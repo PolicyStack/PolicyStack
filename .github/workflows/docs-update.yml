@@ -25,9 +25,17 @@ jobs:
         with:
           python-version: '3.x'
       
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+          # Or: pip install -r tools/requirements.txt
+      
       - name: Update documentation
         id: update
         run: |
+          set -e  # Exit on any error
+          
+          # Run the generator
           python tools/doc-generator.py
           
           if [[ -n $(git status --porcelain) ]]; then
@@ -42,8 +50,8 @@ jobs:
           else
             echo "updated=false" >> $GITHUB_OUTPUT
             echo "No documentation changes needed" >> $GITHUB_STEP_SUMMARY
-          fi
-      
+          fi 
+
       - name: Remove label and comment
         if: always()
         uses: actions/github-script@v7
@@ -124,6 +132,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
       
       - name: Update documentation
         id: update

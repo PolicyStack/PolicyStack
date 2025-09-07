@@ -1,0 +1,3 @@
+- name: update-docs
+  color: "0366d6"
+  description: "Triggers automatic documentation update"

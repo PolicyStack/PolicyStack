@@ -1,0 +1,110 @@
+name: Documentation Check
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stack/**'
+      - 'appset/**'
+      - 'sample-element/**'
+      - 'values/**'
+      - '*.yaml'
+      - 'tools/doc-generator.py'
+
+jobs:
+  check-docs:
+    name: Verify Documentation
+    runs-on: ubuntu-latest
+    # Skip if we just updated docs (prevents race condition)
+    if: "!contains(github.event.head_commit.message, '[docs-updated]')"
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Check documentation status
+        id: check
+        run: |
+          python tools/doc-generator.py
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "outdated=true" >> $GITHUB_OUTPUT
+            echo "## Files that need updating:" >> $GITHUB_STEP_SUMMARY
+            git status --porcelain >> $GITHUB_STEP_SUMMARY
+          else
+            echo "outdated=false" >> $GITHUB_OUTPUT
+            echo "✅ Documentation is up to date" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Post status comment
+        if: steps.check.outputs.outdated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const hasLabel = labels.data.some(l => l.name === 'update-docs');
+            
+            const body = `## 📚 Documentation Status: Outdated
+            
+            The documentation needs to be updated to reflect recent changes.
+            
+            ### Options:
+            1. **Automatic**: Add the \`update-docs\` label to this PR
+            2. **Manual**: Run \`python tools/doc-generator.py\` locally and commit
+            3. **Command**: Comment \`/update-docs\` on this PR
+            
+            ${hasLabel ? '⏳ The `update-docs` label is present - update should trigger soon...' : ''}`;
+            
+            // Find existing bot comment
+            const comments = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.data.find(c => 
+              c.user.type === 'Bot' && c.body.includes('📚 Documentation Status:')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+            
+            // Fail the check
+            core.setFailed('Documentation is outdated. Add `update-docs` label or update manually.');
+      
+      - name: Clear success comment
+        if: steps.check.outputs.outdated == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Remove any outdated comments
+            const comments = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            
+            for (const comment of comments.data) {
+              if (comment.user.type === 'Bot' && comment.body.includes('📚 Documentation Status:')) {
+                await github.rest.issues.deleteComment({
+                  ...context.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }

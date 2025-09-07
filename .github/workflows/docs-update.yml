@@ -1,11 +1,9 @@
 name: Update Documentation
-
 on:
   pull_request:
     types: [labeled]
   issue_comment:
     types: [created]
-
 jobs:
   update-docs-label:
     name: Update via Label
@@ -42,12 +40,10 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             
             git add -A
-            # Remove [docs-updated] tag
             git commit -m "docs: update documentation"
             git push origin HEAD
             
             echo "updated=true" >> $GITHUB_OUTPUT
-            # Save the commit SHA for later
             echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           else
             echo "updated=false" >> $GITHUB_OUTPUT
@@ -74,16 +70,14 @@ jobs:
               }
             });
             
-            // Also trigger a workflow_dispatch
+            // Trigger check re-run
             await github.rest.pulls.requestReviewers({
               ...context.repo,
               pull_number: context.issue.number,
-              reviewers: []  // Empty array just triggers check re-run
-            }).catch(() => {
-              // Ignore error if no reviewers to add
-            });
+              reviewers: []
+            }).catch(() => {});
       
-      - name: Remove label and comment
+      - name: Remove label and update comment
         if: always()
         uses: actions/github-script@v7
         with:
@@ -95,14 +89,34 @@ jobs:
               name: 'update-docs'
             }).catch(() => {});
             
-            // Update comment
+            // Prepare the status message
             const updated = '${{ steps.update.outputs.updated }}' === 'true';
             const body = updated
-              ? '✅ Documentation has been successfully updated and verified!'
-              : '✅ Documentation was already up to date.';
+              ? '## 📚 Documentation Status: Updated\n\n✅ Documentation has been successfully updated and verified!'
+              : '## 📚 Documentation Status: Current\n\n✅ Documentation was already up to date.';
             
-            await github.rest.issues.createComment({
+            // Find existing bot comment
+            const comments = await github.rest.issues.listComments({
               ...context.repo,
               issue_number: context.issue.number,
-              body: body
             });
+            
+            const botComment = comments.data.find(c => 
+              c.user.type === 'Bot' && c.body.includes('📚 Documentation Status:')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment if none exists (edge case)
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

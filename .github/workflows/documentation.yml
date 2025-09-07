@@ -67,10 +67,10 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.specific_element }}" ]]; then
             echo "📝 Generating documentation for ${{ inputs.specific_element }}..."
-            python tools/generate_docs.py --element "${{ inputs.specific_element }}" --output-dir ./docs
+            python tools/doc-generator.py --element "${{ inputs.specific_element }}" --output-dir ./docs
           else
             echo "📝 Generating documentation for all elements..."
-            python tools/generate_docs.py --stack-dir ./stack --output-dir ./docs
+            python tools/doc-generator.py --stack-dir ./stack --output-dir ./docs
           fi
           
       - name: Check documentation completeness
@@ -148,11 +148,11 @@ jobs:
             if (missing) {
               comment += '❌ **Documentation generation failed**\n\n';
               comment += `Missing documentation for elements: ${missing}\n\n`;
-              comment += 'Please run `python tools/generate_docs.py` locally and commit the changes.\n';
+              comment += 'Please run `python tools/doc-generator.py` locally and commit the changes.\n';
             } else if (hasChanges) {
               comment += '⚠️ **Documentation is out of date**\n\n';
               comment += 'The documentation needs to be regenerated. Please:\n';
-              comment += '1. Run `python generate_docs.py` locally\n';
+              comment += '1. Run `python doc-generator.py` locally\n';
               comment += '2. Review the generated documentation in `docs/`\n';
               comment += '3. Commit and push the changes\n\n';
               comment += 'Or trigger the workflow manually with "Auto-commit" enabled.\n';

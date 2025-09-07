@@ -28,7 +28,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyyaml
-          # Or: pip install -r tools/requirements.txt
       
       - name: Update documentation
         id: update

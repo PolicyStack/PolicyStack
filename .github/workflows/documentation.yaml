@@ -1,0 +1,217 @@
+name: PolicyStack Documentation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'stack/**/values.yaml'
+      - 'stack/**/Chart.yaml'
+      - 'tools/doc-generator.py'
+  
+  workflow_dispatch:
+    inputs:
+      update_docs:
+        description: 'Auto-commit documentation updates'
+        required: false
+        type: boolean
+        default: false
+      specific_element:
+        description: 'Generate docs for specific element only (leave empty for all)'
+        required: false
+        type: string
+
+jobs:
+  validate-and-generate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better diff checking
+          
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-docs.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+          # Create requirements file for future additions
+          echo "pyyaml>=6.0" > requirements-docs.txt
+          
+      - name: Validate YAML syntax
+        run: |
+          echo "🔍 Validating YAML syntax..."
+          for file in stack/*/values.yaml; do
+            python -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+            echo "✓ $file"
+          done
+          
+      - name: Generate documentation
+        id: generate
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.specific_element }}" ]]; then
+            echo "📝 Generating documentation for ${{ inputs.specific_element }}..."
+            python tools/generate_docs.py --element "${{ inputs.specific_element }}" --output-dir ./docs
+          else
+            echo "📝 Generating documentation for all elements..."
+            python tools/generate_docs.py --stack-dir ./stack --output-dir ./docs
+          fi
+          
+      - name: Check documentation completeness
+        id: check-completeness
+        run: |
+          echo "🔍 Checking documentation completeness..."
+          missing_docs=()
+          for dir in stack/*/; do
+            element=$(basename "$dir")
+            if [[ ! -f "docs/${element}.md" ]]; then
+              missing_docs+=("$element")
+            fi
+          done
+          
+          if [ ${#missing_docs[@]} -gt 0 ]; then
+            echo "❌ Missing documentation for: ${missing_docs[*]}"
+            echo "missing=${missing_docs[*]}" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ All elements have documentation"
+          fi
+          
+      - name: Validate documentation quality
+        run: |
+          echo "🔍 Validating documentation quality..."
+          for doc in docs/*.md; do
+            if [[ -f "$doc" ]]; then
+              # Check minimum documentation standards
+              if ! grep -q "## Component Configuration" "$doc"; then
+                echo "❌ $doc missing Component Configuration section"
+                exit 1
+              fi
+              if ! grep -q "## 📊 Summary" "$doc"; then
+                echo "❌ $doc missing Summary section"
+                exit 1
+              fi
+              # Check for generic descriptions that indicate missing annotations
+              if grep -q "Template configuration" "$doc" | head -20; then
+                echo "⚠️  $doc may have missing @description annotations"
+              fi
+            fi
+          done
+          echo "✅ Documentation structure validated"
+          
+      - name: Check for uncommitted changes
+        id: check-changes
+        run: |
+          if [[ -n $(git diff --name-only docs/) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "📋 Documentation changes detected"
+            git diff --stat docs/
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "✅ Documentation is up to date"
+          fi
+          
+      - name: Upload documentation artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: generated-documentation
+          path: docs/
+          retention-days: 30
+          
+      - name: Comment PR with documentation status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasChanges = '${{ steps.check-changes.outputs.has_changes }}' === 'true';
+            const missing = '${{ steps.check-completeness.outputs.missing }}';
+            
+            let comment = '## 📚 PolicyStack Documentation Status\n\n';
+            
+            if (missing) {
+              comment += '❌ **Documentation generation failed**\n\n';
+              comment += `Missing documentation for elements: ${missing}\n\n`;
+              comment += 'Please run `python tools/generate_docs.py` locally and commit the changes.\n';
+            } else if (hasChanges) {
+              comment += '⚠️ **Documentation is out of date**\n\n';
+              comment += 'The documentation needs to be regenerated. Please:\n';
+              comment += '1. Run `python generate_docs.py` locally\n';
+              comment += '2. Review the generated documentation in `docs/`\n';
+              comment += '3. Commit and push the changes\n\n';
+              comment += 'Or trigger the workflow manually with "Auto-commit" enabled.\n';
+            } else {
+              comment += '✅ **Documentation is up to date**\n\n';
+              comment += 'All PolicyStack elements are properly documented.\n';
+            }
+            
+            comment += '\n[📄 View documentation artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})';
+            
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('PolicyStack Documentation Status')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+            
+      - name: Auto-commit documentation (manual trigger only)
+        if: |
+          github.event_name == 'workflow_dispatch' && 
+          inputs.update_docs == true && 
+          steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/
+          git commit -m "📚 Auto-update PolicyStack documentation
+          
+          Generated by workflow run #${{ github.run_number }}
+          Triggered by: @${{ github.actor }}"
+          git push
+          
+      - name: Set status check
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          if [[ "${{ steps.check-changes.outputs.has_changes }}" == "true" ]] || [[ -n "${{ steps.check-completeness.outputs.missing }}" ]]; then
+            echo "❌ Documentation check failed - updates required"
+            exit 1
+          else
+            echo "✅ Documentation check passed"
+          fi

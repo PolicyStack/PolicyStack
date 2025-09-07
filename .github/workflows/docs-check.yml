@@ -44,16 +44,39 @@ jobs:
             exit 1
           fi
           
-          # Check if any files changed
-          if [[ -n $(git status --porcelain) ]]; then
-            echo "outdated=true" >> $GITHUB_OUTPUT
-            echo "## Files that need updating:" >> $GITHUB_STEP_SUMMARY
-            git status --porcelain >> $GITHUB_STEP_SUMMARY
-          else
+          # Check if any files changed (excluding timestamp-only changes)
+          # Get list of modified files
+          CHANGED_FILES=$(git diff --name-only)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            # No files changed at all
             echo "outdated=false" >> $GITHUB_OUTPUT
             echo "✅ Documentation is up to date" >> $GITHUB_STEP_SUMMARY
+          else
+            # Files changed - check if it's only timestamps
+            REAL_CHANGES=false
+            
+            for file in $CHANGED_FILES; do
+              # Check if the file has non-timestamp changes
+              # This filters out lines containing "Generated:" and compares
+              DIFF_WITHOUT_TIMESTAMP=$(git diff "$file" | grep -v "^\+.*Generated:" | grep -v "^\-.*Generated:" | grep "^[+-]" | grep -v "^+++\|^---" || true)
+              
+              if [ -n "$DIFF_WITHOUT_TIMESTAMP" ]; then
+                REAL_CHANGES=true
+                break
+              fi
+            done
+            
+            if [ "$REAL_CHANGES" = true ]; then
+              echo "outdated=true" >> $GITHUB_OUTPUT
+              echo "## Files that need updating (ignoring timestamp changes):" >> $GITHUB_STEP_SUMMARY
+              git diff --name-only >> $GITHUB_STEP_SUMMARY
+            else
+              echo "outdated=false" >> $GITHUB_OUTPUT
+              echo "✅ Documentation is up to date (only timestamp changes detected)" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
- 
+      
       - name: Post status comment
         if: steps.check.outputs.outdated == 'true'
         uses: actions/github-script@v7

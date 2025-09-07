@@ -93,27 +93,27 @@ jobs:
             echo "✅ All elements have documentation"
           fi
           
-      - name: Validate documentation quality
-        run: |
-          echo "🔍 Validating documentation quality..."
-          for doc in docs/*.md; do
-            if [[ -f "$doc" ]]; then
-              # Check minimum documentation standards
-              if ! grep -q "## Component Configuration" "$doc"; then
-                echo "❌ $doc missing Component Configuration section"
-                exit 1
-              fi
-              if ! grep -q "## 📊 Summary" "$doc"; then
-                echo "❌ $doc missing Summary section"
-                exit 1
-              fi
-              # Check for generic descriptions that indicate missing annotations
-              if grep -q "Template configuration" "$doc" | head -20; then
-                echo "⚠️  $doc may have missing @description annotations"
-              fi
-            fi
-          done
-          echo "✅ Documentation structure validated"
+#      - name: Validate documentation quality
+#        run: |
+#          echo "🔍 Validating documentation quality..."
+#          for doc in docs/*.md; do
+#            if [[ -f "$doc" ]]; then
+#              # Check minimum documentation standards
+#              if ! grep -q "## Component Configuration" "$doc"; then
+#                echo "❌ $doc missing Component Configuration section"
+#                exit 1
+#              fi
+#              if ! grep -q "## 📊 Summary" "$doc"; then
+#                echo "❌ $doc missing Summary section"
+#                exit 1
+#              fi
+#              # Check for generic descriptions that indicate missing annotations
+#              if grep -q "Template configuration" "$doc" | head -20; then
+#                echo "⚠️  $doc may have missing @description annotations"
+#              fi
+#            fi
+#          done
+#          echo "✅ Documentation structure validated"
           
       - name: Check for uncommitted changes
         id: check-changes

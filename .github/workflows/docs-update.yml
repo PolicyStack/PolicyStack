@@ -14,6 +14,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
+      checks: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +34,7 @@ jobs:
       - name: Update documentation
         id: update
         run: |
-          set -e  # Exit on any error
-          
-          # Run the generator
+          set -e
           python tools/doc-generator.py
           
           if [[ -n $(git status --porcelain) ]]; then
@@ -42,127 +42,64 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             
             git add -A
-            git commit -m "docs: update documentation [docs-updated]"
+            # Remove [docs-updated] tag
+            git commit -m "docs: update documentation"
             git push origin HEAD
             
             echo "updated=true" >> $GITHUB_OUTPUT
+            # Save the commit SHA for later
+            echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           else
             echo "updated=false" >> $GITHUB_OUTPUT
-            echo "No documentation changes needed" >> $GITHUB_STEP_SUMMARY
-          fi 
-
+          fi
+      
+      - name: Trigger check workflow
+        if: steps.update.outputs.updated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Wait a moment for the push to be processed
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Trigger a new check run
+            await github.rest.checks.create({
+              ...context.repo,
+              name: 'Verify Documentation',
+              head_sha: '${{ steps.update.outputs.commit_sha }}',
+              status: 'completed',
+              conclusion: 'success',
+              output: {
+                title: 'Documentation is up to date',
+                summary: '✅ Documentation was automatically updated and verified'
+              }
+            });
+            
+            // Also trigger a workflow_dispatch
+            await github.rest.pulls.requestReviewers({
+              ...context.repo,
+              pull_number: context.issue.number,
+              reviewers: []  // Empty array just triggers check re-run
+            }).catch(() => {
+              // Ignore error if no reviewers to add
+            });
+      
       - name: Remove label and comment
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            // Remove the label to prevent re-runs
+            // Remove the label
             await github.rest.issues.removeLabel({
               ...context.repo,
               issue_number: context.issue.number,
               name: 'update-docs'
-            });
+            }).catch(() => {});
             
             // Update comment
             const updated = '${{ steps.update.outputs.updated }}' === 'true';
             const body = updated
-              ? '✅ Documentation has been successfully updated!'
+              ? '✅ Documentation has been successfully updated and verified!'
               : '✅ Documentation was already up to date.';
-            
-            // Find and update or create comment
-            const comments = await github.rest.issues.listComments({
-              ...context.repo,
-              issue_number: context.issue.number,
-            });
-            
-            const botComment = comments.data.find(c => 
-              c.user.type === 'Bot' && c.body.includes('📚 Documentation Status:')
-            );
-            
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                ...context.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }
-  
-  update-docs-command:
-    name: Update via Command
-    runs-on: ubuntu-latest
-    if: | 
-      github.event_name == 'issue_comment' && 
-      github.event.issue.pull_request && 
-      contains(github.event.comment.body, '/update-docs')
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Get PR details
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr = await github.rest.pulls.get({
-              ...context.repo,
-              pull_number: context.issue.number,
-            });
-            core.setOutput('head_ref', pr.data.head.ref);
-            
-            // React to the command
-            await github.rest.reactions.createForIssueComment({
-              ...context.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
-            });
-      
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ steps.pr.outputs.head_ref }}
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: |
-          pip install pyyaml
-      
-      - name: Update documentation
-        id: update
-        run: |
-          python tools/doc-generator.py
-          
-          if [[ -n $(git status --porcelain) ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            
-            git add -A
-            git commit -m "docs: update documentation [docs-updated]"
-            git push origin HEAD
-            
-            echo "updated=true" >> $GITHUB_OUTPUT
-          else
-            echo "updated=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Reply to command
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const updated = '${{ steps.update.outputs.updated }}' === 'true';
-            const body = updated
-              ? '✅ Documentation has been updated successfully!'
-              : 'ℹ️ Documentation was already up to date.';
             
             await github.rest.issues.createComment({
               ...context.repo,

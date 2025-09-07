@@ -73,7 +73,6 @@ jobs:
             ### Options:
             1. **Automatic**: Add the \`update-docs\` label to this PR
             2. **Manual**: Run \`python tools/doc-generator.py\` locally and commit
-            3. **Command**: Comment \`/update-docs\` on this PR
             
             ${hasLabel ? '⏳ The `update-docs` label is present - update should trigger soon...' : ''}`;
             

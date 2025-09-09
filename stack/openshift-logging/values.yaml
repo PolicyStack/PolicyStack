@@ -63,7 +63,7 @@ stack:
           # @desc: Operator package name in catalog
           name: openshift-logging
           # @desc: Catalog source name
-          source: redhat-operator-index
+          source: redhat-operators
           # @desc: Namespace containing the catalog
           sourceNamespace: openshift-marketplace
         # @desc: Approval strategy for operator updates (Automatic/Manual)

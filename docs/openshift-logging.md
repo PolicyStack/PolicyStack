@@ -2,7 +2,7 @@
 
 > Element for the OpenShift Logging. This installs and configures OpenShift Logging.
 
-*Generated: 2025-09-09 00:25:45*
+*Generated: 2025-09-09 16:48:44*
 
 ## Component Configuration
 
@@ -64,7 +64,7 @@ Default configuration applied to all policies unless explicitly overridden
 | --------- | ----- | ----------- |
 | Name | `openshift-logging` | Operator package name in catalog |
 | Channel | `stable-6.2` | Update channel |
-| Source | `redhat-operator-index` | Catalog source name |
+| Source | `redhat-operators` | Catalog source name |
 | Source Namespace | `openshift-marketplace` | Namespace containing the catalog |
 
 

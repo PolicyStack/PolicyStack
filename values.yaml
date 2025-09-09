@@ -1,1 +1,2 @@
-policyNamespace: policy-management
+# Please do not change policyNamespace
+policyNamespace: policy

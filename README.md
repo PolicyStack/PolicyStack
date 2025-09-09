@@ -6,6 +6,9 @@ PolicyStack is a GitOps implementation utilizing ACM (Advanced Cluster Managemen
 2. This will create a directory under the `stack/` dir with the configured helm chart.
 3. Update the `values.yaml` w/ everything that needs to be deployed. This includes updating the `converters` dir.
 
+> [!WARNING]  
+> The max characters for a policy is 63. This consists of `<policy-namespace>.<policy-name>`. The `<policy-name>` includes the `<name in values>`-`<element-name>`-`<cluster-name>`. Make sure this is taken into account when creating policy names in a values file. Try to keep it as short as possible.
+
 ### Documentation
 
 #### Overview
@@ -108,7 +111,7 @@ The installation is configured via the `./appset` helm chart.
 
 ```
 1. Configure `appset` values.yaml, see README for details
-2. helm install appset ./appset
+2. helm install appset ./appset -f ./appset/values.yaml -f values.yaml
 ```
 
 ## Overview

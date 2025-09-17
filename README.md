@@ -28,17 +28,17 @@ Managing complex policy configurations across multiple clusters requires clear d
 
 ##### Generate documentation for all elements:
 ```bash
-python generate_docs.py
+python doc-generator.py
 ```
 
 ##### Specify custom directories:
 ```bash
-python generate_docs.py --stack-dir ./stack --output-dir ./docs
+python doc-generator.py --stack-dir ./stack --output-dir ./docs
 ```
 
 ##### Generate documentation for a specific element:
 ```bash
-python generate_docs.py --element security-config
+python doc-generator.py --element security-config
 ```
 
 #### Comment Annotation Syntax

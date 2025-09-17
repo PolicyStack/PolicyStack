@@ -2,7 +2,7 @@
 
 > Element for the OpenShift Logging. This installs and configures OpenShift Logging.
 
-*Generated: 2025-09-09 16:48:44*
+*Generated: 2025-09-17 01:12:34*
 
 ## Component Configuration
 
@@ -45,13 +45,13 @@ Default configuration applied to all policies unless explicitly overridden
 
 ##### Operator Policies
 
-###### 🔧 Operator: openshift-logging
+###### 🔧 Operator: cluster-logging
 > Installs the OpenShift logging operator
 
 **Basic Configuration:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `openshift-logging-operator-openshift-logging` | Operator policy identifier |
+| Name | `openshift-logging-operator-cluster-logging` | Operator policy identifier |
 | Namespace | `openshift-logging` | Target namespace for operator installation |
 | Display Name | `Red Hat OpenShift Logging` | Human-friendly display name in OLM |
 | Compliance Type | `musthave` | Operator must be present |
@@ -62,7 +62,7 @@ Default configuration applied to all policies unless explicitly overridden
 **Subscription Details:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `openshift-logging` | Operator package name in catalog |
+| Name | `cluster-logging` | Operator package name in catalog |
 | Channel | `stable-6.2` | Update channel |
 | Source | `redhat-operators` | Catalog source name |
 | Source Namespace | `openshift-marketplace` | Namespace containing the catalog |

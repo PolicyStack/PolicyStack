@@ -204,6 +204,9 @@ Currently, the only "required" label is the revision label. This is fairly limit
 
 1. `git.example.com/revision=<revision>`: This would be a revision in git for the cluster to pull configuration from. This could be a tag or branch
 
+> [!WARNING]  
+> The revision must be a normalized value as this will be a K8s label. No forward slashes (/), quotes ("), etc.
+
 ## Recommended Labels
 Here are some recommended labels that would allow you to take advantage of multiple environments.
 1. `config.example.com/envioronment.1=<environment>`: This would be prod/nonprod/sbx or any other custom environment

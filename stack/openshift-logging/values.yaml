@@ -37,7 +37,7 @@ stack:
     # @description: Operator policies for managing OpenShift/Kubernetes operators
     operatorPolicies:
       # @description: OpenShift Logging Operator for aggregating logs.
-      - name: openshift-logging
+      - name: cluster-logging
         enabled: true
         description: "Installs the OpenShift logging operator"
         # @desc: Human-friendly display name in OLM
@@ -61,7 +61,7 @@ stack:
           # @desc: Update channel
           channel: stable-6.2
           # @desc: Operator package name in catalog
-          name: openshift-logging
+          name: cluster-logging
           # @desc: Catalog source name
           source: redhat-operators
           # @desc: Namespace containing the catalog

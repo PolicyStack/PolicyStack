@@ -104,7 +104,8 @@ It is best-practice to set `enabled: false` in the helm values.yaml and enable o
 There are several prerequisite items to install on an OpenShift cluster before this can be used.
 1. ACM
 2. OpenShift GitOps
-3. `./gitops-prereq` please apply this directory. It will create a GitOpsCluster for pulling in the ACM clusters to GitOps.
+3. Ensure the ArgoCD Application Controller SA has cluster-admin
+4. `./gitops-prereq` please apply this directory. It will create a GitOpsCluster for pulling in the ACM clusters to GitOps.
 
 ## Installation
 The installation is configured via the `./appset` helm chart.

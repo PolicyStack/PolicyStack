@@ -1,0 +1,48 @@
+name: Policy Validate
+
+on:
+  pull_request:
+    paths:
+      - 'stack/**'
+      - 'sample-element/**'
+      - 'appset/**'
+      - 'values/**'
+      - 'values.yaml'
+      - 'tools/validator/**'
+      - '.github/workflows/validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: tools/validator/go.sum
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL -o /tmp/kc.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          sudo tar -xzf /tmp/kc.tar.gz -C /usr/local/bin kubeconform
+
+      - name: Build validator
+        working-directory: tools/validator
+        run: go build -trimpath -o bin/policystack-validator ./cmd/policystack-validator
+
+      - name: Validate policies
+        run: |
+          ./tools/validator/bin/policystack-validator \
+            --github \
+            --repo-root . \
+            --extra-values tools/validator/testdata/baseline.yaml

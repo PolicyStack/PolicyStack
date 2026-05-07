@@ -1,0 +1,11 @@
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: prod-east-1
+  labels:
+    name: prod-east-1
+    vendor: OpenShift
+    config.example.com/environment.10: prod
+    config.example.com/datacenter.20: dc1
+spec:
+  hubAcceptsClient: true

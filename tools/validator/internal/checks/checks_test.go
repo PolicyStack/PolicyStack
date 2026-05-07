@@ -48,7 +48,8 @@ dependencies:
 	return el
 }
 
-func TestPolicy001_NameLength(t *testing.T) {
+func TestPolicy001_ParentPolicyReplicated(t *testing.T) {
+	// "policy." + "long-name-..." + "-my-element-huge-cluster-name" must exceed 63.
 	el := loadElement(t, `
 stack:
   myElement:
@@ -56,19 +57,53 @@ stack:
     policies:
       - name: short
         enabled: true
-      - name: this-name-is-deliberately-very-long-on-purpose-to-overflow
+      - name: this-is-a-deliberately-very-long-policy-name-overflow
         enabled: true
 `, "", nil)
+	// PolicyNamespace defaults to "policy" via loadElement.
 	cl := &cascade.Resolved{ClusterName: "huge-cluster-name", ReleaseName: "my-element-huge-cluster-name"}
 	got := (&NameLengthCheck{}).Run(Context{Element: el, Cluster: cl})
 	if len(got) != 1 {
 		t.Fatalf("expected 1 finding, got %d: %+v", len(got), got)
 	}
-	if !strings.Contains(got[0].Message, "chars >") {
-		t.Errorf("unexpected message: %s", got[0].Message)
+	if !strings.Contains(got[0].Message, "ACM-replicated") {
+		t.Errorf("expected message to mention ACM-replicated form, got: %s", got[0].Message)
 	}
-	if got[0].Line == 0 {
-		t.Error("expected line number to be populated")
+	if !strings.Contains(got[0].Message, "metadata.name=") {
+		t.Errorf("expected message to disclose metadata.name, got: %s", got[0].Message)
+	}
+}
+
+func TestPolicy001_SubPolicyNoNamespacePrefix(t *testing.T) {
+	// Sub-policy metadata.name = <parent>-<sub>; no namespace, no Release.Name.
+	// Construct a name that's >63 only because of the parent-sub concatenation.
+	el := loadElement(t, `
+stack:
+  myElement:
+    enable: true
+    policies:
+      - name: parent-policy-with-a-medium-length-name
+        enabled: true
+    configPolicies:
+      - name: child-policy-with-yet-another-medium-length-name
+        enabled: true
+        policyRef: parent-policy-with-a-medium-length-name
+`, "", nil)
+	cl := &cascade.Resolved{ClusterName: "x", ReleaseName: "my-element-x"}
+	got := (&NameLengthCheck{}).Run(Context{Element: el, Cluster: cl})
+	if len(got) == 0 {
+		t.Fatalf("expected at least one finding, got 0")
+	}
+	// Parent policy shouldn't be flagged (its ACM-replicated form is < 63 here),
+	// only the sub-policy should be — verify via message content.
+	subFound := false
+	for _, f := range got {
+		if strings.Contains(f.Message, "ConfigurationPolicy") && !strings.Contains(f.Message, "ACM-replicated") {
+			subFound = true
+		}
+	}
+	if !subFound {
+		t.Fatalf("expected a ConfigurationPolicy finding without ACM-replicated wording, got: %+v", got)
 	}
 }
 

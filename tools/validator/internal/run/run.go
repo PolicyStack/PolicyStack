@@ -31,11 +31,16 @@ type Options struct {
 	HelmBin        string
 	KubeconformBin string
 	SchemasDir     string
-	Skip           []string
-	Only           []string
-	IncludeSample  bool
-	Jobs           int
-	Logger         *slog.Logger
+	// ExtraValues are absolute paths appended to every (element, fixture)
+	// cascade with highest precedence. Useful for supplying baseline values
+	// (e.g. a default `selector`) when fixture cluster names don't match
+	// real per-cluster files in values/clusters/.
+	ExtraValues   []string
+	Skip          []string
+	Only          []string
+	IncludeSample bool
+	Jobs          int
+	Logger        *slog.Logger
 }
 
 // Result aggregates the run output.
@@ -229,6 +234,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 
 func perCluster(ctx context.Context, opts Options, runner *render.Runner, el *chart.Element, mc *fixtures.ManagedCluster) (checks.Context, *checks.Finding) {
 	res := cascade.Resolve(mc, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir, opts.BaseDomain)
+	if len(opts.ExtraValues) > 0 {
+		res.ValueFiles = append(res.ValueFiles, opts.ExtraValues...)
+	}
 	c := checks.Context{
 		Element: el,
 		Cluster: &res,
@@ -255,6 +263,9 @@ func renderErrorFinding(el *chart.Element, cl *cascade.Resolved, tr render.Templ
 	if msg == "" {
 		msg = tr.Err.Error()
 	}
+	if hint := renderHint(msg); hint != "" {
+		msg = hint + "\n\n" + msg
+	}
 	f := &checks.Finding{
 		RuleID:   "RENDER000",
 		Severity: checks.SevError,
@@ -271,6 +282,18 @@ func renderErrorFinding(el *chart.Element, cl *cascade.Resolved, tr render.Templ
 		f.File = el.ValuesFile
 	}
 	return f
+}
+
+// renderHint maps known template error patterns to actionable suggestions.
+// Empty string means no hint applies.
+func renderHint(stderr string) string {
+	switch {
+	case strings.Contains(stderr, "Values.selector.matchExpressions") && strings.Contains(stderr, "nil pointer"):
+		return "hint: cascade did not provide `selector`. Either name the fixture cluster to match a real values/clusters/<name>.yaml that defines selector, or pass --extra-values <file> with a baseline `selector:` block (or set `disablePlacements: true` on the element)."
+	case strings.Contains(stderr, "nil pointer evaluating"):
+		return "hint: a values key referenced by the chart template is missing. Check that your fixture's cascade resolves to a values file that supplies the missing key."
+	}
+	return ""
 }
 
 func truncate(s string, max int) string {

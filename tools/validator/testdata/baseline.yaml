@@ -1,0 +1,9 @@
+# Baseline values appended to every fixture cascade with --extra-values.
+# Supplies the `selector` block that policy-library expects to be defined
+# (it dereferences .Values.selector.matchExpressions unconditionally), so
+# CI renders succeed even when fixture cluster names don't correspond to
+# real values/clusters/<name>.yaml files in the repo.
+selector:
+  matchExpressions:
+    - key: name
+      operator: Exists

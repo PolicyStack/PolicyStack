@@ -41,4 +41,8 @@ jobs:
         run: go build -trimpath -o bin/policystack-validator ./cmd/policystack-validator
 
       - name: Validate policies
-        run: ./tools/validator/bin/policystack-validator --github --repo-root .
+        run: |
+          ./tools/validator/bin/policystack-validator \
+            --github \
+            --repo-root . \
+            --extra-values tools/validator/testdata/baseline.yaml

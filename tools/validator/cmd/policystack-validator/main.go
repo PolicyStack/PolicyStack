@@ -43,6 +43,7 @@ func realMain() error {
 		kcBin          = flag.String("kubeconform-bin", "kubeconform", "kubeconform binary; POLICY080 is skipped if not on PATH")
 		schemasDir     = flag.String("schemas-dir", "", "extra -schema-location for kubeconform")
 		includeSample  = flag.Bool("include-sample-element", false, "validate sample-element/ alongside stack/")
+		extraValues    = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade — useful for supplying baseline `selector` etc.")
 		verbose        = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -85,6 +86,11 @@ func realMain() error {
 		}
 	}
 
+	extras, err := absPaths(splitCSV(*extraValues))
+	if err != nil {
+		return err
+	}
+
 	opts := run.Options{
 		RepoRoot:       root,
 		StackDir:       *stackDir,
@@ -95,6 +101,7 @@ func realMain() error {
 		HelmBin:        *helmBin,
 		KubeconformBin: resolvedKc,
 		SchemasDir:     *schemasDir,
+		ExtraValues:    extras,
 		Skip:           splitCSV(*skipFlag),
 		Only:           splitCSV(*onlyFlag),
 		IncludeSample:  *includeSample,
@@ -141,6 +148,18 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+func absPaths(paths []string) ([]string, error) {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		ap, err := filepath.Abs(p)
+		if err != nil {
+			return nil, fmt.Errorf("--extra-values %s: %w", p, err)
+		}
+		out = append(out, ap)
+	}
+	return out, nil
 }
 
 var _ = checks.Finding{}

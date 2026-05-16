@@ -1,0 +1,44 @@
+stack:
+  # @description: OpenShift Pipelines (Tekton) Operator
+  openshiftPipelines:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the Pipelines Operator install resources
+    policies:
+      - name: pipelines-install
+        enabled: true
+        namespace: open-cluster-management
+        description: "Install and manage the OpenShift Pipelines (Tekton) Operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the Pipelines subscription in the cluster-wide openshift-operators namespace
+    operatorPolicies:
+      - name: openshift-pipelines
+        enabled: true
+        description: "OpenShift Pipelines (Tekton)"
+        displayName: "Red Hat OpenShift Pipelines"
+        policyRef: pipelines-install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators
+        operatorGroup:
+          name: global-operators
+        subscription:
+          channel: pipelines-1.21
+          name: openshift-pipelines-operator-rh
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic

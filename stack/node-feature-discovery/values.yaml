@@ -1,0 +1,80 @@
+stack:
+  # @description: Node Feature Discovery Operator and instance for hardware feature labelling
+  nodeFeatureDiscovery:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the NFD operator install AND the NodeFeatureDiscovery instance
+    policies:
+      - name: nfd-install
+        enabled: true
+        namespace: open-cluster-management
+        description: "Install and configure the Node Feature Discovery Operator and instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the NFD subscription
+    operatorPolicies:
+      - name: node-feature-discovery
+        enabled: true
+        description: "Node Feature Discovery Operator"
+        displayName: "Node Feature Discovery"
+        policyRef: nfd-install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-nfd
+        operatorGroup:
+          name: openshift-nfd-operator
+          targetNamespaces:
+            - openshift-nfd
+        subscription:
+          channel: stable
+          name: nfd
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    # @description: Namespace label patch + NodeFeatureDiscovery CR instance
+    configPolicies:
+      - name: nfd-ns-monitoring
+        enabled: true
+        description: "Adds openshift.io/cluster-monitoring label to operator namespace"
+        policyRef: nfd-install
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        evaluationInterval:
+          compliant: "10m"
+          noncompliant: "30s"
+        templateNames:
+          - name: ns-monitoring-label
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-nfd
+
+      - name: nfd-instance
+        enabled: true
+        description: "Deploy the NodeFeatureDiscovery custom resource"
+        policyRef: nfd-install
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        evaluationInterval:
+          compliant: "10m"
+          noncompliant: "30s"
+        templateNames:
+          - name: nfd-instance
+        enableTemplateParameters: true
+        templateParameters:
+          operandImage: registry.redhat.io/openshift4/ose-node-feature-discovery-rhel9:v4.20

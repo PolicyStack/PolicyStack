@@ -1,0 +1,64 @@
+stack:
+  # @description: Node Maintenance Operator for safely cordoning and draining nodes
+  nodeMaintenance:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the Node Maintenance Operator install resources
+    policies:
+      - name: node-maintenance-install
+        enabled: true
+        namespace: open-cluster-management
+        description: "Install and manage the Node Maintenance Operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the Node Maintenance Operator subscription
+    operatorPolicies:
+      - name: node-maintenance
+        enabled: true
+        description: "Node Maintenance Operator (Workload Availability)"
+        displayName: "Node Maintenance Operator"
+        policyRef: node-maintenance-install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-workload-availability
+        operatorGroup:
+          name: node-maintenance-operator-group
+          targetNamespaces:
+            - openshift-workload-availability
+        subscription:
+          channel: stable
+          name: node-maintenance-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    # @description: Adds the cluster-monitoring label to the operator namespace
+    configPolicies:
+      - name: node-maintenance-ns-monitoring
+        enabled: true
+        description: "Adds openshift.io/cluster-monitoring label to operator namespace"
+        policyRef: node-maintenance-install
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        evaluationInterval:
+          compliant: "10m"
+          noncompliant: "30s"
+        templateNames:
+          - name: ns-monitoring-label
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-workload-availability

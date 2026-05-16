@@ -1,10 +1,15 @@
 # PolicyStack Documentation Index
 
-*Generated: 2025-09-17 01:12:34*
+*Generated: 2026-05-08 20:16:05*
 
 ## Available Elements
 
+- [cert-manager](./cert-manager.md)
+- [external-secrets-operator](./external-secrets-operator.md)
+- [node-feature-discovery](./node-feature-discovery.md)
+- [node-maintenance](./node-maintenance.md)
 - [openshift-logging](./openshift-logging.md)
+- [openshift-pipelines](./openshift-pipelines.md)
 
 ## Comment Notation Guide
 

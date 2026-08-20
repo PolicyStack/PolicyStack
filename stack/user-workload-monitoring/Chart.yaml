@@ -8,4 +8,4 @@ appVersion: "1.16.0"
 dependencies:
   - name: policy-library
     version: "1.3.0"
-    repository: "file://../../../policystack-chart/charts/policy-library"
+    repository: "https://policystack.github.io/PolicyStack-chart"

@@ -1,0 +1,205 @@
+{{- /*
+NodeNetworkConfigurationPolicies generated from the `networking` tree in values.
+
+Every input is plain configuration, so it resolves at render time. The objects are assembled as data
+and serialised with toYaml - structurally correct by construction, rather than depending on getting
+the indentation right across hundreds of lines of conditional text.
+
+The one genuinely runtime value is the cluster base domain, used to build per-host nodeSelector
+hostnames; that stays as an escaped ACM template.
+
+Shape of `config.networking`:
+  nodeSelector: {}                        # applied to the shared NNCPs
+  interfaces:   {<id>: {...}}             # cluster-wide interface topology
+  ovsBridges:   {<id>: {...}}
+  routes:       {<id>: {...}}
+  dns:          {servers: [], search: []}
+  ovnMappings:  {<id>: {localnet, bridge}}
+and `config.hosts`: {<hostname>: {hostname?, networking: {interfaces, routes, dns}}}
+An interface declared under a host is rendered ONLY per-host, never cluster-wide.
+*/ -}}
+{{- $cfg := .Values.stack.nmstate.config }}
+{{- $net := $cfg.networking | default dict }}
+{{- $hosts := $cfg.hosts | default dict }}
+{{- $sharedSelector := $net.nodeSelector | default dict }}
+{{- $ifaces := $net.interfaces | default dict }}
+
+{{- /* ---- helper: ipv4/ipv6 stanza for a given mode, optionally with static addresses ---- */ -}}
+{{- define "nmstate.ipStanza" -}}
+{{- $mode := .mode -}}{{- $addrs := .addresses -}}{{- $v6 := .v6 -}}
+{{- if eq $mode "dhcp" -}}
+{{- $d := dict "enabled" true "dhcp" true -}}{{- toYaml $d -}}
+{{- else if and $v6 (eq $mode "autoconf") -}}
+{{- $d := dict "enabled" true "autoconf" true -}}{{- toYaml $d -}}
+{{- else if eq $mode "static" -}}
+{{- $d := dict "enabled" true "dhcp" false -}}
+{{- if $v6 }}{{- $_ := set $d "autoconf" false -}}{{- end -}}
+{{- if $addrs -}}
+{{- $list := list -}}
+{{- range $a := $addrs -}}{{- $list = append $list (dict "ip" $a.ip "prefix-length" $a.prefixLength) -}}{{- end -}}
+{{- $_ := set $d "address" $list -}}
+{{- end -}}
+{{- toYaml $d -}}
+{{- else -}}
+{{- toYaml (dict "enabled" false) -}}
+{{- end -}}
+{{- end -}}
+
+{{- /* ---- collect interface ids that a host overrides, so they are not also emitted cluster-wide ---- */ -}}
+{{- $hostOwned := dict }}
+{{- range $hostname, $host := $hosts }}
+{{- range $id, $_ := (($host.networking).interfaces | default dict) }}{{- $_ := set $hostOwned $id true }}{{- end }}
+{{- end }}
+
+{{- /* ---- cluster-wide interfaces ---- */ -}}
+{{- range $id, $if := $ifaces }}
+{{- if not (hasKey $hostOwned $id) }}
+{{- $type := $if.type | default "ethernet" }}
+{{- $iface := dict "name" ($if.name | default $id) "type" $type "state" ($if.state | default "up") }}
+{{- if $if.mac }}{{- $_ := set $iface "identifier" "mac-address" }}{{- $_ := set $iface "mac-address" $if.mac }}{{- end }}
+{{- if $if.mtu }}{{- $_ := set $iface "mtu" $if.mtu }}{{- end }}
+{{- $_ := set $iface "ipv4" (include "nmstate.ipStanza" (dict "mode" ($if.ipv4 | default "disabled") "v6" false) | fromYaml) }}
+{{- $_ := set $iface "ipv6" (include "nmstate.ipStanza" (dict "mode" ($if.ipv6 | default "disabled") "v6" true) | fromYaml) }}
+{{- if eq $type "bond" }}
+{{- $la := dict "mode" ($if.mode | default "802.3ad") }}
+{{- if $if.miimon }}{{- $_ := set $la "options" (dict "miimon" $if.miimon) }}{{- end }}
+{{- if $if.ports }}{{- $_ := set $la "port" $if.ports }}{{- end }}
+{{- $_ := set $iface "link-aggregation" $la }}
+{{- end }}
+{{- if eq $type "vlan" }}
+{{- $_ := set $iface "vlan" (dict "base-iface" $if.base "id" $if.id) }}
+{{- end }}
+{{- $spec := dict "desiredState" (dict "interfaces" (list $iface)) }}
+{{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: nmstate.io/v1
+    kind: NodeNetworkConfigurationPolicy
+    metadata:
+      name: nmstate-{{ $type }}-{{ $id }}
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}
+{{- end }}
+
+{{- /* ---- OVS bridges ---- */ -}}
+{{- range $id, $br := ($net.ovsBridges | default dict) }}
+{{- $opts := dict "stp" ($br.stp | default false) }}
+{{- if $br.mcastSnooping }}{{- $_ := set $opts "mcast-snooping-enable" $br.mcastSnooping }}{{- end }}
+{{- $bridge := dict "allow-extra-patch-ports" (kindIs "invalid" $br.allowExtraPatchPorts | ternary true $br.allowExtraPatchPorts) "options" $opts }}
+{{- if $br.ports }}
+{{- $ports := list }}{{- range $p := $br.ports }}{{- $ports = append $ports (dict "name" $p) }}{{- end }}
+{{- $_ := set $bridge "port" $ports }}
+{{- end }}
+{{- $iface := dict "name" ($br.name | default (printf "ovs-br-%s" $id)) "type" "ovs-bridge" "state" "up" "bridge" $bridge }}
+{{- $spec := dict "desiredState" (dict "interfaces" (list $iface)) }}
+{{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: nmstate.io/v1
+    kind: NodeNetworkConfigurationPolicy
+    metadata:
+      name: nmstate-ovs-bridge-{{ $id }}
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}
+
+{{- /* ---- shared routes / dns / ovn bridge-mappings ---- */ -}}
+{{- $routes := $net.routes | default dict }}
+{{- $dns := $net.dns | default dict }}
+{{- $ovn := $net.ovnMappings | default dict }}
+{{- if or $routes (or $dns.servers (or $dns.search $ovn)) }}
+{{- $desired := dict }}
+{{- if $routes }}
+{{- $rc := list }}
+{{- range $rid, $r := $routes }}
+{{- $entry := dict "destination" $r.destination "next-hop-address" $r.gateway "next-hop-interface" $r.interface }}
+{{- if $r.metric }}{{- $_ := set $entry "metric" $r.metric }}{{- end }}
+{{- if $r.tableId }}{{- $_ := set $entry "table-id" $r.tableId }}{{- end }}
+{{- $rc = append $rc $entry }}
+{{- end }}
+{{- $_ := set $desired "routes" (dict "config" $rc) }}
+{{- end }}
+{{- if or $dns.servers $dns.search }}
+{{- $dc := dict }}
+{{- if $dns.servers }}{{- $_ := set $dc "server" $dns.servers }}{{- end }}
+{{- if $dns.search }}{{- $_ := set $dc "search" $dns.search }}{{- end }}
+{{- $_ := set $desired "dns-resolver" (dict "config" $dc) }}
+{{- end }}
+{{- if $ovn }}
+{{- $bm := list }}
+{{- range $mid, $m := $ovn }}{{- $bm = append $bm (dict "localnet" $m.localnet "bridge" $m.bridge "state" "present") }}{{- end }}
+{{- $_ := set $desired "ovn" (dict "bridge-mappings" $bm) }}
+{{- end }}
+{{- $spec := dict "desiredState" $desired }}
+{{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: nmstate.io/v1
+    kind: NodeNetworkConfigurationPolicy
+    metadata:
+      name: nmstate-network-config
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}
+
+{{- /* ---- per-host overrides ---- */ -}}
+{{- range $hostname, $host := $hosts }}
+{{- $hnet := $host.networking | default dict }}
+{{- $hIfaces := $hnet.interfaces | default dict }}
+{{- $hRoutes := $hnet.routes | default dict }}
+{{- $hDns := $hnet.dns | default dict }}
+{{- if or $hIfaces (or $hRoutes $hDns) }}
+{{- $desired := dict }}
+{{- if $hIfaces }}
+{{- $list := list }}
+{{- range $id, $ov := $hIfaces }}
+{{- $topo := index $ifaces $id | default dict }}
+{{- $type := $topo.type | default "ethernet" }}
+{{- $iface := dict "name" ($topo.name | default $id) "type" $type "state" ($topo.state | default "up") }}
+{{- $mac := $ov.mac | default $topo.mac }}
+{{- if $mac }}{{- $_ := set $iface "identifier" "mac-address" }}{{- $_ := set $iface "mac-address" $mac }}{{- end }}
+{{- if $topo.mtu }}{{- $_ := set $iface "mtu" $topo.mtu }}{{- end }}
+{{- $_ := set $iface "ipv4" (include "nmstate.ipStanza" (dict "mode" ($topo.ipv4 | default "disabled") "addresses" (($ov.ipv4).addresses) "v6" false) | fromYaml) }}
+{{- $_ := set $iface "ipv6" (include "nmstate.ipStanza" (dict "mode" ($topo.ipv6 | default "disabled") "addresses" (($ov.ipv6).addresses) "v6" true) | fromYaml) }}
+{{- if eq $type "bond" }}
+{{- $la := dict "mode" ($topo.mode | default "802.3ad") }}
+{{- if $topo.miimon }}{{- $_ := set $la "options" (dict "miimon" $topo.miimon) }}{{- end }}
+{{- $ports := $ov.ports | default $topo.ports }}
+{{- if $ports }}{{- $_ := set $la "port" $ports }}{{- end }}
+{{- $_ := set $iface "link-aggregation" $la }}
+{{- end }}
+{{- if eq $type "vlan" }}{{- $_ := set $iface "vlan" (dict "base-iface" $topo.base "id" $topo.id) }}{{- end }}
+{{- $list = append $list $iface }}
+{{- end }}
+{{- $_ := set $desired "interfaces" $list }}
+{{- end }}
+{{- if $hRoutes }}
+{{- $rc := list }}
+{{- range $rid, $r := $hRoutes }}
+{{- $entry := dict "destination" $r.destination "next-hop-address" $r.gateway "next-hop-interface" $r.interface }}
+{{- if $r.metric }}{{- $_ := set $entry "metric" $r.metric }}{{- end }}
+{{- if $r.tableId }}{{- $_ := set $entry "table-id" $r.tableId }}{{- end }}
+{{- $rc = append $rc $entry }}
+{{- end }}
+{{- $_ := set $desired "routes" (dict "config" $rc) }}
+{{- end }}
+{{- if or $hDns.servers $hDns.search }}
+{{- $dc := dict }}
+{{- if $hDns.servers }}{{- $_ := set $dc "server" $hDns.servers }}{{- end }}
+{{- if $hDns.search }}{{- $_ := set $dc "search" $hDns.search }}{{- end }}
+{{- $_ := set $desired "dns-resolver" (dict "config" $dc) }}
+{{- end }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: nmstate.io/v1
+    kind: NodeNetworkConfigurationPolicy
+    metadata:
+      name: nmstate-host-{{ $hostname }}
+    spec:
+      nodeSelector:
+        {{- if $host.hostname }}
+        kubernetes.io/hostname: {{ $host.hostname }}
+        {{- else }}
+        kubernetes.io/hostname: {{ $hostname }}.{{ "{{" }} ((lookup "config.openshift.io/v1" "DNS" "" "cluster").spec.baseDomain | default "") {{ "}}" }}
+        {{- end }}
+      desiredState:{{ toYaml $desired | nindent 8 }}
+{{- end }}
+{{- end }}

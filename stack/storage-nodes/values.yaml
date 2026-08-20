@@ -1,0 +1,133 @@
+stack:
+  # @description: Dedicated storage nodes for OpenShift Data Foundation
+  storageNodes:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Exactly one platform toggle should be on. Set these in values/platforms/<p>.yaml
+    # @description: and select the file with a config.<domain>/platform.<N> cluster label.
+    toggles:
+      # @desc: Create storage MachineSets by cloning the worker MachineSet (AWS)
+      aws: false
+      # @desc: Clone each worker MachineSet per vSphere failure domain
+      vmware: false
+      # @desc: Label existing nodes as storage nodes (no MachineSets on bare metal)
+      baremetal: false
+      # @desc: Report NonCompliant until the storage nodes are ready
+      ready: true
+
+    # @description: Storage node sizing
+    config:
+      # @desc: Storage nodes per zone. ODF expects three for a supported topology.
+      replicas: 3
+      # @desc: Availability zones. Empty means "wherever the workers are".
+      zones: []
+      # @desc: AWS instance type. Empty inherits from the worker MachineSet.
+      instanceType: ""
+      # @desc: Root volume size in GiB. Empty inherits from the worker MachineSet.
+      volumeSize: ""
+      # @desc: vSphere sizing. Empty inherits from the worker MachineSet.
+      numCPUs: ""
+      numCoresPerSocket: ""
+      memoryMiB: ""
+      # @desc: Bare metal only: node names to designate as storage. Empty takes the first
+      # @desc: `replicas` nodes instead.
+      nodes: []
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-6 Configuration Settings
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: aws
+        enabled: true
+        description: "Storage MachineSets on AWS"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: vmware
+        enabled: true
+        description: "Storage MachineSets on vSphere"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: baremetal
+        enabled: true
+        description: "Storage node labels on bare metal"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: openshift-data-foundation and local-storage depend on this
+      # @description: policy by name, so it is the readiness gate for the whole storage stack.
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until the storage nodes are ready"
+        remediationAction: inform
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: machinesets-aws
+        enabled: true
+        description: "Storage MachineSets cloned from the worker MachineSet"
+        policyRef: aws
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: machineset-aws
+        enableTemplateParameters: true
+        templateParameters: &storageParams
+          role: storage
+          namespace: openshift-machine-api
+          nodeLabels:
+            node-role.kubernetes.io/infra: ""
+            cluster.ocs.openshift.io/openshift-storage: ""
+
+      - name: machinesets-vmware
+        enabled: true
+        description: "Storage MachineSets per vSphere failure domain"
+        policyRef: vmware
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: machineset-vmware
+        enableTemplateParameters: true
+        templateParameters: *storageParams
+
+      - name: labels
+        enabled: true
+        description: "Storage node labels"
+        policyRef: baremetal
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: storage-label-nodes
+        enableTemplateParameters: true
+        templateParameters: *storageParams
+
+      - name: nodes-ready
+        enabled: true
+        description: "Storage MachineSet readiness"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: machineset-ready
+        enableTemplateParameters: true
+        templateParameters: *storageParams

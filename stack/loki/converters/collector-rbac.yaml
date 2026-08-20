@@ -1,0 +1,21 @@
+{{- /*
+The collector needs one ClusterRoleBinding per log type it is allowed to read, plus the writer role
+for pushing into Loki. Emitted together because the count follows config.logTypes.
+*/ -}}
+{{- $cfg := .Values.stack.loki.config }}
+{{- range $role := concat $cfg.collectorRoles (list "logging-collector-logs-writer") }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: {{ $role }}
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: {{ $role }}
+    subjects:
+      - kind: ServiceAccount
+        name: {{ $.Parameters.collectorName }}
+        namespace: {{ $.Parameters.namespace }}
+{{- end }}

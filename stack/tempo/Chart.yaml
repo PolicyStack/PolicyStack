@@ -1,0 +1,10 @@
+apiVersion: v2
+name: tempo
+description: Red Hat build of Tempo for distributed tracing storage
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: policy-library
+    version: "1.3.0"
+    repository: "file://../../../policystack-chart/charts/policy-library"

@@ -1,0 +1,11 @@
+{{- /* Pin the ClusterVersion upgrade channel. The channel itself is a plain value. */ -}}
+{{- $cfg := .Values.stack.openshiftUpgrade.config }}
+{{- if not $cfg.channel }}{{- fail "stack.openshiftUpgrade.config.channel must be set when the channel toggle is on" }}{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      name: version
+    spec:
+      channel: {{ $cfg.channel | quote }}

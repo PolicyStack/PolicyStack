@@ -1,0 +1,18 @@
+{{- /*
+IPAddressPool objects, one per entry in config.ipAddressPools.
+
+The key is the object name and the value is the spec verbatim, so the addressing is plain
+reviewable YAML in the values cascade rather than an opaque encoded blob.
+
+Object count follows the map, hence rawTemplate.
+*/ -}}
+{{- range $name, $spec := .Values.stack.metallb.config.ipAddressPools }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: metallb.io/v1beta1
+    kind: IPAddressPool
+    metadata:
+      name: {{ $name }}
+      namespace: {{ $.Parameters.namespace }}
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}

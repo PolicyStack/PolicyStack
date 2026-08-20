@@ -1,0 +1,20 @@
+{{- /*
+Copies the `sensor-tls` material that Central generated ON THE HUB down to this secured cluster.
+
+This is the one place in the migration where hub templating stays. It is not configuration - it is a
+runtime secret minted by Central that must be distributed to every secured cluster, so it can never
+be a values file. The braces are escaped so Helm passes them through for ACM to resolve.
+*/ -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sensor-tls
+  namespace: {{ .Parameters.namespace }}
+  labels:
+    certificate_key_name: sensor-cert.pem
+type: Opaque
+data:
+  sensor-cert.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "sensor-tls" "sensor-cert.pem" hub{{ "}}" }}'
+  sensor-key.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "sensor-tls" "sensor-key.pem" hub{{ "}}" }}'
+  ca.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "sensor-tls" "ca.pem" hub{{ "}}" }}'
+  acs-host: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "sensor-tls" "acs-host" hub{{ "}}" }}'

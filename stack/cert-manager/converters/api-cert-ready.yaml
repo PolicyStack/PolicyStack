@@ -1,0 +1,13 @@
+{{- /*
+Inform-only readiness signal: Compliant once the API serving certificate reports Ready. Gives a
+failing or expiring cert a visible NonCompliant status instead of letting it degrade silently.
+*/ -}}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Parameters.certName }}
+  namespace: openshift-config
+status:
+  conditions:
+    - type: Ready
+      status: 'True'

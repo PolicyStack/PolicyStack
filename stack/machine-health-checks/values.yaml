@@ -1,0 +1,61 @@
+stack:
+  # @description: MachineHealthChecks for automatic replacement of unhealthy nodes
+  machineHealthChecks:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Which node roles are health-checked, and how aggressively
+    config:
+      worker:
+        # @desc: Replace unhealthy worker nodes
+        enabled: true
+      infra:
+        # @desc: Replace unhealthy infra nodes
+        enabled: true
+      storage:
+        # @desc: Replace unhealthy storage nodes. Off by default - rebuilding a storage node
+        # @desc: triggers Ceph backfill and is far more disruptive than replacing a worker.
+        enabled: false
+        # @desc: Longer than the default: storage nodes take longer to come back
+        timeout: 600s
+        maxUnhealthy: 1
+        nodeStartupTimeout: 15m
+      default:
+        # @desc: How long a node may be NotReady before it is replaced
+        timeout: 300s
+        # @desc: Stop replacing once this many are unhealthy, to avoid cascading drains
+        maxUnhealthy: 40%
+        nodeStartupTimeout: 10m
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CP Contingency Planning
+      controls:
+        - CP-10 System Recovery and Reconstitution
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "MachineHealthChecks per MachineSet"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: checks
+        enabled: true
+        description: "One MachineHealthCheck per discovered MachineSet"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: Object count depends on how many MachineSets the cluster has
+        rawTemplate: true
+        templateNames:
+          - name: machine-health-checks
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-machine-api

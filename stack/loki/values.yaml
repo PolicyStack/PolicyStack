@@ -1,0 +1,203 @@
+stack:
+  # @description: Loki log storage, the log forwarder and the console logging UI
+  loki:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Optional pieces. Each depends on a different element being present, so they are
+    # @description: switched on independently.
+    toggles:
+      # @desc: Forward cluster logs into Loki. Requires the openshift-logging element.
+      forwarder: false
+      # @desc: Add the Logging view to the console. Requires the cluster-observability element.
+      observability-ui: false
+
+    # @description: Loki sizing and ingestion limits
+    config:
+      # @desc: 1x.demo, 1x.pico, 1x.extra-small, 1x.small or 1x.medium
+      size: 1x.extra-small
+      # @desc: StorageClass for Loki's own PVCs (indexes and caches, not the object store)
+      storageClass: gp3-csi
+      # @desc: Sustained ingestion in MB/s per tenant
+      ingestionRate: 8
+      # @desc: Burst allowance in MB
+      ingestionBurstSize: 16
+      # @desc: How long a query may run before it is cut off
+      queryTimeout: 3m
+      # @desc: Schema start date. Only change this when migrating schema versions.
+      schemaEffectiveDate: '2024-09-22'
+      # @desc: Log types forwarded into Loki: application, infrastructure and/or audit
+      forwardedLogTypes:
+        - infrastructure
+        - application
+      # @desc: ClusterRoles the collector needs to read those log types
+      collectorRoles:
+        - collect-application-logs
+        - collect-infrastructure-logs
+        - collect-audit-logs
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - AU Audit and Accountability
+      controls:
+        - AU-6 Audit Review, Analysis, and Reporting
+        - AU-9 Protection of Audit Information
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Loki operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: Loki stores its chunks in a NooBaa bucket, so it waits for ODF storage to be
+      # @description: usable before the bucket is claimed.
+      - name: stack
+        enabled: true
+        description: "Deploy the LokiStack and its object storage"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+          - name: ready
+            element: openshift-data-foundation
+
+      # @description: The forwarder needs the logging operator's CRDs, which live in a different
+      # @description: element on the same cluster.
+      - name: forwarder
+        enabled: true
+        description: "Forward cluster logs into Loki"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: stack
+          - name: install
+            element: openshift-logging
+
+      # @description: The console plugin is served by the Cluster Observability operator.
+      - name: observability-ui
+        enabled: true
+        description: "Logging view in the OpenShift console"
+        remediationAction: enforce
+        severity: low
+        disabled: false
+        dependencies:
+          - name: forwarder
+          - name: install
+            element: cluster-observability
+
+    operatorPolicies:
+      - name: loki
+        enabled: true
+        description: "Loki operator"
+        displayName: "Loki Operator"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators-redhat
+        operatorGroup:
+          name: openshift-operators-redhat
+        subscription:
+          channel: stable-6.5
+          name: loki-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: bucket
+        enabled: true
+        description: "Object storage bucket and the secret LokiStack reads it through"
+        policyRef: stack
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: loki-bucketclaim
+          - name: loki-bucket-secret
+        enableTemplateParameters: true
+        templateParameters: &lokiParams
+          namespace: openshift-logging
+          stackName: logging-lokistack
+          bucketName: loki-bucket-odf
+          bucketStorageClass: openshift-storage.noobaa.io
+          storageSecret: logging-loki-odf
+          collectorName: collector
+          forwarderName: logging
+
+      - name: lokistack
+        enabled: true
+        description: "LokiStack"
+        policyRef: stack
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: loki
+        # @desc: The bucket secret must exist before LokiStack starts
+        extraDependencies:
+          - name: bucket
+        ignorePending: true
+        templateNames:
+          - name: loki-stack
+        enableTemplateParameters: true
+        templateParameters: *lokiParams
+
+      - name: collector
+        enabled: true
+        description: "Collector ServiceAccount"
+        policyRef: forwarder
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: collector-sa
+        enableTemplateParameters: true
+        templateParameters: *lokiParams
+
+      - name: collector-rbac
+        enabled: true
+        description: "Collector ClusterRoleBindings"
+        policyRef: forwarder
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: One binding per configured collector role
+        rawTemplate: true
+        templateNames:
+          - name: collector-rbac
+        enableTemplateParameters: true
+        templateParameters: *lokiParams
+
+      - name: clusterlogforwarder
+        enabled: true
+        description: "ClusterLogForwarder"
+        policyRef: forwarder
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        extraDependencies:
+          - name: collector-rbac
+        ignorePending: true
+        templateNames:
+          - name: log-forwarder
+        enableTemplateParameters: true
+        templateParameters: *lokiParams
+
+      - name: uiplugin
+        enabled: true
+        description: "Console logging UI plugin"
+        policyRef: observability-ui
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: logging-ui-plugin
+        enableTemplateParameters: true
+        templateParameters: *lokiParams

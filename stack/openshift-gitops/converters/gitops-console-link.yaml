@@ -1,0 +1,13 @@
+{{- /* Console shortcut to ArgoCD. The route host is only known on the managed cluster. */ -}}
+{{- $cfg := .Values.stack.openshiftGitops.config }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: {{ .Parameters.argoName }}
+spec:
+  location: ApplicationMenu
+  text: {{ .Parameters.consoleText | quote }}
+  href: 'https://{{ "{{" }} (lookup "route.openshift.io/v1" "Route" "{{ $cfg.namespace }}" "{{ .Parameters.argoName }}-server").spec.host {{ "}}" }}'
+  applicationMenu:
+    section: Red Hat applications
+    imageURL: {{ .Parameters.imageUrl }}

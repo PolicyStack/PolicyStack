@@ -1,0 +1,18 @@
+{{- /*
+Inform-only readiness gate: the LVMCluster must report Ready. A status can only be observed, never
+enforced, so this policy is inform even though the element's others are enforce.
+*/ -}}
+{{- $cfg := .Values.stack.lvm.config }}
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  ready: true
+  state: Ready
+  deviceClassStatuses:
+    - name: {{ $cfg.deviceClassName }}
+      nodeStatus:
+        - name: {{ $cfg.deviceClassName }}
+          status: Ready

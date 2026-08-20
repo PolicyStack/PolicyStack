@@ -1,0 +1,12 @@
+{{- /* Console shortcut to Quay. The route host is only known on the managed cluster. */ -}}
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: quay
+spec:
+  location: ApplicationMenu
+  text: {{ .Parameters.consoleText | quote }}
+  href: 'https://{{ "{{" }} (lookup "route.openshift.io/v1" "Route" "{{ .Parameters.namespace }}" "{{ .Parameters.routeName }}").spec.host {{ "}}" }}'
+  applicationMenu:
+    section: Red Hat applications
+    imageURL: {{ .Parameters.consoleImageUrl }}

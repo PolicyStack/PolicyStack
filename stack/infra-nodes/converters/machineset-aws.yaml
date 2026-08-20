@@ -1,0 +1,103 @@
+{{- /*
+Creates one MachineSet per availability zone for this node role on AWS, cloning the cluster's worker
+MachineSet for everything that is cluster-specific: AMI, subnet, security groups, tags, credentials
+and user-data. That cloning can only happen on the managed cluster, so it stays ACM templating.
+
+What comes from values: the replica count, which zones to use (empty means "wherever the workers
+are"), and the instance/volume sizing.
+
+Portable across node elements - the role comes from .Parameters and the config block is resolved
+from the chart name, so this file is byte-identical in infra-nodes and storage-nodes.
+*/ -}}
+{{- $cfg := (index .Values.stack (.Chart.Name | replace "-" " " | title | nospace | untitle)).config }}
+{{ "{{" }}- $role := "{{ .Parameters.role }}" {{ "}}" }}
+{{ "{{" }}- $zonesWanted := (list{{ range $z := $cfg.zones }} {{ $z | quote }}{{ end }}) {{ "}}" }}
+{{ "{{" }}- $infraId := (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}
+{{ "{{" }}- $workerMs := dict {{ "}}" }}
+{{ "{{" }}- range (lookup "machine.openshift.io/v1beta1" "MachineSet" "{{ .Parameters.namespace }}" "").items {{ "}}" }}
+{{ "{{" }}-   if hasPrefix (printf "%s-worker" $infraId) .metadata.name {{ "}}" }}{{ "{{" }}- $workerMs = . {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if $workerMs {{ "}}" }}
+{{ "{{" }}- $pv := $workerMs.spec.template.spec.providerSpec.value {{ "}}" }}
+{{ "{{" }}- $workerSubnet := (index (index $pv.subnet.filters 0).values 0) {{ "}}" }}
+{{ "{{" }}- $ebs := (index $pv.blockDevices 0).ebs {{ "}}" }}
+{{ "{{" }}- range $zone := ternary (list $pv.placement.availabilityZone) $zonesWanted (eq 0 (len $zonesWanted)) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+      name: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+    spec:
+      deletePolicy: Oldest
+      replicas: {{ $cfg.replicas }}
+      selector:
+        matchLabels:
+          machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+          machine.openshift.io/cluster-api-machineset: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+      template:
+        metadata:
+          labels:
+            machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+            machine.openshift.io/cluster-api-machine-role: {{ "{{" }} $role {{ "}}" }}
+            machine.openshift.io/cluster-api-machine-type: {{ "{{" }} $role {{ "}}" }}
+            machine.openshift.io/cluster-api-machineset: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+        spec:
+          metadata:
+            labels:
+              {{- range $k, $v := .Parameters.nodeLabels }}
+              {{ $k }}: {{ $v | quote }}
+              {{- end }}
+          taints:
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+              effect: NoSchedule
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+              effect: NoExecute
+          providerSpec:
+            value:
+              kind: AWSMachineProviderConfig
+              deviceIndex: 0
+              instanceType: {{ if $cfg.instanceType }}{{ $cfg.instanceType }}{{ else }}{{ "{{" }} $pv.instanceType {{ "}}" }}{{ end }}
+              ami:
+                id: {{ "{{" }} $pv.ami.id {{ "}}" }}
+              userDataSecret:
+                name: {{ "{{" }} $pv.userDataSecret.name {{ "}}" }}
+              credentialsSecret:
+                name: {{ "{{" }} $pv.credentialsSecret.name {{ "}}" }}
+              placement:
+                availabilityZone: {{ "{{" }} $zone {{ "}}" }}
+                region: {{ "{{" }} $pv.placement.region {{ "}}" }}
+              blockDevices:
+                - ebs:
+                    encrypted: {{ "{{" }} $ebs.encrypted {{ "}}" }}
+                    iops: {{ "{{" }} $ebs.iops {{ "}}" }}
+                    volumeType: {{ "{{" }} $ebs.volumeType {{ "}}" }}
+                    volumeSize: {{ if $cfg.volumeSize }}{{ $cfg.volumeSize }}{{ else }}{{ "{{" }} $ebs.volumeSize {{ "}}" }}{{ end }}
+                    {{ "{{" }}- if $ebs.kmsKey.arn {{ "}}" }}
+                    kmsKey:
+                      arn: {{ "{{" }} $ebs.kmsKey.arn {{ "}}" }}
+                    {{ "{{" }}- end {{ "}}" }}
+              securityGroups:
+                - filters:
+                    - name: 'tag:Name'
+                      values:
+                        - {{ "{{" }} (index (index $pv.securityGroups 0).filters 0).values 0 {{ "}}" }}
+              subnet:
+                filters:
+                  - name: 'tag:Name'
+                    values:
+                      {{ "{{" }}- if contains "subnet-private" $workerSubnet {{ "}}" }}
+                      - {{ "{{" }} $infraId {{ "}}" }}-subnet-private-{{ "{{" }} $zone {{ "}}" }}
+                      {{ "{{" }}- else {{ "}}" }}
+                      - {{ "{{" }} $infraId {{ "}}" }}-private-{{ "{{" }} $zone {{ "}}" }}
+                      {{ "{{" }}- end {{ "}}" }}
+              tags:
+                {{ "{{" }}- range $tag := $pv.tags {{ "}}" }}
+                - name: {{ "{{" }} $tag.name {{ "}}" }}
+                  value: {{ "{{" }} $tag.value {{ "}}" }}
+                {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

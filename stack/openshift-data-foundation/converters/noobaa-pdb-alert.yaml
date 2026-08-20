@@ -1,0 +1,17 @@
+{{- /*
+Suppress PodDisruptionBudgetAtLimit for the NooBaa primary. It runs as a single replica by design,
+so the alert fires permanently and drowns out real ones.
+*/ -}}
+apiVersion: monitoring.openshift.io/v1
+kind: AlertRelabelConfig
+metadata:
+  name: suppress-noobaa-pdb-at-limit
+  namespace: openshift-monitoring
+spec:
+  configs:
+    - sourceLabels:
+        - alertname
+        - namespace
+        - poddisruptionbudget
+      regex: PodDisruptionBudgetAtLimit;{{ .Parameters.namespace }};noobaa-db-pg-cluster-primary
+      action: Drop

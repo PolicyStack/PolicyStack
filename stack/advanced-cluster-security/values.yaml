@@ -1,0 +1,305 @@
+stack:
+  # @description: "Red Hat Advanced Cluster Security: Central, secured clusters and security policies"
+  advancedClusterSecurity:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Which ACS role this cluster plays. The values cascade decides - turn `central`
+    # @description: on in values/acm/*.yaml and `secured` on wherever ACS agents should run.
+    toggles:
+      # @desc: Run Central here (the ACS hub). Exactly one cluster should have this. Also brings
+      # @desc: the declarative auth config, security policies and the init-bundle Job.
+      central: false
+      # @desc: Run the secured-cluster agents here. Usually every cluster, including the hub.
+      secured: false
+      # @desc: Publish a console link to Central. Only meaningful where Central runs.
+      console: true
+
+    # @description: ACS configuration
+    config:
+      # @desc: Scanner V4 component state: Enabled, Default or Disabled
+      scannerV4: Enabled
+      # @desc: Central egress posture: Online or Offline
+      egressConnectivity: Online
+      # @desc: Let the operator manage its NetworkPolicies: Enabled or Disabled. Empty leaves it unset.
+      networkPolicies: ""
+      # @desc: Wire ACS into OpenShift monitoring. Leave unset to use the operator default.
+      monitoring: null
+      # @description: Central scanner autoscaling
+      scanner:
+        minReplicas: 2
+        maxReplicas: 5
+        replicas: 3
+      # @description: Authentication wired in declaratively at Central startup
+      auth:
+        # @desc: Auth provider to declare. Empty disables declarative auth config entirely.
+        provider: openshift
+        # @desc: Role granted to any authenticated user
+        minimumRole: None
+        # @desc: OpenShift group mapped to the ACS Admin role
+        adminGroup: cluster-admins
+      # @description: Admission control behaviour on secured clusters
+      admissionControl:
+        # @desc: Enforce on create/update. Off by default: it sits in the admission path.
+        enabled: false
+        # @desc: ScanIfMissing, ScanInline or DoNotScanInline
+        contactImageScanners: ScanIfMissing
+        # @desc: What happens if the admission webhook is unreachable: Ignore or Fail
+        failurePolicy: Ignore
+      # @description: Node collector
+      collector:
+        # @desc: CORE_BPF, EBPF or NO_COLLECTION
+        collection: CORE_BPF
+      # @desc: Image used by the init-bundle Job
+      bootstrapImage: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      # @description: SecurityPolicy objects, keyed by name. As values rather than built-ins they can be edited, extended or replaced per cluster.
+      securityPolicies:
+        no-privilege-escalation:
+          policyName: No Privilege Escalation
+          categories:
+          - Privileges
+          severity: HIGH_SEVERITY
+          disabled: false
+          lifecycleStages:
+          - DEPLOY
+          policySections:
+          - sectionName: Rule 1
+            policyGroups:
+            - fieldName: Allow Privilege Escalation
+              values:
+              - value: 'true'
+          enforcementActions: []
+        no-root-user-containers:
+          policyName: No Root User Containers
+          categories:
+          - Privileges
+          severity: HIGH_SEVERITY
+          disabled: false
+          lifecycleStages:
+          - DEPLOY
+          policySections:
+          - sectionName: Rule 1
+            policyGroups:
+            - fieldName: Run As User
+              values:
+              - value: '0'
+          enforcementActions: []
+        no-shell-spawning:
+          policyName: No Shell Spawning at Runtime
+          categories:
+          - System Modification
+          severity: HIGH_SEVERITY
+          disabled: false
+          lifecycleStages:
+          - RUNTIME
+          eventSource: DEPLOYMENT_EVENT
+          policySections:
+          - sectionName: Rule 1
+            policyGroups:
+            - fieldName: Process Name
+              values:
+              - value: /bin/sh
+              - value: /bin/bash
+              - value: /bin/dash
+          enforcementActions: []
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - SI System and Information Integrity
+        - CM Configuration Management
+      controls:
+        - SI-3 Malicious Code Protection
+        - CM-6 Configuration Settings
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the ACS operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: central
+        enabled: true
+        description: "Central, its declarative auth config and security policies"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: secured
+        enabled: true
+        description: "Secured-cluster agents and their TLS material"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+        dependencies:
+          - name: install
+
+    operatorPolicies:
+      - name: acs
+        enabled: true
+        description: "Advanced Cluster Security operator"
+        displayName: "Advanced Cluster Security for Kubernetes"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: rhacs-operator
+        operatorGroup:
+          name: rhacs-operator
+        subscription:
+          channel: stable
+          name: rhacs-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      # @description: Central itself, plus the config it reads at startup
+      - name: central
+        enabled: true
+        description: "Central and its declarative configuration"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        waitForOperator: acs
+        ignorePending: true
+        templateNames:
+          - name: acs-namespace
+          - name: acs-declarative-config
+          - name: acs-central
+        enableTemplateParameters: true
+        templateParameters: &acsParams
+          namespace: stackrox
+          hubNamespace: stackrox
+          centralName: stackrox-central-services
+          securedName: stackrox-secured-cluster-services
+          declarativeConfigMap: acs-declarative-configs
+          dbClaimName: stackrox-db
+          bootstrapName: create-cluster-init
+          jobName: create-cluster-init-bundle-v2
+          imageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg
+
+      - name: central-ready
+        enabled: true
+        description: "Central readiness"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: acs-central-ready
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      - name: policies
+        enabled: true
+        description: "SecurityPolicy objects"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: One object per entry in config.securityPolicies
+        rawTemplate: true
+        extraDependencies:
+          - name: central-ready
+        ignorePending: true
+        templateNames:
+          - name: acs-security-policies
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      # @description: RBAC and the Job that mints the cluster-init bundle
+      - name: bootstrap
+        enabled: true
+        description: "Init-bundle RBAC and Job"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        # @desc: The Job talks to Central's API, so it cannot run before Central is up
+        extraDependencies:
+          - name: central-ready
+        ignorePending: true
+        templateNames:
+          - name: acs-bootstrap-sa
+          - name: acs-bootstrap-role
+          - name: acs-bootstrap-rolebinding
+          - name: acs-init-bundle-job
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      - name: bundle-ready
+        enabled: true
+        description: "Init-bundle Job completion"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: acs-bundle-ready
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      # @description: TLS material copied down from the hub, then the SecuredCluster itself
+      - name: tls
+        enabled: true
+        description: "Sensor, collector and admission-control TLS from the hub"
+        policyRef: secured
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        templateNames:
+          - name: acs-namespace
+          - name: acs-sync-sensor
+          - name: acs-sync-collector
+          - name: acs-sync-admission-control
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      - name: agents
+        enabled: true
+        description: "SecuredCluster agents"
+        policyRef: secured
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        waitForOperator: acs
+        # @desc: The TLS secrets must exist before the agents can reach Central
+        extraDependencies:
+          - name: tls
+        ignorePending: true
+        templateNames:
+          - name: acs-secured-cluster
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      - name: agents-ready
+        enabled: true
+        description: "SecuredCluster readiness"
+        policyRef: secured
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: acs-secured-ready
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      - name: console
+        enabled: true
+        description: "Console link to Central"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: acs-console-link
+        enableTemplateParameters: true
+        templateParameters: *acsParams

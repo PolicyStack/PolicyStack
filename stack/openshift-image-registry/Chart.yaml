@@ -1,0 +1,10 @@
+apiVersion: v2
+name: openshift-image-registry
+description: "Internal image registry storage and configuration"
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: policy-library
+    version: "1.3.0"
+    repository: "file://../../../policystack-chart/charts/policy-library"

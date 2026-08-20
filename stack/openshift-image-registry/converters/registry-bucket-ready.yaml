@@ -1,0 +1,8 @@
+{{- /* Inform-only: the bucket has actually been provisioned. */ -}}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ .Parameters.claimName }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  phase: Bound

@@ -1,0 +1,153 @@
+stack:
+  # @description: Service Mesh 3 in ambient mode, with Kiali, OpenTelemetry and Tempo
+  servicemesh3Ambient:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Tracing is a large add-on (Tempo plus an ODF bucket), so it is separable from
+    # @description: the mesh itself.
+    toggles:
+      # @desc: Deploy Tempo and wire the mesh and Kiali to it. Requires ODF on the same cluster.
+      tracing: false
+
+    # @description: Mesh configuration
+    config:
+      # @desc: Istio version the sail operator installs
+      istioVersion: v1.28-latest
+      # @desc: Resource requests for istiod
+      pilotRequests:
+        cpu: 100m
+        memory: 256Mi
+      tracing:
+        # @desc: Export mesh traces and show them in Kiali. Keep in step with the tracing toggle.
+        enabled: false
+        # @desc: OTel collector the mesh exports spans to
+        collectorService: otel-collector.istio-system.svc.cluster.local
+        # @desc: Tempo query frontend Kiali reads traces from
+        tempoQueryUrl: http://tempo-servicemesh-query-frontend.tracing-system.svc.cluster.local:3200
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - SC System and Communications Protection
+      controls:
+        - SC-8 Transmission Confidentiality and Integrity
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      # @description: The mesh needs the sail operator's CRDs and Kiali's, both of which live in
+      # @description: other elements on the same cluster.
+      - name: mesh
+        enabled: true
+        description: "Service Mesh 3 control plane, CNI and ztunnel"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+            element: servicemesh3operator
+          - name: install
+            element: kiali
+
+      # @description: Tracing pulls in Tempo (its own element) and an ODF bucket.
+      - name: tracing
+        enabled: true
+        description: "Tempo tracing backend for the mesh"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: mesh
+          - name: install
+            element: tempo
+          - name: install
+            element: opentelemetry
+          - name: ready
+            element: openshift-data-foundation
+
+    configPolicies:
+      - name: namespaces
+        enabled: true
+        description: "Mesh namespaces"
+        policyRef: mesh
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: namespace-istio-system
+          - name: namespace-istio-cni
+          - name: namespace-ztunnel
+          - name: network-cluster
+        enableTemplateParameters: true
+        templateParameters: &meshParams
+          tracingNamespace: tracing-system
+          tempoBucket: tempo-bucket-odf
+
+      - name: control-plane
+        enabled: true
+        description: "IstioCNI, Istio and ztunnel"
+        policyRef: mesh
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: The namespaces must exist before the operands land in them
+        extraDependencies:
+          - name: namespaces
+        ignorePending: true
+        templateNames:
+          - name: istiocni-default
+          - name: istio-default
+          - name: ztunnel-default
+        enableTemplateParameters: true
+        templateParameters: *meshParams
+
+      - name: observability
+        enabled: true
+        description: "Kiali, telemetry and monitors"
+        policyRef: mesh
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        extraDependencies:
+          - name: control-plane
+        ignorePending: true
+        templateNames:
+          - name: kiali
+          - name: telemetry-enable-prometheus-metrics
+          - name: servicemonitor-istiod-monitor
+          - name: podmonitor-istio-ztunnel-monitor
+          - name: clusterrolebinding-kiali-monitoring-rbac
+          - name: opentelemetrycollector-otel
+        enableTemplateParameters: true
+        templateParameters: *meshParams
+
+      - name: tempo-storage
+        enabled: true
+        description: "Tempo namespace, bucket and credentials"
+        policyRef: tracing
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: namespace-tracing-system
+          - name: objectbucketclaim-tempo-bucket-odf
+          - name: secret-tempo-s3-secret
+          - name: configmap-tempo-s3-ca-bundle
+        enableTemplateParameters: true
+        templateParameters: *meshParams
+
+      - name: tempostack
+        enabled: true
+        description: "TempoStack"
+        policyRef: tracing
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        extraDependencies:
+          - name: tempo-storage
+        ignorePending: true
+        templateNames:
+          - name: tempostack-tempo-servicemesh
+        enableTemplateParameters: true
+        templateParameters: *meshParams

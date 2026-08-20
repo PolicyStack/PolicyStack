@@ -1,0 +1,42 @@
+{{- /*
+The image registry Config. Which storage backend to use is a value; where that backend actually
+lives - the NooBaa route host, the bucket name - is discovered on the managed cluster.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftImageRegistry.config }}
+{{- if eq $cfg.storageType "s3" }}
+{{ "{{" }}- $noobaaRoute := (lookup "route.openshift.io/v1" "Route" "openshift-storage" "s3") | default dict {{ "}}" }}
+{{ "{{" }}- $noobaaHost := (index ($noobaaRoute.spec | default dict) "host" | default "") {{ "}}" }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: imageregistry.operator.openshift.io/v1
+    kind: Config
+    metadata:
+      name: cluster
+    spec:
+      managementState: {{ $cfg.managementState }}
+      replicas: {{ $cfg.replicas }}
+      rolloutStrategy: {{ $cfg.rolloutStrategy }}
+      logLevel: Normal
+      operatorLogLevel: Normal
+      requests:
+        read:
+          maxWaitInQueue: 0s
+        write:
+          maxWaitInQueue: 0s
+      storage:
+        {{- if eq $cfg.storageType "pvc" }}
+        managementState: Managed
+        pvc:
+          claim: {{ .Parameters.claimName }}
+        {{- else if eq $cfg.storageType "s3" }}
+        managementState: Unmanaged
+        s3:
+          region: {{ $cfg.s3.region }}
+          virtualHostedStyle: false
+          encrypt: false
+          bucket: {{ "{{" }} fromConfigMap "{{ .Parameters.namespace }}" "{{ .Parameters.claimName }}" "BUCKET_NAME" {{ "}}" }}
+          regionEndpoint: '{{ "{{" }} if not (empty $noobaaHost) {{ "}}" }}https://{{ "{{" }} $noobaaHost {{ "}}" }}{{ "{{" }} else {{ "}}" }}https://{{ "{{" }} fromConfigMap "{{ .Parameters.namespace }}" "{{ .Parameters.claimName }}" "BUCKET_HOST" {{ "}}" }}:{{ "{{" }} fromConfigMap "{{ .Parameters.namespace }}" "{{ .Parameters.claimName }}" "BUCKET_PORT" {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
+          trustedCA:
+            name: {{ .Parameters.trustBundleName }}
+        {{- end }}

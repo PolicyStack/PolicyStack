@@ -4,24 +4,103 @@ stack:
     # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
+    # @description: Sub-feature switches. These override an entry's `enabled` by name and are a map,
+    # @description: so a cluster values file can turn one on without restating the policies list.
+    toggles:
+      # @desc: Cluster CA issuer. On by default - it is the default TLS issuer for the cluster.
+      ca: true
+      # @desc: Replace the external API serving cert (api.<domain>). Additive and SNI-matched.
+      api-cert: false
+      # @desc: Replace the default Ingress wildcard cert (*.apps.<domain>). Higher blast radius.
+      ingress-cert: false
+
+    # @description: Tunables intended to be overridden per cluster, datacenter, or environment.
+    config:
+      # @desc: Name of the CA Certificate and the ClusterIssuer that signs from it
+      caName: policystack-ca
+      # @desc: Signer for the CA. Leave name empty for a self-signed root; point it at your own
+      # @desc: Issuer/ClusterIssuer to make the CA an intermediate instead.
+      caIssuer:
+        name: ""
+        kind: ClusterIssuer
+        group: cert-manager.io
+      # @desc: CA lifetime. Roots are long-lived; the serving certs they sign rotate.
+      caDuration: 17520h0m0s
+      # @desc: Renew the CA this far before expiry
+      caRenewBefore: 2160h0m0s
+      # @desc: Lifetime of the serving certificates
+      leafDuration: 8760h
+      # @desc: Renew serving certificates this far before expiry
+      leafRenewBefore: 720h
+      # @desc: Private key algorithm for every certificate issued here
+      keyAlgorithm: ECDSA
+      # @desc: P-384 is FIPS 140-approved and suits FedRAMP High
+      keySize: 384
+      # @description: API serving certificate settings
+      apiCert:
+        # @desc: Additional SANs beyond api.<domain>
+        extraSANs: []
+        # @desc: Override the issuer; defaults to the cluster CA above
+        issuer: {}
+      # @description: Ingress wildcard certificate settings
+      ingressCert:
+        # @desc: Additional SANs beyond *.apps.<domain> and apps.<domain>
+        extraSANs: []
+        # @desc: Override the issuer; defaults to the cluster CA above
+        issuer: {}
+
     # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
+        - SC System and Communications Protection
       controls:
         - CM-2 Baseline Configuration
+        - SC-12 Cryptographic Key Establishment and Management
       standards:
         - NIST SP 800-53
 
-    # @description: Parent policy grouping the cert-manager install resources
+    # @description: Parent policies. Each sub-feature is its own policy so it can be ordered and
+    # @description: toggled independently.
     policies:
-      - name: cert-manager-install
+      # @description: Install and manage the cert-manager Operator
+      - name: install
         enabled: true
-        namespace: open-cluster-management
         description: "Install and manage the cert-manager Operator"
         remediationAction: enforce
         severity: medium
         disabled: false
+
+      # @description: Cluster CA issuer, signing every certificate below
+      - name: ca
+        enabled: true
+        description: "Cluster CA ClusterIssuer used as the default TLS issuer"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        # @desc: The CRDs must exist before any cert-manager resource can be applied
+        dependencies:
+          - name: install
+
+      # @description: cert-manager-managed serving certificate for the external API endpoint
+      - name: api-cert
+        enabled: true
+        description: "cert-manager-managed API server serving certificate"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: ca
+
+      # @description: cert-manager-managed default Ingress wildcard certificate
+      - name: ingress-cert
+        enabled: true
+        description: "cert-manager-managed default Ingress wildcard certificate"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: ca
 
     # @description: OperatorPolicy installing the cert-manager subscription
     operatorPolicies:
@@ -29,7 +108,7 @@ stack:
         enabled: true
         description: "cert-manager Operator (Red Hat build)"
         displayName: "cert-manager Operator for Red Hat OpenShift"
-        policyRef: cert-manager-install
+        policyRef: install
         severity: medium
         remediationAction: enforce
         complianceType: musthave
@@ -45,12 +124,13 @@ stack:
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
 
-    # @description: Adds the cluster-monitoring label to the operator namespace
+    # @description: Configuration policies
     configPolicies:
-      - name: cert-manager-ns-monitoring
+      # @description: Adds the cluster-monitoring label to the operator namespace
+      - name: ns-monitoring
         enabled: true
         description: "Adds openshift.io/cluster-monitoring label to operator namespace"
-        policyRef: cert-manager-install
+        policyRef: install
         complianceType: musthave
         remediationAction: enforce
         severity: low
@@ -62,3 +142,80 @@ stack:
         enableTemplateParameters: true
         templateParameters:
           namespace: cert-manager-operator
+
+      # @description: The CA Certificate and ClusterIssuer, plus a self-signed root when no
+      # @description: external signer is configured
+      - name: ca-issuer
+        enabled: true
+        description: "Cluster CA Certificate and ClusterIssuer"
+        policyRef: ca
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: Object count varies with whether a self-signed root is needed
+        rawTemplate: true
+        templateNames:
+          - name: ca-issuer
+        enableTemplateParameters: true
+        templateParameters:
+          caName: policystack-ca
+          # @desc: cert-manager's cluster-resource-namespace; the CA secret must live here
+          caNamespace: cert-manager
+
+      # @description: API serving certificate, and the APIServer patch once it is Ready
+      - name: api-certificate
+        enabled: true
+        description: "API server serving certificate (additive, SNI-matched)"
+        policyRef: api-cert
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: api-certificate
+        enableTemplateParameters: true
+        templateParameters:
+          certName: cert-manager-api-cert
+
+      # @description: Inform-only readiness signal for the API certificate
+      - name: api-ready
+        enabled: true
+        description: "Reports NonCompliant while the API certificate is not Ready"
+        policyRef: api-cert
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: api-cert-ready
+        enableTemplateParameters: true
+        templateParameters:
+          certName: cert-manager-api-cert
+
+      # @description: Ingress wildcard certificate, and the IngressController patch once Ready
+      - name: ingress-certificate
+        enabled: true
+        description: "Default Ingress wildcard certificate (replaces *.apps)"
+        policyRef: ingress-cert
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: ingress-certificate
+        enableTemplateParameters: true
+        templateParameters:
+          certName: cert-manager-ingress-cert
+
+      # @description: Inform-only readiness signal for the Ingress certificate
+      - name: ingress-ready
+        enabled: true
+        description: "Reports NonCompliant while the Ingress certificate is not Ready"
+        policyRef: ingress-cert
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: ingress-cert-ready
+        enableTemplateParameters: true
+        templateParameters:
+          certName: cert-manager-ingress-cert

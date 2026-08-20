@@ -1,0 +1,18 @@
+{{- /* Inform-only: the SecuredCluster has deployed and initialised. */ -}}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: SecuredCluster
+metadata:
+  name: {{ .Parameters.securedName }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  conditions:
+    - type: Deployed
+      status: 'True'
+    - type: Initialized
+      status: 'True'
+    - type: Irreconcilable
+      status: 'False'
+    - type: ProxyConfigFailed
+      status: 'False'
+    - type: ReleaseFailed
+      status: 'False'

@@ -1,0 +1,8 @@
+{{- /* Empty ConfigMap; the network operator injects the cluster's trusted CA bundle. */ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Parameters.trustedCaName }}
+  namespace: {{ .Parameters.namespace }}
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"

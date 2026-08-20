@@ -1,0 +1,73 @@
+stack:
+  # @description: Opinionated cluster remediations applied as policy
+  manualRemediations:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Each remediation is independently switchable per cluster
+    toggles:
+      # @desc: Restrict the registries the cluster may pull and import from
+      registries: true
+      # @desc: Remove the Samples Operator and its imagestreams
+      remove-samples: true
+
+    # @description: Tunables intended to be overridden per cluster or environment
+    config:
+      # @desc: Registries permitted for `oc import-image`
+      allowedRegistriesForImport:
+        - domainName: quay.io
+          insecure: false
+        - domainName: registry.redhat.io
+          insecure: false
+      # @desc: Registries the cluster may pull from at runtime
+      allowedRegistries:
+        - quay.io
+        - registry.redhat.io
+        - image-registry.openshift-image-registry.svc:5000
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+        - SI System and Information Integrity
+      controls:
+        - CM-2 Baseline Configuration
+        - SI-7 Software, Firmware, and Information Integrity
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: registries
+        enabled: true
+        description: "Restrict image registries the cluster may use"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+      - name: remove-samples
+        enabled: true
+        description: "Remove the Samples Operator"
+        remediationAction: enforce
+        severity: low
+        disabled: false
+
+    configPolicies:
+      - name: allowlist
+        enabled: true
+        description: "Image registry allowlist"
+        policyRef: registries
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        templateNames:
+          - name: allowed-image-registries
+
+      - name: samples
+        enabled: true
+        description: "Samples Operator management state"
+        policyRef: remove-samples
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: remove-samples-operator

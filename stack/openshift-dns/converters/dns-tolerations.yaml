@@ -1,0 +1,12 @@
+{{- /*
+Let the DNS daemonset schedule onto every node, including tainted ones (infra, storage, master).
+Without this, pods on tainted nodes lose cluster DNS.
+*/ -}}
+apiVersion: operator.openshift.io/v1
+kind: DNS
+metadata:
+  name: default
+spec:
+  nodePlacement:
+    tolerations:
+      {{- toYaml .Values.stack.openshiftDns.config.tolerations | nindent 6 }}

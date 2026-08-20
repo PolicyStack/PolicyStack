@@ -1,0 +1,60 @@
+{{- /*
+Observability: the pull secret, the Thanos object-storage config, and the MultiClusterObservability
+itself.
+
+The pull secret and the bucket credentials are generated on the managed cluster, so those reads stay
+ACM templating; the sizing is values.
+*/ -}}
+{{- $o := .Values.stack.advancedClusterManagement.config.observability }}
+{{- $ns := .Parameters.observabilityNamespace }}
+{{- $bucket := .Parameters.observabilityBucket }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: multiclusterhub-operator-pull-secret
+      namespace: {{ $ns }}
+    type: kubernetes.io/dockerconfigjson
+    data:
+      .dockerconfigjson: '{{ "{{" }} fromSecret "openshift-config" "pull-secret" ".dockerconfigjson" {{ "}}" }}'
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: thanos-object-storage
+      namespace: {{ $ns }}
+    type: Opaque
+    stringData:
+      thanos.yaml: |
+        type: s3
+        config:
+          bucket: {{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_NAME" {{ "}}" }}
+          endpoint: '{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_HOST" {{ "}}" }}:{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_PORT" {{ "}}" }}'
+          insecure: false
+          access_key: {{ "{{" }} fromSecret "{{ $ns }}" "{{ $bucket }}" "AWS_ACCESS_KEY_ID" | base64dec {{ "}}" }}
+          secret_key: {{ "{{" }} fromSecret "{{ $ns }}" "{{ $bucket }}" "AWS_SECRET_ACCESS_KEY" | base64dec {{ "}}" }}
+          http_config:
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: observability.open-cluster-management.io/v1beta2
+    kind: MultiClusterObservability
+    metadata:
+      name: observability
+    spec:
+      observabilityAddonSpec:
+        enableMetrics: {{ $o.enableMetrics }}
+        interval: {{ $o.interval }}
+      storageConfig:
+        metricObjectStorage:
+          name: thanos-object-storage
+          key: thanos.yaml
+        storageClass: {{ $o.storageClass }}
+        alertmanagerStorageSize: {{ $o.alertmanagerStorageSize }}
+        compactStorageSize: {{ $o.compactStorageSize }}
+        receiveStorageSize: {{ $o.receiveStorageSize }}
+        ruleStorageSize: {{ $o.ruleStorageSize }}
+        storeStorageSize: {{ $o.storeStorageSize }}

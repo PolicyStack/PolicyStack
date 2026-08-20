@@ -1,0 +1,58 @@
+{{- /*
+The platform ArgoCD instance.
+
+All the sizing resolves from values. There is deliberately no PolicyGenerator init-container:
+PolicyStack renders with plain Helm and needs no CMP sidecar.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftGitops.config }}
+{{- $r := $cfg.resources }}
+apiVersion: argoproj.io/v1beta1
+kind: ArgoCD
+metadata:
+  name: {{ .Parameters.argoName }}
+  namespace: {{ $cfg.namespace }}
+spec:
+  disableAdmin: {{ $cfg.disableAdmin }}
+  applicationInstanceLabelKey: argocd.argoproj.io/instance
+  resourceTrackingMethod: annotation+label
+  kustomizeBuildOptions: {{ $cfg.kustomizeBuildOptions | quote }}
+  monitoring:
+    enabled: {{ $cfg.monitoring }}
+  sso:
+    provider: dex
+    dex:
+      openShiftOAuth: true
+      resources: {{ toYaml $r.dex | nindent 8 }}
+  rbac:
+    defaultPolicy: ''
+    scopes: '[groups]'
+    policy: |
+      {{- range $p := $cfg.rbacPolicies }}
+      {{ $p }}
+      {{- end }}
+  server:
+    route:
+      enabled: true
+    resources: {{ toYaml $r.server | nindent 6 }}
+    {{- if $cfg.serverAutoscale.enabled }}
+    autoscale:
+      enabled: true
+      hpa:
+        maxReplicas: {{ $cfg.serverAutoscale.maxReplicas }}
+        targetCPUUtilizationPercentage: {{ $cfg.serverAutoscale.targetCPUUtilizationPercentage }}
+        scaleTargetRef:
+          apiVersion: apps/v1
+          kind: deployment
+          name: {{ .Parameters.argoName }}-server
+    {{- end }}
+  repo:
+    resources: {{ toYaml $r.repo | nindent 6 }}
+  controller:
+    resources: {{ toYaml $r.controller | nindent 6 }}
+  applicationSet:
+    resources: {{ toYaml $r.applicationSet | nindent 6 }}
+  redis:
+    resources: {{ toYaml $r.redis | nindent 6 }}
+  ha:
+    enabled: {{ $cfg.ha.enabled }}
+    resources: {{ toYaml $r.ha | nindent 6 }}

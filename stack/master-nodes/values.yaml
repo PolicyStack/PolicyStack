@@ -1,0 +1,54 @@
+stack:
+  # @description: Kubelet tuning for control-plane nodes
+  masterNodes:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Kubelet reservations. These size the control plane, so they are expected to
+    # @description: differ per cluster and live here rather than in templateParameters.
+    config:
+      # @desc: Maximum pods per node
+      maxPods: 250
+      # @desc: Memory reserved for the OS
+      systemReservedMemory: 3Gi
+      # @desc: CPU reserved for the OS
+      systemReservedCpu: 500m
+      # @desc: Memory reserved for kubelet and the container runtime
+      kubeReservedMemory: 1536Mi
+      # @desc: CPU reserved for kubelet and the container runtime
+      kubeReservedCpu: 500m
+      # @desc: Hard eviction threshold on available memory
+      evictionMemory: 500Mi
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-6 Configuration Settings
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "Control-plane kubelet configuration"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: kubelet
+        enabled: true
+        description: "KubeletConfig for the master pool"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: podsPerCore is derived from the node's real CPU count on the managed cluster
+        rawTemplate: true
+        templateNames:
+          - name: node-kubelet-config
+        enableTemplateParameters: true
+        templateParameters:
+          role: master

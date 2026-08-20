@@ -1,0 +1,62 @@
+stack:
+  # @description: Red Hat Developer Hub (Backstage) internal developer portal
+  developerHub:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the operator install
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage Red Hat Developer Hub"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the subscription
+    operatorPolicies:
+      - name: rhdh
+        enabled: true
+        description: "Red Hat Developer Hub (Backstage) internal developer portal"
+        # @desc: Must match the CSV displayName so the generated status check can find it
+        displayName: "Red Hat Developer Hub"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: rhdh-operator
+        subscription:
+          channel: fast-1.9
+          name: rhdh
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        # @desc: Pin upgrades by listing approved CSVs under `versions:` instead of changing this
+        upgradeApproval: Automatic
+
+    # @description: Configuration policies
+    configPolicies:
+      # @description: Adds the cluster-monitoring label so the operator's metrics are scraped
+      - name: ns-monitoring
+        enabled: true
+        description: "Adds openshift.io/cluster-monitoring label to the operator namespace"
+        policyRef: install
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        evaluationInterval:
+          compliant: "10m"
+          noncompliant: "30s"
+        templateNames:
+          - name: ns-monitoring-label
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: rhdh-operator

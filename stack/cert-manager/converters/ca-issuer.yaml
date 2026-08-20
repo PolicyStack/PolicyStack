@@ -1,0 +1,58 @@
+{{- /*
+The cluster's default TLS issuer: a CA ClusterIssuer plus the Certificate backing it.
+
+The signer is a reference. Leave config.caIssuer.name empty and a self-signed root is created here
+and used to sign the CA; point it at your own Issuer/ClusterIssuer and the CA becomes an
+INTERMEDIATE signed by it (cert-manager does the signing - the private key is never handled here).
+The signer must be able to issue a CA certificate, so public ACME issuers cannot be used.
+
+Emitted under object-templates-raw because the object count varies: the self-signed root is only
+created when no external signer is configured. That choice is made by Helm at render time from the
+values cascade, so nothing here needs ACM templating.
+*/ -}}
+{{- $cfg := .Values.stack.certManager.config }}
+{{- $signer := (($cfg.caIssuer).name) | default "" }}
+{{- $caName := .Parameters.caName }}
+{{- $selfSigned := printf "%s-selfsigned" $caName }}
+{{- if not $signer }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: {{ $selfSigned }}
+    spec:
+      selfSigned: {}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: {{ $caName }}
+      # Must live in cert-manager's cluster-resource-namespace for a CA ClusterIssuer to read it.
+      namespace: {{ .Parameters.caNamespace }}
+    spec:
+      isCA: true
+      commonName: {{ $caName }}
+      secretName: {{ $caName }}
+      # Long-lived root (NIST SP 800-57): roots are long-lived, the serving certs they sign rotate.
+      # rotationPolicy defaults to Never, so renewal reuses the key and CA trust is unchanged.
+      duration: {{ $cfg.caDuration }}
+      renewBefore: {{ $cfg.caRenewBefore }}
+      privateKey:
+        algorithm: {{ $cfg.keyAlgorithm }}
+        size: {{ $cfg.keySize }}
+      issuerRef:
+        name: {{ $signer | default $selfSigned }}
+        kind: {{ (($cfg.caIssuer).kind) | default "ClusterIssuer" }}
+        group: {{ (($cfg.caIssuer).group) | default "cert-manager.io" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: {{ $caName }}
+    spec:
+      ca:
+        secretName: {{ $caName }}

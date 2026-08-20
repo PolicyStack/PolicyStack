@@ -1,0 +1,46 @@
+{{- /*
+The Central CR. Every field is a plain value here rather than a hub-side ConfigMap lookup.
+*/ -}}
+{{- $cfg := .Values.stack.advancedClusterSecurity.config }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: {{ .Parameters.centralName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  egress:
+    connectivityPolicy: {{ $cfg.egressConnectivity }}
+  central:
+    exposure:
+      route:
+        enabled: true
+      loadBalancer:
+        enabled: false
+        port: 443
+      nodePort:
+        enabled: false
+    persistence:
+      persistentVolumeClaim:
+        claimName: {{ .Parameters.dbClaimName }}
+    {{- if $cfg.auth.provider }}
+    declarativeConfiguration:
+      configMaps:
+        - name: {{ .Parameters.declarativeConfigMap }}
+    {{- end }}
+  scanner:
+    analyzer:
+      scaling:
+        autoScaling: Enabled
+        minReplicas: {{ $cfg.scanner.minReplicas }}
+        maxReplicas: {{ $cfg.scanner.maxReplicas }}
+        replicas: {{ $cfg.scanner.replicas }}
+  scannerV4:
+    scannerComponent: {{ $cfg.scannerV4 }}
+  {{- with $cfg.networkPolicies }}
+  networkPolicies: {{ . }}
+  {{- end }}
+  {{- if not (kindIs "invalid" $cfg.monitoring) }}
+  monitoring:
+    openshift:
+      enabled: {{ $cfg.monitoring }}
+  {{- end }}

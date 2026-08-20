@@ -1,0 +1,26 @@
+{{- /* The mesh control plane, ambient profile, exporting traces to the OTel collector. */ -}}
+{{- $cfg := .Values.stack.servicemesh3Ambient.config }}
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: {{ $cfg.istioVersion | quote }}
+  namespace: istio-system
+  profile: ambient
+  updateStrategy:
+    type: InPlace
+  values:
+    global:
+      platform: openshift
+    meshConfig:
+      enableTracing: {{ $cfg.tracing.enabled }}
+      extensionProviders:
+        - name: otel
+          opentelemetry:
+            port: 4317
+            service: {{ $cfg.tracing.collectorService }}
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+      resources:
+        requests: {{ toYaml $cfg.pilotRequests | nindent 10 }}

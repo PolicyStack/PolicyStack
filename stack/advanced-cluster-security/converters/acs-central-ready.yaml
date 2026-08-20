@@ -1,0 +1,14 @@
+{{- /* Inform-only: Central has deployed and initialised. */ -}}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: {{ .Parameters.centralName }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  conditions:
+    - type: Deployed
+      status: 'True'
+    - type: Initialized
+      status: 'True'
+    - type: ReleaseFailed
+      status: 'False'

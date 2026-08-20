@@ -1,0 +1,13 @@
+{{- /*
+Inform-only readiness gate: the nmstate webhook must be Available before NNCPs are applied,
+otherwise they are rejected by admission.
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nmstate-webhook
+  namespace: {{ .Parameters.namespace }}
+status:
+  conditions:
+    - type: Available
+      status: 'True'

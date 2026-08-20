@@ -1,0 +1,15 @@
+{{- /* RWX PVC backing the registry when storage type is pvc. */ -}}
+{{- $pvc := .Values.stack.openshiftImageRegistry.config.pvc }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Parameters.claimName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  accessModes:
+    - {{ $pvc.accessMode }}
+  volumeMode: {{ $pvc.volumeMode }}
+  storageClassName: {{ $pvc.storageClass }}
+  resources:
+    requests:
+      storage: {{ $pvc.size }}

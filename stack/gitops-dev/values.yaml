@@ -1,0 +1,73 @@
+stack:
+  # @description: Per-team ArgoCD instances for application delivery
+  gitopsDev:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Team ArgoCD instances
+    config:
+      # @desc: Namespace prefix; each team gets <prefix>-<team>
+      namespacePrefix: openshift-gitops
+      # @desc: Name of the ArgoCD resource inside each team namespace
+      argoName: argocd-dev
+      # @desc: Teams to create, keyed by name. Values override `defaults` below, e.g.
+      # @desc:   dev:  {rbacPolicies: ["g, dev-leads, role:admin"]}
+      # @desc:   test: {ha: true, resources: {server: {limits: {cpu: "1"}}}}
+      # @desc: Which clusters get which teams is decided by where you set this in the cascade.
+      teams: {}
+      # @description: Applied to every team unless the team overrides them
+      defaults:
+        # @desc: RBAC every team instance gets, before its own entries
+        rbacPolicies:
+          - "g, system:cluster-admins, role:admin"
+        resources:
+          server:
+            requests: {cpu: 125m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          repo:
+            requests: {cpu: 250m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1024Mi}
+          dex:
+            requests: {cpu: 125m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          redis:
+            requests: {cpu: 125m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          ha:
+            requests: {cpu: 125m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      # @description: The GitOps operator supplies the ArgoCD CRD, and it lives in a different
+      # @description: element on the same cluster.
+      - name: teams
+        enabled: true
+        description: "Per-team ArgoCD instances"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+            element: openshift-gitops
+
+    configPolicies:
+      - name: instances
+        enabled: true
+        description: "Namespace and ArgoCD instance per team"
+        policyRef: teams
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: Two objects per team in config.teams
+        rawTemplate: true
+        templateNames:
+          - name: team-argocd

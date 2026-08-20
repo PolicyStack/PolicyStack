@@ -1,0 +1,147 @@
+stack:
+  # @description: Red Hat Quay container registry
+  quay:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: The bootstrap Job is opinionated (it creates an initial user, org and repo), so
+    # @description: it is opt-in separately from deploying the registry itself.
+    toggles:
+      # @desc: Run the one-shot bootstrap Job and publish the console link
+      configure: false
+
+    # @description: Registry configuration
+    config:
+      # @desc: Which Quay components the operator manages. Set a component false when you are
+      # @desc: supplying it yourself, e.g. an external Postgres or object store.
+      components:
+        quay: true
+        clair: true
+        postgres: true
+        clairpostgres: true
+        objectstorage: true
+        redis: true
+        horizontalpodautoscaler: true
+        route: true
+        mirror: true
+        monitoring: true
+        tls: true
+      # @desc: Allow the first user to be created through the initialize API
+      featureUserInitialize: true
+      # @desc: Restrict browser API calls to XHR
+      browserApiCallsXhrOnly: false
+      # @desc: Allow self-service user creation
+      featureUserCreation: false
+      # @desc: Quay superusers
+      superUsers:
+        - quayadmin
+      # @desc: Superuser the bootstrap Job initialises
+      adminUser: quayadmin
+      # @desc: First non-admin user the bootstrap Job creates
+      initialUser: quaydevel
+      # @desc: Organization the bootstrap Job creates
+      initialOrg: devel
+      # @desc: Contact address for that organization (must differ from the admin's)
+      initialOrgEmail: devel@myorg.com
+      # @desc: Repository the bootstrap Job creates in that organization
+      initialRepo: example
+      # @desc: Image used to run the bootstrap Job
+      bootstrapImage: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Quay operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: deploy
+        enabled: true
+        description: "Deploy the Quay registry"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: configure
+        enabled: true
+        description: "Bootstrap the registry and publish its console link"
+        remediationAction: enforce
+        severity: low
+        disabled: false
+        dependencies:
+          - name: deploy
+
+    operatorPolicies:
+      - name: quay
+        enabled: true
+        description: "Red Hat Quay operator"
+        displayName: "Red Hat Quay"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators
+        operatorGroup:
+          # @desc: Reuse the namespace's existing cluster-scoped OperatorGroup
+          name: global-operators
+        subscription:
+          channel: stable-3.17
+          name: quay-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: registry
+        enabled: true
+        description: "Quay namespace, config bundle and QuayRegistry"
+        policyRef: deploy
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: quay
+        ignorePending: true
+        templateNames:
+          - name: quay-namespace
+          - name: quay-config-bundle
+          - name: quay-registry
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: quay-enterprise
+          name: registry
+          configBundleSecret: quay-registry-config-bundle
+
+      - name: bootstrap
+        enabled: true
+        description: "Bootstrap Job, its RBAC, and the console link"
+        policyRef: configure
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: quay-bootstrap-sa
+          - name: quay-bootstrap-role
+          - name: quay-bootstrap-rolebinding
+          - name: quay-bootstrap-job
+          - name: quay-host-configmap
+          - name: quay-console-link
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: quay-enterprise
+          name: registry
+          bootstrapName: create-admin-user
+          routeName: registry-quay
+          consoleText: Red Hat Quay Enterprise Registry
+          consoleImageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg

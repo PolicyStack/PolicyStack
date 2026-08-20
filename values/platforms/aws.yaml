@@ -1,0 +1,12 @@
+# Selected by a `config.<baseDomain>/platform.<priority>=aws` label on the ManagedCluster.
+# Node elements create MachineSets by cloning the cluster's worker MachineSet.
+stack:
+  infraNodes:
+    toggles:
+      aws: true
+      vmware: false
+  storageNodes:
+    toggles:
+      aws: true
+      vmware: false
+      baremetal: false

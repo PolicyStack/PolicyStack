@@ -1,0 +1,54 @@
+{{- /*
+cert-manager-managed serving certificate for the default Ingress wildcard (*.apps.<domain>) - the
+console, CLI and every route.
+
+Higher blast radius than the API certificate because this REPLACES the wildcard rather than adding
+an SNI entry, so the same guard applies: the Certificate is always created, but the
+IngressController is only patched once it reports Ready. The secretName is stable across renewals,
+so the router hot-reloads without a rolling update. With a self-signed CA the cluster's internal
+clients must also be given that CA to trust.
+
+As with the API cert, Helm resolves the values here and ACM resolves the apps domain and the
+readiness gate on the managed cluster.
+*/ -}}
+{{- $cfg := .Values.stack.certManager.config }}
+{{ "{{" }}- $appsDomain := dig "spec" "domain" "" ((lookup "config.openshift.io/v1" "Ingress" "" "cluster") | default dict) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: {{ .Parameters.certName }}
+      namespace: openshift-ingress
+    spec:
+      secretName: {{ .Parameters.certName }}
+      duration: {{ $cfg.leafDuration }}
+      renewBefore: {{ $cfg.leafRenewBefore }}
+      privateKey:
+        algorithm: {{ $cfg.keyAlgorithm }}
+        size: {{ $cfg.keySize }}
+      dnsNames:
+        - '*.{{ "{{" }} $appsDomain {{ "}}" }}'
+        - {{ "{{" }} $appsDomain {{ "}}" }}
+        {{- range $san := (($cfg.ingressCert).extraSANs) | default list }}
+        - {{ $san }}
+        {{- end }}
+      issuerRef:
+        name: {{ ((($cfg.ingressCert).issuer).name) | default $cfg.caName }}
+        kind: {{ ((($cfg.ingressCert).issuer).kind) | default "ClusterIssuer" }}
+        group: {{ ((($cfg.ingressCert).issuer).group) | default "cert-manager.io" }}
+{{ "{{" }}- $conds := dig "status" "conditions" (list) ((lookup "cert-manager.io/v1" "Certificate" "openshift-ingress" "{{ .Parameters.certName }}") | default dict) {{ "}}" }}
+{{ "{{" }}- $ready := false {{ "}}" }}
+{{ "{{" }}- range $c := $conds {{ "}}" }}{{ "{{" }}- if and (eq (dig "type" "" $c) "Ready") (eq (dig "status" "" $c) "True") {{ "}}" }}{{ "{{" }}- $ready = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if $ready {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: operator.openshift.io/v1
+    kind: IngressController
+    metadata:
+      name: default
+      namespace: openshift-ingress-operator
+    spec:
+      defaultCertificate:
+        name: {{ .Parameters.certName }}
+{{ "{{" }}- end {{ "}}" }}

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: user-workload-monitoring
+description: "User Workload Monitoring: Prometheus, Thanos Ruler and Alertmanager for application\
+  \ metrics"
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: policy-library
+    version: "1.3.0"
+    repository: "file://../../../policystack-chart/charts/policy-library"

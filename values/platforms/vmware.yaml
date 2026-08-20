@@ -1,0 +1,13 @@
+# Selected by a `config.<baseDomain>/platform.<priority>=vmware` label on the ManagedCluster.
+# vSphere has one worker MachineSet per failure domain; each is cloned so the new nodes land in the
+# same domains as the workers.
+stack:
+  infraNodes:
+    toggles:
+      aws: false
+      vmware: true
+  storageNodes:
+    toggles:
+      aws: false
+      vmware: true
+      baremetal: false

@@ -1,0 +1,65 @@
+{{- /*
+vSphere creates one worker MachineSet per failure domain. Clone each into a MachineSet for this
+role so the new nodes land in the same failure domains as the workers - works for one domain or
+many. The workspace, network and template all come from the worker being cloned.
+
+Portable across node elements; see machineset-aws.yaml for how the config block is resolved.
+*/ -}}
+{{- $cfg := (index .Values.stack (.Chart.Name | replace "-" " " | title | nospace | untitle)).config }}
+{{ "{{" }}- $role := "{{ .Parameters.role }}" {{ "}}" }}
+{{ "{{" }}- $infraId := (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}
+{{ "{{" }}- range (lookup "machine.openshift.io/v1beta1" "MachineSet" "{{ .Parameters.namespace }}" "").items {{ "}}" }}
+{{ "{{" }}- if hasPrefix (printf "%s-worker" $infraId) .metadata.name {{ "}}" }}
+{{ "{{" }}- $workerMs := . {{ "}}" }}
+{{ "{{" }}- $pv := $workerMs.spec.template.spec.providerSpec.value {{ "}}" }}
+{{ "{{" }}- $zone := trimPrefix (printf "%s-worker-" $infraId) $workerMs.metadata.name {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+      name: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+    spec:
+      deletePolicy: Oldest
+      replicas: {{ $cfg.replicas }}
+      selector:
+        matchLabels:
+          machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+          machine.openshift.io/cluster-api-machineset: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+      template:
+        metadata:
+          labels:
+            machine.openshift.io/cluster-api-cluster: {{ "{{" }} $infraId {{ "}}" }}
+            machine.openshift.io/cluster-api-machine-role: {{ "{{" }} $role {{ "}}" }}
+            machine.openshift.io/cluster-api-machine-type: {{ "{{" }} $role {{ "}}" }}
+            machine.openshift.io/cluster-api-machineset: {{ "{{" }} $infraId {{ "}}" }}-{{ "{{" }} $role {{ "}}" }}-{{ "{{" }} $zone {{ "}}" }}
+        spec:
+          metadata:
+            labels:
+              {{- range $k, $v := .Parameters.nodeLabels }}
+              {{ $k }}: {{ $v | quote }}
+              {{- end }}
+          taints:
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+              effect: NoSchedule
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+              effect: NoExecute
+          providerSpec:
+            value:
+              numCPUs: {{ if $cfg.numCPUs }}{{ $cfg.numCPUs }}{{ else }}{{ "{{" }} $pv.numCPUs {{ "}}" }}{{ end }}
+              numCoresPerSocket: {{ if $cfg.numCoresPerSocket }}{{ $cfg.numCoresPerSocket }}{{ else }}{{ "{{" }} $pv.numCoresPerSocket {{ "}}" }}{{ end }}
+              memoryMiB: {{ if $cfg.memoryMiB }}{{ $cfg.memoryMiB }}{{ else }}{{ "{{" }} $pv.memoryMiB {{ "}}" }}{{ end }}
+              diskGiB: {{ "{{" }} $pv.diskGiB {{ "}}" }}
+              template: {{ "{{" }} $pv.template {{ "}}" }}
+              snapshot: ''
+              workspace: {{ "{{" }} $pv.workspace | toRawJson {{ "}}" }}
+              network: {{ "{{" }} $pv.network | toRawJson {{ "}}" }}
+              userDataSecret:
+                name: {{ "{{" }} $pv.userDataSecret.name {{ "}}" }}
+              credentialsSecret:
+                name: {{ "{{" }} $pv.credentialsSecret.name {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

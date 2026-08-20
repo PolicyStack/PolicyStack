@@ -46,9 +46,10 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 		})
 	}
 
-	if comp.DefaultPolicy != nil {
-		emit("defaultPolicy.severity", comp.DefaultPolicy.Severity, allowedSeverity, "defaultPolicy", "severity")
-		emit("defaultPolicy.remediationAction", comp.DefaultPolicy.RemediationAction, allowedRemed, "defaultPolicy", "remediationAction")
+	// policy-library reads `default`, not `defaultPolicy`; POLICY031 reports the legacy spelling.
+	if comp.Default != nil {
+		emit("default.severity", comp.Default.Severity, allowedSeverity, "default", "severity")
+		emit("default.remediationAction", comp.Default.RemediationAction, allowedRemed, "default", "remediationAction")
 	}
 	for i, p := range comp.Policies {
 		emit("policies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "policies", strconv.Itoa(i), "severity")

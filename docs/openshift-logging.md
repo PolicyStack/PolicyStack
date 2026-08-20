@@ -2,7 +2,7 @@
 
 > Element for the OpenShift Logging. This installs and configures OpenShift Logging.
 
-*Generated: 2026-05-08 20:16:05*
+*Generated: 2026-08-20 21:44:36*
 
 ## Component Configuration
 
@@ -11,9 +11,9 @@
 | Component | `openshiftLogging` | OpenShift Logging element |
 | Enabled | `False` | Master control to enable/disable all policies in this element |
 
-## Default Policy Values
+## Default Policy Metadata
 
-Default configuration applied to all policies unless explicitly overridden
+Default policy metadata applied unless overridden per-policy
 
 | Type | Values | Description |
 | ---- | ------ | ----------- |
@@ -23,12 +23,12 @@ Default configuration applied to all policies unless explicitly overridden
 
 ## Policies
 
-### 📋 Policy: openshift-logging-operator
+### 📋 Policy: install
 > Policy for any operator installation
 
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `openshift-logging-operator-<release>` | Full policy name including release |
+| Name | `install-<release>` | Full policy name including release |
 | Namespace | `<namespace>` | Policy namespace |
 | Enabled | `True` | Whether this policy is templated |
 | Severity | `medium` | Policy severity level |
@@ -51,7 +51,7 @@ Default configuration applied to all policies unless explicitly overridden
 **Basic Configuration:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `openshift-logging-operator-cluster-logging` | Operator policy identifier |
+| Name | `install-cluster-logging` | Operator policy identifier |
 | Namespace | `openshift-logging` | Target namespace for operator installation |
 | Display Name | `Red Hat OpenShift Logging` | Human-friendly display name in OLM |
 | Compliance Type | `musthave` | Operator must be present |
@@ -63,7 +63,7 @@ Default configuration applied to all policies unless explicitly overridden
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
 | Name | `cluster-logging` | Operator package name in catalog |
-| Channel | `stable-6.2` | Update channel |
+| Channel | `stable-6.5` | Update channel |
 | Source | `redhat-operators` | Catalog source name |
 | Source Namespace | `openshift-marketplace` | Namespace containing the catalog |
 

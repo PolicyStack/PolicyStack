@@ -1,0 +1,13 @@
+{{- /* Istio CNI in ambient mode. The mesh version is a value. */ -}}
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: {{ .Values.stack.servicemesh3Ambient.config.istioVersion | quote }}
+  profile: ambient
+  namespace: istio-cni
+  values:
+    cni:
+      ambient:
+        reconcileIptablesOnStartup: true

@@ -1,0 +1,57 @@
+{{- /*
+cert-manager-managed serving certificate for the EXTERNAL API endpoint (api.<domain>:6443).
+
+Safe by construction:
+  - The Certificate is always created; the APIServer is only patched once it reports Ready.
+  - namedCertificates is ADDITIVE and SNI-matched, so the internal cert and api-int are untouched
+    and a bad cert can never block internal access. Never name-cert api-int.
+  - The secretName is stable across renewals, so the API server hot-reloads; only the first-time
+    add rolls a revision.
+
+Two template engines are in play. Helm resolves .Parameters/.Values here at render time; the
+escaped braces survive to the managed cluster, where ACM resolves the base domain and the readiness
+gate - neither is knowable at render time.
+*/ -}}
+{{- $cfg := .Values.stack.certManager.config }}
+{{ "{{" }}- $baseDomain := dig "spec" "baseDomain" "" ((lookup "config.openshift.io/v1" "DNS" "" "cluster") | default dict) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: {{ .Parameters.certName }}
+      namespace: openshift-config
+    spec:
+      secretName: {{ .Parameters.certName }}
+      duration: {{ $cfg.leafDuration }}
+      renewBefore: {{ $cfg.leafRenewBefore }}
+      privateKey:
+        algorithm: {{ $cfg.keyAlgorithm }}
+        size: {{ $cfg.keySize }}
+      dnsNames:
+        - api.{{ "{{" }} $baseDomain {{ "}}" }}
+        {{- range $san := (($cfg.apiCert).extraSANs) | default list }}
+        - {{ $san }}
+        {{- end }}
+      issuerRef:
+        name: {{ ((($cfg.apiCert).issuer).name) | default $cfg.caName }}
+        kind: {{ ((($cfg.apiCert).issuer).kind) | default "ClusterIssuer" }}
+        group: {{ ((($cfg.apiCert).issuer).group) | default "cert-manager.io" }}
+{{ "{{" }}- $conds := dig "status" "conditions" (list) ((lookup "cert-manager.io/v1" "Certificate" "openshift-config" "{{ .Parameters.certName }}") | default dict) {{ "}}" }}
+{{ "{{" }}- $ready := false {{ "}}" }}
+{{ "{{" }}- range $c := $conds {{ "}}" }}{{ "{{" }}- if and (eq (dig "type" "" $c) "Ready") (eq (dig "status" "" $c) "True") {{ "}}" }}{{ "{{" }}- $ready = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if $ready {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: APIServer
+    metadata:
+      name: cluster
+    spec:
+      servingCerts:
+        namedCertificates:
+          - names:
+              - api.{{ "{{" }} $baseDomain {{ "}}" }}
+            servingCertificate:
+              name: {{ .Parameters.certName }}
+{{ "{{" }}- end {{ "}}" }}

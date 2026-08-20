@@ -1,0 +1,190 @@
+stack:
+  # @description: "Ansible Automation Platform: controller, hub, EDA and Lightspeed"
+  ansibleAutomationPlatform:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Optional add-ons, switchable per cluster
+    toggles:
+      # @desc: Request a NooBaa bucket from ODF and wire it up as hub content storage.
+      # @desc: Requires openshift-data-foundation on the same cluster.
+      storage: false
+      # @desc: Give AAP the cluster service CA and trusted CA bundle
+      certs: false
+      # @desc: Publish an OpenShift console link to AAP
+      link: true
+
+    # @description: Platform configuration
+    config:
+      # @desc: Redis topology: standalone or cluster
+      redisMode: standalone
+      controller:
+        # @desc: Automation Controller is the core component; disabling it leaves little behind
+        disabled: false
+      eda:
+        # @desc: Event-Driven Ansible
+        disabled: true
+      lightspeed:
+        # @desc: Ansible Lightspeed
+        disabled: true
+      hub:
+        # @desc: Automation Hub (private content repository)
+        disabled: false
+        # @description: Hub content storage, expressed as one enum rather than as separate
+        # @description: mutually-exclusive flags.
+        storage:
+          # @desc: none, file (RWX PVC), or s3 (NooBaa bucket via the storage toggle)
+          type: none
+          # @desc: PVC size when type is file
+          size: 10Gi
+          # @desc: RWX StorageClass when type is file
+          storageClass: ocs-storagecluster-cephfs
+      # @desc: Give AAP the cluster CA bundle even when not using S3 storage
+      customCaBundle: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Ansible Automation Platform operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: certs
+        enabled: true
+        description: "CA bundle for AAP"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      # @description: NooBaa-backed object storage for Automation Hub content. The bucket comes
+      # @description: from ODF, so this waits for the storage cluster to be usable.
+      - name: storage
+        enabled: true
+        description: "Object storage for Automation Hub content"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+          - name: ready
+            element: openshift-data-foundation
+
+      - name: instance
+        enabled: true
+        description: "Deploy the AnsibleAutomationPlatform instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: link
+        enabled: true
+        description: "Console link to AAP"
+        remediationAction: enforce
+        severity: low
+        disabled: false
+        dependencies:
+          - name: instance
+
+    operatorPolicies:
+      - name: aap
+        enabled: true
+        description: "Ansible Automation Platform operator"
+        displayName: "Ansible Automation Platform"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: ansible-automation-platform
+        operatorGroup:
+          name: ansible-automation-platform
+          targetNamespaces:
+            - ansible-automation-platform
+        subscription:
+          channel: stable-2.7
+          name: ansible-automation-platform-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: ca-bundle
+        enabled: true
+        description: "Service CA and trusted CA bundle for AAP"
+        policyRef: certs
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: aap-service-ca
+          - name: aap-trusted-ca
+          - name: aap-ca-bundle
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: ansible-automation-platform
+          serviceCaName: aap-service-ca
+          trustedCaName: aap-trusted-ca
+          caBundleSecret: user-ca-bundle
+
+      - name: bucket
+        enabled: true
+        description: "NooBaa bucket and the S3 secret AAP consumes"
+        policyRef: storage
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: aap-bucketclaim
+          - name: aap-s3-secret
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: ansible-automation-platform
+          bucketName: aap-bucket-odf
+          bucketStorageClass: openshift-storage.noobaa.io
+          s3Secret: s3-aap-odf
+
+      - name: platform
+        enabled: true
+        description: "AnsibleAutomationPlatform instance"
+        policyRef: instance
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: aap
+        ignorePending: true
+        templateNames:
+          - name: aap-instance
+        enableTemplateParameters: true
+        templateParameters:
+          name: aap
+          namespace: ansible-automation-platform
+          s3Secret: s3-aap-odf
+          caBundleSecret: user-ca-bundle
+
+      - name: console
+        enabled: true
+        description: "AAP console link"
+        policyRef: link
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: aap-console-link
+        enableTemplateParameters: true
+        templateParameters:
+          name: aap
+          namespace: ansible-automation-platform
+          imageUrl: https://www.ansible.com/hubfs/Ansible_AutomationPlatform_icon.svg

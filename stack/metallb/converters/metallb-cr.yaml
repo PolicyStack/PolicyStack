@@ -1,0 +1,6 @@
+{{- /* The MetalLB operand itself. */ -}}
+apiVersion: metallb.io/v1beta1
+kind: MetalLB
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}

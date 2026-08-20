@@ -1,0 +1,31 @@
+{{- /*
+Bare metal has no MachineSets, so storage nodes are designated by labelling existing nodes.
+
+Either name them explicitly in config.nodes, or leave that empty and the first config.replicas nodes
+are taken. Which nodes exist is a runtime fact, so the selection stays ACM templating.
+*/ -}}
+{{- $cfg := .Values.stack.storageNodes.config }}
+{{ "{{" }}- $chosen := list {{ "}}" }}
+{{- if $cfg.nodes }}
+{{ "{{" }}- range $n := (list{{ range $n := $cfg.nodes }} {{ $n | quote }}{{ end }}) {{ "}}" }}
+{{ "{{" }}-   $node := (lookup "v1" "Node" "" $n) {{ "}}" }}
+{{ "{{" }}-   if $node {{ "}}" }}{{ "{{" }}- $chosen = append $chosen $node {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{- else }}
+{{ "{{" }}- $all := (lookup "v1" "Node" "" "").items {{ "}}" }}
+{{ "{{" }}- range $i := until (min {{ $cfg.replicas }} (len $all)) {{ "}}" }}
+{{ "{{" }}-   $chosen = append $chosen (index $all $i) {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{- end }}
+{{ "{{" }}- range $node := $chosen {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Node
+    metadata:
+      name: {{ "{{" }} $node.metadata.name {{ "}}" }}
+      labels:
+        {{- range $k, $v := .Parameters.nodeLabels }}
+        {{ $k }}: {{ $v | quote }}
+        {{- end }}
+{{ "{{" }}- end {{ "}}" }}

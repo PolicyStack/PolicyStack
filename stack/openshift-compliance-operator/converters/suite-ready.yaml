@@ -1,0 +1,8 @@
+{{- /* Inform-only: the ComplianceSuite has finished scanning. */ -}}
+apiVersion: compliance.openshift.io/v1alpha1
+kind: ComplianceSuite
+metadata:
+  name: {{ .Parameters.binding }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  phase: DONE

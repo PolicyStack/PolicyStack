@@ -1,0 +1,14 @@
+{{- /* Pin the cluster GitopsService onto infra nodes. */ -}}
+{{- $cfg := .Values.stack.infraNodes.config }}
+apiVersion: pipelines.openshift.io/v1alpha1
+kind: GitopsService
+metadata:
+  name: cluster
+  namespace: {{ $cfg.gitopsNamespace }}
+spec:
+  runOnInfra: true
+  tolerations:
+    - key: node-role.kubernetes.io/{{ .Parameters.role }}
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/{{ .Parameters.role }}
+      effect: NoExecute

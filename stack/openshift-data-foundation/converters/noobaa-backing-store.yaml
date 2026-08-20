@@ -1,0 +1,20 @@
+{{- /* PV-pool backing store for NooBaa, used when there is no cloud object store to front. */ -}}
+{{- $nb := .Values.stack.openshiftDataFoundation.config.noobaa }}
+apiVersion: noobaa.io/v1alpha1
+kind: BackingStore
+metadata:
+  name: noobaa-default-backing-store
+  namespace: {{ .Parameters.namespace }}
+spec:
+  type: pv-pool
+  pvPool:
+    numVolumes: {{ $nb.numVolumes }}
+    secret: {}
+    resources:
+      limits:
+        cpu: {{ $nb.limits.cpu | quote }}
+        memory: {{ $nb.limits.memory | quote }}
+      requests:
+        cpu: {{ $nb.requests.cpu | quote }}
+        memory: {{ $nb.requests.memory | quote }}
+        storage: {{ $nb.volumeSize | quote }}

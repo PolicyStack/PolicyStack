@@ -1,0 +1,17 @@
+{{- /* Quay's own config.yaml, delivered as the configBundleSecret the QuayRegistry references. */ -}}
+{{- $cfg := .Values.stack.quay.config }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Parameters.configBundleSecret }}
+  namespace: {{ .Parameters.namespace }}
+type: Opaque
+stringData:
+  config.yaml: |
+    FEATURE_USER_INITIALIZE: {{ $cfg.featureUserInitialize }}
+    BROWSER_API_CALLS_XHR_ONLY: {{ $cfg.browserApiCallsXhrOnly }}
+    FEATURE_USER_CREATION: {{ $cfg.featureUserCreation }}
+    SUPER_USERS:
+      {{- range $u := $cfg.superUsers }}
+      - {{ $u }}
+      {{- end }}

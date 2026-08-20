@@ -1,0 +1,57 @@
+stack:
+  # @description: PerformanceProfile pinning platform workloads to reserved CPUs
+  workloadPartitioning:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: CPU layout for the profile. reservedCpus and isolatedCpus are REQUIRED when this
+    # @description: element is enabled - they are node-specific, so there is no safe default and the
+    # @description: render fails rather than guessing.
+    config:
+      # @desc: CPUs reserved for platform/infrastructure workloads, e.g. "0-1"
+      reservedCpus: ""
+      # @desc: CPUs left isolated for application workloads, e.g. "2-31"
+      isolatedCpus: ""
+      # @desc: Nodes the profile applies to. Defaults to control-plane nodes.
+      nodeSelector: {}
+      # @desc: MachineConfigPool the profile applies to. Defaults to nodeSelector, then master.
+      machineConfigPoolSelector: {}
+      # @desc: Kubelet NUMA topology policy, e.g. single-numa-node
+      numaTopologyPolicy: ""
+      # @desc: Install the real-time kernel
+      realTimeKernel: false
+      # @desc: Disable IRQ load balancing across the isolated set
+      globallyDisableIrqLoadBalancing: false
+      # @desc: Hugepage allocation, e.g. {defaultSize: 1G, pages: [{size: 1G, count: 4}]}
+      hugepages: {}
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "Workload partitioning PerformanceProfile"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: performance-profile
+        enabled: true
+        description: "PerformanceProfile for workload partitioning"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: performance-profile
+        enableTemplateParameters: true
+        templateParameters:
+          name: workload-partitioning

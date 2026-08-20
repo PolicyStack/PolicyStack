@@ -1,0 +1,17 @@
+{{- /*
+Marks exactly one StorageClass as the cluster default and every other as non-default.
+
+Which StorageClasses exist is a runtime fact - ODF creates several - so the loop stays ACM
+templating. Which one should be default is a value.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftDataFoundation.config }}
+{{ "{{" }}- range $sc := (lookup "storage.k8s.io/v1" "StorageClass" "" "").items {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      name: {{ "{{" }} $sc.metadata.name {{ "}}" }}
+      annotations:
+        storageclass.kubernetes.io/is-default-class: '{{ "{{" }} if eq $sc.metadata.name "{{ $cfg.defaultStorageClass }}" {{ "}}" }}true{{ "{{" }} else {{ "}}" }}false{{ "{{" }} end {{ "}}" }}'
+{{ "{{" }}- end {{ "}}" }}

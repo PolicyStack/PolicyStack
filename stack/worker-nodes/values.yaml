@@ -1,0 +1,111 @@
+stack:
+  # @description: Worker node sizing and kubelet tuning
+  workerNodes:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Kubelet tuning is safe; resizing MachineSets is not, so it is opt-in.
+    toggles:
+      # @desc: Apply the kubelet configuration below to the worker pool
+      config: true
+      # @desc: Scale and resize the existing worker MachineSets
+      machines: false
+      # @desc: Report NonCompliant until the workers report the requested replica count
+      ready: false
+
+    # @description: Worker sizing and kubelet reservations
+    config:
+      # @desc: Replicas per worker MachineSet. Empty leaves the installer's count alone.
+      replicas: ""
+      # @desc: AWS instance type. Empty keeps whatever the installer chose.
+      instanceType: ""
+      # @desc: vSphere vCPUs. Empty keeps the installer's value.
+      numCPUs: ""
+      # @desc: vSphere cores per socket
+      numCoresPerSocket: ""
+      # @desc: vSphere memory in MiB
+      memoryMiB: ""
+      # @desc: Maximum pods per node
+      maxPods: 250
+      systemReservedMemory: 1Gi
+      systemReservedCpu: 250m
+      kubeReservedMemory: 512Mi
+      kubeReservedCpu: 250m
+      evictionMemory: 500Mi
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-6 Configuration Settings
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "Worker kubelet configuration"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: machines
+        enabled: true
+        description: "Worker MachineSet sizing"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until workers reach the requested count"
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: machines
+
+    configPolicies:
+      - name: kubelet
+        enabled: true
+        description: "KubeletConfig for the worker pool"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: node-kubelet-config
+        enableTemplateParameters: true
+        templateParameters:
+          role: worker
+
+      - name: scale
+        enabled: true
+        description: "Scale and resize existing worker MachineSets"
+        policyRef: machines
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: worker-scale
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-machine-api
+
+      - name: replicas
+        enabled: true
+        description: "Worker MachineSet readiness"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: machineset-ready
+        enableTemplateParameters: true
+        templateParameters:
+          role: worker
+          namespace: openshift-machine-api

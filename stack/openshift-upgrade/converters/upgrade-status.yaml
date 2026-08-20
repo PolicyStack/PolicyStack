@@ -1,0 +1,24 @@
+{{- /*
+Inform-only completion signal. Compliant once the cluster has reached or passed the target; until
+then it forces NonCompliant. `current` is the latest Completed history entry, so it only advances on
+a real completion and does not flap mid-upgrade.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftUpgrade.config }}
+{{ "{{" }}- $target := "{{ $cfg.targetVersion }}" {{ "}}" }}
+{{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
+{{ "{{" }}- $current := "" {{ "}}" }}
+{{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
+{{ "{{" }}-   if and (eq $current "") (eq (index $h "state") "Completed") {{ "}}" }}{{ "{{" }}- $current = (index $h "version") {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $done := false {{ "}}" }}
+{{ "{{" }}- if regexMatch "^[0-9]+[.][0-9]+[.][0-9]+" $target {{ "}}" }}
+{{ "{{" }}-   $done = and (ne $current "") (semverCompare (printf ">= %s" $target) $current) {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if and (ne $target "") (not $done) {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      name: version
+{{ "{{" }}- end {{ "}}" }}

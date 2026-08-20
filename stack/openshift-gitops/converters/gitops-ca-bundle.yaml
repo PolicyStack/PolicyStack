@@ -1,0 +1,8 @@
+{{- /* Empty ConfigMap; the network operator injects the cluster's trusted CA bundle for ArgoCD. */ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Parameters.caBundleName }}
+  namespace: {{ .Values.stack.openshiftGitops.config.namespace }}
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"

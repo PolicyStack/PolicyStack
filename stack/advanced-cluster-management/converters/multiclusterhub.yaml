@@ -1,0 +1,19 @@
+{{- /* The MultiClusterHub. All three conditionals below resolve from values, not at evaluation time. */ -}}
+{{- $cfg := .Values.stack.advancedClusterManagement.config }}
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  availabilityConfig: {{ $cfg.availabilityConfig }}
+  {{- if not $cfg.selfManaged }}
+  # The hub does not manage itself; no local-cluster is created
+  disableHubSelfManagement: true
+  {{- end }}
+  {{- if $cfg.siteConfig }}
+  overrides:
+    components:
+      - name: siteconfig
+        enabled: true
+  {{- end }}

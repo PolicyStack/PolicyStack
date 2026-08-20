@@ -2,10 +2,10 @@ stack:
   # @description: OpenShift Logging element
   openshiftLogging:
     # @desc: Master control to enable/disable all policies in this element
-    enable: false
+    enabled: false
     
-    # @description: Default configuration applied to all policies unless explicitly overridden
-    defaultPolicy:
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
       # @desc: Categories for organizing policies in ACM console and reports
       categories:
         - CM Configuration Management
@@ -15,17 +15,11 @@ stack:
       # @desc: Compliance standards and frameworks
       standards:
         - NIST SP 800-53
-      # @desc: Default severity for policy violations (low/medium/high/critical)
-      severity: medium
-      # @desc: Default action when violations detected (inform/enforce)
-      remediationAction: inform
-      # @desc: Whether policies start disabled in ACM (useful for testing)
-      disabled: false
     
     # @description: Main policy definitions that group related configurations and operators
     policies:
       # @description: Policy for any operator installation
-      - name: openshift-logging-operator
+      - name: install
         enabled: true
         namespace: open-cluster-management
         description: "Policy for any operator installation"
@@ -42,8 +36,8 @@ stack:
         description: "Installs the OpenShift logging operator"
         # @desc: Human-friendly display name in OLM
         displayName: "Red Hat OpenShift Logging"
-        # @desc: Links to openshift-logging-operator parent policy
-        policyRef: openshift-logging-operator
+        # @desc: Links to the install parent policy
+        policyRef: install
         # @desc: Could be a high or medium severity depending on the security requirements.
         severity: high
         # @desc: Automatically install and configure
@@ -59,7 +53,7 @@ stack:
         # @description: Subscription details for operator catalog
         subscription:
           # @desc: Update channel
-          channel: stable-6.2
+          channel: stable-6.5
           # @desc: Operator package name in catalog
           name: cluster-logging
           # @desc: Catalog source name

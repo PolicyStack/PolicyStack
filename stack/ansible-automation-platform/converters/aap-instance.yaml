@@ -1,0 +1,34 @@
+{{- /*
+The AnsibleAutomationPlatform operand. Everything resolves from values, and the storage choice is a
+single enum rather than two mutually-exclusive flags.
+*/ -}}
+{{- $cfg := .Values.stack.ansibleAutomationPlatform.config }}
+{{- $hub := $cfg.hub | default dict }}
+{{- $storage := $hub.storage | default dict }}
+apiVersion: aap.ansible.com/v1alpha1
+kind: AnsibleAutomationPlatform
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  redis_mode: {{ $cfg.redisMode }}
+  controller:
+    disabled: {{ $cfg.controller.disabled }}
+  eda:
+    disabled: {{ $cfg.eda.disabled }}
+  lightspeed:
+    disabled: {{ $cfg.lightspeed.disabled }}
+  hub:
+    disabled: {{ $hub.disabled }}
+    {{- if eq ($storage.type | default "none") "file" }}
+    storage_type: file
+    file_storage_size: {{ $storage.size }}
+    file_storage_storage_class: {{ $storage.storageClass }}
+    {{- else if eq ($storage.type | default "none") "s3" }}
+    storage_type: S3
+    object_storage_s3_secret: {{ .Parameters.s3Secret }}
+    {{- end }}
+  {{- if or (eq ($storage.type | default "none") "s3") $cfg.customCaBundle }}
+  # AAP needs the cluster's service CA and trusted CA bundle to talk to in-cluster S3 over TLS
+  bundle_cacert_secret: {{ .Parameters.caBundleSecret }}
+  {{- end }}

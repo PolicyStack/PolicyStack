@@ -1,0 +1,20 @@
+{{- /*
+Inform-only: every MachineSet for this role reports the requested number of ready replicas.
+Portable across node elements.
+*/ -}}
+{{- $cfg := (index .Values.stack (.Chart.Name | replace "-" " " | title | nospace | untitle)).config }}
+{{ "{{" }}- $role := "{{ .Parameters.role }}" {{ "}}" }}
+{{ "{{" }}- $infraId := (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}
+{{ "{{" }}- range (lookup "machine.openshift.io/v1beta1" "MachineSet" "{{ .Parameters.namespace }}" "").items {{ "}}" }}
+{{ "{{" }}- if hasPrefix (printf "%s-%s" $infraId $role) .metadata.name {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+    status:
+      readyReplicas: {{ $cfg.replicas }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

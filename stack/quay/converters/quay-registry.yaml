@@ -1,0 +1,17 @@
+{{- /*
+The QuayRegistry itself. Which components Quay manages is the main thing that differs between
+clusters (external Postgres, external object storage, no Clair), so the component map is values.
+*/ -}}
+{{- $cfg := .Values.stack.quay.config }}
+apiVersion: quay.redhat.com/v1
+kind: QuayRegistry
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  configBundleSecret: {{ .Parameters.configBundleSecret }}
+  components:
+    {{- range $kind, $managed := $cfg.components }}
+    - kind: {{ $kind }}
+      managed: {{ $managed }}
+    {{- end }}

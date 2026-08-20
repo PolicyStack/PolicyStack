@@ -1,0 +1,85 @@
+{{- /*
+The StorageCluster. Every knob is a value here, including the local-storage case: pointing at a
+local-storage-backed StorageClass is just a different storageClassName and size, so it needs no
+conditional at evaluation time.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftDataFoundation.config }}
+{{- $ds := $cfg.deviceSet }}
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  resourceProfile: {{ $cfg.resourceProfile }}
+  monDataDirHostPath: /var/lib/rook
+  {{- if not (kindIs "invalid" $cfg.flexibleScaling) }}
+  flexibleScaling: {{ $cfg.flexibleScaling }}
+  {{- end }}
+  storageDeviceSets:
+    - name: ocs-deviceset
+      count: {{ $ds.count }}
+      replica: {{ $ds.replicas }}
+      config: {}
+      placement: {}
+      preparePlacement: {}
+      resources: {}
+      dataPVCTemplate:
+        metadata: {}
+        status: {}
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          volumeMode: Block
+          storageClassName: {{ $ds.storageClassName }}
+          resources:
+            requests:
+              storage: {{ $ds.size | quote }}
+  encryption:
+    enable: {{ $cfg.encryption.enabled }}
+    clusterWide: {{ $cfg.encryption.clusterWide }}
+    keyRotation:
+      schedule: {{ $cfg.encryption.keyRotationSchedule | quote }}
+    kms: {}
+  network:
+    connections:
+      encryption:
+        enabled: {{ $cfg.network.encryptionEnabled }}
+    multiClusterService: {}
+    selectors: {}
+  multiCloudGateway:
+    reconcileStrategy: {{ $cfg.multiCloudGateway }}
+  managedResources:
+    cephBlockPools:
+      defaultStorageClass: true
+    cephNonResilientPools:
+      count: 1
+      resources: {}
+      volumeClaimTemplate:
+        metadata: {}
+        status: {}
+        spec:
+          resources: {}
+    cephFilesystems:
+      dataPoolSpec:
+        application: ''
+        erasureCoded:
+          codingChunks: 0
+          dataChunks: 0
+        mirroring: {}
+        quotas: {}
+        replicated:
+          size: 0
+        statusCheck:
+          mirror: {}
+    cephRBDMirror:
+      daemonCount: 1
+    cephObjectStoreUsers: {}
+    cephCluster: {}
+    cephObjectStores: {}
+    cephToolbox: {}
+    cephDashboard: {}
+    cephConfig: {}
+  arbiter: {}
+  nodeTopologies: {}
+  externalStorage: {}

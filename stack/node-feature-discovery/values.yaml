@@ -65,6 +65,11 @@ stack:
 
       - name: nfd-instance
         enabled: true
+        # @desc: The NodeFeatureDiscovery CRD only exists once the operator is installed, so gate
+        # @desc: the CR on the operator's CSV reaching Succeeded rather than racing it.
+        waitForOperator: node-feature-discovery
+        # @desc: Report compliant while waiting, instead of flapping NonCompliant during install
+        ignorePending: true
         description: "Deploy the NodeFeatureDiscovery custom resource"
         policyRef: nfd-install
         complianceType: musthave

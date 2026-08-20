@@ -1,0 +1,20 @@
+{{- /*
+Apply named ComplianceRemediations.
+
+The list is ordinary values rather than an out-of-band ConfigMap, so which remediations get applied
+is diffable, reviewable, and overridable per cluster like anything else.
+
+Object count follows the list length, hence rawTemplate.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftComplianceOperator.config }}
+{{- range $r := $cfg.autoRemediate }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceRemediation
+    metadata:
+      name: {{ $r }}
+      namespace: {{ $.Parameters.namespace }}
+    spec:
+      apply: true
+{{- end }}

@@ -3,12 +3,21 @@
 
 stack:
   # @description: Sample element demonstrating all policy types and documentation features
-  replaceMe:
+  myTest:
     # @desc: Master control to enable/disable all policies in this element
-    enable: false
+    enabled: false
+
+    # @desc: When true, each policy in policies[] gets an ACM dependency on the previous one,
+    # @desc: so they roll out in declaration order instead of all at once.
+    orderPolicies: false
+    # @desc: When true, the policy-templates inside each policy are chained in render order.
+    # @desc: Overridable per policy with policies[].orderManifests.
+    orderManifests: false
     
-    # @description: Default configuration applied to all policies unless explicitly overridden
-    defaultPolicy:
+    # @description: Default policy metadata applied unless overridden per-policy.
+    # @description: Only categories/controls/standards are consumed here; severity and
+    # @description: remediationAction must be set on each policy.
+    default:
       # @desc: Categories for organizing policies in ACM console and reports
       categories:
         - CM Configuration Management
@@ -22,12 +31,6 @@ stack:
         - NIST SP 800-53
         - CIS Benchmark
         - PCI DSS
-      # @desc: Default severity for policy violations (low/medium/high/critical)
-      severity: medium
-      # @desc: Default action when violations detected (inform/enforce)
-      remediationAction: inform
-      # @desc: Whether policies start disabled in ACM (useful for testing)
-      disabled: false
     
     # @description: Main policy definitions that group related configurations and operators
     policies:
@@ -96,6 +99,13 @@ stack:
         remediationAction: inform
         severity: medium
         disabled: false
+        # @description: Hold this policy Pending until another policy reports Compliant.
+        # @description: Names are written as they appear in this file - the chart appends the
+        # @description: release suffix itself. Add `element: <other-element>` to depend on a
+        # @description: policy owned by a different element on the same cluster.
+        dependencies:
+          # @desc: Wait for the baseline security controls before scanning for compliance
+          - name: baseline-security
       
       # @description: Resource management and quota enforcement policy
       - name: resource-management
@@ -198,6 +208,11 @@ stack:
         severity: high
         remediationAction: enforce
         complianceType: musthave
+        # @desc: Wait for this operator's CSV to reach Succeeded before applying this config.
+        # @desc: Names an entry in operatorPolicies[]; the owning policy is resolved automatically.
+        waitForOperator: acs-operator
+        # @desc: Report compliant (rather than NonCompliant) while waiting on the dependency above
+        ignorePending: true
         # @desc: Don't process templates in the policy itself
         disableTemplating: false
         # @desc: Target all non-system namespaces

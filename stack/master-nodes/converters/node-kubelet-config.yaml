@@ -1,0 +1,38 @@
+{{- /*
+KubeletConfig for one node role. Identical in every node element, so it stays portable: the role
+comes from .Parameters, and the element's own config block is resolved from the chart name using the
+same camelCase rule policy-library uses to find `stack.<component>`. Nothing here names an element,
+so this file is byte-identical in master-nodes, worker-nodes and infra-nodes.
+
+podsPerCore is derived from the node's actual CPU count, which is only knowable on the managed
+cluster - that part stays as an escaped ACM template.
+*/ -}}
+{{- $cfg := (index .Values.stack (.Chart.Name | replace "-" " " | title | nospace | untitle)).config }}
+{{ "{{" }}- $cores := 0 {{ "}}" }}
+{{ "{{" }}- range (lookup "v1" "Node" "" "").items {{ "}}" }}
+{{ "{{" }}-   if hasKey .metadata.labels "node-role.kubernetes.io/{{ .Parameters.role }}" {{ "}}" }}
+{{ "{{" }}-     if eq $cores 0 {{ "}}" }}{{ "{{" }}- $cores = (.status.capacity.cpu | toInt) {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}-   end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if eq $cores 0 {{ "}}" }}{{ "{{" }}- $cores = 1 {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machineconfiguration.openshift.io/v1
+    kind: KubeletConfig
+    metadata:
+      name: {{ .Parameters.role }}-node-config
+    spec:
+      machineConfigPoolSelector:
+        matchLabels:
+          pools.operator.machineconfiguration.openshift.io/{{ .Parameters.role }}: ""
+      kubeletConfig:
+        maxPods: {{ $cfg.maxPods }}
+        podsPerCore: {{ "{{" }} add 1 (div {{ $cfg.maxPods }} $cores) {{ "}}" }}
+        systemReserved:
+          memory: {{ $cfg.systemReservedMemory }}
+          cpu: {{ $cfg.systemReservedCpu }}
+        kubeReserved:
+          memory: {{ $cfg.kubeReservedMemory }}
+          cpu: {{ $cfg.kubeReservedCpu }}
+        evictionHard:
+          memory.available: {{ $cfg.evictionMemory }}

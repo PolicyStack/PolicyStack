@@ -1,0 +1,32 @@
+{{- /*
+Tunes the policy addons ACM pushes to every managed cluster: evaluation concurrency and API client
+rate limits as annotations, resource requests and limits as an AddOnDeploymentConfig.
+
+At fleet scale the defaults are the usual cause of slow policy evaluation, so these are values.
+*/ -}}
+{{- $cfg := .Values.stack.advancedClusterManagement.config.addons }}
+{{- range $addon, $spec := $cfg }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: addon.open-cluster-management.io/v1alpha1
+    kind: ClusterManagementAddOn
+    metadata:
+      name: {{ $addon }}
+      annotations:
+        addon.open-cluster-management.io/policy-evaluation-concurrency: {{ $spec.evaluationConcurrency | quote }}
+        addon.open-cluster-management.io/client-qps: {{ $spec.clientQPS | quote }}
+        addon.open-cluster-management.io/client-burst: {{ $spec.clientBurst | quote }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: addon.open-cluster-management.io/v1alpha1
+    kind: AddOnDeploymentConfig
+    metadata:
+      name: {{ $addon }}
+      namespace: {{ $.Parameters.namespace }}
+    spec:
+      resourceRequirements:
+        - containerID: "deployments:*:*"
+          resources:
+            requests: {{ toYaml $spec.requests | nindent 14 }}
+            limits: {{ toYaml $spec.limits | nindent 14 }}
+{{- end }}

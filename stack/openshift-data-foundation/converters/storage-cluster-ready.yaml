@@ -1,0 +1,21 @@
+{{- /*
+Inform-only readiness gate. This is what other elements depend on via `element:
+openshift-data-foundation`, so it is the contract for "storage is usable".
+*/ -}}
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  conditions:
+    - type: Available
+      status: 'True'
+    - type: ReconcileComplete
+      status: 'True'
+    - type: Progressing
+      status: 'False'
+    - type: Degraded
+      status: 'False'
+    - type: VersionMismatch
+      status: 'False'

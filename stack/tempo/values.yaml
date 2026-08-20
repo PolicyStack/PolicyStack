@@ -1,0 +1,46 @@
+stack:
+  # @description: Red Hat build of Tempo for distributed tracing storage
+  tempo:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the operator install
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage Red Hat build of Tempo"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the subscription
+    operatorPolicies:
+      - name: tempo
+        enabled: true
+        description: "Red Hat build of Tempo for distributed tracing storage"
+        # @desc: Must match the CSV displayName so the generated status check can find it
+        displayName: "Red Hat build of Tempo"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators
+        operatorGroup:
+          # @desc: Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
+          name: global-operators
+        subscription:
+          channel: stable
+          name: tempo-product
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        # @desc: Pin upgrades by listing approved CSVs under `versions:` instead of changing this
+        upgradeApproval: Automatic

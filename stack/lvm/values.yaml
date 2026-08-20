@@ -1,0 +1,109 @@
+stack:
+  # @description: LVM Storage operator providing local storage via LVM
+  lvm:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Tunables intended to be overridden per cluster or environment
+    config:
+      # @desc: Name of the LVM device class / volume group
+      deviceClassName: vg1
+      # @desc: Make the resulting StorageClass the cluster default
+      default: true
+      # @desc: Filesystem laid down on provisioned volumes
+      fstype: xfs
+      # @desc: Name of the thin pool inside the volume group
+      thinPoolName: thin-pool-1
+      # @desc: Percentage of the volume group given to the thin pool
+      sizePercent: 90
+      # @desc: How far the thin pool may overprovision
+      overprovisionRatio: 10
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the LVM Storage operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: config
+        enabled: true
+        description: "Deploy the LVMCluster instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until the LVMCluster is Ready"
+        # @desc: A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: config
+
+    operatorPolicies:
+      - name: lvms
+        enabled: true
+        description: "LVM Storage operator"
+        displayName: "LVM Storage"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-storage
+        operatorGroup:
+          name: openshift-storage-operatorgroup
+          targetNamespaces:
+            - openshift-storage
+        subscription:
+          channel: stable-4.20
+          name: lvms-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: lvmcluster
+        enabled: true
+        description: "LVMCluster instance"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: The LVMCluster CRD only exists after the operator installs
+        waitForOperator: lvms
+        ignorePending: true
+        templateNames:
+          - name: lvmcluster
+        enableTemplateParameters: true
+        templateParameters:
+          name: lvmcluster
+          namespace: openshift-storage
+
+      - name: lvmcluster-ready
+        enabled: true
+        description: "LVMCluster readiness gate"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: lvmcluster-ready
+        enableTemplateParameters: true
+        templateParameters:
+          name: lvmcluster
+          namespace: openshift-storage

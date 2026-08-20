@@ -15,7 +15,7 @@ stack:
 
     # @description: Parent policy grouping the Node Maintenance Operator install resources
     policies:
-      - name: node-maintenance-install
+      - name: install
         enabled: true
         namespace: open-cluster-management
         description: "Install and manage the Node Maintenance Operator"
@@ -29,7 +29,7 @@ stack:
         enabled: true
         description: "Node Maintenance Operator (Workload Availability)"
         displayName: "Node Maintenance Operator"
-        policyRef: node-maintenance-install
+        policyRef: install
         severity: medium
         remediationAction: enforce
         complianceType: musthave
@@ -50,7 +50,7 @@ stack:
       - name: node-maintenance-ns-monitoring
         enabled: true
         description: "Adds openshift.io/cluster-monitoring label to operator namespace"
-        policyRef: node-maintenance-install
+        policyRef: install
         complianceType: musthave
         remediationAction: enforce
         severity: low

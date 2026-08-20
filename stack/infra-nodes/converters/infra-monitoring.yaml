@@ -1,0 +1,26 @@
+{{- /*
+Pin the monitoring stack onto infra nodes.
+
+cluster-monitoring-config holds a single YAML string, so writing it wholesale would clobber whatever
+else is in there - notably `enableUserWorkload`, which the user-workload-monitoring element sets in
+the same ConfigMap. Replacing the document wholesale would make the two policies fight over it, so
+the existing one is read on the managed cluster and the placement keys are merged into it - both
+elements then compose instead of overwriting each other.
+*/ -}}
+{{- $role := .Parameters.role }}
+{{ "{{" }}- $cm := (lookup "v1" "ConfigMap" "openshift-monitoring" "cluster-monitoring-config") | default dict {{ "}}" }}
+{{ "{{" }}- $existing := (index ($cm.data | default dict) "config.yaml" | default "" | fromYaml) | default dict {{ "}}" }}
+{{ "{{" }}- $placement := dict "nodeSelector" (dict "node-role.kubernetes.io/{{ $role }}" "") "tolerations" (list (dict "key" "node-role.kubernetes.io/{{ $role }}" "effect" "NoSchedule") (dict "key" "node-role.kubernetes.io/{{ $role }}" "effect" "NoExecute")) {{ "}}" }}
+{{- range $comp := .Parameters.components }}
+{{ "{{" }}- $_ := set $existing "{{ $comp }}" (merge (deepCopy $placement) (index $existing "{{ $comp }}" | default dict)) {{ "}}" }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cluster-monitoring-config
+      namespace: openshift-monitoring
+    data:
+      config.yaml: |
+        {{ "{{" }} $existing | toYaml | autoindent {{ "}}" }}

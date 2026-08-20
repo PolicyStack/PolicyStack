@@ -1,0 +1,23 @@
+{{- /*
+LVMCluster operand. Every value resolves from Helm, so nothing needs ACM templating - and the typed
+fields keep their native YAML types instead of being quoted strings that have to be coerced back
+with toBool/toInt.
+*/ -}}
+{{- $cfg := .Values.stack.lvm.config }}
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  storage:
+    deviceClasses:
+      - name: {{ $cfg.deviceClassName }}
+        default: {{ $cfg.default }}
+        fstype: {{ $cfg.fstype }}
+        thinPoolConfig:
+          name: {{ $cfg.thinPoolName }}
+          sizePercent: {{ $cfg.sizePercent }}
+          overprovisionRatio: {{ $cfg.overprovisionRatio }}
+          chunkSizeCalculationPolicy: Static
+          metadataSizeCalculationPolicy: Host

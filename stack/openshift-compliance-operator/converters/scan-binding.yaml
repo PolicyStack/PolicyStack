@@ -1,0 +1,17 @@
+{{- /* Binds the configured profiles to the ScanSetting, which is what actually starts scanning. */ -}}
+{{- $cfg := .Values.stack.openshiftComplianceOperator.config }}
+apiVersion: compliance.openshift.io/v1alpha1
+kind: ScanSettingBinding
+metadata:
+  name: {{ .Parameters.binding }}
+  namespace: {{ .Parameters.namespace }}
+profiles:
+  {{- range $p := $cfg.profiles }}
+  - apiGroup: compliance.openshift.io/v1alpha1
+    kind: Profile
+    name: {{ $p }}
+  {{- end }}
+settingsRef:
+  apiGroup: compliance.openshift.io/v1alpha1
+  kind: ScanSetting
+  name: {{ .Parameters.scanSetting }}

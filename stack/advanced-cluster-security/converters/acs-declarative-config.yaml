@@ -1,0 +1,17 @@
+{{- /* Declarative auth provider config, mounted by Central. */ -}}
+{{- $auth := .Values.stack.advancedClusterSecurity.config.auth }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Parameters.declarativeConfigMap }}
+  namespace: {{ .Parameters.namespace }}
+data:
+  auth-provider.yaml: |
+    name: OpenShift
+    minimumRole: {{ $auth.minimumRole | quote }}
+    openshift:
+      enable: true
+    groups:
+      - key: groups
+        value: {{ $auth.adminGroup | quote }}
+        role: Admin

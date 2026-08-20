@@ -1,0 +1,10 @@
+{{- /* NooBaa bucket backing the registry when storage type is s3. */ -}}
+{{- $s3 := .Values.stack.openshiftImageRegistry.config.s3 }}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ .Parameters.claimName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  generateBucketName: {{ .Parameters.claimName }}
+  storageClassName: {{ $s3.bucketStorageClass }}

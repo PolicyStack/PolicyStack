@@ -26,9 +26,11 @@ In CI:
 | POLICY001  | error    | Policy/PolicySet ACM-replicated name `<ns>.<name>-<release>` > 63 chars; ConfigurationPolicy/OperatorPolicy/CertificatePolicy `metadata.name` (`<parent>-<sub>`) > 63 chars |
 | POLICY002  | error    | Duplicate rendered policy `metadata.name` within a `policyNamespace` |
 | POLICY010  | error    | `policyRef` points to nonexistent or disabled parent policy |
+| POLICY011  | error    | dependency reference that can never be satisfied: unknown `dependencies`/`extraDependencies` target, unknown `element:`, `element:` on a template kind, `waitForOperator` naming no enabled operator, or a target policy policy-library never emits (no enabled sub-policy attached) |
 | POLICY020  | error    | `templateNames[].name` has no matching `converters/<name>.yaml` |
 | POLICY021  | warning  | Converter file not referenced by any `templateNames[].name` |
 | POLICY030  | error    | Invalid enum: severity / remediationAction / complianceType / upgradeApproval |
+| POLICY031  | error/warning | values keys policy-library never reads: `enable:` (element renders nothing) and `defaultPolicy:` (metadata silently dropped) are errors; `default.severity`/`.remediationAction`/`.disabled` are warnings. Also flags `rawTemplate: true` with more than one `templateNames` entry |
 | POLICY040  | error    | `policySets[].policies[]` references a name not in `policies[]` |
 | POLICY050  | error    | Duplicate `<category>.<priority>` labels on a fixture cluster |
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |

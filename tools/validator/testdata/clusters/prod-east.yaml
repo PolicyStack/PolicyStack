@@ -7,5 +7,6 @@ metadata:
     vendor: OpenShift
     config.example.com/environment.10: prod
     config.example.com/datacenter.20: dc1
+    config.example.com/platform.30: aws
 spec:
   hubAcceptsClient: true

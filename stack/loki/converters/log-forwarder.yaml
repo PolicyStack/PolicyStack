@@ -1,0 +1,31 @@
+{{- /* Forwards the selected log types into the LokiStack. */ -}}
+{{- $cfg := .Values.stack.loki.config }}
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: {{ .Parameters.forwarderName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  managementState: Managed
+  serviceAccount:
+    name: {{ .Parameters.collectorName }}
+  outputs:
+    - name: {{ .Parameters.stackName }}
+      type: lokiStack
+      lokiStack:
+        target:
+          name: {{ .Parameters.stackName }}
+          namespace: {{ .Parameters.namespace }}
+        authentication:
+          token:
+            from: serviceAccount
+      tls:
+        ca:
+          configMapName: openshift-service-ca.crt
+          key: service-ca.crt
+  pipelines:
+    - name: logs-to-loki
+      inputRefs:
+        {{- toYaml $cfg.forwardedLogTypes | nindent 8 }}
+      outputRefs:
+        - {{ .Parameters.stackName }}

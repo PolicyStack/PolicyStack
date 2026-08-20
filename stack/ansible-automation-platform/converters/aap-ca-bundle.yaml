@@ -1,0 +1,12 @@
+{{- /*
+Concatenates the two injected CA bundles into the single Secret AAP consumes. Both inputs are
+populated by cluster operators on the managed cluster, so this is a genuine runtime read.
+*/ -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Parameters.caBundleSecret }}
+  namespace: {{ .Parameters.namespace }}
+type: Opaque
+data:
+  trusted-ca-bundle: '{{ "{{" }} printf "%s\n%s" (index (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.serviceCaName }}").data "service-ca.crt") (index (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.trustedCaName }}").data "ca-bundle.crt") | base64enc {{ "}}" }}'

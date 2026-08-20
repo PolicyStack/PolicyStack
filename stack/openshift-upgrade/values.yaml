@@ -1,0 +1,103 @@
+stack:
+  # @description: Drive and observe OpenShift cluster version upgrades
+  openshiftUpgrade:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Both actions are high-impact and independently switchable. Setting a target
+    # @description: version and toggling `upgrade` on is what actually starts an upgrade.
+    toggles:
+      # @desc: Pin the ClusterVersion channel (requires config.channel)
+      channel: false
+      # @desc: Drive the cluster to config.targetVersion, and report on progress
+      upgrade: false
+
+    # @description: Upgrade target
+    config:
+      # @desc: Upgrade channel, e.g. stable-4.20
+      channel: ""
+      # @desc: Exact version to upgrade to, e.g. 4.20.29. Required when the upgrade toggle is on.
+      targetVersion: ""
+      # @desc: Upgrade graph service
+      upstream: https://api.openshift.com/api/upgrades_info/v1/graph
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: channel
+        enabled: true
+        description: "Pin the cluster upgrade channel"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: The whole upgrade flow - guard, trigger, completion - behind one switch, so
+      # @description: none of it can report NonCompliant when no upgrade is targeted.
+      - name: upgrade
+        enabled: true
+        description: "Drive the cluster to the target version and report on progress"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+    configPolicies:
+      - name: pin
+        enabled: true
+        description: "ClusterVersion channel"
+        policyRef: channel
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: channel
+
+      # @description: Reachability guard. Inform-only: it never acts, it only reports.
+      - name: guard
+        enabled: true
+        description: "Target version reachability"
+        policyRef: upgrade
+        complianceType: musthave
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: upgrade-allowed
+
+      # @description: The actual trigger, held until the guard reports the target is reachable
+      - name: trigger
+        enabled: true
+        description: "ClusterVersion desiredUpdate"
+        policyRef: upgrade
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: clusterversion
+        # @desc: Never start an upgrade the guard says is invalid
+        extraDependencies:
+          - name: guard
+        ignorePending: true
+
+      # @description: Completion signal, only meaningful once the trigger has been applied
+      - name: progress
+        enabled: true
+        description: "Upgrade completion"
+        policyRef: upgrade
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: upgrade-status
+        extraDependencies:
+          - name: trigger
+        ignorePending: true

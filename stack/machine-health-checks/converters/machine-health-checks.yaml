@@ -1,0 +1,62 @@
+{{- /*
+One MachineHealthCheck per MachineSet, but only for the roles that are switched on.
+
+The MachineSets are discovered on the managed cluster - their names and roles are not knowable at
+render time - so the loop stays as ACM templating. Which roles participate, and the timeouts, come
+from values.
+
+Storage nodes get their own (longer) timeouts because rebuilding a storage node is far more
+disruptive than replacing a worker.
+*/ -}}
+{{- $cfg := .Values.stack.machineHealthChecks.config }}
+{{ "{{" }}- $machinesets := (lookup "machine.openshift.io/v1beta1" "MachineSet" "{{ .Parameters.namespace }}" "").items {{ "}}" }}
+{{ "{{" }}- range $ms := $machinesets {{ "}}" }}
+{{ "{{" }}-   $role := index $ms.spec.template.metadata.labels "machine.openshift.io/cluster-api-machine-role" {{ "}}" }}
+{{ "{{" }}-   $name := $ms.metadata.name {{ "}}" }}
+{{ "{{" }}-   $isStorage := hasKey ($ms.spec.template.spec.metadata.labels | default dict) "cluster.ocs.openshift.io/openshift-storage" {{ "}}" }}
+{{ "{{" }}-   $isWorker := and (eq $role "worker") (not $isStorage) {{ "}}" }}
+{{ "{{" }}-   $isInfra := and (eq $role "infra") (not $isStorage) {{ "}}" }}
+{{ "{{" }}-   if and $isStorage {{ $cfg.storage.enabled }} {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineHealthCheck
+    metadata:
+      name: {{ "{{" }} $name {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+    spec:
+      selector:
+        matchLabels:
+          machine.openshift.io/cluster-api-machineset: {{ "{{" }} $name {{ "}}" }}
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: {{ $cfg.storage.timeout }}
+        - type: Ready
+          status: Unknown
+          timeout: {{ $cfg.storage.timeout }}
+      maxUnhealthy: {{ $cfg.storage.maxUnhealthy | quote }}
+      nodeStartupTimeout: {{ $cfg.storage.nodeStartupTimeout }}
+{{ "{{" }}-   else if or (and $isWorker {{ $cfg.worker.enabled }}) (and $isInfra {{ $cfg.infra.enabled }}) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineHealthCheck
+    metadata:
+      name: {{ "{{" }} $name {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+    spec:
+      selector:
+        matchLabels:
+          machine.openshift.io/cluster-api-machineset: {{ "{{" }} $name {{ "}}" }}
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: {{ $cfg.default.timeout }}
+        - type: Ready
+          status: Unknown
+          timeout: {{ $cfg.default.timeout }}
+      maxUnhealthy: {{ $cfg.default.maxUnhealthy | quote }}
+      nodeStartupTimeout: {{ $cfg.default.nodeStartupTimeout }}
+{{ "{{" }}-   end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

@@ -1,0 +1,11 @@
+{{- /*
+Publishes Quay's route host for other workloads to consume. The host is assigned by the Route
+controller on the managed cluster, so the lookup stays as an escaped ACM template.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quay-config
+  namespace: {{ .Parameters.namespace }}
+data:
+  host: '{{ "{{" }} (lookup "route.openshift.io/v1" "Route" "{{ .Parameters.namespace }}" "{{ .Parameters.routeName }}").spec.host {{ "}}" }}'

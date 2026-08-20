@@ -1,0 +1,182 @@
+stack:
+  # @description: "MetalLB load balancer: address pools, advertisements and BGP peers"
+  metallb:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Optional pieces, switchable per cluster
+    toggles:
+      # @desc: Apply a ResourceQuota to the metallb namespace
+      quota: false
+      # @desc: Apply the address pools, advertisements and peers configured below
+      addressing: false
+
+    # @description: MetalLB configuration. Each map key becomes an object name and each value is
+    # @description: the object's spec exactly as the MetalLB API defines it.
+    config:
+      # @desc: IPAddressPool specs, e.g.
+      # @desc: internal: {addresses: ["192.168.100.1-192.168.100.20"], autoAssign: true}
+      ipAddressPools: {}
+      # @desc: L2Advertisement specs, e.g. internal: {ipAddressPools: [internal]}
+      l2Advertisements: {}
+      # @desc: BGPAdvertisement specs, e.g. internal: {ipAddressPools: [internal], peers: [rack1]}
+      bgpAdvertisements: {}
+      # @desc: BGPPeer specs, e.g. rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1}
+      bgpPeers: {}
+      # @description: Namespace resource ceiling, applied when the quota toggle is on
+      quota:
+        cpu: "100m"
+        memory: "256Mi"
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - SC System and Communications Protection
+      controls:
+        - SC-7 Boundary Protection
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the MetalLB operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: config
+        enabled: true
+        description: "Deploy the MetalLB instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: quota
+        enabled: true
+        description: "Resource quota for the MetalLB namespace"
+        remediationAction: enforce
+        severity: low
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: addressing
+        enabled: true
+        description: "Address pools, advertisements and BGP peers"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        # @desc: The MetalLB CRDs and controller must exist before any of these apply
+        dependencies:
+          - name: config
+
+    operatorPolicies:
+      - name: metallb
+        enabled: true
+        description: "MetalLB operator"
+        displayName: "MetalLB Operator"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: metallb-system
+        operatorGroup:
+          name: metallb-operator
+          targetNamespaces:
+            - metallb-system
+        subscription:
+          channel: stable
+          name: metallb-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: instance
+        enabled: true
+        description: "MetalLB instance"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: metallb
+        ignorePending: true
+        templateNames:
+          - name: metallb-cr
+        enableTemplateParameters: true
+        templateParameters:
+          name: metallb
+          namespace: metallb-system
+
+      - name: resourcequota
+        enabled: true
+        description: "MetalLB namespace quota"
+        policyRef: quota
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: metallb-quota
+        enableTemplateParameters: true
+        templateParameters:
+          name: metallb-quota
+          namespace: metallb-system
+
+      - name: pools
+        enabled: true
+        description: "IPAddressPools"
+        policyRef: addressing
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: metallb-ipaddresspools
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: metallb-system
+
+      - name: l2
+        enabled: true
+        description: "L2Advertisements"
+        policyRef: addressing
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: metallb-l2advertisements
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: metallb-system
+
+      - name: bgp
+        enabled: true
+        description: "BGPAdvertisements"
+        policyRef: addressing
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: metallb-bgpadvertisements
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: metallb-system
+
+      - name: peers
+        enabled: true
+        description: "BGPPeers"
+        policyRef: addressing
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: metallb-bgppeers
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: metallb-system

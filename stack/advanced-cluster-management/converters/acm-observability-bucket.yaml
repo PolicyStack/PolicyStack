@@ -1,0 +1,10 @@
+{{- /* NooBaa bucket from ODF, used as Thanos long-term metric storage. */ -}}
+{{- $o := .Values.stack.advancedClusterManagement.config.observability }}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ .Parameters.observabilityBucket }}
+  namespace: {{ .Parameters.observabilityNamespace }}
+spec:
+  generateBucketName: {{ .Parameters.observabilityBucket }}
+  storageClassName: {{ $o.bucketStorageClass }}

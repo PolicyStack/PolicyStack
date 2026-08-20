@@ -1,0 +1,35 @@
+{{- /*
+Trigger the upgrade. The target version and upstream graph are values; everything else - what the
+cluster is running now, and whether an upgrade is already in flight - can only be read on the
+managed cluster, so it stays as ACM templating.
+
+Only scalar spec fields are asserted. Completion is reported by the separate status policy, because
+ACM does not match status lists reliably.
+*/ -}}
+{{- $cfg := .Values.stack.openshiftUpgrade.config }}
+{{- if not $cfg.targetVersion }}{{- fail "stack.openshiftUpgrade.config.targetVersion must be set when the upgrade toggle is on" }}{{- end }}
+{{ "{{" }}- $target := "{{ $cfg.targetVersion }}" {{ "}}" }}
+{{ "{{" }}- $upstream := "{{ $cfg.upstream }}" {{ "}}" }}
+{{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
+{{ "{{" }}- $current := "" {{ "}}" }}
+{{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
+{{ "{{" }}-   if and (eq $current "") (eq (index $h "state") "Completed") {{ "}}" }}{{ "{{" }}- $current = (index $h "version") {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $progressing := false {{ "}}" }}
+{{ "{{" }}- range $c := (index $status "conditions" | default list) {{ "}}" }}
+{{ "{{" }}-   if and (eq (index $c "type") "Progressing") (eq (index $c "status") "True") {{ "}}" }}{{ "{{" }}- $progressing = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if or (eq $current "") (semverCompare (printf "> %s" $current) $target) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      name: version
+    spec:
+      upstream: '{{ "{{" }} $upstream {{ "}}" }}'
+      {{ "{{" }}- if not $progressing {{ "}}" }}
+      desiredUpdate:
+        version: '{{ "{{" }} $target {{ "}}" }}'
+      {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

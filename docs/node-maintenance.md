@@ -2,27 +2,44 @@
 
 > Node Maintenance Operator for safely cordoning and draining nodes
 
-*Generated: 2026-05-08 20:16:05*
+*Generated: 2026-08-20 21:44:36*
 
 ## Component Configuration
 
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
 | Component | `nodeMaintenance` | Node Maintenance Operator for safely cordoning and draining nodes |
-| Enabled | `False` | Whether this component is enabled |
+| Enabled | `False` | Master control to enable/disable all policies in this element |
+
+## Default Policy Metadata
+
+Default policy metadata applied unless overridden per-policy
+
+| Type | Values | Description |
+| ---- | ------ | ----------- |
+| Categories | CM Configuration Management | Default category classifications |
+| Controls | CM-2 Baseline Configuration | Default control mappings |
+| Standards | NIST SP 800-53 | Default compliance standards |
 
 ## Policies
 
-### 📋 Policy: node-maintenance-install
+### 📋 Policy: install
 > Install and manage the Node Maintenance Operator
 
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `node-maintenance-install-<release>` | Full policy name including release |
+| Name | `install-<release>` | Full policy name including release |
 | Namespace | `<namespace>` | Policy namespace |
 | Enabled | `True` | Whether this policy is templated |
 | Severity | `medium` | Policy severity level |
 | Remediation | `enforce` | Action when policy is violated |
+
+#### Compliance Metadata
+| Type | Values | Description |
+| ---- | ------ | ----------- |
+| Categories | CM Configuration Management (default) | Category classifications |
+| Controls | CM-2 Baseline Configuration (default) | Control mappings |
+| Standards | NIST SP 800-53 (default) | Compliance standards |
 
 #### Associated Sub-Policies
 
@@ -34,7 +51,7 @@
 **Basic Configuration:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `node-maintenance-install-node-maintenance-ns-monitoring` | Configuration policy identifier |
+| Name | `install-node-maintenance-ns-monitoring` | Configuration policy identifier |
 | Compliance Type | `musthave` | Compliance requirement type |
 | Remediation | `enforce` | Remediation action |
 | Severity | `low` | Severity level |
@@ -57,7 +74,7 @@
 **Basic Configuration:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `node-maintenance-install-node-maintenance` | Operator policy identifier |
+| Name | `install-node-maintenance` | Operator policy identifier |
 | Namespace | `openshift-workload-availability` | Target namespace for operator |
 | Display Name | `Node Maintenance Operator` | Display name for operator |
 | Compliance Type | `musthave` | Compliance requirement |

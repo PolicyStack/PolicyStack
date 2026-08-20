@@ -1,0 +1,29 @@
+{{- /*
+Claims node-local disks on the storage nodes and publishes them as a StorageClass, which ODF then
+consumes as its OSD backing store.
+*/ -}}
+{{- $cfg := .Values.stack.localStorage.config }}
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LocalVolumeSet
+metadata:
+  name: {{ .Parameters.name }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  storageClassName: {{ $cfg.storageClassName }}
+  volumeMode: {{ $cfg.volumeMode }}
+  deviceInclusionSpec:
+    deviceTypes:
+      {{- toYaml $cfg.deviceTypes | nindent 6 }}
+    minSize: {{ $cfg.minSize }}
+    {{- with $cfg.maxSize }}
+    maxSize: {{ . }}
+    {{- end }}
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: {{ $cfg.nodeSelectorKey }}
+            operator: Exists
+  tolerations:
+    - key: node.ocs.openshift.io/storage
+      operator: Exists
+      effect: NoSchedule

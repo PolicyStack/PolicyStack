@@ -1,0 +1,90 @@
+stack:
+  # @description: Local Storage operator exposing node-local disks as PVs
+  localStorage:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Which disks to claim, and what to call the resulting StorageClass
+    config:
+      # @desc: StorageClass created from the claimed disks. Point ODF's deviceSet at this.
+      storageClassName: nvme-storageclass
+      # @desc: Block for ODF OSDs; Filesystem for general local PVs
+      volumeMode: Block
+      # @desc: Device classes to claim
+      deviceTypes:
+        - disk
+      # @desc: Ignore devices smaller than this - keeps boot and OS disks out
+      minSize: 200G
+      # @desc: Optional upper bound
+      maxSize: ""
+      # @desc: Node label marking the nodes whose disks are claimed. Matches the label the
+      # @desc: storage-nodes element applies.
+      nodeSelectorKey: cluster.ocs.openshift.io/openshift-storage
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CP Contingency Planning
+      controls:
+        - CP-9 System Backup
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Local Storage operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: Claiming disks only makes sense once the storage nodes exist, so this waits
+      # @description: on the storage-nodes element on the same cluster.
+      - name: volumes
+        enabled: true
+        description: "Claim local disks on the storage nodes"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+          - name: ready
+            element: storage-nodes
+
+    operatorPolicies:
+      - name: local-storage
+        enabled: true
+        description: "Local Storage operator"
+        displayName: "Local Storage"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-local-storage
+        operatorGroup:
+          name: openshift-local-storage
+          targetNamespaces:
+            - openshift-local-storage
+        subscription:
+          channel: stable
+          name: local-storage-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: volumeset
+        enabled: true
+        description: "LocalVolumeSet claiming node-local disks"
+        policyRef: volumes
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: local-storage
+        ignorePending: true
+        templateNames:
+          - name: local-volume-set
+        enableTemplateParameters: true
+        templateParameters:
+          name: nvme-localvolumeset
+          namespace: openshift-local-storage

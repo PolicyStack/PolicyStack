@@ -1,0 +1,20 @@
+{{- /* Where the Ceph CSI node plugins are allowed to run. */ -}}
+{{- $cfg := .Values.stack.openshiftDataFoundation.config }}
+apiVersion: csi.ceph.io/v1
+kind: OperatorConfig
+metadata:
+  name: ceph-csi-operator-config
+  namespace: {{ .Parameters.namespace }}
+spec:
+  driverSpecDefaults:
+    nodePlugin:
+      tolerations:
+        {{- if $cfg.csiOnAllNodes }}
+        # Run CSI everywhere, including masters and infra
+        - operator: Exists
+        {{- else }}
+        - key: node.ocs.openshift.io/storage
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        {{- end }}

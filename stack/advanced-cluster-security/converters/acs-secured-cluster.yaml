@@ -1,0 +1,42 @@
+{{- /*
+The SecuredCluster CR. One definition covers both the hub and the managed clusters, because which
+clusters get it is decided by the values cascade rather than by separate placements.
+
+clusterName and centralEndpoint are read on the managed cluster: the first from the ACM agent's own
+kubeconfig secret, the second from the sensor-tls secret the init-bundle Job stamped. Neither is
+knowable at render time, so both stay as ACM templates.
+*/ -}}
+{{- $cfg := .Values.stack.advancedClusterSecurity.config }}
+{{- $ac := $cfg.admissionControl }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: SecuredCluster
+metadata:
+  name: {{ .Parameters.securedName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  clusterName: '{{ "{{" }} fromSecret "open-cluster-management-agent" "hub-kubeconfig-secret" "cluster-name" | base64dec {{ "}}" }}'
+  centralEndpoint: '{{ "{{" }} fromSecret "{{ .Parameters.namespace }}" "sensor-tls" "acs-host" | base64dec {{ "}}" }}'
+  auditLogs:
+    collection: Auto
+  admissionControl:
+    listenOnCreates: {{ $ac.enabled }}
+    listenOnUpdates: {{ $ac.enabled }}
+    listenOnEvents: true
+    contactImageScanners: {{ $ac.contactImageScanners }}
+    failurePolicy: {{ $ac.failurePolicy }}
+  scannerV4:
+    # The SecuredCluster enum is Default|AutoSense|Disabled - there is no "Enabled"
+    scannerComponent: {{ eq $cfg.scannerV4 "Enabled" | ternary "AutoSense" $cfg.scannerV4 }}
+  perNode:
+    collector:
+      collection: {{ $cfg.collector.collection }}
+      imageFlavor: Regular
+    taintToleration: TolerateTaints
+  {{- with $cfg.networkPolicies }}
+  networkPolicies: {{ . }}
+  {{- end }}
+  {{- if not (kindIs "invalid" $cfg.monitoring) }}
+  monitoring:
+    openshift:
+      enabled: {{ $cfg.monitoring }}
+  {{- end }}

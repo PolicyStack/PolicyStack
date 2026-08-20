@@ -1,0 +1,144 @@
+stack:
+  # @description: Compliance Operator running STIG scans and applying remediations
+  openshiftComplianceOperator:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Applying remediations reboots nodes, so it is opt-in per cluster
+    toggles:
+      # @desc: Apply the ComplianceRemediations listed in config.autoRemediate
+      remediate: false
+
+    # @description: Scan configuration
+    config:
+      # @desc: Profiles bound to the scan
+      profiles:
+        - ocp4-stig
+        - ocp4-stig-node
+        - rhcos4-stig
+      # @desc: Where raw scan results are persisted
+      rawResultStorage:
+        enabled: true
+        # @desc: StorageClass for raw results. Omit to use the cluster default.
+        storageClass: ""
+      # @desc: ComplianceRemediation names to apply when the remediate toggle is on. Keeping the list in values rather than an out-of-band ConfigMap makes it reviewable in git.
+      autoRemediate: []
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CA Security Assessment and Authorization
+      controls:
+        - CA-2 Control Assessments
+        - CA-7 Continuous Monitoring
+      standards:
+        - NIST SP 800-53
+        - DISA STIG
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Compliance Operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: scan
+        enabled: true
+        description: "Configure and bind the STIG scan"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until the scan suite has finished"
+        # @desc: A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: scan
+
+      - name: remediate
+        enabled: true
+        description: "Apply the configured compliance remediations"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+        # @desc: Remediations can only be applied once the scan has produced them
+        dependencies:
+          - name: ready
+
+    operatorPolicies:
+      - name: compliance
+        enabled: true
+        description: "OpenShift Compliance Operator"
+        displayName: "Compliance Operator"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-compliance
+        operatorGroup:
+          name: compliance-operator
+          targetNamespaces:
+            - openshift-compliance
+        subscription:
+          channel: stable
+          name: compliance-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: setting
+        enabled: true
+        description: "Default ScanSetting"
+        policyRef: scan
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: compliance
+        ignorePending: true
+        templateNames:
+          - name: scan-setting
+          - name: agg-patch-role
+          - name: agg-patch-rolebinding
+          - name: scan-binding
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-compliance
+          scanSetting: default
+          binding: stig
+
+      - name: suite
+        enabled: true
+        description: "Scan suite completion"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: suite-ready
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-compliance
+          binding: stig
+
+      - name: remediations
+        enabled: true
+        description: "Applied ComplianceRemediations"
+        policyRef: remediate
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        # @desc: One object per entry in config.autoRemediate
+        rawTemplate: true
+        templateNames:
+          - name: auto-remediate
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-compliance

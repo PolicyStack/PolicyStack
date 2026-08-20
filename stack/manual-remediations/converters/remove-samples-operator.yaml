@@ -1,0 +1,10 @@
+{{- /*
+Turn off the Samples Operator. It pulls a large set of imagestreams from registry.redhat.io that
+most clusters never use, and it fails noisily on disconnected clusters.
+*/ -}}
+apiVersion: samples.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  managementState: Removed

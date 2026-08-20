@@ -1,0 +1,9 @@
+{{- /* NooBaa bucket from ODF, used as LokiStack's object store. */ -}}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ .Parameters.bucketName }}
+  namespace: {{ .Parameters.namespace }}
+spec:
+  generateBucketName: {{ .Parameters.bucketName }}
+  storageClassName: {{ .Parameters.bucketStorageClass }}

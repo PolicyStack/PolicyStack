@@ -1,0 +1,19 @@
+{{- /*
+Copies the `admission-control-tls` material that Central generated ON THE HUB down to this secured cluster.
+
+This is the one place in the migration where hub templating stays. It is not configuration - it is a
+runtime secret minted by Central that must be distributed to every secured cluster, so it can never
+be a values file. The braces are escaped so Helm passes them through for ACM to resolve.
+*/ -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admission-control-tls
+  namespace: {{ .Parameters.namespace }}
+  labels:
+    certificate_key_name: admission-control-cert.pem
+type: Opaque
+data:
+  admission-control-cert.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "admission-control-tls" "admission-control-cert.pem" hub{{ "}}" }}'
+  admission-control-key.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "admission-control-tls" "admission-control-key.pem" hub{{ "}}" }}'
+  ca.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "admission-control-tls" "ca.pem" hub{{ "}}" }}'

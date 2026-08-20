@@ -1,0 +1,46 @@
+stack:
+  # @description: Red Hat Trusted Artifact Signer for supply-chain signing
+  trustedArtifactSigner:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the operator install
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage Red Hat Trusted Artifact Signer"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the subscription
+    operatorPolicies:
+      - name: rhtas
+        enabled: true
+        description: "Red Hat Trusted Artifact Signer for supply-chain signing"
+        # @desc: Must match the CSV displayName so the generated status check can find it
+        displayName: "Red Hat Trusted Artifact Signer"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators
+        operatorGroup:
+          # @desc: Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
+          name: global-operators
+        subscription:
+          channel: stable
+          name: rhtas-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        # @desc: Pin upgrades by listing approved CSVs under `versions:` instead of changing this
+        upgradeApproval: Automatic

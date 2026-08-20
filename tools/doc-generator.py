@@ -340,8 +340,8 @@ class DocumentationGenerator:
         comp_desc = self.get_field_description(comments, 'stack', component_name) or "Main component configuration"
         md.append(f"| Component | `{component_name}` | {comp_desc} |")
         
-        enabled_desc = self.get_field_description(comments, 'stack', component_name, 'enable') or "Whether this component is enabled"
-        md.append(f"| Enabled | `{component.get('enable', False)}` | {enabled_desc} |")
+        enabled_desc = self.get_field_description(comments, 'stack', component_name, 'enabled') or "Whether this component is enabled"
+        md.append(f"| Enabled | `{component.get('enabled', False)}` | {enabled_desc} |")
         
         if component.get('disablePlacements'):
             desc = self.get_field_description(comments, 'stack', component_name, 'disablePlacements') or "Whether automatic placement generation is disabled"
@@ -354,28 +354,59 @@ class DocumentationGenerator:
         md.append("")
         
         # Default Values
-        if component.get('defaultPolicy'):
-            md.append("## Default Policy Values")
+        if component.get('default'):
+            md.append("## Default Policy Metadata")
             md.append("")
-            desc = self.get_field_description(comments, 'stack', component_name, 'defaultPolicy') or "These defaults are applied to all policies unless overridden."
+            desc = self.get_field_description(comments, 'stack', component_name, 'default') or "These defaults are applied to all policies unless overridden."
             md.append(desc)
             md.append("")
             md.append("| Type | Values | Description |")
             md.append("| ---- | ------ | ----------- |")
             
-            defaults = component['defaultPolicy']
+            defaults = component['default']
             if defaults.get('categories'):
-                desc = self.get_field_description(comments, 'stack', component_name, 'defaultPolicy', 'categories') or "Default category classifications"
+                desc = self.get_field_description(comments, 'stack', component_name, 'default', 'categories') or "Default category classifications"
                 md.append(f"| Categories | {', '.join(defaults['categories'])} | {desc} |")
             if defaults.get('controls'):
-                desc = self.get_field_description(comments, 'stack', component_name, 'defaultPolicy', 'controls') or "Default control mappings"
+                desc = self.get_field_description(comments, 'stack', component_name, 'default', 'controls') or "Default control mappings"
                 md.append(f"| Controls | {', '.join(defaults['controls'])} | {desc} |")
             if defaults.get('standards'):
-                desc = self.get_field_description(comments, 'stack', component_name, 'defaultPolicy', 'standards') or "Default compliance standards"
+                desc = self.get_field_description(comments, 'stack', component_name, 'default', 'standards') or "Default compliance standards"
                 md.append(f"| Standards | {', '.join(defaults['standards'])} | {desc} |")
             
             md.append("")
         
+        # Toggles override an entry's `enabled` by name. They are a map, so a cluster values file
+        # can flip one sub-feature without restating the whole list.
+        toggles = component.get('toggles') or {}
+        if toggles:
+            md.append("## Sub-Feature Toggles")
+            md.append("")
+            md.append("Override an entry's `enabled` by name. Being a map, these merge cleanly "
+                      "through the values cascade, so a per-cluster override stays one line.")
+            md.append("")
+            md.append("| Toggle | Default | Description |")
+            md.append("| ------ | ------- | ----------- |")
+            for tname, tval in toggles.items():
+                desc = self.get_field_description(comments, 'stack', component_name, 'toggles', tname) or ""
+                md.append(f"| `{tname}` | `{tval}` | {desc} |")
+            md.append("")
+
+        # config: holds the tunables the values cascade is expected to override per cluster.
+        config = component.get('config') or {}
+        if config:
+            md.append("## Configuration")
+            md.append("")
+            md.append("Values intended to be overridden per environment, datacenter, or cluster.")
+            md.append("")
+            md.append("| Key | Default | Description |")
+            md.append("| --- | ------- | ----------- |")
+            for ckey, cval in config.items():
+                desc = self.get_field_description(comments, 'stack', component_name, 'config', ckey) or ""
+                shown = cval if not isinstance(cval, (dict, list)) else f"({type(cval).__name__})"
+                md.append(f"| `{ckey}` | `{shown}` | {desc} |")
+            md.append("")
+
         # Process Policies
         policies = component.get('policies', [])
         if policies:
@@ -467,6 +498,45 @@ class DocumentationGenerator:
         
         return '\n'.join(md)
     
+    def _generate_gating_section(self, md: List[str], sub: Dict, policy_name: str):
+        """Render waitForOperator / extraDependencies / ignorePending for one sub-policy."""
+        wait = sub.get('waitForOperator')
+        extra = sub.get('extraDependencies')
+        if not wait and not extra and not sub.get('ignorePending'):
+            return
+        md.append("**Gating:**")
+        md.append("")
+        if wait:
+            names = [wait] if isinstance(wait, str) else list(wait)
+            for n in names:
+                md.append(f"- Waits for operator `{n}` to reach CSV phase `Succeeded`")
+        if sub.get('ignorePending'):
+            md.append("- Reports compliant while waiting (`ignorePending`)")
+        if extra:
+            md.append("")
+            md.append("| Resolves To | Kind | Awaited State |")
+            md.append("| ----------- | ---- | ------------- |")
+            for dep in extra:
+                md.append(self._format_dependency(dep, policy_name, 'ConfigurationPolicy'))
+        md.append("")
+
+    def _format_dependency(self, dep: Dict, owner: str, default_kind: str) -> str:
+        """Render one dependency entry the way policy-library resolves it."""
+        name = dep.get('name', '?')
+        kind = dep.get('kind', default_kind)
+        if dep.get('raw'):
+            resolved = name
+        elif kind == 'Policy':
+            if dep.get('release'):
+                resolved = f"{name}-{dep['release']}"
+            elif dep.get('element'):
+                resolved = f"{name}-{dep['element']}-<cluster>"
+            else:
+                resolved = f"{name}-<release>"
+        else:
+            resolved = f"{dep.get('policyRef', owner)}-{name}"
+        return f"| `{resolved}` | `{kind}` | `{dep.get('compliance', 'Compliant')}` |"
+
     def _generate_policy_section(self, md: List[str], policy: Dict, component: Dict, 
                                  comments: Dict, path: List):
         """Generate documentation for a single policy and its sub-policies"""
@@ -506,28 +576,41 @@ class DocumentationGenerator:
         
         md.append("")
         
+        # Dependencies hold the whole policy Pending until the targets report Compliant.
+        if policy.get('dependencies'):
+            md.append("#### Dependencies")
+            md.append("")
+            md.append("This policy stays `Pending` until every target below reports the "
+                      "listed compliance state.")
+            md.append("")
+            md.append("| Resolves To | Kind | Awaited State |")
+            md.append("| ----------- | ---- | ------------- |")
+            for dep in policy['dependencies']:
+                md.append(self._format_dependency(dep, policy_name, 'Policy'))
+            md.append("")
+        
         # Compliance Metadata
         if any([policy.get('categories'), policy.get('controls'), policy.get('standards'),
-                component.get('defaultPolicy', {}).get('categories'),
-                component.get('defaultPolicy', {}).get('controls'),
-                component.get('defaultPolicy', {}).get('standards')]):
+                component.get('default', {}).get('categories'),
+                component.get('default', {}).get('controls'),
+                component.get('default', {}).get('standards')]):
             md.append("#### Compliance Metadata")
             md.append("| Type | Values | Description |")
             md.append("| ---- | ------ | ----------- |")
             
-            categories = policy.get('categories') or component.get('defaultPolicy', {}).get('categories')
+            categories = policy.get('categories') or component.get('default', {}).get('categories')
             if categories:
                 source = "" if policy.get('categories') else " (default)"
                 desc = self.get_field_description(comments, *path, 'categories') or "Category classifications"
                 md.append(f"| Categories | {', '.join(categories)}{source} | {desc} |")
             
-            controls = policy.get('controls') or component.get('defaultPolicy', {}).get('controls')
+            controls = policy.get('controls') or component.get('default', {}).get('controls')
             if controls:
                 source = "" if policy.get('controls') else " (default)"
                 desc = self.get_field_description(comments, *path, 'controls') or "Control mappings"
                 md.append(f"| Controls | {', '.join(controls)}{source} | {desc} |")
             
-            standards = policy.get('standards') or component.get('defaultPolicy', {}).get('standards')
+            standards = policy.get('standards') or component.get('default', {}).get('standards')
             if standards:
                 source = "" if policy.get('standards') else " (default)"
                 desc = self.get_field_description(comments, *path, 'standards') or "Compliance standards"
@@ -623,7 +706,13 @@ class DocumentationGenerator:
             desc = self.get_field_description(comments, *path, 'disableTemplating') or "Template processing status"
             md.append(f"| Template Processing | Disabled | {desc} |")
         
+        if config.get('rawTemplate'):
+            desc = self.get_field_description(comments, *path, 'rawTemplate') or "Emitted under object-templates-raw"
+            md.append(f"| Raw Template | Enabled | {desc} |")
+        
         md.append("")
+        
+        self._generate_gating_section(md, config, policy_name)
         
         # Template Names with descriptions
         if config.get('templateNames'):
@@ -737,6 +826,8 @@ class DocumentationGenerator:
                 else:
                     md.append(f"- `{version}`")
             md.append("")
+        
+        self._generate_gating_section(md, operator, policy_name)
     
     def _generate_certificate_policy_section(self, md: List[str], cert: Dict, policy_name: str, 
                                             comments: Dict, path: List):
@@ -795,6 +886,9 @@ class DocumentationGenerator:
                 pattern_desc = self.get_field_description(comments, *path, 'disallowedSANPattern') or "Regex pattern for disallowed SANs"
                 md.append(f"- Disallowed Pattern: `{cert['disallowedSANPattern']}` - {pattern_desc}")
             md.append("")
+    
+        
+        self._generate_gating_section(md, cert, policy_name)
     
     def _find_sub_policies(self, policy_name: str, component: Dict) -> Dict[str, List]:
         """Find all sub-policies associated with a policy"""

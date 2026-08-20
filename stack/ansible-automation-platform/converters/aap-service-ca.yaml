@@ -1,0 +1,8 @@
+{{- /* Empty ConfigMap; the service CA operator injects the bundle. */ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Parameters.serviceCaName }}
+  namespace: {{ .Parameters.namespace }}
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"

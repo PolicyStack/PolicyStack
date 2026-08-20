@@ -1,0 +1,8 @@
+{{- /* Inform-only: the init-bundle Job has succeeded. */ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Parameters.jobName }}
+  namespace: {{ .Parameters.namespace }}
+status:
+  succeeded: 1

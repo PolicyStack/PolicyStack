@@ -1,0 +1,13 @@
+# Selected by a `config.<baseDomain>/platform.<priority>=baremetal` label on the ManagedCluster.
+# Bare metal has no MachineSets, so storage nodes are designated by labelling existing nodes and
+# infra MachineSet creation is off entirely.
+stack:
+  infraNodes:
+    toggles:
+      aws: false
+      vmware: false
+  storageNodes:
+    toggles:
+      aws: false
+      vmware: false
+      baremetal: true

@@ -1,0 +1,98 @@
+stack:
+  # @description: Migration Toolkit for Virtualization
+  mtv:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Tunables intended to be overridden per cluster or environment
+    config:
+      # @desc: Expose the Forklift console plugin
+      uiPlugin: true
+      # @desc: Run the validation service
+      validation: true
+      # @desc: Enable the volume populator for disk transfer
+      volumePopulator: true
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      # @description: Operator install
+      - name: install
+        enabled: true
+        description: "Install and manage the Migration Toolkit for Virtualization operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: The ForkliftController operand, applied once the operator is ready
+      - name: config
+        enabled: true
+        description: "Deploy the ForkliftController instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        # @desc: The ForkliftController CRD only exists after the operator installs
+        dependencies:
+          - name: install
+
+    operatorPolicies:
+      - name: mtv
+        enabled: true
+        description: "Migration Toolkit for Virtualization"
+        displayName: "Migration Toolkit for Virtualization Operator"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-mtv
+        operatorGroup:
+          name: migration
+          # @desc: Own-namespace install mode
+          targetNamespaces:
+            - openshift-mtv
+        subscription:
+          channel: release-v2.10
+          name: mtv-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      # @description: Adds the cluster-monitoring label so the operator's metrics are scraped
+      - name: ns-monitoring
+        enabled: true
+        description: "Adds openshift.io/cluster-monitoring label to the operator namespace"
+        policyRef: install
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: ns-monitoring-label
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-mtv
+
+      # @description: ForkliftController operand
+      - name: forklift
+        enabled: true
+        description: "ForkliftController instance"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: Wait for the operator's CSV rather than racing the CRD
+        waitForOperator: mtv
+        # @desc: Report compliant while waiting instead of flapping during install
+        ignorePending: true
+        templateNames:
+          - name: forklift-controller
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-mtv

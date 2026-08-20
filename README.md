@@ -211,7 +211,10 @@ Currently, the only "required" label is the revision label. This is fairly limit
 Here are some recommended labels that would allow you to take advantage of multiple environments.
 1. `config.example.com/envioronment.1=<environment>`: This would be prod/nonprod/sbx or any other custom environment
 2. `config.example.com/datacenter.2=<datacenter>`: This would be nj/mtc or custom
-3. `config.example.com/<type>.<priority>=<value>`: Dynamically generated label - ***OPTIONAL***
+3. `config.example.com/platform.3=<platform>`: aws/vmware/baremetal. Node elements (`infra-nodes`,
+   `storage-nodes`) build MachineSets differently per platform, so this selects
+   `values/platforms/<platform>.yaml`, which flips the matching toggles.
+4. `config.example.com/<type>.<priority>=<value>`: Dynamically generated label - ***OPTIONAL***
 
 ### Missing Values Files
 

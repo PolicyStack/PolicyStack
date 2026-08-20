@@ -1,0 +1,63 @@
+{{- /*
+Two objects, and they need different engines.
+
+The first flips enableUserWorkload in the cluster's existing cluster-monitoring-config. That
+ConfigMap holds a single YAML string under data."config.yaml", so a musthave apply would REPLACE
+whatever else the cluster has set there. The existing value therefore has to be read on the managed
+cluster and merged - that is a real runtime read and stays as an escaped ACM template.
+
+The second is pure configuration, so Helm builds it from the values cascade - a dict and a toYaml
+rather than lines of conditional text.
+*/ -}}
+{{- $cfg := .Values.stack.userWorkloadMonitoring.config }}
+{{- $sc := $cfg.storageClass }}
+
+{{ "{{" }}- $cm := (lookup "v1" "ConfigMap" "openshift-monitoring" "cluster-monitoring-config") | default dict {{ "}}" }}
+{{ "{{" }}- $existing := (index ($cm.data | default dict) "config.yaml" | default "" | fromYaml) | default dict {{ "}}" }}
+{{ "{{" }}- $_ := set $existing "enableUserWorkload" true {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cluster-monitoring-config
+      namespace: openshift-monitoring
+    data:
+      config.yaml: |
+        {{ "{{" }} $existing | toYaml | autoindent {{ "}}" }}
+{{- /* Build the UWM config as a dict so the emitted YAML is structurally correct by construction. */ -}}
+{{- $prom := dict "retention" $cfg.prometheus.retention
+      "volumeClaimTemplate" (dict "spec" (dict "resources" (dict "requests" (dict "storage" $cfg.prometheus.storage)))) }}
+{{- if or $cfg.prometheus.storageClass $sc }}
+{{- $_ := set (index $prom "volumeClaimTemplate" "spec") "storageClassName" ($cfg.prometheus.storageClass | default $sc) }}
+{{- end }}
+{{- with $cfg.prometheus.resources }}{{- $_ := set $prom "resources" . }}{{- end }}
+{{- if $cfg.prometheus.dedicatedServiceMonitors }}
+{{- $_ := set $prom "dedicatedServiceMonitors" (dict "enabled" true) }}
+{{- end }}
+{{- $thanos := dict "retention" $cfg.thanosRuler.retention
+      "volumeClaimTemplate" (dict "spec" (dict "resources" (dict "requests" (dict "storage" $cfg.thanosRuler.storage)))) }}
+{{- if or $cfg.thanosRuler.storageClass $sc }}
+{{- $_ := set (index $thanos "volumeClaimTemplate" "spec") "storageClassName" ($cfg.thanosRuler.storageClass | default $sc) }}
+{{- end }}
+{{- with $cfg.thanosRuler.resources }}{{- $_ := set $thanos "resources" . }}{{- end }}
+{{- $uwm := dict "prometheus" $prom "thanosRuler" $thanos }}
+{{- if $cfg.alertmanager.enabled }}
+{{- $am := dict "enabled" true
+      "volumeClaimTemplate" (dict "spec" (dict "resources" (dict "requests" (dict "storage" $cfg.alertmanager.storage)))) }}
+{{- if or $cfg.alertmanager.storageClass $sc }}
+{{- $_ := set (index $am "volumeClaimTemplate" "spec") "storageClassName" ($cfg.alertmanager.storageClass | default $sc) }}
+{{- end }}
+{{- with $cfg.alertmanager.resources }}{{- $_ := set $am "resources" . }}{{- end }}
+{{- $_ := set $uwm "alertmanager" $am }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: user-workload-monitoring-config
+      namespace: openshift-user-workload-monitoring
+    data:
+      config.yaml: |
+{{ $uwm | toYaml | indent 8 }}

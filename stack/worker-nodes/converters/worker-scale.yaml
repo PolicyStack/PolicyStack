@@ -1,0 +1,44 @@
+{{- /*
+Workers already exist - the installer created them - so this scales and resizes the existing
+MachineSets rather than creating new ones. It matches both cloud shapes: on AWS there is one worker
+MachineSet per AZ, on vSphere one per failure domain, and patching each covers either.
+
+Only the fields that are actually configured are patched, so an unset value leaves the installer's
+choice alone rather than overwriting it.
+*/ -}}
+{{- $cfg := .Values.stack.workerNodes.config }}
+{{ "{{" }}- $infraId := (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}
+{{ "{{" }}- range (lookup "machine.openshift.io/v1beta1" "MachineSet" "{{ .Parameters.namespace }}" "").items {{ "}}" }}
+{{ "{{" }}- if hasPrefix (printf "%s-worker" $infraId) .metadata.name {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ .Parameters.namespace }}
+    spec:
+      deletePolicy: Oldest
+      {{- if $cfg.replicas }}
+      replicas: {{ $cfg.replicas }}
+      {{- end }}
+      {{- if or $cfg.instanceType (or $cfg.numCPUs (or $cfg.memoryMiB $cfg.numCoresPerSocket)) }}
+      template:
+        spec:
+          providerSpec:
+            value:
+              {{- with $cfg.instanceType }}
+              instanceType: {{ . }}
+              {{- end }}
+              {{- with $cfg.numCPUs }}
+              numCPUs: {{ . }}
+              {{- end }}
+              {{- with $cfg.numCoresPerSocket }}
+              numCoresPerSocket: {{ . }}
+              {{- end }}
+              {{- with $cfg.memoryMiB }}
+              memoryMiB: {{ . }}
+              {{- end }}
+      {{- end }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

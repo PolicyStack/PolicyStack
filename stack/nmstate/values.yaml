@@ -1,0 +1,140 @@
+stack:
+  # @description: Kubernetes NMState operator and declarative node network configuration
+  nmstate:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: NNCP generation is opt-in: the operator and its CR are useful on their own,
+    # @description: and node network topology is highly cluster-specific.
+    toggles:
+      # @desc: Generate NodeNetworkConfigurationPolicies from config.networking below
+      nncp: false
+
+    # @description: Node network topology. Everything the NNCP generator needs lives here, so the
+    # @description: whole topology is reviewable in git.
+    config:
+      networking:
+        # @desc: Nodes the shared NNCPs apply to. Empty means all nodes.
+        nodeSelector: {}
+        # @desc: Cluster-wide interfaces keyed by id, e.g.
+        # @desc: bond0: {type: bond, mode: 802.3ad, ports: [ens1f0, ens1f1], ipv4: dhcp}
+        interfaces: {}
+        # @desc: OVS bridges keyed by id, e.g. br-ex: {ports: [bond0], stp: false}
+        ovsBridges: {}
+        # @desc: Static routes keyed by id, e.g. r1: {destination: 0.0.0.0/0, gateway: ..., interface: bond0}
+        routes: {}
+        # @desc: Resolver settings, e.g. {servers: [10.0.0.10], search: [example.com]}
+        dns: {}
+        # @desc: OVN localnet-to-bridge mappings, e.g. m1: {localnet: physnet, bridge: br-ex}
+        ovnMappings: {}
+      # @desc: Per-host overrides keyed by hostname. An interface declared here is rendered only
+      # @desc: for that host, not cluster-wide. Use it for static addressing and per-host MACs.
+      hosts: {}
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the Kubernetes NMState operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: config
+        enabled: true
+        description: "Deploy the NMState instance"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: install
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until the nmstate webhook is Available"
+        # @desc: A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: config
+
+      - name: nncp
+        enabled: true
+        description: "Node network configuration policies"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        # @desc: NNCPs are rejected by admission until the webhook is up
+        dependencies:
+          - name: ready
+
+    operatorPolicies:
+      - name: nmstate
+        enabled: true
+        description: "Kubernetes NMState operator"
+        displayName: "Kubernetes NMState Operator"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-nmstate
+        operatorGroup:
+          name: openshift-nmstate
+          targetNamespaces:
+            - openshift-nmstate
+        subscription:
+          channel: stable
+          name: kubernetes-nmstate-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+
+    configPolicies:
+      - name: instance
+        enabled: true
+        description: "NMState instance"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        waitForOperator: nmstate
+        ignorePending: true
+        templateNames:
+          - name: nmstate-cr
+        enableTemplateParameters: true
+        templateParameters:
+          name: nmstate
+
+      - name: webhook
+        enabled: true
+        description: "nmstate webhook readiness"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: webhook-ready
+        enableTemplateParameters: true
+        templateParameters:
+          namespace: openshift-nmstate
+
+      - name: policies
+        enabled: true
+        description: "Generated NodeNetworkConfigurationPolicies"
+        policyRef: nncp
+        complianceType: mustonlyhave
+        remediationAction: enforce
+        severity: medium
+        # @desc: The number of NNCPs depends on how many interfaces/hosts are configured
+        rawTemplate: true
+        templateNames:
+          - name: nncp

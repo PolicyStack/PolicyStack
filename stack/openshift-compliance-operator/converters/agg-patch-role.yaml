@@ -1,0 +1,16 @@
+{{- /*
+The remediation aggregator needs to patch ComplianceRemediation objects. Split into its own
+converter because a PolicyStack converter renders exactly one object.
+*/ -}}
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: compliance-operator-agg-patch-role
+  namespace: {{ .Parameters.namespace }}
+rules:
+  - apiGroups:
+      - compliance.openshift.io
+    resources:
+      - complianceremediations
+      - complianceremediations/status
+    verbs: [create, get, update, patch, delete]

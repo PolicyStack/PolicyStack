@@ -1,0 +1,64 @@
+{{- /*
+PerformanceProfile pinning platform workloads onto a reserved CPU set, leaving the isolated set for
+application workloads.
+
+Every input is a plain Helm value, so the whole thing resolves at render time and no ACM templating
+is needed.
+
+reserved/isolated have no safe defaults - getting them wrong degrades the node - so enabling this
+element without setting them is a hard render error rather than a silently wrong profile.
+*/ -}}
+{{- $cfg := .Values.stack.workloadPartitioning.config }}
+{{- if not $cfg.reservedCpus }}
+  {{- fail "stack.workloadPartitioning.config.reservedCpus must be set (e.g. \"0-1\") when this element is enabled" }}
+{{- end }}
+{{- if not $cfg.isolatedCpus }}
+  {{- fail "stack.workloadPartitioning.config.isolatedCpus must be set (e.g. \"2-31\") when this element is enabled" }}
+{{- end }}
+{{- $nodeSelector := $cfg.nodeSelector | default dict }}
+{{- $mcpSelector := $cfg.machineConfigPoolSelector | default $nodeSelector }}
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  name: {{ .Parameters.name }}
+spec:
+  cpu:
+    reserved: {{ $cfg.reservedCpus | quote }}
+    isolated: {{ $cfg.isolatedCpus | quote }}
+  nodeSelector:
+    {{- if $nodeSelector }}
+    {{- toYaml $nodeSelector | nindent 4 }}
+    {{- else }}
+    node-role.kubernetes.io/master: ""
+    {{- end }}
+  machineConfigPoolSelector:
+    {{- if $mcpSelector }}
+    {{- toYaml $mcpSelector | nindent 4 }}
+    {{- else }}
+    pools.operator.machineconfiguration.openshift.io/master: ""
+    {{- end }}
+  {{- if $cfg.numaTopologyPolicy }}
+  numa:
+    topologyPolicy: {{ $cfg.numaTopologyPolicy }}
+  {{- end }}
+  {{- if $cfg.realTimeKernel }}
+  realTimeKernel:
+    enabled: true
+  {{- end }}
+  globallyDisableIrqLoadBalancing: {{ $cfg.globallyDisableIrqLoadBalancing | default false }}
+  {{- with $cfg.hugepages }}
+  hugepages:
+    {{- if .defaultSize }}
+    defaultHugepagesSize: {{ .defaultSize }}
+    {{- end }}
+    {{- if .pages }}
+    pages:
+      {{- range $p := .pages }}
+      - size: {{ $p.size }}
+        count: {{ $p.count }}
+        {{- if $p.node }}
+        node: {{ $p.node }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}

@@ -23,11 +23,18 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 	comp := ctx.Element.Values.Component
 
 	policies := map[string]bool{}
+	// toggled records parents whose enabled state is controlled by the component's toggles map. A
+	// sub-feature that ships off and is switched on per cluster is the intended pattern, not a
+	// mistake, so those are exempt from the "exists but is disabled" finding below.
+	toggled := map[string]bool{}
 	for _, p := range comp.Policies {
 		if p.Name == "" {
 			continue
 		}
-		policies[p.Name] = p.Enabled
+		policies[p.Name] = comp.IsEnabled(p.Name, p.Enabled)
+		if _, ok := comp.Toggles[p.Name]; ok {
+			toggled[p.Name] = true
+		}
 	}
 
 	var out []Finding
@@ -47,6 +54,9 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 			return
 		}
 		if !enabled {
+			if toggled[ref] {
+				return
+			}
 			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, strconv.Itoa(idx), "policyRef")
 			out = append(out, Finding{
 				RuleID: c.ID(), Severity: SevError,
@@ -58,19 +68,19 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 	}
 
 	for i, p := range comp.ConfigPolicies {
-		if !p.Enabled {
+		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
 		emit(p.PolicyRef, p.Name, "configPolicies", i)
 	}
 	for i, p := range comp.OperatorPolicies {
-		if !p.Enabled {
+		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
 		emit(p.PolicyRef, p.Name, "operatorPolicies", i)
 	}
 	for i, p := range comp.CertificatePolicies {
-		if !p.Enabled {
+		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
 		emit(p.PolicyRef, p.Name, "certificatePolicies", i)

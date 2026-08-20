@@ -1,0 +1,10 @@
+{{- /* Adds the Logging view to the OpenShift console, served by Cluster Observability. */ -}}
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: logging
+spec:
+  type: Logging
+  logging:
+    lokiStack:
+      name: {{ .Parameters.stackName }}

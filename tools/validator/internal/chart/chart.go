@@ -56,59 +56,156 @@ type Values struct {
 }
 
 // Component mirrors the per-element block under `stack.<key>`.
+//
+// Note the spelling of Enabled/Default: policy-library reads `enabled` and `default`. The legacy
+// `enable`/`defaultPolicy` spellings are modelled separately so DeadKeys can report them - an
+// element using them renders silently wrong rather than failing.
 type Component struct {
-	Enable              bool                 `yaml:"enable"`
-	Policies            []Policy             `yaml:"policies"`
-	ConfigPolicies      []SubPolicy          `yaml:"configPolicies"`
-	OperatorPolicies    []OperatorPolicy     `yaml:"operatorPolicies"`
-	CertificatePolicies []CertificatePolicy  `yaml:"certificatePolicies"`
-	PolicySets          []PolicySet          `yaml:"policySets"`
-	DefaultPolicy       *DefaultPolicy       `yaml:"defaultPolicy"`
+	Enabled             bool                `yaml:"enabled"`
+	Policies            []Policy            `yaml:"policies"`
+	ConfigPolicies      []SubPolicy         `yaml:"configPolicies"`
+	OperatorPolicies    []OperatorPolicy    `yaml:"operatorPolicies"`
+	CertificatePolicies []CertificatePolicy `yaml:"certificatePolicies"`
+	PolicySets          []PolicySet         `yaml:"policySets"`
+	Default             *Default            `yaml:"default"`
+	// Toggles overrides an entry's Enabled by name (chart 1.3.0).
+	Toggles        map[string]bool `yaml:"toggles"`
+	OrderPolicies  bool            `yaml:"orderPolicies"`
+	OrderManifests bool            `yaml:"orderManifests"`
+
+	// Legacy spellings the chart never reads. Present only so they can be reported.
+	LegacyEnable        *bool    `yaml:"enable"`
+	LegacyDefaultPolicy *Default `yaml:"defaultPolicy"`
 }
 
-// DefaultPolicy is the per-component defaults block. Enums also validated here.
-type DefaultPolicy struct {
+// Default is the per-component defaults block. policy-library consumes only
+// categories/controls/standards from it; Severity/RemediationAction/Disabled are modelled so
+// DeadKeys can report that setting them here has no effect.
+type Default struct {
 	Severity          string `yaml:"severity"`
 	RemediationAction string `yaml:"remediationAction"`
+	Disabled          *bool  `yaml:"disabled"`
+}
+
+// CouldBeEnabled reports whether an entry is either enabled now, or governed by a toggle and so
+// could be enabled on some cluster. Structural checks use this rather than IsEnabled: a toggle is a
+// per-cluster switch, so a reference inside a currently-off sub-feature still has to resolve, or the
+// typo only surfaces when someone turns it on in production.
+func (c *Component) CouldBeEnabled(name string, declared bool) bool {
+	if c != nil {
+		if _, ok := c.Toggles[name]; ok {
+			return true
+		}
+	}
+	return c.IsEnabled(name, declared)
+}
+
+// IsToggled reports whether an entry's enablement is governed by the toggles map.
+func (c *Component) IsToggled(name string) bool {
+	if c == nil {
+		return false
+	}
+	_, ok := c.Toggles[name]
+	return ok
+}
+
+// IsEnabled resolves an entry's effective enabled state, honouring Toggles. A toggle keyed by the
+// entry's name overrides its declared `enabled`, in either direction.
+func (c *Component) IsEnabled(name string, declared bool) bool {
+	if c == nil {
+		return declared
+	}
+	if v, ok := c.Toggles[name]; ok {
+		return v
+	}
+	return declared
 }
 
 // Policy is a parent ACM Policy entry.
 type Policy struct {
-	Name              string `yaml:"name"`
-	Enabled           bool   `yaml:"enabled"`
-	Severity          string `yaml:"severity"`
-	RemediationAction string `yaml:"remediationAction"`
+	Name              string     `yaml:"name"`
+	Enabled           bool       `yaml:"enabled"`
+	Severity          string     `yaml:"severity"`
+	RemediationAction string     `yaml:"remediationAction"`
+	Dependencies      []DepEntry `yaml:"dependencies"`
+}
+
+// DepEntry is one entry of policies[].dependencies or *.extraDependencies.
+type DepEntry struct {
+	Name       string `yaml:"name"`
+	Kind       string `yaml:"kind"`
+	APIVersion string `yaml:"apiVersion"`
+	Namespace  string `yaml:"namespace"`
+	Compliance string `yaml:"compliance"`
+	PolicyRef  string `yaml:"policyRef"`
+	// Release pins an exact Helm release; Element names a sibling element on the same cluster.
+	Release string `yaml:"release"`
+	Element string `yaml:"element"`
+	Raw     bool   `yaml:"raw"`
 }
 
 // SubPolicy is the union shape used by configPolicies (ConfigurationPolicy).
 type SubPolicy struct {
-	Name              string         `yaml:"name"`
-	Enabled           bool           `yaml:"enabled"`
-	PolicyRef         string         `yaml:"policyRef"`
-	Severity          string         `yaml:"severity"`
-	RemediationAction string         `yaml:"remediationAction"`
-	ComplianceType    string         `yaml:"complianceType"`
-	TemplateNames     []TemplateName `yaml:"templateNames"`
+	Name              string          `yaml:"name"`
+	Enabled           bool            `yaml:"enabled"`
+	PolicyRef         string          `yaml:"policyRef"`
+	Severity          string          `yaml:"severity"`
+	RemediationAction string          `yaml:"remediationAction"`
+	ComplianceType    string          `yaml:"complianceType"`
+	TemplateNames     []TemplateName  `yaml:"templateNames"`
+	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
+	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
+	IgnorePending     bool            `yaml:"ignorePending"`
+	RawTemplate       bool            `yaml:"rawTemplate"`
 }
 
 // OperatorPolicy mirrors operatorPolicies entries.
 type OperatorPolicy struct {
-	Name              string `yaml:"name"`
-	Enabled           bool   `yaml:"enabled"`
-	PolicyRef         string `yaml:"policyRef"`
-	Severity          string `yaml:"severity"`
-	RemediationAction string `yaml:"remediationAction"`
-	ComplianceType    string `yaml:"complianceType"`
-	UpgradeApproval   string `yaml:"upgradeApproval"`
+	Name              string          `yaml:"name"`
+	Enabled           bool            `yaml:"enabled"`
+	PolicyRef         string          `yaml:"policyRef"`
+	Severity          string          `yaml:"severity"`
+	RemediationAction string          `yaml:"remediationAction"`
+	ComplianceType    string          `yaml:"complianceType"`
+	UpgradeApproval   string          `yaml:"upgradeApproval"`
+	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
+	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
+	IgnorePending     bool            `yaml:"ignorePending"`
 }
 
 // CertificatePolicy mirrors certificatePolicies entries.
 type CertificatePolicy struct {
-	Name              string `yaml:"name"`
-	Enabled           bool   `yaml:"enabled"`
-	PolicyRef         string `yaml:"policyRef"`
-	Severity          string `yaml:"severity"`
-	RemediationAction string `yaml:"remediationAction"`
+	Name              string          `yaml:"name"`
+	Enabled           bool            `yaml:"enabled"`
+	PolicyRef         string          `yaml:"policyRef"`
+	Severity          string          `yaml:"severity"`
+	RemediationAction string          `yaml:"remediationAction"`
+	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
+	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
+	IgnorePending     bool            `yaml:"ignorePending"`
+}
+
+// WaitForOperator accepts either a single operator name or a list of them.
+type WaitForOperator []string
+
+// UnmarshalYAML coerces a bare scalar into a one-element list.
+func (w *WaitForOperator) UnmarshalYAML(n *yaml.Node) error {
+	switch n.Kind {
+	case yaml.ScalarNode:
+		if n.Value != "" {
+			*w = WaitForOperator{n.Value}
+		}
+		return nil
+	case yaml.SequenceNode:
+		var items []string
+		if err := n.Decode(&items); err != nil {
+			return err
+		}
+		*w = items
+		return nil
+	default:
+		return fmt.Errorf("waitForOperator: unexpected yaml kind %d at line %d", n.Kind, n.Line)
+	}
 }
 
 // PolicySet groups policies into a PolicySet ACM resource.

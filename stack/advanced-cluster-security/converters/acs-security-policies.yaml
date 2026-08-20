@@ -1,0 +1,16 @@
+{{- /*
+SecurityPolicy objects, one per entry in config.securityPolicies.
+
+Keeping them as values rather than hardcoding them means the shipped set can be edited, extended,
+or replaced per cluster.
+*/ -}}
+{{- range $name, $spec := .Values.stack.advancedClusterSecurity.config.securityPolicies }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.stackrox.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: {{ $name }}
+      namespace: {{ $.Parameters.namespace }}
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}

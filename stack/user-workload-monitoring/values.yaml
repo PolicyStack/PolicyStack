@@ -1,0 +1,89 @@
+stack:
+  # @description: User Workload Monitoring: Prometheus, Thanos Ruler and Alertmanager for application metrics
+  userWorkloadMonitoring:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Retention and storage sizing. These are the values most likely to differ per
+    # @description: cluster, so they live here rather than in templateParameters.
+    config:
+      # @desc: Default StorageClass for every UWM component. Omit to use the cluster default.
+      storageClass: ""
+      prometheus:
+        # @desc: How long application metrics are kept
+        retention: 24h
+        # @desc: PVC size for each Prometheus replica
+        storage: 50Gi
+        # @desc: Override the StorageClass for Prometheus only
+        storageClass: ""
+        # @desc: Optional resource requests/limits
+        resources: {}
+        # @desc: Give each ServiceMonitor its own Prometheus shard
+        dedicatedServiceMonitors: false
+      thanosRuler:
+        # @desc: How long ruler data is kept
+        retention: 24h
+        # @desc: PVC size for each Thanos Ruler replica
+        storage: 10Gi
+        # @desc: Override the StorageClass for Thanos Ruler only
+        storageClass: ""
+        resources: {}
+      alertmanager:
+        # @desc: Run a dedicated Alertmanager for user workloads
+        enabled: false
+        # @desc: PVC size for each Alertmanager replica
+        storage: 10Gi
+        # @desc: Override the StorageClass for Alertmanager only
+        storageClass: ""
+        resources: {}
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - AU Audit and Accountability
+      controls:
+        - AU-6 Audit Review, Analysis, and Reporting
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "Enable and configure User Workload Monitoring"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until the UWM StatefulSets are ready"
+        # @desc: A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: config
+
+    configPolicies:
+      - name: enable
+        enabled: true
+        description: "Enable UWM and write its configuration"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: Merges into an existing ConfigMap read on the managed cluster
+        rawTemplate: true
+        templateNames:
+          - name: uwm-enable
+
+      - name: statefulsets
+        enabled: true
+        description: "UWM StatefulSet readiness"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: uwm-ready

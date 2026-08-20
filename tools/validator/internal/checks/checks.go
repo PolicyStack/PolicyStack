@@ -77,9 +77,11 @@ func All() []Check {
 		&NameLengthCheck{},     // POLICY001
 		&DuplicateNameCheck{},  // POLICY002
 		&PolicyRefCheck{},      // POLICY010
+		&DependencyCheck{},     // POLICY011
 		&MissingConverterCheck{}, // POLICY020
 		&UnusedConverterCheck{},  // POLICY021
 		&EnumCheck{},           // POLICY030
+		&DeadKeyCheck{},        // POLICY031
 		&PolicySetCheck{},      // POLICY040
 		&LabelCheck{},          // POLICY050
 		&PinningCheck{},        // POLICY060

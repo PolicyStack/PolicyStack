@@ -1,0 +1,40 @@
+stack:
+  # @description: Cluster DNS operand configuration
+  openshiftDns:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Tunables intended to be overridden per cluster or environment
+    config:
+      # @desc: Tolerations for the DNS daemonset. The default tolerates every taint so that
+      # @desc: workloads on infra, storage and master nodes keep cluster DNS.
+      tolerations:
+        - operator: Exists
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: config
+        enabled: true
+        description: "Cluster DNS node placement"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: tolerations
+        enabled: true
+        description: "DNS daemonset tolerations"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: dns-tolerations

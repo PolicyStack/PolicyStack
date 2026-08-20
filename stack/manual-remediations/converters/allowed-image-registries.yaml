@@ -1,0 +1,18 @@
+{{- /*
+Restrict where the cluster may pull and import images from. The registry lists are the whole point
+of this policy and differ per environment, so they come from the values cascade.
+*/ -}}
+{{- $cfg := .Values.stack.manualRemediations.config }}
+apiVersion: config.openshift.io/v1
+kind: Image
+metadata:
+  name: cluster
+spec:
+  allowedRegistriesForImport:
+    {{- range $r := $cfg.allowedRegistriesForImport }}
+    - domainName: {{ $r.domainName }}
+      insecure: {{ $r.insecure | default false }}
+    {{- end }}
+  registrySources:
+    allowedRegistries:
+      {{- toYaml $cfg.allowedRegistries | nindent 6 }}

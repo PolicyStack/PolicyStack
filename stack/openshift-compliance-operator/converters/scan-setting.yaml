@@ -1,0 +1,12 @@
+{{- /* Default ScanSetting. Raw result storage is optional and its class varies per cluster. */ -}}
+{{- $cfg := .Values.stack.openshiftComplianceOperator.config }}
+apiVersion: compliance.openshift.io/v1alpha1
+kind: ScanSetting
+metadata:
+  name: {{ .Parameters.scanSetting }}
+  namespace: {{ .Parameters.namespace }}
+rawResultStorage:
+  enabled: {{ $cfg.rawResultStorage.enabled }}
+  {{- with $cfg.rawResultStorage.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}

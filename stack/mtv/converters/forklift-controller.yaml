@@ -1,0 +1,9 @@
+apiVersion: forklift.konveyor.io/v1beta1
+kind: ForkliftController
+metadata:
+  name: forklift-controller
+  namespace: {{ .Parameters.namespace }}
+spec:
+  feature_ui_plugin: '{{ .Values.stack.mtv.config.uiPlugin }}'
+  feature_validation: '{{ .Values.stack.mtv.config.validation }}'
+  feature_volume_populator: '{{ .Values.stack.mtv.config.volumePopulator }}'

@@ -1,0 +1,56 @@
+{{- /*
+One namespace + ArgoCD instance per team in config.teams.
+
+The team list is a values map, and "which clusters get which teams" is answered by the values
+cascade - put a team in values/acm/*.yaml for hub-only, or in a cluster/environment file for
+anywhere else.
+
+Object count follows the map, hence rawTemplate.
+*/ -}}
+{{- $cfg := .Values.stack.gitopsDev.config }}
+{{- $d := $cfg.defaults }}
+{{- range $team, $spec := $cfg.teams }}
+{{- $ns := printf "%s-%s" $cfg.namespacePrefix $team }}
+{{- $res := mergeOverwrite (deepCopy $d.resources) ($spec.resources | default dict) }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ $ns }}
+      labels:
+        openshift.io/cluster-monitoring: "true"
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: argoproj.io/v1beta1
+    kind: ArgoCD
+    metadata:
+      name: {{ $cfg.argoName }}
+      namespace: {{ $ns }}
+    spec:
+      monitoring:
+        enabled: false
+      sso:
+        provider: dex
+        dex:
+          openShiftOAuth: true
+          resources: {{ toYaml $res.dex | nindent 12 }}
+      rbac:
+        defaultPolicy: ''
+        scopes: '[groups]'
+        policy: |
+          {{- range $p := concat $d.rbacPolicies ($spec.rbacPolicies | default list) }}
+          {{ $p }}
+          {{- end }}
+      server:
+        route:
+          enabled: true
+        resources: {{ toYaml $res.server | nindent 10 }}
+      repo:
+        resources: {{ toYaml $res.repo | nindent 10 }}
+      redis:
+        resources: {{ toYaml $res.redis | nindent 10 }}
+      ha:
+        enabled: {{ $spec.ha | default false }}
+        resources: {{ toYaml $res.ha | nindent 10 }}
+{{- end }}

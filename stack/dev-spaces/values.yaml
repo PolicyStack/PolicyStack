@@ -1,0 +1,46 @@
+stack:
+  # @description: Red Hat OpenShift Dev Spaces cloud development environments
+  devSpaces:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # @description: Parent policy grouping the operator install
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage Red Hat OpenShift Dev Spaces"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    # @description: OperatorPolicy installing the subscription
+    operatorPolicies:
+      - name: devspaces
+        enabled: true
+        description: "Red Hat OpenShift Dev Spaces cloud development environments"
+        # @desc: Must match the CSV displayName so the generated status check can find it
+        displayName: "Red Hat OpenShift Dev Spaces"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-operators-redhat
+        operatorGroup:
+          # @desc: Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
+          name: openshift-operators-redhat
+        subscription:
+          channel: stable
+          name: devspaces
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        # @desc: Pin upgrades by listing approved CSVs under `versions:` instead of changing this
+        upgradeApproval: Automatic

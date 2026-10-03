@@ -6,7 +6,7 @@ stack:
 
     # @description: Enable only one platform toggle (aws or vmware). Set it in
     # @description: values/platforms/<platform>.yaml, selected by a
-    # @description: config.<domain>/platform.<N> cluster label.
+    # @description: platform.<N> config entry in the cluster's fleet file.
     toggles:
       # @desc: MachineConfigPool for the infra role
       mcp: true

@@ -1,17 +1,18 @@
 # Per-cluster values for the AWS test cluster.
 #
-# !! RENAME THIS FILE to match the ManagedCluster name exactly:
+# !! RENAME THIS FILE to match the ManagedCluster name exactly, and name the fleet file the same:
 #      oc get managedcluster
 #      git mv values/clusters/aws-prod.yaml values/clusters/<that-name>.yaml
 #    The ApplicationSet runs with ignoreMissingValueFiles, so a filename that does not match the
 #    cluster is silently skipped - none of the elements below would turn on and the test would look
-#    like it simply did nothing. Verify with the render command in the notes at the bottom.
+#    like it simply did nothing. Verify with the valueFiles check in docs/values.md (Missing files).
 #
-# Labels this cluster needs:
-#   git.example.com/revision=<branch-or-tag>    # REQUIRED, no "/" in a label value
-#   config.example.com/environment.10=prod      # reuses values/environments/prod.yaml
-#   config.example.com/datacenter.20=<dc>
-#   config.example.com/platform.30=aws
+# Fleet file this cluster needs, fleet/<that-name>.yaml on the default branch:
+#   revision: main             # required; branch, tag or SHA
+#   config:
+#     environment.10: prod     # reuses values/environments/prod.yaml
+#     datacenter.20: <dc>
+#     platform.30: aws
 #
 # On top of the prod baseline (cert-manager CA, external-secrets, compliance scan,
 # manual-remediations, cluster DNS), this cluster tests what bare metal could not.

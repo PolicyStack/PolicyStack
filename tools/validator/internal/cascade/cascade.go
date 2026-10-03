@@ -1,5 +1,5 @@
-// Package cascade resolves a ManagedCluster and its labels into the ordered
-// list of values files passed to helm.
+// Package cascade resolves a fleet file into the ordered list of values files
+// passed to helm.
 //
 // It mirrors the valueFiles block in appset/templates/appset.yaml. Keep the two
 // in sync; any divergence is a bug.
@@ -8,7 +8,7 @@
 //
 //  1. element defaults       <element>/values.yaml
 //  2. global root            <repoRoot>/values.yaml
-//  3. label-driven entries   <values>/<category>s/<value>.yaml, in ascending
+//  3. config entries         <values>/<category>s/<value>.yaml, in ascending
 //     priority order (higher priority overrides)
 //  4. cluster-specific       hub: <values>/acm/acm-<dc>.yaml then
 //     <values>/clusters/acm-<dc>.yaml
@@ -19,8 +19,11 @@ package cascade
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,25 +34,21 @@ import (
 // Resolved is the output of Resolve.
 type Resolved struct {
 	// ClusterName is the helm release suffix and the <cluster> part of
-	// policy names. For local-cluster=true hubs it is "acm-<datacenter>".
+	// policy names. For hubs it is "acm-<datacenter>".
 	ClusterName string
 	// ReleaseName is the helm Release.Name, <element>-<cluster>, matching the
 	// Application name set in appset.yaml.
 	ReleaseName string
 	// ValueFiles is the ordered list of -f arguments (absolute paths).
 	ValueFiles []string
-	// IsLocalHub is metadata.labels["local-cluster"] == "true".
+	// IsLocalHub is true for a hub fleet file (hubs/<hubName>.yaml). On a
+	// cluster it is ACM's local-cluster label.
 	IsLocalHub  bool
 	Datacenter  string
 	Environment string
-	// LabelIssues lists malformed config labels. POLICY050 reports them.
-	LabelIssues []LabelIssue
-}
-
-// LabelIssue describes a malformed or duplicate config label key.
-type LabelIssue struct {
-	Key    string
-	Reason string // e.g. "duplicate priority", "missing priority", "non-numeric priority"
+	// Issues lists the fleet file's problems, then malformed or duplicate
+	// config keys. POLICY050 reports them.
+	Issues []fixtures.Issue
 }
 
 type entry struct {
@@ -58,49 +57,48 @@ type entry struct {
 	value    string
 }
 
-// Resolve builds the cascade for mc. element is the chart directory,
+// Resolve builds the cascade for c. element is the chart directory,
 // repoRoot holds the global values.yaml, and valuesRoot is normally
 // <repoRoot>/values.
-func Resolve(mc *fixtures.ManagedCluster, element, chartName, repoRoot, valuesRoot, baseDomain string) Resolved {
-	r := Resolved{}
-	prefix := "config." + baseDomain + "/"
+func Resolve(c *fixtures.Cluster, element, chartName, repoRoot, valuesRoot string) Resolved {
+	r := Resolved{Issues: slices.Clone(c.Issues)}
 
 	// 1-2. element defaults and global root
 	addIfExists(&r.ValueFiles, filepath.Join(element, "values.yaml"))
 	addIfExists(&r.ValueFiles, filepath.Join(repoRoot, "values.yaml"))
 
-	// 3. label-driven entries from config.<baseDomain>/<category>.<priority> labels
-	type seen struct{ value string }
+	// 3. config entries, keyed <category>.<priority>
 	dups := map[string]struct{}{}
 	priorityKeys := map[string]struct{}{}
 	var entries []entry
 
-	for k, v := range mc.Metadata.Labels {
-		if !strings.HasPrefix(k, prefix) {
-			continue
-		}
-		rest := strings.TrimPrefix(k, prefix)
-		dot := strings.LastIndex(rest, ".")
-		if dot < 0 {
-			r.LabelIssues = append(r.LabelIssues, LabelIssue{Key: k, Reason: "missing priority"})
-			continue
-		}
-		category := rest[:dot]
-		prioStr := rest[dot+1:]
-		prio, err := strconv.Atoi(prioStr)
-		if err != nil {
-			r.LabelIssues = append(r.LabelIssues, LabelIssue{Key: k, Reason: "non-numeric priority"})
+	// Sorted, as Go templates range over maps, so the last datacenter wins in both.
+	for _, k := range slices.Sorted(maps.Keys(c.Config)) {
+		v := c.Config[k]
+		// Split at the first dot, as appset's splitList "." does.
+		category, prioStr, ok := strings.Cut(k, ".")
+		if !ok {
+			r.Issues = append(r.Issues, keyIssue(k, "missing priority"))
 			continue
 		}
 		if category == "" || prioStr == "" {
-			r.LabelIssues = append(r.LabelIssues, LabelIssue{Key: k, Reason: "empty category or priority"})
+			r.Issues = append(r.Issues, keyIssue(k, "empty category or priority"))
 			continue
 		}
-		// Category comparison is case-insensitive.
-		dupKey := strings.ToLower(category) + "." + prioStr
+		prio, err := strconv.Atoi(prioStr)
+		if err != nil {
+			r.Issues = append(r.Issues, keyIssue(k, "non-numeric priority"))
+			continue
+		}
+		if !categoryRE.MatchString(category) {
+			r.Issues = append(r.Issues, keyIssue(k, "category must be alphanumerics, '-' or '_'"))
+			continue
+		}
+		// Category comparison is case-insensitive; 10 and 010 sort as one priority in appset.
+		dupKey := strings.ToLower(category) + "." + strconv.Itoa(prio)
 		if _, ok := priorityKeys[dupKey]; ok {
 			if _, alreadyReported := dups[dupKey]; !alreadyReported {
-				r.LabelIssues = append(r.LabelIssues, LabelIssue{Key: k, Reason: "duplicate <category>.<priority>"})
+				r.Issues = append(r.Issues, keyIssue(k, "duplicate <category>.<priority>"))
 				dups[dupKey] = struct{}{}
 			}
 		}
@@ -109,7 +107,8 @@ func Resolve(mc *fixtures.ManagedCluster, element, chartName, repoRoot, valuesRo
 		entries = append(entries, entry{priority: prio, category: category, value: v})
 
 		// Datacenter names the hub values files in step 4; Environment is informational.
-		switch strings.ToLower(category) {
+		// Case-sensitive, as appset's eq $category "datacenter".
+		switch category {
 		case "environment":
 			r.Environment = v
 		case "datacenter":
@@ -131,18 +130,30 @@ func Resolve(mc *fixtures.ManagedCluster, element, chartName, repoRoot, valuesRo
 	}
 
 	// 4. cluster-specific
-	r.IsLocalHub = strings.EqualFold(mc.Metadata.Labels["local-cluster"], "true")
-	r.ClusterName = mc.Metadata.Name
+	r.IsLocalHub = c.Hub
+	r.ClusterName = c.Name
+	if r.IsLocalHub && r.Datacenter == "" {
+		// appset would name the hub's Applications <element>-acm-.
+		r.Issues = append(r.Issues, fixtures.Issue{Message: "a hub fleet file needs a datacenter.<priority> entry"})
+	}
 	if r.IsLocalHub && r.Datacenter != "" {
 		r.ClusterName = fmt.Sprintf("acm-%s", r.Datacenter)
 		addIfExists(&r.ValueFiles, filepath.Join(valuesRoot, "acm", r.ClusterName+".yaml"))
 		addIfExists(&r.ValueFiles, filepath.Join(valuesRoot, "clusters", r.ClusterName+".yaml"))
 	} else {
-		addIfExists(&r.ValueFiles, filepath.Join(valuesRoot, "clusters", mc.Metadata.Name+".yaml"))
+		addIfExists(&r.ValueFiles, filepath.Join(valuesRoot, "clusters", c.Name+".yaml"))
 	}
 
 	r.ReleaseName = chartName + "-" + r.ClusterName
 	return r
+}
+
+// categoryRE is a label name without dots: the category becomes a directory
+// name, values/<category>s/.
+var categoryRE = regexp.MustCompile(`^[A-Za-z0-9]([-A-Za-z0-9_]*[A-Za-z0-9])?$`)
+
+func keyIssue(key, reason string) fixtures.Issue {
+	return fixtures.Issue{Message: fmt.Sprintf("config %q: %s", key, reason)}
 }
 
 func addIfExists(list *[]string, path string) {

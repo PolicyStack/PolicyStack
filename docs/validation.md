@@ -3,8 +3,10 @@
 `tools/validator` renders every element under `stack/` for each fixture cluster in
 `tools/validator/testdata/clusters`, building the list of values files the way the ApplicationSet
 does ([Order](values.md#order)). It checks the element sources and the rendered output. The
-fixtures carry the labels of the example clusters. The hub (`local-cluster` in `dc1`, which reads
-the `acm-dc1` files), `prod-east-1` and `nonprod-west-1`. Their files in `values/` are rendered too.
+fixtures are the example [fleet files](applicationset.md#fleet-files): `prod-east-1.yaml`,
+`nonprod-west-1.yaml` and the hub's `hubs/acm-dc1.yaml`. A file under `hubs/` is a hub and renders
+as `acm-<datacenter>`, so the hub in `dc1` reads the `acm-dc1` files. Their files in `values/` are
+rendered too.
 
 It needs Go and Helm. Use the Helm major version that CI pins
 ([Policy Validate](workflows.md#policy-validate)). kubeconform is optional, without it on `PATH`,
@@ -60,9 +62,9 @@ warning POLICY021 [metallb] converters/metallb-cr.yaml is not referenced by any 
 | `--skip` | Comma-separated rule IDs to skip |
 | `--severity warning` | Fail on warnings as well as errors |
 | `--github` | Write GitHub Actions annotations instead of terminal output |
+| `--fixtures-dir` | Fleet files to render instead of the examples, hubs in its `hubs/`. CI passes `fleet` when the repo has fleet files |
 
-`--help` lists the rest. The validator does not read the appset chart's `baseDomain`: `--base-domain`
-sets the label prefix it reads from the fixtures and defaults to `example.com`, the fixtures' domain.
+`--help` lists the rest.
 
 ## Rules
 

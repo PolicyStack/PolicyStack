@@ -27,7 +27,6 @@ type Options struct {
 	SampleDir      string
 	ValuesDir      string
 	FixturesDir    string
-	BaseDomain     string
 	HelmBin        string
 	KubeconformBin string
 	SchemasDir     string
@@ -121,12 +120,12 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	// Phase 2: per-cluster checks. One helm template per (element, fixture), run in parallel.
 	type pair struct {
 		el *chart.Element
-		mc *fixtures.ManagedCluster
+		cl *fixtures.Cluster
 	}
 	var pairs []pair
 	for _, el := range elements {
-		for _, mc := range clusters {
-			pairs = append(pairs, pair{el, mc})
+		for _, cl := range clusters {
+			pairs = append(pairs, pair{el, cl})
 		}
 	}
 
@@ -146,13 +145,10 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	sem := make(chan struct{}, opts.Jobs)
 	var wg sync.WaitGroup
 	for _, p := range pairs {
-		p := p
-		wg.Add(1)
 		sem <- struct{}{}
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() { <-sem }()
-			c, renderFinding := perCluster(ctx, opts, runner, p.el, p.mc)
+			c, renderFinding := perCluster(ctx, opts, runner, p.el, p.cl)
 			if renderFinding != nil && !skipped("RENDER000", opts) {
 				addFindings([]checks.Finding{*renderFinding})
 			}
@@ -163,7 +159,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 				fs := ck.Run(c)
 				for i := range fs {
 					if fs[i].File == "" {
-						fs[i].File = p.mc.SourceFile
+						fs[i].File = p.cl.SourceFile
 					}
 				}
 				addFindings(fs)
@@ -187,7 +183,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 				}
 				dupMu.Unlock()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -231,8 +227,8 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	return res, nil
 }
 
-func perCluster(ctx context.Context, opts Options, runner *render.Runner, el *chart.Element, mc *fixtures.ManagedCluster) (checks.Context, *checks.Finding) {
-	res := cascade.Resolve(mc, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir, opts.BaseDomain)
+func perCluster(ctx context.Context, opts Options, runner *render.Runner, el *chart.Element, cl *fixtures.Cluster) (checks.Context, *checks.Finding) {
+	res := cascade.Resolve(cl, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir)
 	if len(opts.ExtraValues) > 0 {
 		res.ValueFiles = append(res.ValueFiles, opts.ExtraValues...)
 	}
@@ -288,7 +284,7 @@ func renderErrorFinding(el *chart.Element, cl *cascade.Resolved, tr render.Templ
 func renderHint(stderr string) string {
 	switch {
 	case strings.Contains(stderr, "Values.selector.matchExpressions") && strings.Contains(stderr, "nil pointer"):
-		return "hint: cascade did not provide `selector`. Either name the fixture cluster to match a real values/clusters/<name>.yaml that defines selector, or pass --extra-values <file> with a baseline `selector:` block (or set `disablePlacements: true` on the element)."
+		return "hint: cascade did not provide `selector`. In production the ApplicationSet injects it; pass --extra-values <file> with a baseline `selector:` block (or set `disablePlacements: true` on the element)."
 	case strings.Contains(stderr, "nil pointer evaluating"):
 		return "hint: a values key referenced by the chart template is missing. Check that your fixture's cascade resolves to a values file that supplies the missing key."
 	}

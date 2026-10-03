@@ -37,10 +37,17 @@ oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster
 
 ## Install the ApplicationSet
 
-Set `baseDomain` and `gitRepo` in [`appset/values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/values.yaml). `baseDomain` is the domain in every PolicyStack label key, and `gitRepo` is the repository Argo CD reads ([The appset chart](applicationset.md#the-appset-chart)). Then install the chart, passing the root `values.yaml` for `policyNamespace`:
+Set `gitRepo` and `hubName` in [`appset/values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/values.yaml). `gitRepo` is the repository Argo CD reads ([The appset chart](applicationset.md#the-appset-chart)). `hubName` names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, because every hub's own ManagedCluster is named `local-cluster` by default ([The hub](applicationset.md#the-hub)). Then install the chart, passing the root `values.yaml` for `policyNamespace`:
 
 ```sh
 helm install appset ./appset -f ./appset/values.yaml -f values.yaml
+```
+
+Every additional hub that reads the same repo, including a passive or disaster recovery hub, needs its own `hubName`. Otherwise it applies the first hub's configuration to itself. Pass it on every `helm install` and `helm upgrade` of that hub, since `helm upgrade` drops `--set` values it is not given again:
+
+```sh
+helm install appset ./appset -f ./appset/values.yaml -f values.yaml --set hubName=<name>
+helm upgrade appset ./appset -f ./appset/values.yaml -f values.yaml --set hubName=<name>
 ```
 
 The chart creates:
@@ -55,4 +62,4 @@ The namespace and the binding carry `helm.sh/resource-policy: keep`. The binding
 
 `helm uninstall appset` deletes every Application with the ApplicationSet but leaves their Policies enforcing ([Removing an element](rollout.md#removing-an-element)).
 
-Next: [Onboarding a cluster](rollout.md#onboarding-a-cluster).
+Next: add a fleet file for the hub and each managed cluster ([Onboarding a cluster](rollout.md#onboarding-a-cluster)).

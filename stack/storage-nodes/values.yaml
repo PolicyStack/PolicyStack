@@ -5,7 +5,7 @@ stack:
     enabled: false
 
     # @description: Exactly one platform toggle should be on. Set these in values/platforms/<p>.yaml
-    # @description: and select the file with a config.<domain>/platform.<N> cluster label.
+    # @description: and select the file with a platform.<N> config entry in the fleet file.
     toggles:
       # @desc: Create storage MachineSets by cloning the worker MachineSet (AWS)
       aws: false

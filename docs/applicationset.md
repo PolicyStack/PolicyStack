@@ -1,35 +1,142 @@
 # Clusters and Applications
 
-The ApplicationSet `policystack` in `openshift-gitops` on the hub creates one Argo CD Application per element for every managed cluster that carries a revision label. The cluster's labels pick the Git revision, the values files and the Placement selector. The template is [`appset/templates/appset.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/templates/appset.yaml).
+The ApplicationSet `policystack` in `openshift-gitops` on the hub creates one Argo CD Application per element for every managed cluster that has a fleet file. The fleet file picks the Git revision and the values files. The template is [`appset/templates/appset.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/templates/appset.yaml).
 
-## Cluster labels
+## Fleet files
 
-Labels go on the cluster's ManagedCluster on the hub. The GitOpsCluster copies them to the cluster's Argo CD secret, where the ApplicationSet reads them ([Generators](#generators)). Label keys use the appset chart's `baseDomain`, `example.com` here ([The appset chart](#the-appset-chart)).
+A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.yaml`, named exactly like its ManagedCluster. The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](#the-hub)).
 
-| Label | Required | Effect |
+| Key | Required | Effect |
 |---|---|---|
-| `git.example.com/revision` | Yes | Branch or tag every Application for the cluster renders from. Without it the cluster gets no Applications. Label values cannot contain `/`, so a branch with `/` in its name cannot be used. Changing it promotes or rolls back ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)). |
-| `clusterID` | Yes. ACM sets it on OpenShift clusters | Becomes `selectedId`. The template uses `missingkey=error`, so a cluster without it fails to render. One failed render stops the whole ApplicationSet. Argo CD creates, updates and deletes no Applications for any cluster until the label is set. |
-| `config.example.com/<category>.<priority>=<value>` | No | Adds `values/<category>s/<value>.yaml` to the cascade and an `In` expression for this label to the Placement selector. The priority orders the files ([Order](values.md#order)). |
-| `config.example.com/datacenter.<priority>=<datacenter>` | On the hub | A config label like any other. On the hub it also names the Applications and the hub values files. |
-| `local-cluster` | ACM sets it on the hub | Switches the cluster to hub naming and hub values files. |
-| `name` | ACM sets it | The ManagedCluster name. The Placement selector matches on it ([Placement](policies.md#placement)). |
-| `env.example.com/defaultstorageclass` | No | Becomes `selectedDefaultStorageClass`. |
+| `revision` | Yes | Branch, tag or commit SHA every Application for the cluster renders from ([Revision](#revision)). |
+| `config` | No. The hub needs a `datacenter` entry | A map of `<category>.<priority>: <value>`. Each entry adds `values/<category>s/<value>.yaml` to the cascade. The priority orders the files ([Order](values.md#order)). On the hub the `datacenter` entry also names the Applications and the hub values files. |
 
-Categories are dynamic. `config.example.com/tenant.40=payments` adds `values/tenants/payments.yaml`. The repo's priorities are environment `.10`, datacenter `.20`, platform `.30` and tenant `.40`. [Onboarding a cluster](rollout.md#onboarding-a-cluster) labels `prod-east-1` with them.
+No other keys are allowed. Config values follow label value syntax: at most 63 characters of alphanumerics, `-`, `_` and `.`, starting and ending with an alphanumeric. A category is alphanumerics, `-` and `_`.
 
-Hub Application names and hub values files are keyed by datacenter, so hubs in the same datacenter share hub values files.
+Argo CD reads fleet files as YAML 1.1, so `revision` and every config value must be YAML strings. Quote anything YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`, `"yes"`. Unquoted, `revision: 1.10` pins `1.1`, and `platform.30: 1.10` loads `values/platforms/1.1.yaml`. The validator checks these rules ([Validation](validation.md)).
+
+```yaml
+# fleet/prod-east-1.yaml
+revision: main
+config:
+  environment.10: prod
+  datacenter.20: dc1
+  platform.30: aws
+```
+
+Categories are dynamic. `tenant.40: payments` adds `values/tenants/payments.yaml`. The repo's priorities are environment `.10`, datacenter `.20`, platform `.30` and tenant `.40`. The config keys are the old `config.<baseDomain>/` label keys without the prefix ([Moving from cluster labels](rollout.md#moving-from-cluster-labels)).
+
+Upstream ships no live fleet files, since a shipped file would configure a real cluster as soon as someone installs from upstream. The examples are the validator's fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters): `prod-east-1.yaml`, `nonprod-west-1.yaml` and `hubs/acm-dc1.yaml`.
+
+The ApplicationSet reads fleet files only from the repo's default branch, as `HEAD`. Copies of `fleet/` on other branches have no effect. Changing the default branch re-points every cluster to the fleet files on the new branch, and a cluster without one there loses its Applications.
+
+Fleet changes reach Argo CD within about 6 minutes: the ApplicationSet controller re-runs its generators every 3 minutes, and Argo CD caches the commit a branch points to for 3 minutes. An [ApplicationSet webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Git/#webhook-configuration) makes changes immediate, except the fix for a failed generation, which still waits for the 3 minute retry.
+
+PolicyStack still reads three labels. ACM sets all of them, and nobody sets them by hand:
+
+| Label | Set by | Effect |
+|---|---|---|
+| `clusterID` | ACM, on OpenShift clusters | Selects the cluster's Argo CD secret and becomes `selectedId`. A cluster without it gets no Applications. |
+| `local-cluster` | ACM, on the hub | Switches the cluster to the hub's fleet file, hub naming and hub values files. |
+| `name` | ACM | The ManagedCluster name. The Placement selector matches on it ([Placement](policies.md#placement)). |
+
+### Revision
+
+`revision` is a branch, a tag or a commit SHA. Branch names with `/` work.
+
+If a fleet file this hub reads does not parse, has no `revision`, or pins a revision that does not exist, ApplicationSet generation fails. Argo CD then creates, updates and deletes no Applications for any cluster until the file is fixed. The ApplicationSet's `ErrorOccurred` condition holds the error:
+
+```sh
+oc get applicationset policystack -n openshift-gitops \
+  -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].message}'
+```
+
+Pin tags, commit SHAs, protected branches, or a branch you keep until its pin moves off. A pinned branch that is deleted freezes the whole fleet, and GitHub deletes a pull request's branch on merge when automatic deletion of head branches is on.
+
+The generator reads `HEAD` rather than `main`, so it follows a rename of the default branch.
+
+### The hub
+
+The hub's own ManagedCluster carries ACM's `local-cluster` label. Its fleet file is `fleet/hubs/<hubName>.yaml`, where `hubName` is an appset chart value set once per hub, `acm-dc1` by default ([The appset chart](#the-appset-chart)).
+
+```yaml
+# fleet/hubs/acm-dc1.yaml
+revision: main
+config:
+  environment.10: prod
+  datacenter.20: dc1
+  platform.30: baremetal
+```
+
+`hubName` is a chart value because nothing on the hub gives it a stable, unique name:
+
+- Every hub's own ManagedCluster is named `local-cluster` by default, so the cluster name cannot tell two hubs reading this repo apart.
+- The datacenter that names the hub Applications is inside the file, so it cannot be used to find the file.
+- ACM's `localClusterName` (ACM 2.14 and later) changes only at install, or after turning off hub self-management.
+- OpenShift's `clusterID` is a UUID that changes when a hub is rebuilt.
+
+So each hub's identity is set once in its appset release, and its configuration stays in Git. `helm get values appset` shows a hub's `hubName`. `hubs/` is a subdirectory so a hub's file cannot collide with a managed cluster of the same name.
+
+A second hub reading the same repo, including a passive or disaster recovery hub, needs its own `--set hubName=<name>` on every `helm install` and `helm upgrade` ([Install the ApplicationSet](install.md#install-the-applicationset)). `helm upgrade` drops `--set` values it is not given again, so the hub falls back to the default and applies the first hub's configuration to itself.
+
+The hub has two names:
+
+| Name | Comes from | Used for |
+|---|---|---|
+| `hubName` | The appset chart | The path of the hub's fleet file |
+| `acm-<datacenter>` | The `datacenter` entry in the hub's fleet file | Application names, `values/acm/acm-<datacenter>.yaml`, `values/clusters/acm-<datacenter>.yaml` and `selectedName` |
+
+With one hub per datacenter, set `hubName` to `acm-<datacenter>` so both names match. Hubs in the same datacenter need different `hubName` values but share hub values files.
+
+### Protection
+
+PolicyStack reads no labels people set by hand. Short of editing the three ACM labels above, which RBAC on ManagedClusters guards, `oc label` cannot change what a cluster runs. Whoever can merge to `fleet/` on the default branch decides it instead. The repo ships no CODEOWNERS file, because owners differ per fork. Add:
+
+- A `CODEOWNERS` entry for `/fleet/`.
+- A ruleset on the default branch that requires a pull request with code owner review, and blocks force pushes and deletion.
+
+```text
+# .github/CODEOWNERS
+/fleet/ @<org>/<team>
+```
+
+To require code owner review only for production clusters, own `/fleet/prod-*.yaml` and `/fleet/hubs/` instead of `/fleet/`.
 
 ## Generators
 
-A matrix generator combines:
+The generator, as rendered with the default `hubName`:
 
-1. A clusters generator. Every Argo CD cluster secret with a `git.example.com/revision` label.
-2. A git generator. Every directory under `stack/` in `gitRepo`, at that cluster's revision.
+```yaml
+generators:
+  - matrix:
+      generators:
+        - matrix:
+            generators:
+              - clusters:
+                  selector:
+                    matchExpressions:
+                      - key: clusterID
+                        operator: Exists
+              - git:
+                  repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+                  revision: HEAD
+                  pathParamPrefix: fleet
+                  files:
+                  - path: 'fleet/{{if index .metadata.labels "local-cluster"}}hubs/acm-dc1{{else}}{{.name}}{{end}}.yaml'
+        - git:
+            repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+            revision: '{{.revision}}'
+            directories:
+            - path: 'stack/*'
+```
 
-Each cluster and directory pair becomes one Application. The directory list comes from the cluster's own revision, so an element added on one branch reaches only clusters on a revision that contains it. Every directory gets an Application whether the element is enabled or not. A disabled element renders no objects.
+1. A clusters generator. Every Argo CD cluster secret with a `clusterID` label.
+2. A git files generator. The cluster's fleet file at `HEAD`, `fleet/hubs/<hubName>.yaml` on a cluster labeled `local-cluster` and `fleet/<cluster>.yaml` otherwise. The file's keys become parameters. `pathParamPrefix: fleet` moves the file's path parameters under `fleet`, because a matrix keeps the first child's value when two children set the same parameter, and the file's `path` would otherwise replace the directory's.
+3. A git directories generator. Every directory under `stack/` in `gitRepo`, at the fleet file's `revision`.
 
-The GitOpsCluster from [Import clusters into Argo CD](install.md#import-clusters-into-argo-cd) creates one cluster secret per managed cluster. Clusters without the revision label are imported but get no Applications.
+The inner matrix pairs each cluster with its fleet file. A cluster without one pairs with nothing. The outer matrix pairs each cluster with the directories, and each cluster and directory pair becomes one Application. The directory list comes from the cluster's own revision, so an element added on one branch reaches only clusters on a revision that contains it. Every directory gets an Application whether the element is enabled or not. A disabled element renders no objects.
+
+The GitOpsCluster from [Import clusters into Argo CD](install.md#import-clusters-into-argo-cd) creates one cluster secret per managed cluster. Clusters without a fleet file are imported but get no Applications.
 
 ## Applications
 
@@ -51,16 +158,15 @@ The ApplicationSet sets `preserveResourcesOnDeletion: true`, so its Applications
 
 ## Injected values
 
-Each Application passes these keys to Helm in `valuesObject`, built from the cluster's labels. [Order](values.md#order) gives their precedence over the values files.
+Each Application passes these keys to Helm in `valuesObject`, built from the cluster's fleet file and its ACM labels. [Order](values.md#order) gives their precedence over the values files.
 
 | Key | Value |
 |---|---|
-| `selected<Category>` | The value of the cluster's config label in that category, for example `selectedEnvironment`. When a category has several labels, the one that sorts last in [Order](values.md#order) wins. |
+| `selected<Category>` | The value of the fleet file's config entry in that category, for example `selectedEnvironment`. When a category has several entries, the one that sorts last in [Order](values.md#order) wins. |
 | `selected<Category>Values` | Every value of that category, as a list. |
 | `selectedName` | The cluster name, or `acm-<datacenter>` on the hub. |
 | `selectedId` | The `clusterID` label. |
-| `selectedDefaultStorageClass` | The `env.example.com/defaultstorageclass` label. Absent when the label is not set. |
-| `selector.matchExpressions` | A map of `In` expressions, one per config label plus one for the `name` label, keyed by the label key with `.`, `/` and `-` replaced by `_`. |
+| `selector.matchExpressions` | A map with one `In` expression on the `name` label, under the key `name`. |
 
 Elements can read every key. The policy-library chart turns `selector` into each Placement's cluster selector ([Placement](policies.md#placement)). On the hub, `selectedName` is `acm-<datacenter>`, but the `name` expression holds the hub's ManagedCluster name. For `prod-east-1`:
 
@@ -75,21 +181,6 @@ selectedName: prod-east-1
 selectedId: <clusterID>
 selector:
   matchExpressions:
-    config_example_com_datacenter_20:
-      key: config.example.com/datacenter.20
-      operator: In
-      values:
-        - "dc1"
-    config_example_com_environment_10:
-      key: config.example.com/environment.10
-      operator: In
-      values:
-        - "prod"
-    config_example_com_platform_30:
-      key: config.example.com/platform.30
-      operator: In
-      values:
-        - "aws"
     name:
       key: name
       operator: In
@@ -103,8 +194,8 @@ The [appset chart](https://github.com/PolicyStack/PolicyStack/tree/main/appset) 
 
 | Value | Set in | Use |
 |---|---|---|
-| `baseDomain` | `appset/values.yaml` | The domain in the `git.`, `config.` and `env.` label keys. |
-| `gitRepo` | `appset/values.yaml` | The repository the git generator lists and every Application renders from. |
+| `gitRepo` | `appset/values.yaml` | The repository the git generators read and every Application renders from. |
+| `hubName` | `appset/values.yaml`, or `--set` on each additional hub | Names this hub's fleet file, `fleet/hubs/<hubName>.yaml`. Default `acm-dc1` ([The hub](#the-hub)). |
 | `policyNamespace` | Root `values.yaml` | The namespace the chart creates. Elements read the same value. Do not change it. |
 
 The install command passes both values files ([Install the ApplicationSet](install.md#install-the-applicationset)). The chart also binds the `global` ManagedClusterSet into `policyNamespace`, so element Placements can select clusters ([Placement](policies.md#placement)).

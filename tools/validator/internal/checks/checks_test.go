@@ -8,6 +8,7 @@ import (
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 )
 
 const (
@@ -270,5 +271,25 @@ stack:
 	}
 	if !strings.Contains(got[0].Message, "myElement") {
 		t.Errorf("unexpected: %s", got[0].Message)
+	}
+}
+
+func TestPolicy050_FleetFileIssues(t *testing.T) {
+	if got := (&LabelCheck{}).Run(Context{Cluster: &cascade.Resolved{ClusterName: "x"}}); len(got) != 0 {
+		t.Fatalf("expected no findings for a clean fleet file, got %+v", got)
+	}
+	cl := &cascade.Resolved{ClusterName: "x", Issues: []fixtures.Issue{
+		{Line: 2, Message: "field revison not found in type fixtures.fleetFile"},
+		{Message: `config "environment": missing priority`},
+	}}
+	got := (&LabelCheck{}).Run(Context{Cluster: cl})
+	if len(got) != 2 {
+		t.Fatalf("expected 2 findings, got %d: %+v", len(got), got)
+	}
+	if got[0].Line != 2 || got[0].Message != "invalid fleet file: field revison not found in type fixtures.fleetFile" {
+		t.Errorf("unexpected finding: %+v", got[0])
+	}
+	if got[1].Line != 0 || got[1].Cluster != "x" || got[1].Severity != SevError {
+		t.Errorf("unexpected finding: %+v", got[1])
 	}
 }

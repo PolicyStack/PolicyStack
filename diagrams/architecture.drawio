@@ -1,6 +1,6 @@
 <mxfile host="Electron" compressed="false" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.8 Chrome/140.0.7339.240 Electron/38.4.0 Safari/537.36" version="28.2.8">
   <diagram id="PolicyStackarchitect" name="PolicyStack architecture">
-    <mxGraphModel dx="1281" dy="770" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1010" background="#ffffff" math="0" shadow="0">
+    <mxGraphModel dx="1281" dy="770" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1136" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -8,7 +8,7 @@
           <mxGeometry x="40" y="50" width="1100" height="40" as="geometry" />
         </mxCell>
         <mxCell id="policy-3" value="Git repository — PolicyStack" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f5f9fe;fontStyle=1;fontSize=16;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=38;" parent="1" vertex="1">
-          <mxGeometry x="40" y="100" width="1180" height="350" as="geometry" />
+          <mxGeometry x="40" y="100" width="1180" height="476" as="geometry" />
         </mxCell>
         <mxCell id="policy-4" value="" style="shape=image;html=1;imageAspect=1;aspect=fixed;image=data:image/png,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;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=none;fontSize=16;fontStyle=1;fontColor=#333333;" parent="policy-3" vertex="1">
           <mxGeometry x="9" y="4" width="22" height="22" as="geometry" />
@@ -70,7 +70,7 @@
         <mxCell id="policy-23" value="&lt;b&gt;environments/&lt;/b&gt;&lt;br&gt;prod.yaml · dev.yaml" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-21" vertex="1">
           <mxGeometry x="12" y="72" width="276" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="policy-24" value="&lt;b&gt;datacenters/ · platforms/ · tenants/&lt;/b&gt;&lt;br&gt;any &lt;font face=&quot;Courier New&quot;&gt;config&lt;/font&gt; label type" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-21" vertex="1">
+        <mxCell id="policy-24" value="&lt;b&gt;datacenters/ · platforms/ · tenants/&lt;/b&gt;&lt;br&gt;any &lt;font face=&quot;Courier New&quot;&gt;config&lt;/font&gt; category in a fleet file" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-21" vertex="1">
           <mxGeometry x="12" y="122" width="276" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-25" value="&lt;b&gt;acm/&lt;/b&gt; acm-dc1.yaml — hub only" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-21" vertex="1">
@@ -97,11 +97,23 @@
         <mxCell id="policy-32" value="&lt;b&gt;CI&lt;/b&gt; — GitHub Actions&lt;br&gt;Policy Validate · Docs Check" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-28" vertex="1">
           <mxGeometry x="12" y="228" width="236" height="50" as="geometry" />
         </mxCell>
+        <mxCell id="fleet-row" value="&lt;font face=&quot;Courier New&quot;&gt;fleet/&lt;/font&gt; — one file per cluster, read from the default branch at HEAD" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f5f9fe;fontStyle=1;fontSize=14;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=12;" parent="policy-3" vertex="1">
+          <mxGeometry x="20" y="350" width="1140" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="fleet-hub" value="&lt;b&gt;&lt;font face=&quot;Courier New&quot;&gt;hubs/acm-dc1.yaml&lt;/font&gt;&lt;/b&gt; — the hub, named by appset value &lt;font face=&quot;Courier New&quot;&gt;hubName&lt;/font&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;revision: main&lt;br&gt;config: {environment.10: prod, datacenter.20: dc1}&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=left;verticalAlign=top;spacingLeft=10;spacingRight=6;spacingTop=4;" parent="fleet-row" vertex="1">
+          <mxGeometry x="12" y="38" width="364" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fleet-aws" value="&lt;b&gt;&lt;font face=&quot;Courier New&quot;&gt;aws-prod-1.yaml&lt;/font&gt;&lt;/b&gt; — named after the ManagedCluster&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;revision: main&lt;br&gt;config: {environment.10: prod, platform.30: aws}&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=left;verticalAlign=top;spacingLeft=10;spacingRight=6;spacingTop=4;" parent="fleet-row" vertex="1">
+          <mxGeometry x="388" y="38" width="364" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fleet-azure" value="&lt;b&gt;&lt;font face=&quot;Courier New&quot;&gt;azure-prod-2.yaml&lt;/font&gt;&lt;/b&gt; — named after the ManagedCluster&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;revision: v1.4&lt;br&gt;config: {environment.10: prod, platform.30: azure}&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;align=left;verticalAlign=top;spacingLeft=10;spacingRight=6;spacingTop=4;" parent="fleet-row" vertex="1">
+          <mxGeometry x="764" y="38" width="364" height="60" as="geometry" />
+        </mxCell>
         <mxCell id="policy-33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#888888;fontSize=11;labelBackgroundColor=#ffffff;fontColor=#222222;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="policy-5" target="policy-14" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="policy-34" value="ACM hub cluster (local-cluster)" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#ede7f2;strokeColor=#7a5c8e;swimlaneFillColor=#ffffff;fontStyle=1;fontSize=16;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=38;" parent="1" vertex="1">
-          <mxGeometry x="40" y="500" width="1180" height="420" as="geometry" />
+          <mxGeometry x="40" y="626" width="1180" height="420" as="geometry" />
         </mxCell>
         <mxCell id="policy-36" value="Argo CD · openshift-gitops" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;swimlaneFillColor=#fffaf3;fontStyle=1;fontSize=14;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=38;" parent="policy-34" vertex="1">
           <mxGeometry x="20" y="44" width="360" height="330" as="geometry" />
@@ -109,7 +121,7 @@
         <mxCell id="policy-37" value="" style="shape=image;html=1;imageAspect=1;aspect=fixed;image=data:image/png,iVBORw0KGgoAAAANSUhEUgAAAHwAAACgCAMAAAD5PPjYAAAAkFBMVEX9aDq21PXY6vILCwv+djO20/TurJv6imLb7/r+almx3fT+cj39cj37/P+wtPq20vL/AgL9aUvtw7jT6vmjpaX9ZUW3t7j//wBiZGR/f/9///+sTyv/akRaLRv/qlUAAP8A//9/f39/v79/tOmmalPTlZUA/wB/fwCKOhvpkXsAAADq+Pz9cj3M6/X9Z0X+dkMPm/dnAAAAMHRSTlP58vT/FKP+/p0LGaRcAQVhAe//bf+aAwH/AgL/Xf8DAQECBAX/BgEC/2kA/v7//v6eYdohAAALsElEQVR42uWc2YKbuBJAhZrFwizGbbfT7k46yczdZIP+/++uNoR2wCZPo4dJxiN0qEWlUkkMwMtb/dbwP8uybbMsUS3L2rYseY+yqVcMCBaTxfBlmymkbOodWt5jBX4h/L2ZwFm2e93xBmnbySbeISvfmYbqDeF1M5KzjHLhzdPg+AJZuVj8BfCaDlRmSZ9kr69+sP0CTP91vQGcKZyiOfm2oFG+FH8eD5ZIzYReRB75mcCXT8EbgW7XoBW+bXD962F4XeI3NsgrvK1ukOMx/v0gnGq8TfpsrdST9PThMur3IKLyhmr8UbTEM+Gb1fCvEpdJ377enmlU933WhOkB+K8rbqmj7W5PNmb5MkgHIXNnMJtxNCjbjPBM9YEpD4Lmjqgcwt5qkVegqg/RfXCqpwSGVO6C516AGR5f62VwKncSNHcQLV8gSPfJDgLskBr7ueZ7EAbowPW1EnrZcBnci+f08ucc/L32y83UvYztxXN68xWH181v6mvwAXXP4CHz+SYObzDt9DxbqMmlv8XgDW59cwz2DzToBjs71gGTXfbZbqHYULWldBppr+8h+K/3Mklel4jNgPCY80b/HnoBh56ZouvwN5y5bC8Z5gW5g7GRIqc/LaGzQOuH/6YLmeNsPm3nBSXe74Q3+QJF7sVDy+mSsr764FeqdMfgHnZ+B4x7l22S34uHjuJLH7zxKN0Zqs8JRd/1BuJ46Ci+dOENU/puhg0LG23QQeHxPFPxSVJPCxyYMnTH0x32kQAHbdLJcYZuKB4oT3e8zR4G5h6xbTrIZ+jM52oT/lW73raYbcA9dBgSHUwWjysdHoFEEfIUnYn+rsP/TRdSS3DH1+5CblLQRmJw4HqdLfqbDn9zBHeeL8DEnqGTfk50/EuDX3GS7GYMLniFbBH4QGdcjL5LxpUdyNTJcnVH6eMcWwCn7RhTPJ3rcgMH/MEtoPQg3KLHFa9EB0Jwy91cTx+NHLC5LXoeF13ONsA3Ce1SwUfR7zPwuOhs/1ZLuLOOBy0uZSf3OXjc6kzvEv4TNzNaL0AgtIXhUYeHMqUBwuRtdBGfRbv0Acb13jDRwZXm6m1c60dAVsPjLrdLygb/vALmb1aECQWY7fTOjE79HdCENUsyGNN68QicxNJJanRWsgBJz+qVT5vcgceXF1ak7RPAi8WvM+vZNnDD31kT8F00eQLkEXi+DA6zKDzfCt774P0snAxji8NVt+XwuLNT+GC0ENzs5YNDLzyas47DdVG66jV266IepzlcUHBIJznX4jDQLdIwihdg0/9MOiK603d1ZPfCg1qHkNBxwEC3oVwrx3wAXjpHk1yU4vhO0qd5292jcNhzdqE/JPEOGwy5brzCS18D7zs2RG4VC4hDH6w3ZC330VfAhZ+75SEulcXOnV5H7nmm1y2HQ8hG9VUUO5PO5Pb0yoXJHoRTCT0SsSeZTER3Nm+plNMN0RfDueBk6n06WQbVBD/q3abRBlv05XBKmEb99kLbhCcTnAI69fvJ6CZ8Bj6idqp1Ygz68gI9ouveJrudNPMYDr8UzrSuRoVi0Jdv6lkdPk0Iuxv3mhl4thT+optzhHdKP0633No1+sKrvqppOcQ0zxzJ+Wxz55kNp2N0JB7boQ6Hmr910PA33eMKDT5NR7sbsw6JL6neTMaEQ0vwANzutgDuzeHoBs0Ib6dv3056kOsknJjhzezGTNc9BB8C8c12OC0SeWKc7nArslcSgQemmmcJ0qeaA8/63nR3qIX2ISLSGNwjChIrE/Q7e99nALdt6dd7DsLDDnp47UjsFf0mb8vXFgN22JWF9B4yp72w5GHBA1pnZZEa4LK8tgYczooOjVRmCFm9MNcVI4Or3+tSFAfqQOZOOn21nBrpFicTmuC6yVVlgu6U/XqH3KcdOrQSmTvx0kUiE1jMWwV/w62/OgDFy/sSSCd57TwJZKcv5tA0ea3X4YIJhZM6d27eLlJnrdtR5Pt6IuFqXVQgbb3bdFCI7QA8Fr6sfdw0DPmR94I5AR3bRATzN60CyU4SQ1UZuWdhG6FxH+TdrJFh3FWNvYB53APdGqCsOrMDlhC9z4dhyTbV7gXD+4VMrzqzg4ZwQUpsfcYWKRQYO2SrGmW521WD11+R0i8vTZB4acDQPutmTDJv+XE6Y3mzXe62ui5ivkRwq8IE/zKOOajRw6JvALcEt4626L+3IdEfg+cwKLi6QKDg72XomOV5+M1rce04s8Rtv/OeLz0Nt+r80yE20I7uE+/K+jQc3szg9oZ98LL3Rvhn4dYhsnY1EOj3sbLe5/BPwm+WtzXeawt1U3qDrA0nxDnQJXfrJ6IOWW6Wt/0VuLAROOKyK78gtwvwBJCj/YsM7fbJfVmH7skwj8+ck0ULzjRKaUQTm90YsN5Hwo25q1az0A0hT5R14H+z3BDI2yLsykrOEhfLFBC6VxZa6w4wcO5lWXTY21KRD8iqfHd1S4bp6u+7C7cuIpg3RTwXs96xE+gghZv2/PgmEqq8KAqRvNxO/7XYxL6ZyUPbz/h9uMZHt+Dg5WQntC+21okrd+Nc/gXu7csS2nR7YmmVoXFb7kx0m5009fuSO5C27A78+4sh++nl5bsluJXHQ8fRw7c/LboDB7z+cKJWhfDESyEf9jQvHPbbsnuvNh0Sj+hmc3MJy964Xn7jl9FhGP5hsT9IBE7Zf+Hr8rvOv9l9YxVpHbgt+ncSlpyqPGNTeMUtb2qgiQ49i5rB9i1qE7sNXrAP3W9/Z0mdVL0PDr5H2BMcxm6Yh2/20/S2lMd9sPAt2R8Be4+Lj1R588DNfqF6JvyOLSO+fOEOPj4+/Je1uOSQqxw/9E0DZtfC2YckO+iFy0uQwURGiB39kmb2OxYqfELA+ixKfEbTPPMFD/W7X21SALIqixsonH/BUz/57RL7iKfjlZCFfMIPF/9HjX3d4Kutf2FAwOz+2NglA5LSxzb4ZAwdENE33yELEH0LTzqELs/DLyk+E2t0/gpkcnpP3WI4Y4SehB9SjM9WtTHSiNbxjHGKHoYfEHt3dLYrEmQOLN/yjNjLI3R4VHL02YXLISQcZYSKzo9KjtIUfZ7nrmnMuX13/kQoXQk/HJi6yfAoXNWvCJP/cFirdkQF77qhU0c56wTvzrx9huWe93bqcxd0Xr9F/pzGSA/r4QeUKkfdr6STPZ1mbLakacTZZyVn5krT9fCYtld9DpwqyWeXVtmBVHg7eCUD7H4OLt/yT8Dv/zQ4UvBqDl4pm6PN4OlaeLolXI6dyvTQ4+bEeLvt4KmEkxG+DxpbveVmNr+McLAATjaGH7AYU8Erd/fCXZKqRqof4cNmcMTHJHsFJwG47AjSzeB0IAk/jD7twsUfIhCThf8DiUXdkBxzjwU1deDCIBo83RxeSTgKwYF6S7QZPDXgk1sZcMLhlYSnfwAOOMIHB38OLsZMJRy7cGzAq+3hdwnf++B7AU+3h6PlcBEI0FYOd0EoIDnZj+u3hO9HOI7tkpbCLzT/ZKIDTkACXil4VSl4pcM7JPY8z8DFw6ja36UPC/kmeIpGFYxwOS/u+0/EN7noCcnTipGJXFDTi4QLbdMJJsONgv8nTUX9hv5jXz0h+eXAwYU8yOnYMsnVPqbSSlBNcpp4VEBsYYuCgH318KYhpa2ibb/ff1aIzTi5WEtkhaUnMuq4jqf8Mf4ca+mzU21sYukCP8ZNBB14TC8w4ha5V2vGi8IPF1VYoK5biXWVpIeLXLvoZioFYzyVMXev5jj6QRt6bp4j5nR7dYYHKhXqGXH864Fq+8z6sK/ZwJ46W/p0NYqKVu0BUN+KMA8eQw41+Y8fMpgDVrVikZA7CG9VsCaw3uYIoVGfnzKwoAvVOxqNzip2eF2bhx9GAQ48Yh3QuGXlublSA5VUTBDqHekPtKQGuFhysd9GqAJjyJE7IpblCEdkNpEx8bKV5NOk5zGH8BLYfa/2JFR2MP5Mf1dvsBlcBruxRMADJ9J2U9UZAFWbo/992Z4B/x+xoDP/iBENNQAAAABJRU5ErkJggg==;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=none;fontSize=16;fontStyle=1;fontColor=#333333;" parent="policy-36" vertex="1">
           <mxGeometry x="9" y="4" width="22" height="22" as="geometry" />
         </mxCell>
-        <mxCell id="policy-38" value="&lt;b&gt;ApplicationSet&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;policystack&lt;/font&gt;&lt;br&gt;clusters × &lt;font face=&quot;Courier New&quot;&gt;stack/*&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-36" vertex="1">
+        <mxCell id="policy-38" value="&lt;b&gt;ApplicationSet&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;policystack&lt;/font&gt;&lt;br&gt;clusters × &lt;font face=&quot;Courier New&quot;&gt;fleet/&lt;/font&gt; × &lt;font face=&quot;Courier New&quot;&gt;stack/*&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-36" vertex="1">
           <mxGeometry x="12" y="40" width="336" height="50" as="geometry" />
         </mxCell>
         <mxCell id="policy-39" value="&lt;b&gt;cert-manager-aws-prod-1&lt;/b&gt;" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;verticalAlign=top;spacingTop=6;" parent="policy-36" vertex="1">
@@ -118,7 +130,7 @@
         <mxCell id="policy-40" value="Policies" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-36" vertex="1">
           <mxGeometry x="24" y="158" width="80" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="policy-41" value="PlacementRule" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-36" vertex="1">
+        <mxCell id="policy-41" value="Placement" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-36" vertex="1">
           <mxGeometry x="110" y="158" width="104" height="26" as="geometry" />
         </mxCell>
         <mxCell id="policy-42" value="PlacementBinding" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-36" vertex="1">
@@ -142,43 +154,25 @@
         <mxCell id="policy-49" value="&lt;b&gt;local-cluster&lt;/b&gt; — the hub, also a target" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;" parent="policy-48" vertex="1">
           <mxGeometry x="12" y="40" width="256" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="policy-50" value="rev=main" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="22" y="70" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-51" value="env=prod" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="92" y="70" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-52" value="dc=dc1" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="162" y="70" width="56" height="22" as="geometry" />
+        <mxCell id="policy-50" value="reads &lt;font face=&quot;Courier New&quot;&gt;fleet/hubs/acm-dc1.yaml&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
+          <mxGeometry x="22" y="70" width="236" height="22" as="geometry" />
         </mxCell>
         <mxCell id="policy-53" value="&lt;b&gt;aws-prod-1&lt;/b&gt;" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;" parent="policy-48" vertex="1">
           <mxGeometry x="12" y="108" width="256" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="policy-54" value="rev=main" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="22" y="138" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-55" value="env=prod" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="92" y="138" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-56" value="aws" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="162" y="138" width="44" height="22" as="geometry" />
+        <mxCell id="policy-54" value="reads &lt;font face=&quot;Courier New&quot;&gt;fleet/aws-prod-1.yaml&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
+          <mxGeometry x="22" y="138" width="236" height="22" as="geometry" />
         </mxCell>
         <mxCell id="policy-57" value="&lt;b&gt;azure-prod-2&lt;/b&gt;" style="html=1;whiteSpace=wrap;fontSize=12;rounded=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;verticalAlign=top;align=left;spacingLeft=10;spacingTop=4;" parent="policy-48" vertex="1">
           <mxGeometry x="12" y="176" width="256" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="policy-58" value="rev=v1.4" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="22" y="206" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-59" value="env=prod" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="92" y="206" width="64" height="22" as="geometry" />
-        </mxCell>
-        <mxCell id="policy-60" value="azure" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
-          <mxGeometry x="162" y="206" width="52" height="22" as="geometry" />
+        <mxCell id="policy-58" value="reads &lt;font face=&quot;Courier New&quot;&gt;fleet/azure-prod-2.yaml&lt;/font&gt;" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=40;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;" parent="policy-48" vertex="1">
+          <mxGeometry x="22" y="206" width="236" height="22" as="geometry" />
         </mxCell>
         <mxCell id="policy-61" value="…" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;opacity=50;" parent="policy-48" vertex="1">
           <mxGeometry x="12" y="244" width="256" height="22" as="geometry" />
         </mxCell>
-        <mxCell id="policy-62" value="&lt;b&gt;GitOpsCluster&lt;/b&gt;&lt;br&gt;imports clusters + labels into Argo" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-48" vertex="1">
+        <mxCell id="policy-62" value="&lt;b&gt;GitOpsCluster&lt;/b&gt;&lt;br&gt;imports clusters as Argo CD cluster secrets" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-48" vertex="1">
           <mxGeometry x="12" y="276" width="256" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-63" value="Governance · namespace &lt;font face=&quot;Courier New&quot;&gt;policy&lt;/font&gt;" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;swimlaneFillColor=#fbf8fc;fontStyle=1;fontSize=14;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=38;" parent="policy-34" vertex="1">
@@ -199,7 +193,7 @@
         <mxCell id="policy-69" value="…" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;opacity=50;" parent="policy-63" vertex="1">
           <mxGeometry x="12" y="152" width="396" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="policy-70" value="&lt;b&gt;PlacementRule · PlacementBinding&lt;/b&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;placement-cert-manager-aws-prod-1&lt;/font&gt; → aws-prod-1" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-63" vertex="1">
+        <mxCell id="policy-70" value="&lt;b&gt;Placement · PlacementBinding&lt;/b&gt;&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;cert-manager-aws-prod-1&lt;/font&gt; → aws-prod-1" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-63" vertex="1">
           <mxGeometry x="12" y="180" width="396" height="50" as="geometry" />
         </mxCell>
         <mxCell id="policy-71" value="&lt;b&gt;governance-policy-propagator&lt;/b&gt;&lt;br&gt;replicates each Policy into the cluster&#39;s namespace&lt;br&gt;resolves &lt;font face=&quot;Courier New&quot;&gt;{{hub}}&lt;/font&gt; templates · rolls up compliance" style="html=1;whiteSpace=wrap;fontSize=11;rounded=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;align=center;verticalAlign=middle;spacingLeft=6;spacingRight=6;" parent="policy-63" vertex="1">
@@ -212,7 +206,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="policy-72" value="Managed clusters" style="swimlane;html=1;whiteSpace=wrap;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#f6fbf5;fontStyle=1;fontSize=16;rounded=1;absoluteArcSize=1;arcSize=14;container=1;collapsible=0;strokeWidth=1.5;align=left;spacingLeft=38;" parent="1" vertex="1">
-          <mxGeometry x="1260" y="500" width="400" height="420" as="geometry" />
+          <mxGeometry x="1260" y="626" width="400" height="420" as="geometry" />
         </mxCell>
         <mxCell id="policy-73" value="" style="shape=image;html=1;imageAspect=1;aspect=fixed;image=data:image/png,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;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=none;fontSize=16;fontStyle=1;fontColor=#333333;" parent="policy-72" vertex="1">
           <mxGeometry x="9" y="4" width="22" height="22" as="geometry" />
@@ -256,19 +250,19 @@
         <mxCell id="policy-86" value="1" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
           <mxGeometry x="14" y="50" width="26" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="policy-87" value="Argo CD pulls &lt;font face=&quot;Courier New&quot;&gt;stack/&lt;/font&gt; + &lt;font face=&quot;Courier New&quot;&gt;values/&lt;/font&gt; at each cluster&#39;s git revision" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
+        <mxCell id="policy-87" value="Argo CD pulls &lt;font face=&quot;Courier New&quot;&gt;stack/&lt;/font&gt; + &lt;font face=&quot;Courier New&quot;&gt;values/&lt;/font&gt; at the revision in each cluster&#39;s fleet file" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
           <mxGeometry x="50" y="42" width="336" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-88" value="2" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
           <mxGeometry x="14" y="101" width="26" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="policy-89" value="GitOpsCluster imports the ManagedClusters and their labels into Argo CD" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
+        <mxCell id="policy-89" value="GitOpsCluster imports the ManagedClusters into Argo CD as cluster secrets" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
           <mxGeometry x="50" y="93" width="336" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-90" value="3" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
           <mxGeometry x="14" y="152" width="26" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="policy-91" value="The ApplicationSet creates one Application per element × cluster" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
+        <mxCell id="policy-91" value="The ApplicationSet creates one Application per element × cluster with a fleet file" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
           <mxGeometry x="50" y="144" width="336" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-92" value="4" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
@@ -280,7 +274,7 @@
         <mxCell id="policy-94" value="5" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
           <mxGeometry x="14" y="254" width="26" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="policy-95" value="The PlacementRule selects exactly one cluster by name and labels" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
+        <mxCell id="policy-95" value="The Placement selects exactly one cluster by name" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#333333;" parent="policy-85" vertex="1">
           <mxGeometry x="50" y="246" width="336" height="44" as="geometry" />
         </mxCell>
         <mxCell id="policy-96" value="6" style="html=1;whiteSpace=wrap;fontSize=13;rounded=1;arcSize=40;fillColor=#4d4d4d;strokeColor=none;fontColor=#ffffff;align=center;verticalAlign=middle;spacingLeft=2;spacingRight=2;ellipse;fontStyle=1;" parent="policy-85" vertex="1">
@@ -295,24 +289,24 @@
         <mxCell id="policy-99" value="②" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#4d4d4d;fontSize=15;labelBackgroundColor=#ffffff;fontColor=#222222;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontStyle=1;" parent="1" source="policy-62" target="policy-38" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="440" y="842" />
-              <mxPoint x="440" y="609" />
+              <mxPoint x="440" y="968" />
+              <mxPoint x="440" y="735" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="policy-100" value="④" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#4d4d4d;fontSize=15;labelBackgroundColor=#ffffff;fontColor=#222222;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontStyle=1;" parent="1" source="policy-36" target="policy-63" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="240" y="896" />
-              <mxPoint x="990" y="896" />
+              <mxPoint x="240" y="1022" />
+              <mxPoint x="990" y="1022" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="policy-101" value="⑤" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#4d4d4d;fontSize=15;labelBackgroundColor=#ffffff;fontColor=#222222;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontStyle=1;" parent="1" source="policy-70" target="policy-53" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="760" y="749" />
-              <mxPoint x="760" y="682" />
+              <mxPoint x="760" y="875" />
+              <mxPoint x="760" y="808" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -320,40 +314,40 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="policy-103" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
-          <mxGeometry x="40" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="40" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-104" value="Git repository" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="64" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="64" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
         <mxCell id="policy-105" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
-          <mxGeometry x="210" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="210" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-106" value="Helm chart" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="234" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="234" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
         <mxCell id="policy-107" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
-          <mxGeometry x="380" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="380" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-108" value="Argo CD" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="404" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="404" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
         <mxCell id="policy-109" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
-          <mxGeometry x="550" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="550" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-110" value="ACM" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="574" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="574" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
         <mxCell id="policy-111" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
-          <mxGeometry x="720" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="720" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-112" value="Managed cluster" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="744" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="744" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
         <mxCell id="policy-113" value="" style="html=1;whiteSpace=wrap;fontSize=10;rounded=1;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
-          <mxGeometry x="890" y="950" width="18" height="18" as="geometry" />
+          <mxGeometry x="890" y="1076" width="18" height="18" as="geometry" />
         </mxCell>
         <mxCell id="policy-114" value="Tooling / docs" style="html=1;whiteSpace=wrap;fontSize=13;text;align=left;verticalAlign=middle;fontColor=#444444;" parent="1" vertex="1">
-          <mxGeometry x="914" y="944" width="140" height="30" as="geometry" />
+          <mxGeometry x="914" y="1070" width="140" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

@@ -1,4 +1,4 @@
-# Site values for dc2. Selected by the label: config.example.com/datacenter.20=dc2
+# Site values for dc2. Selected by config entry datacenter.20: dc2 in a fleet file.
 #
 # Holds facts about the site, not which elements run. Each cluster opts into elements from
 # values/clusters/<cluster>.yaml, and these values only apply where the element is enabled.

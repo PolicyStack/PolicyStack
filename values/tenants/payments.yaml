@@ -1,7 +1,8 @@
-# Values for clusters that host the payments tenant. Selected by a custom label category:
-#   config.example.com/tenant.40=payments  ->  values/tenants/payments.yaml
+# Values for clusters that host the payments tenant. Selected by a custom config category in a
+# fleet file:
+#   tenant.40: payments  ->  values/tenants/payments.yaml
 #
-# Any config.example.com/<category>.<priority> label works the same way; the ApplicationSet appends
+# Any <category>.<priority> config entry works the same way; the ApplicationSet appends
 # "s" to the category for the directory name. Priority 40 layers this file above environment (10),
 # datacenter (20) and platform (30), and below values/clusters/.
 stack:

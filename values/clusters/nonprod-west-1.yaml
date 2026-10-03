@@ -1,9 +1,11 @@
 # Per-cluster values for nonprod-west-1, a managed (non-hub) cluster.
 #
-# The file name must match the ManagedCluster name; a mismatch is skipped silently. Labels:
-#   git.example.com/revision=<branch-or-tag>
-#   config.example.com/environment.10=nonprod
-#   config.example.com/datacenter.20=dc2
+# The file name must match the ManagedCluster name; a mismatch is skipped silently. Fleet file
+# fleet/nonprod-west-1.yaml on the default branch:
+#   revision: main             # required; branch, tag or SHA
+#   config:
+#     environment.10: nonprod
+#     datacenter.20: dc2
 #
 # Site settings come from values/datacenters/dc2.yaml. This file turns elements on and sets what is
 # specific to this cluster.

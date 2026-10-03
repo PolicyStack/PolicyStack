@@ -1,4 +1,4 @@
-# Selected by a `config.<baseDomain>/platform.<priority>=aws` label on the ManagedCluster.
+# Selected by config entry `platform.<priority>: aws` in a fleet file.
 # Node elements create MachineSets by cloning the cluster's worker MachineSet.
 stack:
   infraNodes:

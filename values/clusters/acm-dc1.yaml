@@ -2,14 +2,16 @@
 #
 # This file is selected for the hub because the ManagedCluster carries local-cluster="true", which
 # makes the ApplicationSet resolve values/acm/acm-<datacenter>.yaml and this file instead of
-# values/clusters/<clusterName>.yaml. The Helm release becomes <element>-acm-dc1.
+# values/clusters/<clusterName>.yaml. The datacenter, dc1, comes from the hub's fleet file below.
+# The Helm release becomes <element>-acm-dc1.
 #
-# Required labels on the local-cluster ManagedCluster (the ApplicationSet fails without them):
-#   git.example.com/revision=<branch-or-tag>   # REQUIRED; no "/" allowed in a label value
-#   config.example.com/environment.10=prod
-#   config.example.com/datacenter.20=dc1
-#   config.example.com/platform.30=baremetal
-#   clusterID=<uuid>                           # set by ACM on OpenShift clusters
+# Fleet file on the default branch: fleet/hubs/<hubName>.yaml, where hubName is set in the appset
+# chart (default acm-dc1):
+#   revision: main             # required; branch, tag or SHA
+#   config:
+#     environment.10: prod
+#     datacenter.20: dc1
+#     platform.30: baremetal
 #
 # On top of the prod baseline in values/environments/prod.yaml, this cluster runs:
 stack:

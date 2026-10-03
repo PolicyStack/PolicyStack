@@ -11,14 +11,22 @@ spec:
   generators:
     - matrix:
         generators:
-          - clusters:
-              selector:
-                matchExpressions:
-                  - key: git.{{ .Values.baseDomain }}/revision
-                    operator: Exists
+          - matrix:
+              generators:
+                - clusters:
+                    selector:
+                      matchExpressions:
+                        - key: clusterID
+                          operator: Exists
+                - git:
+                    repoURL: '{{ .Values.gitRepo }}'
+                    revision: HEAD
+                    pathParamPrefix: fleet
+                    files:
+                    - path: 'fleet/{{ "{{" }}if index .metadata.labels "local-cluster"{{ "}}" }}hubs/{{ .Values.hubName }}{{ "{{" }}else{{ "}}" }}{{ "{{" }}.name{{ "}}" }}{{ "{{" }}end{{ "}}" }}.yaml'
           - git:
               repoURL: '{{ .Values.gitRepo }}'
-              revision: '{{ "{{" }}index .metadata.labels "git.{{ .Values.baseDomain }}/revision"{{ "}}" }}'
+              revision: '{{ "{{" }}.revision{{ "}}" }}'
               directories:
               - path: 'stack/*'
   template:
@@ -28,7 +36,7 @@ spec:
       project: default
       source:
         repoURL: '{{ .Values.gitRepo }}'
-        targetRevision: '{{ "{{" }}index .metadata.labels "git.{{ .Values.baseDomain }}/revision"{{ "}}" }}'
+        targetRevision: '{{ "{{" }}.revision{{ "}}" }}'
         path: '{{ "{{" }}.path.path{{ "}}" }}'
       destination:
         server: 'https://kubernetes.default.svc'
@@ -42,20 +50,12 @@ spec:
   templatePatch: |
     {{ "{{" }}- /* First pass: extract datacenter */{{ "}}" }}
     {{ "{{" }}- $datacenter := "" {{ "}}" }}
-    {{ "{{" }}- range $key, $value := .metadata.labels {{ "}}" }}
-      {{ "{{" }}- if hasPrefix "config.{{ .Values.baseDomain }}/datacenter." $key {{ "}}" }}
+    {{ "{{" }}- range $key, $value := index . "config" {{ "}}" }}
+      {{ "{{" }}- if hasPrefix "datacenter." $key {{ "}}" }}
         {{ "{{" }}- $datacenter = $value {{ "}}" }}
       {{ "{{" }}- end {{ "}}" }}
     {{ "{{" }}- end {{ "}}" }}
 
-    {{ "{{" }}- /* Second pass: extract environment */{{ "}}" }}
-    {{ "{{" }}- $environment := "" {{ "}}" }}
-    {{ "{{" }}- range $key, $value := .metadata.labels {{ "}}" }}
-      {{ "{{" }}- if hasPrefix "config.{{ .Values.baseDomain }}/environment." $key {{ "}}" }}
-        {{ "{{" }}- $environment = $value {{ "}}" }}
-      {{ "{{" }}- end {{ "}}" }}
-    {{ "{{" }}- end {{ "}}" }}
-  
     {{ "{{" }}- if index .metadata.labels "local-cluster" {{ "}}" }}
     metadata:
       name: '{{ "{{" }}.path.basenameNormalized{{ "}}" }}-acm-{{ "{{" }} $datacenter {{ "}}" }}'
@@ -71,38 +71,31 @@ spec:
           {{ "{{" }}- /* Store the cluster name for use in nested scopes */{{ "}}" }}
           {{ "{{" }}- $clusterName := .name {{ "}}" }}
 
-          {{ "{{" }}- /* Organize labels by priority using a dictionary */{{ "}}" }}
+          {{ "{{" }}- /* Organize config entries by priority using a dictionary */{{ "}}" }}
           {{ "{{" }}- $priorityMap := dict {{ "}}" }}
           {{ "{{" }}- $multiValues := dict {{ "}}" }}
 
-          {{ "{{" }}- /* Gather all config.{{ .Values.baseDomain }} labels */{{ "}}" }}
-          {{ "{{" }}- range $key, $value := .metadata.labels {{ "}}" }}
-            {{ "{{" }}- if hasPrefix "config.{{ .Values.baseDomain }}/" $key {{ "}}" }}
-              {{ "{{" }}- /* Extract category and priority */{{ "}}" }}
-              {{ "{{" }}- $keyParts := splitList "/" $key {{ "}}" }}
-              {{ "{{" }}- if gt (len $keyParts) 1 {{ "}}" }}
-                {{ "{{" }}- $categoryPriority := index $keyParts 1 {{ "}}" }}
-                {{ "{{" }}- $dotParts := splitList "." $categoryPriority {{ "}}" }}
-                {{ "{{" }}- if gt (len $dotParts) 1 {{ "}}" }}
-                  {{ "{{" }}- $category := index $dotParts 0 {{ "}}" }}
-                  {{ "{{" }}- $priorityStr := index $dotParts 1 {{ "}}" }}
-                
-                  {{ "{{" }}- /* Add to priority map */{{ "}}" }}
-                  {{ "{{" }}- $paddedKey := printf "%05s-%s-%s" $priorityStr $category $value {{ "}}" }}
-                  {{ "{{" }}- $_ := set $priorityMap $paddedKey (dict "category" $category "value" $value "key" $key) {{ "}}" }}
-                
-                  {{ "{{" }}- /* For multi-value support, append to a list if it exists or create a new one */{{ "}}" }}
-                  {{ "{{" }}- if not (hasKey $multiValues $category) {{ "}}" }}
-                    {{ "{{" }}- $_ := set $multiValues $category (list) {{ "}}" }}
-                  {{ "{{" }}- end {{ "}}" }}
-                  {{ "{{" }}- $existingValues := index $multiValues $category {{ "}}" }}
-                  {{ "{{" }}- $_ := set $multiValues $category (append $existingValues $value) {{ "}}" }}
-                
-                  {{ "{{" }}- /* Update datacenter if found */{{ "}}" }}
-                  {{ "{{" }}- if eq $category "datacenter" {{ "}}" }}
-                    {{ "{{" }}- $datacenter = $value {{ "}}" }}
-                  {{ "{{" }}- end {{ "}}" }}
-                {{ "{{" }}- end {{ "}}" }}
+          {{ "{{" }}- /* Gather the fleet file's config entries, keyed <category>.<priority> */{{ "}}" }}
+          {{ "{{" }}- range $key, $value := index . "config" {{ "}}" }}
+            {{ "{{" }}- $dotParts := splitList "." $key {{ "}}" }}
+            {{ "{{" }}- if gt (len $dotParts) 1 {{ "}}" }}
+              {{ "{{" }}- $category := index $dotParts 0 {{ "}}" }}
+              {{ "{{" }}- $priorityStr := index $dotParts 1 {{ "}}" }}
+
+              {{ "{{" }}- /* Add to priority map */{{ "}}" }}
+              {{ "{{" }}- $paddedKey := printf "%05s-%s-%s" $priorityStr $category $value {{ "}}" }}
+              {{ "{{" }}- $_ := set $priorityMap $paddedKey (dict "category" $category "value" $value) {{ "}}" }}
+
+              {{ "{{" }}- /* For multi-value support, append to a list if it exists or create a new one */{{ "}}" }}
+              {{ "{{" }}- if not (hasKey $multiValues $category) {{ "}}" }}
+                {{ "{{" }}- $_ := set $multiValues $category (list) {{ "}}" }}
+              {{ "{{" }}- end {{ "}}" }}
+              {{ "{{" }}- $existingValues := index $multiValues $category {{ "}}" }}
+              {{ "{{" }}- $_ := set $multiValues $category (append $existingValues $value) {{ "}}" }}
+
+              {{ "{{" }}- /* Update datacenter if found */{{ "}}" }}
+              {{ "{{" }}- if eq $category "datacenter" {{ "}}" }}
+                {{ "{{" }}- $datacenter = $value {{ "}}" }}
               {{ "{{" }}- end {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}
           {{ "{{" }}- end {{ "}}" }}
@@ -112,24 +105,13 @@ spec:
         
           {{ "{{" }}- /* Collect selected values for later use */{{ "}}" }}
           {{ "{{" }}- $selectedValues := dict {{ "}}" }}
-          {{ "{{" }}- $matchSelectors := dict {{ "}}" }}
 
-          {{ "{{" }}- /* Determine the filename based on local-cluster */{{ "}}" }}
-          {{ "{{" }}- $filename := $clusterName {{ "}}" }}
-          {{ "{{" }}- if index .metadata.labels "local-cluster" {{ "}}" }}
-            {{ "{{" }}- $filename = printf "acm-%s" $datacenter {{ "}}" }}
-          {{ "{{" }}- end {{ "}}" }}
-
-          {{ "{{" }}- /* Process sorted labels */{{ "}}" }}
+          {{ "{{" }}- /* Process sorted config entries */{{ "}}" }}
           {{ "{{" }}- range $sortKey := $sortedKeys {{ "}}" }}
             {{ "{{" }}- $label := index $priorityMap $sortKey {{ "}}" }}
             {{ "{{" }}- $category := $label.category {{ "}}" }}
             {{ "{{" }}- $value := $label.value {{ "}}" }}
-            {{ "{{" }}- $key := $label.key {{ "}}" }}
-          
-            {{ "{{" }}- /* Store in match selectors */{{ "}}" }}
-            {{ "{{" }}- $_ := set $matchSelectors $key (dict "key" $key "operator" "In" "values" (list $value)) {{ "}}" }}
-          
+
             {{ "{{" }}- /* Store for selected values - last one wins for backward compatibility */{{ "}}" }}
             {{ "{{" }}- $_ := set $selectedValues $category $value {{ "}}" }}
           
@@ -168,20 +150,9 @@ spec:
             selectedName: {{ "{{" }} $clusterName {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}
             selectedId: {{ "{{" }} .metadata.labels.clusterID {{ "}}" }}
-            {{ "{{" }}- if index .metadata.labels "env.{{ .Values.baseDomain }}/defaultstorageclass" {{ "}}" }}
-            selectedDefaultStorageClass: {{ "{{" }} index .metadata.labels "env.{{ .Values.baseDomain }}/defaultstorageclass" {{ "}}" }}
-            {{ "{{" }}- end {{ "}}" }}
 
             selector:
               matchExpressions:
-                {{ "{{" }}- range $key, $expr := $matchSelectors {{ "}}" }}
-                {{ "{{" }}- $safeKey := $key | replace "." "_" | replace "/" "_" | replace "-" "_" {{ "}}" }}
-                {{ "{{" }} $safeKey {{ "}}" }}:
-                  key: {{ "{{" }} $expr.key {{ "}}" }}
-                  operator: {{ "{{" }} $expr.operator {{ "}}" }}
-                  values:
-                    - {{ "{{" }} index $expr.values 0 | quote {{ "}}" }}
-                {{ "{{" }}- end {{ "}}" }}
                 name:
                   key: name
                   operator: In

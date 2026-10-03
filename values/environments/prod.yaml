@@ -1,5 +1,5 @@
 # Security and compliance baseline every prod cluster gets, regardless of site or platform.
-# Selected by the label: config.example.com/environment.10=prod
+# Selected by config entry environment.10: prod in a fleet file.
 #
 # Cluster-specific workloads live in values/clusters/<cluster>.yaml instead.
 stack:

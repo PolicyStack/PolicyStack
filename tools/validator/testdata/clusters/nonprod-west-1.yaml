@@ -1,0 +1,4 @@
+revision: main
+config:
+  environment.10: nonprod
+  datacenter.20: dc2

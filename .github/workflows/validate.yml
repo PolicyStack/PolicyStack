@@ -6,6 +6,7 @@ on:
       - 'stack/**'
       - 'values/**'
       - 'values.yaml'
+      - 'fleet/**'
       - 'tools/validator/**'
       - '.github/workflows/validate.yml'
   push:
@@ -14,6 +15,7 @@ on:
       - 'stack/**'
       - 'values/**'
       - 'values.yaml'
+      - 'fleet/**'
       - 'tools/validator/**'
       - '.github/workflows/validate.yml'
   workflow_dispatch:
@@ -36,6 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # tags and origin/* branches for the pin check
           persist-credentials: false
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -59,3 +62,37 @@ jobs:
             --repo-root . \
             --extra-values tools/validator/testdata/baseline.yaml \
             --skip POLICY080
+
+      # Upstream ships no fleet files. A fork validates its real fleet here.
+      - name: Validate fleet
+        if: hashFiles('fleet/*.yaml', 'fleet/hubs/*.yaml') != ''
+        run: |
+          tools/validator/bin/policystack-validator \
+            --github \
+            --repo-root . \
+            --fixtures-dir fleet \
+            --extra-values tools/validator/testdata/baseline.yaml \
+            --skip POLICY080
+
+      # Catches typos and pins like gh-pages. A pinned branch deleted later still freezes the
+      # ApplicationSet (docs/applicationset.md#revision).
+      - name: Check fleet pins
+        run: |
+          shopt -s nullglob
+          failed=0
+          for f in fleet/*.yaml fleet/hubs/*.yaml; do
+            rev=$(yq '.revision' "$f") || { echo "::error file=$f::not valid YAML"; failed=1; continue; }
+            # The forms Argo CD resolves: a tag, a branch, or a commit SHA of 5 to 40 hex characters.
+            found=0
+            for ref in "refs/tags/$rev" "refs/remotes/origin/$rev"; do
+              git show-ref -q --verify "$ref" && git cat-file -e "$ref:stack" 2>/dev/null && found=1 && break
+            done
+            if [ "$found" = 0 ] && [[ $rev =~ ^[0-9a-f]{5,40}$ ]]; then
+              git cat-file -e "$rev:stack" 2>/dev/null && found=1
+            fi
+            if [ "$found" = 0 ]; then
+              echo "::error file=$f::revision '$rev' is not a tag, branch or commit SHA of this repository with a stack/ directory"
+              failed=1
+            fi
+          done
+          exit "$failed"

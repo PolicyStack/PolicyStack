@@ -25,7 +25,7 @@ Policies, PolicySets, Placements and PlacementBindings live on the hub in `polic
 
 ## Placement
 
-The chart turns the injected `selector` ([Injected values](applicationset.md#injected-values)) into the Placement's required cluster selector. Its expression on the `name` label makes each Placement select only its own cluster. The rendered predicate for `nonprod-west-1`:
+The chart turns the injected `selector` ([Injected values](applicationset.md#injected-values)) into the Placement's required cluster selector. It holds one expression, on the `name` label, so each Placement selects only its own cluster. The rendered predicate for `nonprod-west-1`:
 
 ```yaml
 spec:
@@ -33,14 +33,6 @@ spec:
   - requiredClusterSelector:
       labelSelector:
         matchExpressions:
-        - key: config.example.com/datacenter.20
-          operator: In
-          values:
-            - dc2
-        - key: config.example.com/environment.10
-          operator: In
-          values:
-            - nonprod
         - key: name
           operator: In
           values:

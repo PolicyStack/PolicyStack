@@ -32,8 +32,7 @@ func realMain() error {
 		stackDir      = flag.String("stack-dir", "", "override stack/ (default <repo>/stack)")
 		sampleDir     = flag.String("sample-dir", "", "override sample-element/ (default <repo>/sample-element)")
 		valuesDir     = flag.String("values-dir", "", "override values/ (default <repo>/values)")
-		fixturesDir   = flag.String("fixtures-dir", "", "fixture ManagedCluster YAMLs (default <repo>/tools/validator/testdata/clusters)")
-		baseDomain    = flag.String("base-domain", "example.com", "config label prefix")
+		fixturesDir   = flag.String("fixtures-dir", "", "fleet files to render, hubs in its hubs/ (default <repo>/tools/validator/testdata/clusters)")
 		github        = flag.Bool("github", false, "emit GitHub Actions ::error/::warning annotations")
 		severity      = flag.String("severity", "error", "fail threshold: error|warning")
 		skipFlag      = flag.String("skip", "", "comma-separated rule IDs to skip")
@@ -97,7 +96,6 @@ func realMain() error {
 		SampleDir:      *sampleDir,
 		ValuesDir:      *valuesDir,
 		FixturesDir:    *fixturesDir,
-		BaseDomain:     *baseDomain,
 		HelmBin:        *helmBin,
 		KubeconformBin: resolvedKc,
 		SchemasDir:     *schemasDir,

@@ -1,4 +1,4 @@
-# Selected by a `config.<baseDomain>/platform.<priority>=baremetal` label on the ManagedCluster.
+# Selected by config entry `platform.<priority>: baremetal` in a fleet file.
 # Bare metal has no MachineSets, so storage nodes are designated by labelling existing nodes and
 # infra MachineSet creation is off entirely.
 stack:

@@ -1,6 +1,6 @@
 # Appended to every fixture cascade with --extra-values. policy-library
-# dereferences .Values.selector.matchExpressions unconditionally, and fixture
-# cluster names have no values/clusters/<name>.yaml to supply it.
+# dereferences .Values.selector.matchExpressions unconditionally, and only the
+# ApplicationSet injects selector, so nothing supplies it outside Argo CD.
 selector:
   matchExpressions:
     - key: name

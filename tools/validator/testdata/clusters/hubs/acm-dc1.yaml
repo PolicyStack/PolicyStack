@@ -1,0 +1,5 @@
+revision: main
+config:
+  environment.10: prod
+  datacenter.20: dc1
+  platform.30: baremetal

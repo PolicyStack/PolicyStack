@@ -169,8 +169,11 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
   ([example](https://github.com/PolicyStack/PolicyStack/blob/main/stack/advanced-cluster-security/converters/acs-sync-collector.yaml)).
   Helm and the validator see escaped templates as plain strings, so a mistake shows up only on the
   cluster, as a `template-error` violation.
-- **Try changes on one cluster first.** Push a branch without `/` in its name and point a nonprod
-  cluster's revision label at it ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)).
+- **Try changes on one cluster first.** Push a branch, then pin a nonprod cluster's fleet file to it
+  with a pull request to the default branch
+  ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)). Keep the branch until the
+  pin moves back. A pin to a deleted branch freezes the Applications of every cluster
+  ([Revision](applicationset.md#revision)).
 
 ## Element reference
 

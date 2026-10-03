@@ -1,22 +1,24 @@
 # Rolling out changes
 
-A cluster runs what Git holds at the revision its `git.<baseDomain>/revision` label pins. The element charts, their policy-library pins and every values file. To roll out a change, commit it and move cluster labels to a revision that contains it.
+A cluster runs what Git holds at the revision its [fleet file](applicationset.md#fleet-files) pins: the element charts, their policy-library pins and every values file. To roll out a change, commit it and point fleet files at a revision that contains it.
 
 ## Onboarding a cluster
 
 1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
-2. Commit `values/clusters/<cluster>.yaml`, named exactly like the ManagedCluster, to the revision the cluster will pin. It enables the elements this cluster runs beyond what its other layers enable. A misnamed file is skipped without an error ([Missing files](values.md#missing-files)). The hub uses `acm-<datacenter>` file names instead ([Order](values.md#order)).
-3. Label the ManagedCluster on the hub ([Cluster labels](applicationset.md#cluster-labels)). The ApplicationSet selects clusters by the revision label, so set it in the same command as the config labels, or after them. An Application rendered before a config label exists leaves out that layer's file.
+2. Open a pull request to the default branch that adds `fleet/<cluster>.yaml`, named exactly like the ManagedCluster ([Fleet files](applicationset.md#fleet-files)). The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).
 
-    ```sh
-    oc label managedcluster prod-east-1 \
-      config.example.com/environment.10=prod \
-      config.example.com/datacenter.20=dc1 \
-      config.example.com/platform.30=aws \
-      git.example.com/revision=main
+    ```yaml
+    # fleet/prod-east-1.yaml
+    revision: main
+    config:
+      environment.10: prod
+      datacenter.20: dc1
+      platform.30: aws
     ```
 
-The ApplicationSet creates one Application per element, named `<element>-prod-east-1`, in `openshift-gitops`. An element no layer enables syncs with no resources.
+3. Add `values/clusters/<cluster>.yaml`, named exactly like the ManagedCluster, at the revision the fleet file pins. When that is the default branch, add it in the same pull request. It enables the elements this cluster runs beyond what its other layers enable. A misnamed file is skipped without an error ([Missing files](values.md#missing-files)). The hub uses `acm-<datacenter>` file names instead ([Order](values.md#order)).
+
+Import and the pull request can come in either order. Land step 3 before or with step 2: Applications rendered before the cluster's values file exists leave that layer out, which can briefly enable an element the file turns off. Once the cluster is imported and its fleet file is on the default branch, the ApplicationSet creates one Application per element, named `<element>-prod-east-1`, in `openshift-gitops`, within about 6 minutes. An element no layer enables syncs with no resources.
 
 ```sh
 oc get applications.argoproj.io -n openshift-gitops | grep prod-east-1
@@ -24,13 +26,18 @@ oc get applications.argoproj.io -n openshift-gitops | grep prod-east-1
 
 ## Promoting and rolling back
 
-A cluster pinned to a branch picks up every commit pushed to it. A cluster pinned to a tag changes only when its label moves. Promote by moving the label to the new revision, and roll back by moving it back:
+A cluster pinned to a branch picks up every commit pushed to it. A cluster pinned to a tag or SHA changes only when its fleet file's `revision` changes. Promote with a pull request that edits `revision`:
 
-```sh
-oc label managedcluster prod-east-1 git.example.com/revision=<tag> --overwrite
+```diff
+ # fleet/prod-east-1.yaml
+-revision: v1.4.0
++revision: v1.5.0
+ config:
 ```
 
-Every Application for the cluster switches to the new revision. Application names do not include the revision, so Argo CD updates the same Policies in place. The [Placement](policies.md#placement) selector does not include the revision label, so the policies stay bound to the cluster while Argo CD syncs.
+Roll back with `git revert` of that commit, or with a pull request that sets the previous revision. Both go through the same review as any change to `fleet/` ([Protection](applicationset.md#protection)).
+
+Every Application for the cluster switches to the new revision. Application names do not include the revision, so Argo CD updates the same Policies in place. The [Placement](policies.md#placement) selector matches only the cluster's `name` label, so the policies stay bound to the cluster while Argo CD syncs.
 
 An element that exists at the new revision but not the old one gets a new Application. An element missing at the new revision loses its Application, and its Policies stay behind ([Removing an element](#removing-an-element)).
 
@@ -62,24 +69,25 @@ Argo CD then deletes the element's objects from `policy`, and ACM removes its po
 The ApplicationSet sets `preserveResourcesOnDeletion`, and its Applications carry no resources finalizer. Deleting an Application therefore leaves the element's objects in `policy`, its Policies stay bound to the cluster and keep enforcing, with nothing managing them. An Application is deleted when:
 
 - `stack/<element>` does not exist at the cluster's revision.
-- The cluster loses its revision label ([Removing a cluster's revision label](#removing-a-clusters-revision-label)).
+- The cluster's fleet file is deleted ([Offboarding a cluster](#offboarding-a-cluster)).
 - The ApplicationSet is deleted, for example by `helm uninstall appset`.
 
 To remove an element:
 
 1. Set `enabled: false` in the element's `values.yaml`, and remove every `enabled: true` for it from the root `values.yaml` and `values/`.
 2. Move every cluster to a revision with that change, and sync each of the element's Applications with pruning ([Disabling an element](#disabling-an-element)) until it is Synced with no resources.
-3. Delete `stack/<element>` in a later commit. Clusters pinned to older revisions keep the directory and its Application until their label moves.
+3. Delete `stack/<element>` in a later commit. Clusters pinned to older revisions keep the directory and its Application until their pin moves.
 
 To clean up objects already orphaned, delete them from `policy` by name ([Rendered objects](policies.md#rendered-objects)).
 
-## Removing a cluster's revision label
+## Offboarding a cluster
 
-```sh
-oc label managedcluster prod-east-1 git.example.com/revision-
-```
+Deleting a cluster's fleet file deletes all of its Applications. Their Policies stay and keep enforcing ([Removing an element](#removing-an-element)). To stop managing a cluster without orphaning its Policies:
 
-The ApplicationSet stops selecting the cluster and deletes all of its Applications. Their Policies stay and keep enforcing ([Removing an element](#removing-an-element)). To stop managing a cluster without orphaning its Policies, first set `enabled: false` in the cluster's own file for every element enabled on it, sync those Applications with pruning ([Disabling an element](#disabling-an-element)), then remove the label.
+1. Set `enabled: false` in `values/clusters/<cluster>.yaml` for every element enabled on it, and sync those Applications with pruning ([Disabling an element](#disabling-an-element)).
+2. Delete the cluster's fleet file in a pull request.
+
+Do not reuse the cluster's name while its fleet file exists. A cluster imported under that name gets the old file's configuration.
 
 ## Operator upgrades
 
@@ -108,6 +116,6 @@ stack:
 
 `oc get csv -n metallb-system` on the managed cluster shows the installed CSV. On a cluster that does not have the operator yet, OLM resolves the Subscription to the channel's latest CSV. If that CSV is not in `versions`, the policy does not approve the install. To install a listed version there, set `subscription.startingCSV` to it.
 
-When a newer CSV is available, the OperatorPolicy status names it in a message that starts `an InstallPlan to update to [<csv>]`. Add that CSV name to `versions`, then promote the revision cluster by cluster ([Promoting and rolling back](#promoting-and-rolling-back)).
+When a newer CSV is available, the OperatorPolicy status names it in a message that starts `an InstallPlan to update to [<csv>]`. Add that CSV name to `versions`, then promote the revision that has it one cluster at a time, by editing each cluster's fleet file ([Promoting and rolling back](#promoting-and-rolling-back)).
 
 Keep `versions` in the element's `values.yaml`. `operatorPolicies` is a list, and lists replace across the cascade ([Merge rules](values.md#merge-rules)), so overriding `versions` from another layer means restating the whole list there.

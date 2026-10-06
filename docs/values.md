@@ -75,7 +75,7 @@ The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/v
 | `values/acm/acm-dc1.yaml` | `hubs/acm-dc1` | Reserved for the hub's own ACM and GitOps elements. Left commented out so PolicyStack does not reconcile its own delivery path |
 | `values/clusters/acm-dc1.yaml` | The hub, `hubName: acm-dc1` | The hub's elements, and a commented list of the elements left off and why |
 | `values/clusters/prod-east-1.yaml` | ManagedCluster `prod-east-1` | Infra nodes, machine health checks, an update channel pin and user workload monitoring |
-| `values/clusters/hcp-agent.yaml` | `lifecycle-hcp-agent` and ManagedCluster `hcp-agent` | `install`: the oac-apps style services, MetalLB API address and Certificate ([Mapping from oac-apps](lifecycle.md#mapping-from-oac-apps)). `stack`: the guest's MetalLB ingress pool |
+| `values/clusters/hcp-agent.yaml` | `lifecycle-hcp-agent` and ManagedCluster `hcp-agent` | `install`: configure services. `stack`: the guest's MetalLB ingress pool |
 | `values/clusters/nonprod-west-1.yaml` | ManagedCluster `nonprod-west-1` | Enforces the dc2 registry allowlist, the cluster's own MetalLB address pool, and user workload monitoring |
 | `values/clusters/aws-prod.yaml` | ManagedCluster `aws-prod` | Values for an AWS test cluster: the OpenShift Data Foundation to Loki storage chain and additional operator installs. Rename it to the target ManagedCluster name before use, its header lists the fleet file it expects |
 

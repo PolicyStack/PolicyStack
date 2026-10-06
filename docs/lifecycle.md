@@ -241,8 +241,6 @@ done
 oc get agents -n hardware-inventory
 ```
 
-The only recovery oac-apps found for Agents stuck in `reclaiming` resets the assisted service database, which loses every host registration on that hub.
-
 ## Other engines
 
 v1 builds HostedClusters only, and the schema rejects unknown `install` keys. Another engine, such as a Hive ClusterDeployment or a SiteConfig ClusterInstance, would add an `install` key selecting it, converters for its objects, and its own absent chain with inform gates. `hub` and `state`, the ApplicationSet and the guard stay as they are.

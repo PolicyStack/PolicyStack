@@ -27,3 +27,14 @@ On the ACM hub, with the [prerequisites](https://policystack.github.io/PolicySta
    ```
 
 Every element ships disabled. Enable it in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystack.github.io/PolicyStack/values/).
+
+To have the hub build a hosted cluster instead of importing one, meet the [lifecycle prerequisites](https://policystack.github.io/PolicyStack/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
+```yaml
+revision: main
+hub: acm-dc1
+valueFiles:
+  - environments/nonprod.yaml
+  - platforms/kubevirt.yaml
+install:
+  version: 4.20.8
+```

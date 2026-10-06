@@ -4,6 +4,8 @@ A cluster runs what Git holds at the revision its [fleet file](applicationset.md
 
 ## Onboarding a cluster
 
+A cluster either already exists and is imported, or a hub builds it from its fleet file. To have a hub build it, add `hub` and `install` to the fleet file in step 2 and skip step 1: the hub creates the hosted cluster, ACM imports it, and the steps below then apply as written ([Cluster lifecycle](lifecycle.md)).
+
 1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
 2. Open a pull request to the default branch that adds `fleet/<cluster>.yaml`, named exactly like the ManagedCluster ([Fleet files](applicationset.md#fleet-files)). The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).
 
@@ -66,7 +68,7 @@ Argo CD then deletes the element's objects from `policy`, and ACM removes its po
 
 ## Removing an element
 
-The ApplicationSet sets `preserveResourcesOnDeletion`, and its Applications carry no resources finalizer. Deleting an Application therefore leaves the element's objects in `policy`, its Policies stay bound to the cluster and keep enforcing, with nothing managing them. An Application is deleted when:
+The ApplicationSet `policystack` sets `preserveResourcesOnDeletion`, and its Applications carry no resources finalizer. Deleting an Application therefore leaves the element's objects in `policy`, its Policies stay bound to the cluster and keep enforcing, with nothing managing them. An Application is deleted when:
 
 - `stack/<element>` does not exist at the cluster's revision.
 - The cluster's fleet file is deleted ([Offboarding a cluster](#offboarding-a-cluster)).
@@ -86,6 +88,11 @@ Deleting a cluster's fleet file deletes all of its Applications. Their Policies 
 
 1. Set `enabled: false` in `values/clusters/<cluster>.yaml` for every element enabled on it, and sync those Applications with pruning ([Disabling an element](#disabling-an-element)).
 2. Delete the cluster's fleet file in a pull request.
+
+For a cluster whose fleet file sets `hub`, the file also decides whether the cluster survives:
+
+- **Destroy.** Set `state: absent`, wait for the Policy `absent-lifecycle-<cluster>` to be Compliant, then delete the file ([Destroy](lifecycle.md#destroy)). Detaching deletes the Day-2 Applications, so run step 1 first to leave no Policies behind.
+- **Abandon.** Delete the file, or remove `hub`. The hub deletes the lifecycle Policies and the cluster keeps running, unmanaged ([Abandon](lifecycle.md#abandon)).
 
 Do not reuse the cluster's name while its fleet file exists. A cluster imported under that name gets the old file's configuration.
 

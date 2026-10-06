@@ -1,0 +1,9 @@
+apiVersion: v2
+name: lifecycle
+description: "Creates and destroys a hosted cluster from its fleet file"
+type: application
+version: 0.1.0
+dependencies:
+  - name: policy-library
+    version: "2.1.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

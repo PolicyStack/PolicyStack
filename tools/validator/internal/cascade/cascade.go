@@ -2,7 +2,9 @@
 // passed to helm.
 //
 // It mirrors the valueFiles block in appset/templates/appset.yaml. Keep the two
-// in sync; any divergence is a bug.
+// in sync; any divergence is a bug. appset/templates/lifecycle.yaml applies the
+// same cascade to lifecycle/, and run.Run appends the fleet file for its
+// valuesObject.
 //
 // Cascade order (lowest precedence first):
 //

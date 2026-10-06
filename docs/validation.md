@@ -4,9 +4,14 @@
 `tools/validator/testdata/clusters`, building the list of values files the way the ApplicationSet
 does ([Order](values.md#order)). It checks the element sources and the rendered output. The
 fixtures are the example [fleet files](applicationset.md#fleet-files): `prod-east-1.yaml`,
-`nonprod-west-1.yaml` and the hub's `hubs/acm-dc1.yaml`. A file is named after its cluster, so
-`hubs/acm-dc1.yaml` renders as `acm-dc1` and reads `values/clusters/acm-dc1.yaml`. Their files in `values/` are
-rendered too.
+`nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and three clusters the hub builds:
+`hcp-kubevirt.yaml`, `hcp-agent.yaml` and `hcp-retired.yaml` (`state: absent`). A file is named
+after its cluster, so `hubs/acm-dc1.yaml` renders as `acm-dc1` and reads
+`values/clusters/acm-dc1.yaml`. Their files in `values/` are rendered too.
+
+For each fixture that sets `hub`, it also renders the `lifecycle/` chart as `lifecycle-<cluster>`,
+with the fixture file appended to the cascade in place of the ApplicationSet's `valuesObject`
+([Cluster lifecycle](lifecycle.md)).
 
 It needs Go and Helm. Use the Helm major version that CI pins
 ([Policy Validate](workflows.md#policy-validate)). kubeconform is optional, without it on `PATH`,
@@ -28,11 +33,12 @@ The first checks formatting, vets, tests and builds the validator. The second ru
 chart builds each Placement from `selector.matchExpressions`, and outside Argo CD nothing injects
 it, so `helm template` fails for an enabled element without one. In production the ApplicationSet
 injects a selector for the one cluster instead ([Placement](policies.md#placement)). Files passed
-with `--extra-values` take precedence over the whole cascade.
+with `--extra-values` take precedence over the whole cascade. They are not applied to `lifecycle/`,
+which ships its own `selector`.
 
 The validator runs `helm dependency update` on an element only when its `charts/` directory holds no
 `.tgz`, otherwise it renders with the archive already there. After bumping the policy-library
-version, delete the stale archives with `rm -rf stack/*/charts`. A CI checkout has none.
+version, delete the stale archives with `rm -rf stack/*/charts lifecycle/charts`. A CI checkout has none.
 
 ## Output
 
@@ -63,6 +69,7 @@ warning POLICY021 [metallb] converters/metallb-cr.yaml is not referenced by any 
 | `--severity warning` | Fail on warnings as well as errors |
 | `--github` | Write GitHub Actions annotations instead of terminal output |
 | `--fixtures-dir` | Fleet files to render instead of the examples, hubs in its `hubs/`. CI passes `fleet` when the repo has fleet files |
+| `--lifecycle-dir` | The lifecycle chart, default `<repo>/lifecycle` |
 
 `--help` lists the rest.
 

@@ -1,0 +1,8 @@
+{{- /*
+Deleting the HostedCluster deletes its NodePools and control plane namespace.
+*/ -}}
+apiVersion: hypershift.openshift.io/v1beta1
+kind: HostedCluster
+metadata:
+  name: {{ include "lifecycle.cluster" . }}
+  namespace: {{ .Values.install.namespace }}

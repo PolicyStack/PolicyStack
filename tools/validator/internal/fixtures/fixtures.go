@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -26,9 +27,14 @@ type Cluster struct {
 	// ValueFiles lists paths under values/, lowest precedence first.
 	// Entries with an issue are left out.
 	ValueFiles []string
+	// Hub is the hubName of the hub that builds the cluster; empty for an
+	// import-only cluster. State is present or absent, empty meaning present.
+	Hub, State string
 	SourceFile string
 	// Issues lists problems in the file. POLICY050 reports them.
 	Issues []Issue
+
+	hubLine int // line of the hub key, 0 when absent
 }
 
 // Issue is a problem in a fleet file.
@@ -41,6 +47,9 @@ type Issue struct {
 type fleetFile struct {
 	Revision   yaml.Node   `yaml:"revision"`
 	ValueFiles []yaml.Node `yaml:"valueFiles"`
+	Hub        yaml.Node   `yaml:"hub"`
+	State      yaml.Node   `yaml:"state"`
+	Install    yaml.Node   `yaml:"install"`
 }
 
 // argoFile is the file as Argo CD's git files generator reads it:
@@ -49,7 +58,13 @@ type fleetFile struct {
 type argoFile struct {
 	Revision   any   `json:"revision"`
 	ValueFiles []any `json:"valueFiles"`
+	Hub        any   `json:"hub"`
+	State      any   `json:"state"`
+	Install    any   `json:"install"`
 }
+
+// dnsLabel is the RFC 1123 label a HostedCluster name must be.
+var dnsLabel = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`)
 
 // LoadDir loads dir/*.yaml as spokes and dir/hubs/*.yaml as hubs. hubs/ is
 // optional. Other files are ignored.
@@ -61,6 +76,24 @@ func LoadDir(dir string) ([]*Cluster, error) {
 	hubs, err := loadFiles(filepath.Join(dir, "hubs"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
+	}
+	for _, h := range hubs {
+		if h.hubLine != 0 {
+			h.Issues = append(h.Issues, Issue{Line: h.hubLine, Message: "hub is not allowed in a hub file: a hub cannot build itself"})
+			h.Hub = "" // the lifecycle ApplicationSet skips hub files
+		}
+	}
+	for _, c := range spokes {
+		if c.Hub == "" {
+			continue
+		}
+		// A typo would leave the cluster with no hub to build or destroy it.
+		if !slices.ContainsFunc(hubs, func(h *Cluster) bool { return h.Name == c.Hub }) {
+			c.Issues = append(c.Issues, Issue{Line: c.hubLine, Message: fmt.Sprintf("hub %q has no hubs/%s.yaml", c.Hub, c.Hub)})
+		}
+		if !dnsLabel.MatchString(c.Name) {
+			c.Issues = append(c.Issues, Issue{Message: fmt.Sprintf("cluster name %q is not a DNS label: the hub names the HostedCluster after it", c.Name)})
+		}
 	}
 	return append(spokes, hubs...), nil
 }
@@ -135,6 +168,46 @@ func parse(data []byte) *Cluster {
 			c.ValueFiles = append(c.ValueFiles, s)
 		}
 	}
+
+	// Kind is 0 when the key is absent. Argo CD's selector compares hub as a string.
+	c.hubLine = f.Hub.Line
+	switch h := a.Hub.(type) {
+	case nil:
+		if f.Hub.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub has no value"})
+		}
+	case string:
+		if h == "" {
+			c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub is empty"})
+		}
+		c.Hub = h
+	default:
+		c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub " + notString(h)})
+	}
+	switch s := a.State.(type) {
+	case string:
+		if s != "present" && s != "absent" {
+			c.Issues = append(c.Issues, Issue{Line: f.State.Line, Message: fmt.Sprintf("state %q must be present or absent", s)})
+		}
+		c.State = s
+	case nil:
+		if f.State.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: f.State.Line, Message: "state has no value: it must be present or absent"})
+		}
+	default:
+		c.Issues = append(c.Issues, Issue{Line: f.State.Line, Message: "state " + notString(s)})
+	}
+	if _, ok := a.Install.(map[string]any); !ok && f.Install.Kind != 0 {
+		c.Issues = append(c.Issues, Issue{Line: f.Install.Line, Message: "install must be a map"})
+	}
+	if f.Hub.Kind == 0 {
+		if f.State.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: f.State.Line, Message: "state requires hub: only a hub acts on it"})
+		}
+		if f.Install.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: f.Install.Line, Message: "install requires hub: only a hub acts on it"})
+		}
+	}
 	return c
 }
 
@@ -153,7 +226,7 @@ func yamlIssue(msg string) Issue {
 	}
 	if field, ok := strings.CutPrefix(is.Message, "field "); ok {
 		if name, _, ok := strings.Cut(field, " not found in type "); ok {
-			is.Message = "unknown key " + name + ": only revision and valueFiles are allowed"
+			is.Message = "unknown key " + name + ": only revision, valueFiles, hub, state and install are allowed"
 		}
 	}
 	return is

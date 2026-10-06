@@ -43,9 +43,13 @@ A top-level `placement:` key in any cascade file merges into that spec ([Placeme
 
 An ACM Placement selects only clusters in ManagedClusterSets bound to its namespace. The appset chart binds `global` into `policyNamespace` ([Install the ApplicationSet](install.md#install-the-applicationset)).
 
+The `lifecycle/` chart is the exception ([Cluster lifecycle](lifecycle.md)). Its Policies build clusters on the hub, so its `values.yaml` sets `selector` to one `Exists` expression on the `local-cluster` label, and no `selector` is injected. Every lifecycle release lands on the hub, where ACM requires template names to be unique across all Policies, so the chart sets the policy-library option [`suffixTemplateNames`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#root-component-options). Its template names are `<policy>-<name>-<cluster>`, such as `present-credentials-hcp-agent`.
+
 ## Naming limits
 
 ACM replicates each Policy into the cluster's namespace on the hub, and names and labels the copy `<policyNamespace>.<policy>-<release>`. A label value holds at most 63 characters. With `policyNamespace: policy`, `<policy>-<release>` gets 56, and the release spends part of that on the element and cluster names. A long element name shrinks the budget of every policy in that element, and a long cluster name that of every policy on that cluster, so keep policy names short.
+
+The lifecycle release is `lifecycle-<cluster>` and its longest Policy is `present`, so the replicated name is `policy.present-lifecycle-<cluster>`: 25 characters plus the cluster name, which leaves the cluster name at most 38. Its longest template, `present-credentials-<cluster>`, is shorter than 63 for any such name.
 
 Validator rule POLICY001 holds `<policyNamespace>.<policy>-<release>`, `<policyNamespace>.<set>-<release>` and every template name (`<policy>-<name>`) to 63 characters ([Rules](validation.md#rules)).
 

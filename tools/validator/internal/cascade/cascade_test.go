@@ -181,6 +181,16 @@ func TestResolve_testdata(t *testing.T) {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml",
 			"values/datacenters/dc2.yaml", "values/clusters/nonprod-west-1.yaml",
 		},
+		"foo-hcp-agent": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml",
+			"values/datacenters/dc1.yaml", "values/platforms/agent.yaml", "values/clusters/hcp-agent.yaml",
+		},
+		"foo-hcp-kubevirt": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/kubevirt.yaml",
+		},
+		"foo-hcp-retired": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/kubevirt.yaml",
+		},
 		"foo-acm-dc1": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml",
 			"values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",

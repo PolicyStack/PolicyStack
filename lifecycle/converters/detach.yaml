@@ -1,0 +1,15 @@
+{{- /*
+Deletes the ManagedCluster only if this hub built it. The ownership check sits in the same
+evaluation as the delete, so a cluster imported under the same name after teardown is never
+detached; the detached gate then stays NonCompliant instead.
+*/ -}}
+{{- $c := include "lifecycle.cluster" . }}
+{{ "{{-" }} $mc := lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" {{ $c | quote }} {{ "}}" }}
+{{ "{{-" }} if and{{ range $k, $v := include "lifecycle.ownerAnnotations" . | fromYaml }} (eq (dig "metadata" "annotations" {{ $k | quote }} "" $mc) {{ $v | quote }}){{ end }} {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: cluster.open-cluster-management.io/v1
+    kind: ManagedCluster
+    metadata:
+      name: {{ $c }}
+{{ "{{-" }} end {{ "}}" }}

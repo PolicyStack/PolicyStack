@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: policystack-lifecycle
+  namespace: openshift-gitops
+spec:
+  # Deleting a fleet file, or its hub key, deletes the Application and with it the Policies. No
+  # lifecycle policy sets pruneObjectBehavior, so the cluster is abandoned, never destroyed.
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: '{{ .Values.gitRepo }}'
+        revision: HEAD
+        files:
+        - path: 'fleet/*.yaml'
+        # Argo CD's default globbing lets * cross /. This drops hubs/ and any other subdirectory,
+        # which nothing else reads.
+        - path: 'fleet/*/*.yaml'
+          exclude: true
+      selector:
+        matchExpressions:
+          - key: hub
+            operator: In
+            values:
+              - {{ .Values.hubName | quote }}
+  template:
+    metadata:
+      name: 'lifecycle-{{ "{{" }} trimSuffix ".yaml" .path.filename {{ "}}" }}'
+    spec:
+      project: default
+      source:
+        repoURL: '{{ .Values.gitRepo }}'
+        targetRevision: '{{ "{{" }}.revision{{ "}}" }}'
+        path: lifecycle
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: open-cluster-management
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+  templatePatch: |
+    {{ "{{" }}- $name := trimSuffix ".yaml" .path.filename {{ "}}" }}
+    spec:
+      source:
+        helm:
+          ignoreMissingValueFiles: true
+          valueFiles:
+          - values.yaml
+          - ../values.yaml
+          {{ "{{" }}- range index . "valueFiles" {{ "}}" }}
+          - ../values/{{ "{{" }} . {{ "}}" }}
+          {{ "{{" }}- end {{ "}}" }}
+          - ../values/clusters/{{ "{{" }} $name {{ "}}" }}.yaml
+          valuesObject:
+            hub: {{ "{{" }} .hub | quote {{ "}}" }}
+            state: {{ "{{" }} dig "state" "present" . | quote {{ "}}" }}
+            install: {{ "{{" }} dig "install" dict . | toJson {{ "}}" }}

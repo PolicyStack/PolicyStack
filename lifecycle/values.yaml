@@ -1,0 +1,190 @@
+# Rendered once per fleet file whose hub is this hub. hub, state and install come from the fleet
+# file; any values cascade layer can set install defaults. docs/lifecycle.md documents every key.
+
+# hubName of the hub that builds the cluster
+hub: ""
+# present builds and reconciles the cluster, absent destroys it
+state: present
+
+install:
+  # KubeVirt, Agent or None. Fixed at create.
+  platform: ""
+  # OpenShift release, x.y.z. Bumping it upgrades the control plane, then every NodePool.
+  version: ""
+  # The release image is <releaseRepository>:<version>-multi. Point it at a mirror when disconnected.
+  releaseRepository: quay.io/openshift-release-dev/ocp-release
+  # Namespace of the HostedCluster, its NodePools and the secrets copied from the credential
+  namespace: clusters
+  # ACM console credential (Infrastructure > Credentials) holding pullSecret and ssh-publickey
+  credential:
+    namespace: ""
+    name: ""
+  # Required for Agent and None. KubeVirt detects it when empty.
+  baseDomain: ""
+  # Namespace of the InfraEnv and its Agents. Required for Agent.
+  agentNamespace: ""
+  # servicePublishingStrategy per service. Fixed at create. null drops an entry.
+  services:
+    APIServer:
+      type: LoadBalancer
+    OAuthServer:
+      type: Route
+    Konnectivity:
+      type: Route
+    Ignition:
+      type: Route
+  # metadata and spec merged over the generated HostedCluster
+  hostedCluster: {}
+  # NodePool spec per pool, merged over the generated spec. The NodePool is named <cluster>-<pool>.
+  nodePools: {}
+  # Extra hub objects, created before the HostedCluster and deleted after it is gone
+  manifests: []
+
+# The hub's own ManagedCluster, whatever localClusterName is
+selector:
+  matchExpressions:
+    hub:
+      key: local-cluster
+      operator: Exists
+
+stack:
+  lifecycle:
+    enabled: true
+    # Each template waits for the one before it in the same Policy
+    orderManifests: true
+    # Every release lands on the hub, so template names carry the cluster name
+    suffixTemplateNames: true
+
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # No Policy-level remediationAction: it would override the inform gates below.
+    # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
+    policies:
+      - name: present
+        enabled: true
+        description: "Create and reconcile the hosted cluster"
+        severity: high
+        disabled: false
+
+      - name: absent
+        enabled: true
+        description: "Detach, then destroy the hosted cluster"
+        severity: high
+        disabled: false
+
+    configPolicies:
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: present
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+
+      - name: credentials
+        enabled: true
+        description: "Pull secret, SSH key and etcd encryption key"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: credentials
+
+      - name: manifests
+        enabled: true
+        description: "Extra hub objects from install.manifests"
+        policyRef: present
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: manifests
+
+      - name: cluster
+        enabled: true
+        description: "HostedCluster and NodePools"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: hostedcluster
+
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: absent
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to detach it"
+
+      # Detach first, so the hosted klusterlet cleans up while the control plane is still up
+      - name: detach
+        enabled: true
+        description: "Delete the ManagedCluster"
+        policyRef: absent
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: detach
+
+      # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
+      - name: detached
+        enabled: true
+        description: "Wait for the ManagedCluster to be gone"
+        policyRef: absent
+        remediationAction: inform
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: managedcluster
+        customMessage:
+          noncompliant: "Waiting for the ManagedCluster to be deleted"
+
+      - name: destroy
+        enabled: true
+        description: "Delete the HostedCluster"
+        policyRef: absent
+        remediationAction: enforce
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: hostedcluster-ref
+
+      - name: destroyed
+        enabled: true
+        description: "Wait for the HostedCluster to be gone"
+        policyRef: absent
+        remediationAction: inform
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: hostedcluster-ref
+        customMessage:
+          noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
+
+      - name: cleanup
+        enabled: true
+        description: "Delete the copied secrets and install.manifests"
+        policyRef: absent
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: cleanup

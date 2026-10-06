@@ -1,0 +1,102 @@
+# Per-cluster values for hcp-agent, a hosted cluster hub acm-dc1 builds on bare-metal Agents.
+#
+# Fleet file fleet/hcp-agent.yaml on the default branch:
+#   revision: main
+#   hub: acm-dc1
+#   valueFiles:
+#     - environments/prod.yaml
+#     - datacenters/dc1.yaml
+#     - platforms/agent.yaml
+#   install:
+#     version: 4.20.8
+#     nodePools: ...
+#
+# install builds the cluster (lifecycle/); stack configures it once imported, like any other cluster.
+install:
+  # Fixed at create. The API gets a pinned MetalLB address on the hub; the rest ride the hub router.
+  services:
+    APIServer:
+      type: LoadBalancer
+      loadBalancer:
+        hostname: api-int-hcp-agent.dc1.example.com
+    OAuthServer:
+      type: Route
+      route:
+        hostname: oauth-hcp-agent.dc1.example.com
+    Konnectivity:
+      type: Route
+      route:
+        hostname: konnectivity-hcp-agent.dc1.example.com
+    Ignition:
+      type: Route
+      route:
+        hostname: ignition-hcp-agent.dc1.example.com
+  hostedCluster:
+    spec:
+      kubeAPIServerDNSName: api-hcp-agent.dc1.example.com
+      configuration:
+        apiServer:
+          servingCerts:
+            namedCertificates:
+              - names:
+                  - api-hcp-agent.dc1.example.com
+                servingCertificate:
+                  name: hcp-agent-api-tls
+  # Created before the HostedCluster, so the pool exists before the kube-apiserver Service asks
+  # for an address.
+  manifests:
+    - apiVersion: metallb.io/v1beta1
+      kind: IPAddressPool
+      metadata:
+        name: hcp-agent-apiserver
+        namespace: metallb-system
+      spec:
+        addresses:
+          - 10.20.9.13/32
+        # serviceAllocation alone keeps the address for the kube-apiserver Service. autoAssign: false
+        # would hide the pool from it, since the Service carries no pool annotation.
+        serviceAllocation:
+          namespaces:
+            - clusters-hcp-agent
+          serviceSelectors:
+            - matchLabels:
+                app: kube-apiserver
+    - apiVersion: metallb.io/v1beta1
+      kind: L2Advertisement
+      metadata:
+        name: hcp-agent-apiserver
+        namespace: metallb-system
+      spec:
+        ipAddressPools:
+          - hcp-agent-apiserver
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: hcp-agent-api
+        namespace: clusters
+      spec:
+        secretName: hcp-agent-api-tls
+        dnsNames:
+          - api-hcp-agent.dc1.example.com
+        issuerRef:
+          kind: ClusterIssuer
+          name: letsencrypt
+
+stack:
+  # Pins the guest router's ingress VIP.
+  metallb:
+    enabled: true
+    toggles:
+      addressing: true
+    config:
+      ipAddressPools:
+        default-ingress:
+          addresses:
+            - 10.20.13.10/32
+          serviceAllocation:
+            namespaces:
+              - openshift-ingress
+      l2Advertisements:
+        default-ingress:
+          ipAddressPools:
+            - default-ingress

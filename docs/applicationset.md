@@ -2,6 +2,8 @@
 
 The ApplicationSet `policystack` in `openshift-gitops` on the hub creates one Argo CD Application per element for every managed cluster that has a fleet file. The fleet file picks the Git revision and the values files. The template is [`appset/templates/appset.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/templates/appset.yaml).
 
+A second ApplicationSet, `policystack-lifecycle`, creates one Application per fleet file that names this hub in `hub`. That Application builds or destroys the cluster ([Cluster lifecycle](lifecycle.md)). Its template is [`appset/templates/lifecycle.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/templates/lifecycle.yaml).
+
 ## Fleet files
 
 A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.yaml`, named exactly like its ManagedCluster. The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](#the-hub)).
@@ -10,8 +12,11 @@ A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.
 |---|---|---|
 | `revision` | Yes | Branch, tag or commit SHA every Application for the cluster renders from ([Revision](#revision)). |
 | `valueFiles` | No | Paths under `values/`, lowest precedence first. Each entry adds that file to the cascade ([Order](values.md#order)). |
+| `hub` | No | `hubName` of the hub that builds the cluster. Without it the cluster must be imported ([Cluster lifecycle](lifecycle.md)). |
+| `state` | No | `present` (default) or `absent`. `absent` destroys the cluster ([Destroy](lifecycle.md#destroy)). Requires `hub`. |
+| `install` | No | The cluster to build ([Fleet keys](lifecycle.md#fleet-keys)). Requires `hub`. |
 
-No other keys are allowed. Argo CD reads fleet files as YAML 1.1, so `revision` must be a YAML string. Quote a revision YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
+No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`. The Day-2 ApplicationSet ignores the three lifecycle keys. Argo CD reads fleet files as YAML 1.1, so `revision` must be a YAML string. Quote a revision YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
 
 ```yaml
 # fleet/prod-east-1.yaml
@@ -24,7 +29,7 @@ valueFiles:
 
 Any file under `values/` can be listed. `tenants/payments.yaml` is a custom layer: add the file and list it where it should rank. An old `config.<baseDomain>/<category>.<priority>: <value>` label becomes the entry `<category>s/<value>.yaml`, placed in priority order.
 
-Upstream ships no live fleet files, since a shipped file would configure a real cluster as soon as someone installs from upstream. The examples are the validator's fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters): `prod-east-1.yaml`, `nonprod-west-1.yaml` and `hubs/acm-dc1.yaml`.
+Upstream ships no live fleet files, since a shipped file would configure a real cluster as soon as someone installs from upstream. The examples are the validator's fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters): `prod-east-1.yaml`, `nonprod-west-1.yaml`, `hubs/acm-dc1.yaml`, and the hub-built `hcp-kubevirt.yaml`, `hcp-agent.yaml` and `hcp-retired.yaml`.
 
 The ApplicationSet reads fleet files only from the repo's default branch, as `HEAD`. Copies of `fleet/` on other branches have no effect. Changing the default branch re-points every cluster to the fleet files on the new branch, and a cluster without one there loses its Applications.
 
@@ -48,6 +53,8 @@ If a fleet file this hub reads does not parse, has no `revision`, or pins a revi
 oc get applicationset policystack -n openshift-gitops \
   -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].message}'
 ```
+
+A fleet file that does not parse stops `policystack-lifecycle` the same way, so the hub creates, upgrades and destroys no cluster until it is fixed. A bad `revision` there breaks only that cluster's `lifecycle-<cluster>` Application. Check it with the same command on `policystack-lifecycle`.
 
 Pin tags, commit SHAs, protected branches, or a branch you keep until its pin moves off. A pinned branch that is deleted freezes the whole fleet, and GitHub deletes a pull request's branch on merge when automatic deletion of head branches is on.
 
@@ -93,6 +100,8 @@ PolicyStack reads no labels people set by hand. Short of editing the three ACM l
 
 To require code owner review only for production clusters, own `/fleet/prod-*.yaml` and `/fleet/hubs/` instead of `/fleet/`.
 
+The same review guards cluster creation and destruction: a merged `state: absent` destroys the cluster ([Destroy](lifecycle.md#destroy)).
+
 ## Generators
 
 The generator, as rendered with the default `hubName`:
@@ -129,6 +138,29 @@ The inner matrix pairs each cluster with its fleet file. A cluster without one p
 
 The GitOpsCluster from [Import clusters into Argo CD](install.md#import-clusters-into-argo-cd) creates one cluster secret per managed cluster. Clusters without a fleet file are imported but get no Applications.
 
+### Lifecycle generator
+
+`policystack-lifecycle` has one generator, as rendered with the default `hubName`:
+
+```yaml
+generators:
+  - git:
+      repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+      revision: HEAD
+      files:
+      - path: 'fleet/*.yaml'
+      - path: 'fleet/*/*.yaml'
+        exclude: true
+    selector:
+      matchExpressions:
+        - key: hub
+          operator: In
+          values:
+            - "acm-dc1"
+```
+
+It reads every fleet file at `HEAD` and needs no cluster secret, since the cluster does not exist yet. Argo CD's default globbing lets `*` match `/`, so `fleet/*.yaml` also matches files in subdirectories, and the `exclude` entry drops them: the hub files and anything else under a subdirectory, which neither ApplicationSet nor the validator reads. The selector keeps only files whose `hub` is this hub's `hubName`. A file without `hub` never matches, so imported clusters get no lifecycle Application.
+
 ## Applications
 
 | Field | Value |
@@ -145,7 +177,18 @@ Argo CD deploys only to the hub. ACM delivers the policies to the managed cluste
 
 Automated sync leaves `allowEmpty` unset, so it never prunes an Application down to no objects ([Disabling an element](rollout.md#disabling-an-element)).
 
-The ApplicationSet sets `preserveResourcesOnDeletion: true`, so its Applications carry no resources finalizer and deleting one leaves its objects on the hub ([Removing an element](rollout.md#removing-an-element)).
+`policystack` sets `preserveResourcesOnDeletion: true`, so its Applications carry no resources finalizer and deleting one leaves its objects on the hub ([Removing an element](rollout.md#removing-an-element)).
+
+The lifecycle Applications differ:
+
+| Field | Value |
+|---|---|
+| Name | `lifecycle-<cluster>`, where `<cluster>` is the fleet file name |
+| Source | `lifecycle/` in `gitRepo` at the fleet file's revision, with the same cascade ([Order](values.md#order)) |
+| Destination | The hub, namespace `open-cluster-management` |
+| Sync | Automated with `prune` and `selfHeal` |
+
+`policystack-lifecycle` sets `preserveResourcesOnDeletion: false`. Deleting a lifecycle Application deletes its Policies, and the cluster keeps running unmanaged ([Abandon](lifecycle.md#abandon)).
 
 ## Injected values
 
@@ -171,16 +214,18 @@ selector:
         - "prod-east-1"
 ```
 
+A lifecycle Application gets no selector. It passes the fleet file's own keys instead: `hub`, `state` (default `present`) and `install` (default `{}`). They rank above every values file, so the fleet file's `install` overrides the cascade ([Values](lifecycle.md#values)).
+
 ## The appset chart
 
-The [appset chart](https://github.com/PolicyStack/PolicyStack/tree/main/appset) installs the ApplicationSet and reads these values:
+The [appset chart](https://github.com/PolicyStack/PolicyStack/tree/main/appset) installs both ApplicationSets and reads these values:
 
 | Value | Set in | Use |
 |---|---|---|
 | `gitRepo` | `appset/values.yaml` | The repository the git generators read and every Application renders from. |
-| `hubName` | `appset/values.yaml`, or `--set` on each additional hub | Names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, its Applications and its cluster values file. Default `acm-dc1` ([The hub](#the-hub)). |
+| `hubName` | `appset/values.yaml`, or `--set` on each additional hub | Names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, its Applications and its cluster values file. Selects the fleet files whose `hub` this hub builds. Default `acm-dc1` ([The hub](#the-hub)). |
 | `policyNamespace` | Root `values.yaml` | The namespace the chart creates. Elements read the same value. Do not change it. |
 
 The install command passes both values files ([Install the ApplicationSet](install.md#install-the-applicationset)). The chart also binds the `global` ManagedClusterSet into `policyNamespace`, so element Placements can select clusters ([Placement](policies.md#placement)).
 
-[`appset/appset-noformatting.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/appset-noformatting.yaml) is the ApplicationSet as `helm template` renders it with the default values, without the Helm escaping around Argo CD's template expressions. It sits outside `templates/`, so Helm never installs it.
+[`appset/appset-noformatting.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/appset-noformatting.yaml) holds both ApplicationSets, one YAML document each, as `helm template` renders them with the default values, without the Helm escaping around Argo CD's template expressions. It sits outside `templates/`, so Helm never installs it.

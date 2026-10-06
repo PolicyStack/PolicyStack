@@ -1,0 +1,7 @@
+{{- /*
+install.manifests verbatim. ACM templates inside them pass through to the hub unresolved by Helm.
+*/ -}}
+{{- range .Values.install.manifests }}
+- complianceType: musthave
+  objectDefinition: {{- toYaml . | nindent 4 }}
+{{- end }}

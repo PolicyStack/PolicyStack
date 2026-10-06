@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -25,14 +27,16 @@ type Options struct {
 	RepoRoot       string
 	StackDir       string
 	SampleDir      string
+	LifecycleDir   string
 	ValuesDir      string
 	FixturesDir    string
 	HelmBin        string
 	KubeconformBin string
 	SchemasDir     string
 	// ExtraValues are absolute paths appended to every (element, fixture)
-	// cascade at highest precedence. Used to supply baseline values such as
-	// `selector` when fixture names have no file in values/clusters/.
+	// cascade but the lifecycle chart's, at highest precedence. Used to supply
+	// baseline values such as `selector` when fixture names have no file in
+	// values/clusters/.
 	ExtraValues   []string
 	Skip          []string
 	Only          []string
@@ -65,12 +69,25 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if opts.IncludeSample {
 		sample = opts.SampleDir
 	}
-	elements, _, err := chart.LoadAll(opts.StackDir, sample, rootValues)
+	elements, ns, err := chart.LoadAll(opts.StackDir, sample, rootValues)
 	if err != nil {
 		return Result{}, fmt.Errorf("load elements: %w", err)
 	}
 	if len(elements) == 0 {
 		opts.Logger.Warn("no elements found", "stack-dir", opts.StackDir)
+	}
+	// Absence is decided by Chart.yaml alone: Helm and Argo CD render a chart without values.yaml,
+	// so a missing values.yaml must fail the load rather than skip the chart.
+	var lifecycle *chart.Element
+	if _, err := os.Stat(filepath.Join(opts.LifecycleDir, "Chart.yaml")); errors.Is(err, fs.ErrNotExist) {
+		opts.Logger.Warn("no lifecycle chart found", "lifecycle-dir", opts.LifecycleDir)
+	} else if lifecycle, err = chart.Load(opts.LifecycleDir, ns); err != nil {
+		return Result{}, fmt.Errorf("load lifecycle chart: %w", err)
+	}
+	// The chart and repo phases check the lifecycle chart like any element.
+	all := elements
+	if lifecycle != nil {
+		all = append(slices.Clip(elements), lifecycle)
 	}
 
 	clusters, err := fixtures.LoadDir(opts.FixturesDir)
@@ -100,14 +117,14 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 
 	// Fetch dependencies up front so helm lint in the chart phase does not
 	// fail on a missing charts/policy-library-*.tgz.
-	for _, el := range elements {
+	for _, el := range all {
 		if err := runner.EnsureDeps(ctx, el.Dir); err != nil {
 			opts.Logger.Warn("dependency update failed", "element", el.ChartName, "err", err)
 		}
 	}
 
 	// Phase 1: chart-wide checks (per element).
-	for _, el := range elements {
+	for _, el := range all {
 		c := checks.Context{Element: el, Logger: opts.Logger}
 		for _, ck := range enabled {
 			if ck.Phase() != checks.PhaseChart {
@@ -118,16 +135,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	// Phase 2: per-cluster checks. One helm template per (element, fixture), run in parallel.
-	type pair struct {
-		el *chart.Element
-		cl *fixtures.Cluster
-	}
-	var pairs []pair
-	for _, el := range elements {
-		for _, cl := range clusters {
-			pairs = append(pairs, pair{el, cl})
-		}
-	}
+	pairs := buildPairs(elements, lifecycle, clusters)
 
 	// Rendered parent policy names per (namespace, cluster), for cross-element POLICY002.
 	type clusterKey struct {
@@ -148,7 +156,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		sem <- struct{}{}
 		wg.Go(func() {
 			defer func() { <-sem }()
-			c, renderFinding := perCluster(ctx, opts, runner, p.el, p.cl)
+			c, renderFinding := perCluster(ctx, opts, runner, p)
 			if renderFinding != nil && !skipped("RENDER000", opts) {
 				addFindings([]checks.Finding{*renderFinding})
 			}
@@ -209,7 +217,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	// Phase 3: repo-wide checks.
-	repoCtx := checks.Context{AllElements: elements, Logger: opts.Logger}
+	repoCtx := checks.Context{AllElements: all, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue
@@ -227,11 +235,37 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	return res, nil
 }
 
-func perCluster(ctx context.Context, opts Options, runner *render.Runner, el *chart.Element, cl *fixtures.Cluster) (checks.Context, *checks.Finding) {
-	res := cascade.Resolve(cl, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir)
-	if len(opts.ExtraValues) > 0 {
-		res.ValueFiles = append(res.ValueFiles, opts.ExtraValues...)
+// pair is one helm template run: an element and the fleet file it renders for.
+type pair struct {
+	el *chart.Element
+	cl *fixtures.Cluster
+	// fleetValues appends the fleet file to the cascade, standing in for the lifecycle
+	// ApplicationSet's valuesObject (hub, state, install). Its revision and valueFiles keys are
+	// not chart values and have no effect.
+	fleetValues bool
+}
+
+// buildPairs pairs every element with every fleet file, and lifecycle, when non-nil, with the
+// fleet files that set hub: the lifecycle ApplicationSet selects only those.
+func buildPairs(elements []*chart.Element, lifecycle *chart.Element, clusters []*fixtures.Cluster) []pair {
+	var pairs []pair
+	for _, el := range elements {
+		for _, cl := range clusters {
+			pairs = append(pairs, pair{el: el, cl: cl})
+		}
 	}
+	for _, cl := range clusters {
+		if lifecycle != nil && cl.Hub != "" {
+			pairs = append(pairs, pair{el: lifecycle, cl: cl, fleetValues: true})
+		}
+	}
+	return pairs
+}
+
+func perCluster(ctx context.Context, opts Options, runner *render.Runner, p pair) (checks.Context, *checks.Finding) {
+	el := p.el
+	res := cascade.Resolve(p.cl, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir)
+	res.ValueFiles = valueFiles(res.ValueFiles, opts, p)
 	c := checks.Context{
 		Element: el,
 		Cluster: &res,
@@ -245,7 +279,18 @@ func perCluster(ctx context.Context, opts Options, runner *render.Runner, el *ch
 		return c, renderErrorFinding(el, &res, tr)
 	}
 	c.Rendered = tr.Stdout
+	opts.Logger.Debug("rendered", "release", res.ReleaseName, "bytes", len(tr.Stdout))
 	return c, nil
+}
+
+// valueFiles appends to the cascade what ranks above it: the fleet file for a lifecycle pair, in
+// place of the ApplicationSet's valuesObject, or ExtraValues for an element. The lifecycle chart
+// ships its own selector, which ExtraValues' baseline would replace.
+func valueFiles(cascadeFiles []string, opts Options, p pair) []string {
+	if p.fleetValues {
+		return append(cascadeFiles, p.cl.SourceFile)
+	}
+	return append(cascadeFiles, opts.ExtraValues...)
 }
 
 // renderErrorFinding turns a TemplateResult error into a RENDER000 finding.

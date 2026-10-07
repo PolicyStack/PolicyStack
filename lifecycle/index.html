@@ -1,0 +1,1494 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystack.github.io/PolicyStack/lifecycle/">
+      
+      
+        <link rel="prev" href="../rollout/">
+      
+      
+        <link rel="next" href="../elements/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.67">
+    
+    
+      
+        <title>Cluster lifecycle - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.4ae390e2.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.96d1a7e4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cluster-lifecycle" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cluster lifecycle
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Architecture
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../applicationset/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Clusters and Applications
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Policies
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operations
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Operations
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scope
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fleet-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fleet keys
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fleet keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>install</code> keys
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#values" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Values
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#day-2-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Day-2 handoff
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Upgrades
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#immutable-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Immutable fields
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Destroy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#abandon" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Abandon
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removing-a-nodepool" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removing a NodePool
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-engines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Other engines
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Development
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Scope
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fleet-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fleet keys
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fleet keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>install</code> keys
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#values" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Values
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#day-2-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Day-2 handoff
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Upgrades
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#immutable-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Immutable fields
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destroy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Destroy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#abandon" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Abandon
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removing-a-nodepool" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removing a NodePool
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-engines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Other engines
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/lifecycle.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="cluster-lifecycle">Cluster lifecycle<a class="headerlink" href="#cluster-lifecycle" title="Permanent link">&para;</a></h1>
+<p>A fleet file with a <code>hub</code> key makes that hub build the cluster, and <code>state: absent</code> makes it destroy it. The same file then drives the cluster's Day-2 configuration once ACM imports it (<a href="../applicationset/#fleet-files">Fleet files</a>).</p>
+<p>The hub renders the <a href="https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle"><code>lifecycle/</code></a> chart once per cluster it builds. The chart renders policy-library Policies placed on the hub's own ManagedCluster, so the hub's governance add-on creates and deletes the cluster's objects on the hub. Nothing outside ACM and Argo CD runs.</p>
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<p>Hosted control planes only: one HostedCluster and its NodePools, on the <code>KubeVirt</code>, <code>Agent</code> or <code>None</code> platform. The control plane runs on the hub that builds the cluster. Hive, SiteConfig and other engines are not supported (<a href="#other-engines">Other engines</a>).</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>On every hub that builds clusters:</p>
+<ul>
+<li>ACM 2.16 or later. On <code>Agent</code> and <code>None</code> the credentials template generates the etcd encryption key with <code>randBytes</code>, which ACM 2.15 and earlier do not provide.</li>
+<li>
+<p>The multicluster engine <code>hypershift</code> and <code>hypershift-local-hosting</code> components. Both are on by default. <code>hypershift-local-hosting</code> installs the hypershift-addon in the hub's ManagedCluster namespace, <code>local-cluster</code> by default:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>oc<span class="w"> </span>get<span class="w"> </span>managedclusteraddon<span class="w"> </span>hypershift-addon<span class="w"> </span>-n<span class="w"> </span>local-cluster
+</span></code></pre></div>
+</li>
+<li>
+<p>HostedCluster auto-import, on by default on OpenShift. Setting <code>autoImportDisabled</code> in the <code>hypershift-addon-deploy-config</code> AddOnDeploymentConfig turns it off, and a built cluster then gets no Day-2 until imported by hand (<a href="#day-2-handoff">Day-2 handoff</a>). A hand-made ManagedCluster needs both annotations the guard checks (<a href="#create">Create</a>), or the guard stops both chains.</p>
+</li>
+<li>The hub managing itself, with its ManagedCluster labeled <code>local-cluster</code> (the default). The lifecycle Placement selects that label, whatever <code>localClusterName</code> is.</li>
+<li><code>fleet/hubs/&lt;hubName&gt;.yaml</code> for the hub. The validator rejects a <code>hub</code> value with no hub file (<a href="../validation/">Validation</a>).</li>
+<li>
+<p>An ACM console credential (Infrastructure &gt; Credentials) holding the pull secret and the SSH public key. The chart reads the keys <code>pullSecret</code> and <code>ssh-publickey</code>. This secret may already exist with the creation of OCP Virt. The labels only make it show in the console:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>oc<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>kubevirt<span class="w"> </span>-n<span class="w"> </span>open-cluster-management<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-file<span class="o">=</span><span class="nv">pullSecret</span><span class="o">=</span>pull-secret.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--from-file<span class="o">=</span>ssh-publickey<span class="o">=</span>id_ed25519.pub
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>oc<span class="w"> </span>label<span class="w"> </span>secret<span class="w"> </span>kubevirt-secret<span class="w"> </span>-n<span class="w"> </span>open-cluster-management<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>cluster.open-cluster-management.io/credentials<span class="o">=</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>cluster.open-cluster-management.io/type<span class="o">=</span>kubevirt
+</span></code></pre></div>
+<p>Use <code>type=hostinventory</code> for an Agent credential. A <code>baseDomain</code> key in the credential is ignored. Set <code>install.baseDomain</code> instead.</p>
+</li>
+<li>
+<p>A LoadBalancer implementation on the hub, such as MetalLB. The default publishes each cluster's API server through a <code>LoadBalancer</code> Service on the hub (<a href="#install-keys">install keys</a>).</p>
+</li>
+<li><code>KubeVirt</code>: OpenShift Virtualization on the hub.</li>
+<li><code>Agent</code>: an InfraEnv in <code>install.agentNamespace</code>, and approved Agents labeled to match each NodePool's <code>agentLabelSelector</code>.</li>
+</ul>
+<h2 id="fleet-keys">Fleet keys<a class="headerlink" href="#fleet-keys" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hub</code></td>
+<td>none</td>
+<td><code>hubName</code> of the hub that builds and owns the cluster (<a href="../applicationset/#the-hub">The hub</a>). Without it the cluster is import-only.</td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td><code>present</code></td>
+<td><code>present</code> builds and reconciles the cluster. <code>absent</code> destroys it (<a href="#destroy">Destroy</a>). Requires <code>hub</code>.</td>
+</tr>
+<tr>
+<td><code>install</code></td>
+<td>none</td>
+<td>What to build. Requires <code>hub</code>. Any values layer can set the same keys. The fleet file wins (<a href="#values">Values</a>).</td>
+</tr>
+</tbody>
+</table>
+<p>The cluster name is the fleet file name. It must be a DNS label of at most 38 characters (<a href="../policies/#naming-limits">Naming limits</a>).</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># fleet/hcp-kubevirt.yaml</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">revision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">hub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acm-dc1</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">valueFiles</span><span class="p">:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">environments/nonprod.yaml</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platforms/kubevirt.yaml</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">install</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.20.8</span>
+</span></code></pre></div>
+<h3 id="install-keys"><code>install</code> keys<a class="headerlink" href="#install-keys" title="Permanent link">&para;</a></h3>
+<p>Defaults are from <a href="https://github.com/PolicyStack/PolicyStack/blob/main/lifecycle/values.yaml"><code>lifecycle/values.yaml</code></a>. <code>values.schema.json</code> rejects unknown keys.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>platform</code></td>
+<td>required</td>
+<td><code>KubeVirt</code>, <code>Agent</code> or <code>None</code>. Immutable.</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>required</td>
+<td><code>x.y.z</code>. Bumping it upgrades the cluster (<a href="#upgrades">Upgrades</a>).</td>
+</tr>
+<tr>
+<td><code>releaseRepository</code></td>
+<td><code>quay.io/openshift-release-dev/ocp-release</code></td>
+<td>The release image is <code>&lt;releaseRepository&gt;:&lt;version&gt;-multi</code>. Point it at a mirror when disconnected.</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>clusters</code></td>
+<td>Namespace of the HostedCluster, its NodePools and the copied secrets. The control plane runs in <code>&lt;namespace&gt;-&lt;cluster&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>credential.namespace</code>, <code>credential.name</code></td>
+<td>required</td>
+<td>The console credential.</td>
+</tr>
+<tr>
+<td><code>baseDomain</code></td>
+<td><code>""</code></td>
+<td>Required on <code>Agent</code> and <code>None</code>. On <code>KubeVirt</code>, HyperShift detects it when empty.</td>
+</tr>
+<tr>
+<td><code>agentNamespace</code></td>
+<td><code>""</code></td>
+<td>Namespace of the InfraEnv and its Agents. Required on <code>Agent</code>.</td>
+</tr>
+<tr>
+<td><code>services</code></td>
+<td><code>APIServer</code>: <code>LoadBalancer</code>; <code>OAuthServer</code>, <code>Konnectivity</code>, <code>Ignition</code>: <code>Route</code></td>
+<td>Map of service name to its <code>servicePublishingStrategy</code>. <code>null</code> drops an entry. HyperShift requires these four. Immutable.</td>
+</tr>
+<tr>
+<td><code>hostedCluster</code></td>
+<td><code>{}</code></td>
+<td><code>metadata</code> and <code>spec</code> merged over the generated HostedCluster.</td>
+</tr>
+<tr>
+<td><code>nodePools</code></td>
+<td><code>{}</code></td>
+<td>Map of pool name to a NodePool <code>spec</code> merged over the generated one. The NodePool is <code>&lt;cluster&gt;-&lt;pool&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>manifests</code></td>
+<td><code>[]</code></td>
+<td>Extra hub objects, each with <code>apiVersion</code>, <code>kind</code> and <code>metadata</code>. Created before the HostedCluster, deleted after it.</td>
+</tr>
+</tbody>
+</table>
+<p>The generated HostedCluster sets the release image, <code>pullSecret</code> <code>&lt;cluster&gt;-pull-secret</code>, <code>sshKey</code> <code>&lt;cluster&gt;-ssh-key</code>, the platform, <code>services</code>, and <code>dns.baseDomain</code> when set. On <code>Agent</code> it adds <code>platform.agent.agentNamespace</code>. On <code>Agent</code> and <code>None</code> it adds <code>secretEncryption</code> with the key <code>&lt;cluster&gt;-etcd-encryption-key</code>. Networking, etcd and everything else are left to HyperShift's defaults: set them in <code>hostedCluster.spec</code>.</p>
+<p>Each NodePool gets <code>clusterName</code>, the release image (<a href="#upgrades">Upgrades</a> covers when it changes), the platform, and <code>management.upgradeType</code>: <code>Replace</code> on <code>KubeVirt</code>, <code>InPlace</code> otherwise. A pool with no <code>replicas</code> gets HyperShift's default of 0. On <code>Agent</code>, a pool without an <code>agentLabelSelector</code> claims any free Agent in the namespace, which is why <code>platforms/agent.yaml</code> ships no default pool.</p>
+<h3 id="values">Values<a class="headerlink" href="#values" title="Permanent link">&para;</a></h3>
+<p>The lifecycle Application reads the same cascade as the cluster's Day-2 Applications, with paths relative to <code>lifecycle/</code> (<a href="../values/#order">Order</a>). Lowest precedence first:</p>
+<ol>
+<li><code>lifecycle/values.yaml</code></li>
+<li><code>values.yaml</code></li>
+<li>Each <code>valueFiles</code> entry, in list order</li>
+<li><code>values/clusters/&lt;cluster&gt;.yaml</code></li>
+<li><code>hub</code>, <code>state</code> and <code>install</code> from the fleet file, passed in <code>valuesObject</code></li>
+</ol>
+<p>Shared defaults go in the layers: the platform and credential in <code>values/platforms/kubevirt.yaml</code> or <code>agent.yaml</code>, <code>baseDomain</code> in a datacenter file, per-cluster services and manifests in <code>values/clusters/&lt;cluster&gt;.yaml</code>. The fleet file then holds little more than <code>version</code>. For <code>hcp-agent</code> (<a href="https://github.com/PolicyStack/PolicyStack/blob/main/tools/validator/testdata/clusters/hcp-agent.yaml">fixture</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Set by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>platform</code>, <code>agentNamespace</code>, <code>credential</code></td>
+<td><code>values/platforms/agent.yaml</code></td>
+</tr>
+<tr>
+<td><code>baseDomain</code></td>
+<td><code>values/datacenters/dc1.yaml</code></td>
+</tr>
+<tr>
+<td><code>services</code>, <code>hostedCluster</code>, <code>manifests</code></td>
+<td><code>values/clusters/hcp-agent.yaml</code></td>
+</tr>
+<tr>
+<td><code>version</code>, <code>nodePools</code></td>
+<td>The fleet file</td>
+</tr>
+</tbody>
+</table>
+<p>Maps merge across layers, so <code>services</code> and <code>nodePools</code> entries combine. <code>manifests</code> is a list and replaces (<a href="../values/#merge-rules">Merge rules</a>). A shared default is part of every cluster that reads it: changing <code>services</code> or <code>baseDomain</code> in a platform or datacenter file turns every existing cluster built from it NonCompliant (<a href="#immutable-fields">Immutable fields</a>).</p>
+<h2 id="create">Create<a class="headerlink" href="#create" title="Permanent link">&para;</a></h2>
+<p>Merge <code>fleet/&lt;cluster&gt;.yaml</code> with <code>hub</code> to the default branch, together with <code>values/clusters/&lt;cluster&gt;.yaml</code> if the cluster has one. Within about 6 minutes the hub's ApplicationSet <code>policystack-lifecycle</code> creates the Application <code>lifecycle-&lt;cluster&gt;</code> (<a href="../applicationset/#lifecycle-generator">Generators</a>), which syncs the Policy <code>present-lifecycle-&lt;cluster&gt;</code>, with Placement and PlacementBinding <code>lifecycle-&lt;cluster&gt;</code>, into <code>policy</code>. Its templates run in order, each waiting for the one before it to be Compliant:</p>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Mode</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>present-guard-&lt;cluster&gt;</code></td>
+<td>inform</td>
+<td>NonCompliant if a ManagedCluster of that name exists without the annotations the hypershift-addon sets on a cluster hosted on this hub, <code>open-cluster-management/created-via: hypershift</code> and <code>import.open-cluster-management.io/hosting-cluster-name: &lt;hub ManagedCluster&gt;</code>. That stops the chain (<a href="#troubleshooting">Troubleshooting</a>).</td>
+</tr>
+<tr>
+<td><code>present-credentials-&lt;cluster&gt;</code></td>
+<td>enforce</td>
+<td>Namespace <code>install.namespace</code>; <code>&lt;cluster&gt;-pull-secret</code> and <code>&lt;cluster&gt;-ssh-key</code> copied from the credential; on <code>Agent</code> and <code>None</code>, <code>&lt;cluster&gt;-etcd-encryption-key</code>.</td>
+</tr>
+<tr>
+<td><code>present-manifests-&lt;cluster&gt;</code></td>
+<td>enforce</td>
+<td><code>install.manifests</code>, as given.</td>
+</tr>
+<tr>
+<td><code>present-cluster-&lt;cluster&gt;</code></td>
+<td>enforce</td>
+<td>The HostedCluster, then one NodePool per <code>nodePools</code> entry.</td>
+</tr>
+</tbody>
+</table>
+<p>The credential is read with managed-cluster templates resolved on the hub, so it can live in any namespace. The etcd key is generated once, while neither the key nor the HostedCluster exists. A key deleted after create is not regenerated, since a new key cannot decrypt etcd: restore it from a backup.</p>
+<p>Every template is <code>musthave</code>. Fields the operator fills in and the chart leaves out are not compared, so the policy does not fight HyperShift.</p>
+<p>Watch it:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>oc<span class="w"> </span>get<span class="w"> </span>policy<span class="w"> </span>-n<span class="w"> </span>policy<span class="w"> </span>present-lifecycle-hcp-kubevirt
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>oc<span class="w"> </span>get<span class="w"> </span>configurationpolicy<span class="w"> </span>-n<span class="w"> </span>local-cluster<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>hcp-kubevirt
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>oc<span class="w"> </span>get<span class="w"> </span>hostedcluster,nodepool<span class="w"> </span>-n<span class="w"> </span>clusters
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>oc<span class="w"> </span>get<span class="w"> </span>hostedcluster<span class="w"> </span>hcp-kubevirt<span class="w"> </span>-n<span class="w"> </span>clusters<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{range .status.conditions[*]}{.type}={.status} {.message}{"\n"}{end}'</span>
+</span></code></pre></div>
+<p>The ConfigurationPolicies live in the hub's ManagedCluster namespace, <code>local-cluster</code> by default. A template that has not run yet is Pending. The HostedCluster is done when <code>Available</code> is True. A render error, such as a missing <code>version</code>, shows on the Application instead:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>oc<span class="w"> </span>get<span class="w"> </span>applications.argoproj.io<span class="w"> </span>lifecycle-hcp-kubevirt<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.conditions}'</span>
+</span></code></pre></div>
+<h2 id="day-2-handoff">Day-2 handoff<a class="headerlink" href="#day-2-handoff" title="Permanent link">&para;</a></h2>
+<p>No step is needed:</p>
+<ol>
+<li>Once the HostedCluster is available, the hypershift-addon creates ManagedCluster <code>&lt;cluster&gt;</code> and its KlusterletAddonConfig.</li>
+<li>The ManagedCluster joins <code>global</code>. The GitOpsCluster creates its Argo CD cluster secret, and ACM adds the <code>clusterID</code> label once the cluster reports (<a href="../install/#import-clusters-into-argo-cd">Import clusters into Argo CD</a>).</li>
+<li>The Day-2 ApplicationSet pairs the secret with the same fleet file and creates <code>&lt;element&gt;-&lt;cluster&gt;</code> Applications. It ignores <code>hub</code>, <code>state</code> and <code>install</code>.</li>
+</ol>
+<p><code>values/clusters/&lt;cluster&gt;.yaml</code> serves both: <code>install</code> for the lifecycle chart, <code>stack</code> for the elements. Labels in <code>hostedCluster.metadata.labels</code> are copied to the ManagedCluster when the addon creates it and are not synced after.</p>
+<h2 id="upgrades">Upgrades<a class="headerlink" href="#upgrades" title="Permanent link">&para;</a></h2>
+<p>Bump <code>install.version</code>. The HostedCluster takes the new release image at once. Each existing NodePool keeps its current image until the HostedCluster's version history shows the new version <code>Completed</code>, then moves to it: HyperShift only reports version skew, it does not hold a NodePool back. A NodePool added during an upgrade starts on the new image. <code>KubeVirt</code> pools replace their VMs, other platforms upgrade nodes in place.</p>
+<p>The chart owns every NodePool's <code>release</code>; a <code>release</code> key in a <code>nodePools</code> entry is ignored. A minor upgrade that HyperShift blocks because <code>ClusterVersionUpgradeable</code> is False needs the annotation <code>hypershift.openshift.io/force-upgrade-to: &lt;release image&gt;</code> in <code>hostedCluster.metadata.annotations</code>.</p>
+<h2 id="immutable-fields">Immutable fields<a class="headerlink" href="#immutable-fields" title="Permanent link">&para;</a></h2>
+<p>HyperShift rejects changes to these after create, among others:</p>
+<ul>
+<li>HostedCluster: <code>services</code>, <code>platform</code>, <code>networking</code>, <code>etcd</code>, <code>issuerURL</code>, <code>controllerAvailabilityPolicy</code>, <code>fips</code>, and <code>dns.baseDomain</code> once set. <code>secretEncryption</code> cannot be removed.</li>
+<li>NodePool: <code>clusterName</code>, <code>platform.type</code>, <code>arch</code>, <code>management.upgradeType</code>.</li>
+</ul>
+<p>Editing one in the cascade does not change the cluster. The update is rejected and <code>present-cluster-&lt;cluster&gt;</code> goes NonCompliant with the API server's message. Revert the value. To change a NodePool's <code>upgradeType</code> or <code>arch</code>, add a new pool and remove the old one.</p>
+<h2 id="destroy">Destroy<a class="headerlink" href="#destroy" title="Permanent link">&para;</a></h2>
+<p>Set <code>state: absent</code> in the fleet file:</p>
+<div class="language-diff highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w"> </span># fleet/hcp-kubevirt.yaml
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w"> </span>revision: main
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w"> </span>hub: acm-dc1
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="gi">+state: absent</span>
+</span></code></pre></div>
+<p>The Application replaces <code>present-lifecycle-&lt;cluster&gt;</code> with <code>absent-lifecycle-&lt;cluster&gt;</code>. Deleting the present Policy deletes nothing, since no lifecycle template sets <code>pruneObjectBehavior</code>. The absent chain, each step waiting for the one before it:</p>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Mode</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>absent-guard-&lt;cluster&gt;</code></td>
+<td>inform</td>
+<td>Same check as on create, so a ManagedCluster this hub did not build shows NonCompliant.</td>
+</tr>
+<tr>
+<td><code>absent-detach-&lt;cluster&gt;</code></td>
+<td>enforce <code>mustnothave</code></td>
+<td>Deletes the ManagedCluster, while the control plane is still up to clean up the hosted klusterlet. It checks the same annotations in the same evaluation and leaves any other ManagedCluster alone, including one imported under the same name after teardown.</td>
+</tr>
+<tr>
+<td><code>absent-detached-&lt;cluster&gt;</code></td>
+<td>inform <code>mustnothave</code></td>
+<td>Waits until the ManagedCluster is gone. An enforced delete reports Compliant as soon as the API accepts it, so the next step gates on this.</td>
+</tr>
+<tr>
+<td><code>absent-destroy-&lt;cluster&gt;</code></td>
+<td>enforce <code>mustnothave</code></td>
+<td>Deletes the HostedCluster. HyperShift deletes the NodePools, then the control plane namespace <code>&lt;namespace&gt;-&lt;cluster&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>absent-destroyed-&lt;cluster&gt;</code></td>
+<td>inform <code>mustnothave</code></td>
+<td>Waits until the HostedCluster is gone.</td>
+</tr>
+<tr>
+<td><code>absent-cleanup-&lt;cluster&gt;</code></td>
+<td>enforce</td>
+<td>Deletes <code>&lt;cluster&gt;-pull-secret</code>, <code>&lt;cluster&gt;-ssh-key</code>, <code>&lt;cluster&gt;-etcd-encryption-key</code> and every <code>install.manifests</code> object. Leaves <code>install.namespace</code> and the credential.</td>
+</tr>
+</tbody>
+</table>
+<p>If the hypershift-addon restarts between detach and destroy, it can re-create the ManagedCluster. <code>absent-detach</code> deletes it again.</p>
+<p>Detaching deletes the cluster's Argo CD secret, so the Day-2 ApplicationSet deletes its <code>&lt;element&gt;-&lt;cluster&gt;</code> Applications and their Policies stay in <code>policy</code>, selecting nothing (<a href="../rollout/#removing-an-element">Removing an element</a>). ACM deletes the namespaces <code>&lt;cluster&gt;</code> and <code>klusterlet-&lt;cluster&gt;</code>.</p>
+<p>Wait until the Policy is Compliant, then delete the fleet file and <code>values/clusters/&lt;cluster&gt;.yaml</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>oc<span class="w"> </span>get<span class="w"> </span>policy<span class="w"> </span>-n<span class="w"> </span>policy<span class="w"> </span>absent-lifecycle-hcp-kubevirt
+</span></code></pre></div>
+<p>Deleting the file earlier abandons the cluster at whichever step it reached (<a href="#abandon">Abandon</a>).</p>
+<h2 id="abandon">Abandon<a class="headerlink" href="#abandon" title="Permanent link">&para;</a></h2>
+<p>Deleting the fleet file, or removing its <code>hub</code> key, deletes the Application <code>lifecycle-&lt;cluster&gt;</code>. The lifecycle ApplicationSet sets <code>preserveResourcesOnDeletion: false</code>, so Argo CD deletes the Policies with it. The HostedCluster, NodePools, secrets and manifests stay and keep running, unmanaged. <code>helm uninstall appset</code> does the same for every cluster the hub built (<a href="../install/#install-the-applicationset">Install the ApplicationSet</a>).</p>
+<p>To re-adopt, restore the file or the key with the same <code>install</code> values. The guard passes, since HyperShift created the ManagedCluster, the existing etcd key is kept, and <code>musthave</code> reconciles the existing objects.</p>
+<p>Moving a cluster to another hub is unsupported. Changing <code>hub</code> abandons the cluster on the old hub and builds a second one, with the same name, on the new hub. Destroy it on the old hub, then build it on the new one.</p>
+<h2 id="removing-a-nodepool">Removing a NodePool<a class="headerlink" href="#removing-a-nodepool" title="Permanent link">&para;</a></h2>
+<p><code>musthave</code> never deletes, so removing an entry from <code>nodePools</code> only stops managing the pool. Delete the entry, then the NodePool:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>oc<span class="w"> </span>delete<span class="w"> </span>nodepool<span class="w"> </span>hcp-kubevirt-workers<span class="w"> </span>-n<span class="w"> </span>clusters
+</span></code></pre></div>
+<p>Setting a pool to <code>null</code> does not remove it: the schema rejects it. A pool defined in a shared layer, such as <code>workers</code> in <code>platforms/kubevirt.yaml</code>, cannot be removed from a higher layer. Scale it to <code>replicas: 0</code> or move it out of the shared layer.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p><strong>Guard refusal.</strong> <code>present-guard-&lt;cluster&gt;</code> or <code>absent-guard-&lt;cluster&gt;</code> is NonCompliant with "A ManagedCluster with this name was not built by this hub". A cluster of that name was imported, or its control plane runs on another hub, and the chart refuses to build over it or detach it. Usually <code>hub</code> was added to the fleet file of an imported cluster. Remove <code>hub</code>, <code>state</code> and <code>install</code> from that file.</p>
+<p><strong>Missing credential.</strong> An unset <code>credential.namespace</code> or <code>credential.name</code> fails the render, and the Application shows <code>install.credential.namespace is required</code>. A credential Secret that does not exist on the hub turns <code>present-credentials-&lt;cluster&gt;</code> NonCompliant with a template error, and nothing after it runs. Without a <code>pullSecret</code> key, <code>.dockerconfigjson</code> is empty, the API server rejects the Secret, and <code>present-credentials-&lt;cluster&gt;</code> stays NonCompliant. Without an <code>ssh-publickey</code> key, the SSH key is copied as an empty value and no error shows.</p>
+<p><strong>ManagedCluster stuck Terminating.</strong> <code>absent-detached-&lt;cluster&gt;</code> stays NonCompliant. Hosted-mode cleanup waits for the guest, and ACM skips that cleanup once the guest has been unreachable for 5 minutes. Check what holds it:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>oc<span class="w"> </span>get<span class="w"> </span>managedcluster<span class="w"> </span>hcp-kubevirt<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.metadata.finalizers}'</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>oc<span class="w"> </span>get<span class="w"> </span>klusterlet<span class="w"> </span>klusterlet-hcp-kubevirt<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.metadata.finalizers}'</span>
+</span></code></pre></div>
+<p>If the Klusterlet waits on <code>operator.open-cluster-management.io/klusterlet-hosted-cleanup</code> and the guest will not answer, remove that finalizer.</p>
+<p><strong>AgentMachine pre-terminate hook.</strong> On <code>Agent</code>, <code>absent-destroyed-&lt;cluster&gt;</code> stays NonCompliant and Machines in <code>&lt;namespace&gt;-&lt;cluster&gt;</code> stay <code>Deleting</code> with <code>PreTerminateDeleteHookSucceeded</code> reporting <code>WaitingExternalHook</code>. The Agent CAPI provider failed to remove its hook after detaching the Agents. Remove it by hand:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>m<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>oc<span class="w"> </span>get<span class="w"> </span>machines.cluster.x-k8s.io<span class="w"> </span>-n<span class="w"> </span>clusters-hcp-agent<span class="w"> </span>-o<span class="w"> </span>name<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>oc<span class="w"> </span>annotate<span class="w"> </span><span class="s2">"</span><span class="nv">$m</span><span class="s2">"</span><span class="w"> </span>-n<span class="w"> </span>clusters-hcp-agent<span class="w"> </span>pre-terminate.delete.hook.machine.cluster.x-k8s.io/agentmachine-
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">done</span>
+</span></code></pre></div>
+<p><strong>Agents stuck reclaiming.</strong> After a destroy, Agents go to <code>reclaiming</code> while the assisted service reboots them into discovery. An Agent that cannot start that ends in <code>UnbindingPendingUserAction</code>: boot it from the discovery ISO by hand. Agents that stay <code>reclaiming</code> with the <code>agent.agent-install.openshift.io/ai-deprovision</code> finalizer block any new cluster that selects them. Do not rebuild a cluster with the same name until its Agents are free:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>oc<span class="w"> </span>get<span class="w"> </span>agents<span class="w"> </span>-n<span class="w"> </span>hardware-inventory
+</span></code></pre></div>
+<h2 id="other-engines">Other engines<a class="headerlink" href="#other-engines" title="Permanent link">&para;</a></h2>
+<p>v1 builds HostedClusters only, and the schema rejects unknown <code>install</code> keys. Another engine, such as a Hive ClusterDeployment or a SiteConfig ClusterInstance, would add an <code>install</code> key selecting it, converters for its objects, and its own absent chain with inform gates. <code>hub</code> and <code>state</code>, the ApplicationSet and the guard stay as they are.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.action.edit","content.code.copy","navigation.sections"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.67a597eb.min.js"></script>
+      
+    
+  </body>
+</html>

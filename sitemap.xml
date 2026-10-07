@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/applicationset/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/elements/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/install/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/lifecycle/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/policies/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/rollout/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/validation/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/values/</loc>
+      </url>
+      <url>
+        <loc>https://policystack.github.io/PolicyStack/workflows/</loc>
+      </url>
+</urlset>

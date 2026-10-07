@@ -1,0 +1,56 @@
+{{- /*
+musthave only: fields the operator fills in (networking, etcd, and on KubeVirt dns, platform and
+secretEncryption) are left out, so the policy never fights it.
+
+A version bump reaches the HostedCluster at once. Each existing NodePool keeps its current image
+until the control plane reports that version Completed, since HyperShift does not hold a NodePool
+back itself. A new NodePool starts on the target image. NodePool release is always managed here.
+*/ -}}
+{{- $i := .Values.install }}
+{{- $c := include "lifecycle.cluster" . }}
+{{- $p := required "install.platform is required" $i.platform }}
+{{- $image := printf "%s:%s-multi" $i.releaseRepository (required "install.version is required" $i.version) }}
+{{- $services := list }}
+{{- range $name, $strategy := $i.services }}
+{{- if $strategy }}
+{{- $services = append $services (dict "service" $name "servicePublishingStrategy" $strategy) }}
+{{- end }}
+{{- end }}
+{{- $spec := dict "release" (dict "image" $image) "pullSecret" (dict "name" (printf "%s-pull-secret" $c)) "sshKey" (dict "name" (printf "%s-ssh-key" $c)) "platform" (dict "type" $p) "services" $services }}
+{{- if eq $p "Agent" }}
+{{- $_ := set $spec.platform "agent" (dict "agentNamespace" (required "install.agentNamespace is required for Agent" $i.agentNamespace)) }}
+{{- end }}
+{{- if eq $p "KubeVirt" }}
+{{- if $i.baseDomain }}
+{{- $_ := set $spec "dns" (dict "baseDomain" $i.baseDomain) }}
+{{- end }}
+{{- else }}
+{{- $_ := set $spec "dns" (dict "baseDomain" (required "install.baseDomain is required for Agent and None" $i.baseDomain)) }}
+{{- $_ = set $spec "secretEncryption" (dict "type" "aescbc" "aescbc" (dict "activeKey" (dict "name" (printf "%s-etcd-encryption-key" $c)))) }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hypershift.openshift.io/v1beta1
+    kind: HostedCluster
+    {{- mergeOverwrite (dict "metadata" (dict "name" $c "namespace" $i.namespace) "spec" $spec) (deepCopy $i.hostedCluster) | toYaml | nindent 4 }}
+{{ "{{-" }} $upgraded := false {{ "}}" }}
+{{ "{{-" }} range (dig "status" "version" "history" list (lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }})) {{ "}}" }}
+{{ "{{-" }} if and (eq .version {{ $i.version | quote }}) (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $upgraded = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- range $pool, $override := $i.nodePools }}
+{{- $np := dict "clusterName" $c "platform" (dict "type" $p) "management" (dict "upgradeType" (ternary "Replace" "InPlace" (eq $p "KubeVirt"))) }}
+{{- if eq $p "KubeVirt" }}
+{{- $_ := set $np.platform "kubevirt" dict }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hypershift.openshift.io/v1beta1
+    kind: NodePool
+    metadata:
+      name: {{ $c }}-{{ $pool }}
+      namespace: {{ $i.namespace }}
+    spec: {{- mergeOverwrite $np (omit (deepCopy $override) "release") | toYaml | nindent 6 }}
+{{ "{{-" }} $np := lookup "hypershift.openshift.io/v1beta1" "NodePool" {{ $i.namespace | quote }} "{{ $c }}-{{ $pool }}" {{ "}}" }}
+      release:
+        image: '{{ "{{" }} if or (not $np) $upgraded {{ "}}" }}{{ $image }}{{ "{{" }} else {{ "}}" }}{{ "{{" }} dig "spec" "release" "image" {{ $image | quote }} $np {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
+{{- end }}

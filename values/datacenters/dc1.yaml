@@ -1,1 +1,5 @@
 #stack:
+
+# Hosted clusters built in dc1 get *.apps.<cluster>.dc1.example.com.
+install:
+  baseDomain: dc1.example.com

@@ -1,0 +1,25 @@
+revision: main
+hub: acm-dc1
+valueFiles:
+  - environments/prod.yaml
+  - datacenters/dc1.yaml
+  - platforms/agent.yaml
+install:
+  version: 4.20.8
+  nodePools:
+    compute:
+      replicas: 3
+      platform:
+        agent:
+          agentLabelSelector:
+            matchLabels:
+              example.com/cluster: hcp-agent
+              example.com/class: fc830
+    gpu:
+      replicas: 2
+      platform:
+        agent:
+          agentLabelSelector:
+            matchLabels:
+              example.com/cluster: hcp-agent
+              example.com/class: h100

@@ -14,6 +14,7 @@ PolicyStack runs on the ACM hub. Run the commands below from the repository root
     ```
 
 - `oc` and `helm`.
+- On a hub that builds clusters from fleet files: ACM 2.16 or later and the rest of [Cluster lifecycle prerequisites](lifecycle.md#prerequisites).
 
 ## Import clusters into Argo CD
 
@@ -55,11 +56,12 @@ The chart creates:
 | Object | Name | Namespace | On `helm uninstall` |
 |---|---|---|---|
 | ApplicationSet | `policystack` | `openshift-gitops` | Deleted |
+| ApplicationSet | `policystack-lifecycle` | `openshift-gitops` | Deleted |
 | Namespace | `policy` | cluster-scoped | Kept |
 | ManagedClusterSetBinding | `global` | `policy` | Kept |
 
 The namespace and the binding carry `helm.sh/resource-policy: keep`. The binding lets the element Placements in `policy` select clusters ([Placement](policies.md#placement)). Helm refuses to install over an existing object the release does not own. If a hand-made `global` ManagedClusterSetBinding already exists in `policy`, add `--take-ownership` (Helm 3.17 or later) to adopt it. Deleting it instead unbinds the Placements that use it until Helm recreates it.
 
-`helm uninstall appset` deletes every Application with the ApplicationSet but leaves their Policies enforcing ([Removing an element](rollout.md#removing-an-element)).
+`helm uninstall appset` deletes every Application with the ApplicationSets. The element Policies stay and keep enforcing ([Removing an element](rollout.md#removing-an-element)). The lifecycle Policies are deleted, so every cluster this hub built keeps running, unmanaged ([Abandon](lifecycle.md#abandon)).
 
 Next: add a fleet file for the hub and each managed cluster ([Onboarding a cluster](rollout.md#onboarding-a-cluster)).

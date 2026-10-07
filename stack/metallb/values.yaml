@@ -84,8 +84,6 @@ stack:
         namespace: metallb-system
         operatorGroup:
           name: metallb-operator
-          targetNamespaces:
-            - metallb-system
         subscription:
           channel: stable
           name: metallb-operator

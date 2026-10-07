@@ -1,0 +1,10 @@
+# Listed as platforms/kubevirt.yaml by a hosted cluster its hub builds on OpenShift Virtualization.
+# install is read only by lifecycle/ (docs/lifecycle.md).
+install:
+  platform: KubeVirt
+  credential:
+    namespace: open-cluster-management
+    name: kubevirt-secret
+  nodePools:
+    workers:
+      replicas: 2

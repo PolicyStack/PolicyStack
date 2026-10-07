@@ -4,7 +4,10 @@ CI-friendly validator for PolicyStack ACM-policy charts.
 
 Renders every element under `stack/` for a set of fixture fleet files, walking
 the same values cascade that `appset/templates/appset.yaml` applies at runtime,
-and runs structural checks against the result.
+and runs structural checks against the result. `lifecycle/` (override with
+`--lifecycle-dir`) is checked like an element but rendered only for fleet files
+that set `hub`, with the fleet file appended to the cascade the way
+`appset/templates/lifecycle.yaml` passes it in `valuesObject`.
 
 ## Usage
 
@@ -35,7 +38,7 @@ In CI:
 | POLICY030  | error    | Invalid enum: severity / remediationAction / complianceType / upgradeApproval |
 | POLICY031  | error/warning | values keys policy-library never reads: `enable:` (element renders nothing) and `defaultPolicy:` (metadata silently dropped) are errors; `default.severity`/`.remediationAction`/`.disabled` are warnings. Also flags `rawTemplate: true` with more than one `templateNames` entry |
 | POLICY040  | error    | `policySets[].policies[]` references a name not in `policies[]` |
-| POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/` |
+| POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; empty `hub`, `hub` with no `hubs/<hub>.yaml`, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY080  | error    | `kubeconform` schema check on rendered manifests |
@@ -50,6 +53,15 @@ In CI:
 `<cluster>.yaml` for spokes and `hubs/<hubName>.yaml` for hubs. The file name is
 the cluster name, so a hub renders as its `hubName`. The `valueFiles` entries
 drive the cascade in list order (matches `appset.yaml`).
+
+| Fixture | Covers |
+|---|---|
+| `prod-east-1`, `nonprod-west-1` | Import-only spokes |
+| `hubs/acm-dc1` | The hub the `hcp-*` fixtures name |
+| `hcp-kubevirt` | KubeVirt hosted cluster, defaults from `values/platforms/kubevirt.yaml` |
+| `hcp-agent` | Agent hosted cluster with two NodePools and `values/clusters/hcp-agent.yaml` |
+| `hcp-retired` | `state: absent`, the destroy chain |
+
 Override with `--fixtures-dir`, for example `--fixtures-dir fleet` to check a
 real fleet. Other files are ignored, `.yml` included.
 
@@ -62,7 +74,8 @@ real fleet. Other files are ignored, `.yml` included.
 
 Pass `--extra-values testdata/baseline.yaml` (or your own file) to inject a
 default `selector` into every cascade. The shipped baseline sets a permissive
-`Exists` selector that will render but not match any real cluster.
+`Exists` selector that will render but not match any real cluster. It is not
+applied to `lifecycle/`, which ships its own `selector`.
 
 ```sh
 ./bin/policystack-validator --extra-values tools/validator/testdata/baseline.yaml --repo-root .

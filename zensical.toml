@@ -17,6 +17,7 @@ nav = [
   { "Operations" = [
     { "Installation" = "install.md" },
     { "Rolling out changes" = "rollout.md" },
+    { "Cluster lifecycle" = "lifecycle.md" },
   ] },
   { "Development" = [
     { "Writing an element" = "elements.md" },

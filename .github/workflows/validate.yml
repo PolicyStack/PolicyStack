@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'stack/**'
+      - 'lifecycle/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'stack/**'
+      - 'lifecycle/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
@@ -75,23 +77,30 @@ jobs:
             --skip POLICY080
 
       # Catches typos and pins like gh-pages. A pinned branch deleted later still freezes the
-      # ApplicationSet (docs/applicationset.md#revision).
+      # ApplicationSet (docs/applicationset.md#revision). A file that sets hub is also rendered
+      # from lifecycle/ at its revision.
       - name: Check fleet pins
         run: |
           shopt -s nullglob
+          # has <commit> <dir>...: true when every dir exists at commit
+          has() { local c=$1; shift; for d; do git cat-file -e "$c:$d" 2>/dev/null || return 1; done; }
           failed=0
           for f in fleet/*.yaml fleet/hubs/*.yaml; do
             rev=$(yq '.revision' "$f") || { echo "::error file=$f::not valid YAML"; failed=1; continue; }
+            dirs=(stack) need="a stack/ directory"
+            if [ -n "$(yq '.hub // ""' "$f")" ]; then
+              dirs+=(lifecycle) need="stack/ and lifecycle/ directories"
+            fi
             # The forms Argo CD resolves: a tag, a branch, or a commit SHA of 5 to 40 hex characters.
             found=0
             for ref in "refs/tags/$rev" "refs/remotes/origin/$rev"; do
-              git show-ref -q --verify "$ref" && git cat-file -e "$ref:stack" 2>/dev/null && found=1 && break
+              git show-ref -q --verify "$ref" && has "$ref" "${dirs[@]}" && found=1 && break
             done
             if [ "$found" = 0 ] && [[ $rev =~ ^[0-9a-f]{5,40}$ ]]; then
-              git cat-file -e "$rev:stack" 2>/dev/null && found=1
+              has "$rev" "${dirs[@]}" && found=1
             fi
             if [ "$found" = 0 ]; then
-              echo "::error file=$f::revision '$rev' is not a tag, branch or commit SHA of this repository with a stack/ directory"
+              echo "::error file=$f::revision '$rev' is not a tag, branch or commit SHA of this repository with $need"
               failed=1
             fi
           done

@@ -1,7 +1,7 @@
 // policystack-validator checks the PolicyStack element charts. It resolves the
 // values cascade the same way appset.yaml does, renders each element under
-// stack/ for every fixture cluster, and reports findings as terminal output or
-// GitHub Actions annotations.
+// stack/ for every fixture cluster and lifecycle/ for each that sets hub, and
+// reports findings as terminal output or GitHub Actions annotations.
 package main
 
 import (
@@ -31,6 +31,7 @@ func realMain() error {
 		repoRoot      = flag.String("repo-root", ".", "path to repo root")
 		stackDir      = flag.String("stack-dir", "", "override stack/ (default <repo>/stack)")
 		sampleDir     = flag.String("sample-dir", "", "override sample-element/ (default <repo>/sample-element)")
+		lifecycleDir  = flag.String("lifecycle-dir", "", "override lifecycle/, rendered for fleet files that set hub (default <repo>/lifecycle)")
 		valuesDir     = flag.String("values-dir", "", "override values/ (default <repo>/values)")
 		fixturesDir   = flag.String("fixtures-dir", "", "fleet files to render, hubs in its hubs/ (default <repo>/tools/validator/testdata/clusters)")
 		github        = flag.Bool("github", false, "emit GitHub Actions ::error/::warning annotations")
@@ -42,7 +43,7 @@ func realMain() error {
 		kcBin         = flag.String("kubeconform-bin", "kubeconform", "kubeconform binary; POLICY080 is skipped if not on PATH")
 		schemasDir    = flag.String("schemas-dir", "", "extra -schema-location for kubeconform")
 		includeSample = flag.Bool("include-sample-element", false, "validate sample-element/ alongside stack/")
-		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade — useful for supplying baseline `selector` etc.")
+		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
 		verbose       = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -51,17 +52,21 @@ func realMain() error {
 	if err != nil {
 		return err
 	}
-	defaults := struct{ stack, sample, values, fixtures string }{
-		stack:    filepath.Join(root, "stack"),
-		sample:   filepath.Join(root, "sample-element"),
-		values:   filepath.Join(root, "values"),
-		fixtures: filepath.Join(root, "tools/validator/testdata/clusters"),
+	defaults := struct{ stack, sample, lifecycle, values, fixtures string }{
+		stack:     filepath.Join(root, "stack"),
+		sample:    filepath.Join(root, "sample-element"),
+		lifecycle: filepath.Join(root, "lifecycle"),
+		values:    filepath.Join(root, "values"),
+		fixtures:  filepath.Join(root, "tools/validator/testdata/clusters"),
 	}
 	if *stackDir == "" {
 		*stackDir = defaults.stack
 	}
 	if *sampleDir == "" {
 		*sampleDir = defaults.sample
+	}
+	if *lifecycleDir == "" {
+		*lifecycleDir = defaults.lifecycle
 	}
 	if *valuesDir == "" {
 		*valuesDir = defaults.values
@@ -94,6 +99,7 @@ func realMain() error {
 		RepoRoot:       root,
 		StackDir:       *stackDir,
 		SampleDir:      *sampleDir,
+		LifecycleDir:   *lifecycleDir,
 		ValuesDir:      *valuesDir,
 		FixturesDir:    *fixturesDir,
 		HelmBin:        *helmBin,

@@ -1,0 +1,14 @@
+{{- /*
+Refuses, visibly, a ManagedCluster this hub did not build. While no ManagedCluster exists this
+renders nothing, which ACM reports as Compliant.
+*/ -}}
+{{- $c := include "lifecycle.cluster" . }}
+{{ "{{-" }} if lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" {{ $c | quote }} {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cluster.open-cluster-management.io/v1
+    kind: ManagedCluster
+    metadata:
+      name: {{ $c }}
+      annotations: {{- include "lifecycle.ownerAnnotations" . | nindent 8 }}
+{{ "{{-" }} end {{ "}}" }}

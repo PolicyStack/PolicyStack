@@ -1,0 +1,8 @@
+{{- /*
+Rendered once per fleet file whose hub is this hub (appset/templates/lifecycle.yaml). Without hub,
+as under helm lint, nothing renders. state picks which of the two Policies renders.
+*/ -}}
+{{- if .Values.hub }}
+{{- $_ := set .Values.stack.lifecycle "toggles" (dict "present" (eq .Values.state "present") "absent" (eq .Values.state "absent")) }}
+{{- include "policy-library.render" . }}
+{{- end }}

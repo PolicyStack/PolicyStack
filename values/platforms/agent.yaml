@@ -1,0 +1,9 @@
+# Listed as platforms/agent.yaml by a hosted cluster its hub builds on bare-metal Agents.
+# install is read only by lifecycle/ (docs/lifecycle.md). There is no default NodePool: a pool
+# without an agentLabelSelector claims any free Agent in the namespace.
+install:
+  platform: Agent
+  agentNamespace: hardware-inventory
+  credential:
+    namespace: hcp-credentials
+    name: hostinventory

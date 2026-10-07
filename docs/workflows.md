@@ -5,7 +5,7 @@ pushes to `main`. Update Documentation fixes stale element READMEs on request.
 
 | Workflow | Runs on | Fails when |
 | -------- | ------- | ---------- |
-| Policy Validate (`validate.yml`) | Changes to `stack/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/` |
+| Policy Validate (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/`, plus `lifecycle/` for a file that sets `hub` |
 | Documentation Check (`docs-check.yml`) | Changes to `stack/`, the doc generator or its tests | Generator tests fail or a `stack/<element>/README.md` is out of date |
 | Update Documentation (`docs-update.yml`) | `update-docs` label added to a PR | Not a gate, it fixes what Documentation Check reports |
 | Documentation Site (`docs-site.yml`) | Every PR and push to `main` | The strict build finds a relative `.md` link or anchor that does not resolve, or a missing snippet |
@@ -24,7 +24,8 @@ the run in progress.
    `values/` for each file, not the tree at the file's `revision`. Upstream ships no fleet files and
    skips this step.
 4. Checks every fleet file's `revision`. It must be a tag, a branch or a commit SHA of 5 to 40 hex
-   characters, the forms Argo CD resolves, and point at a commit that contains `stack/`. Each failure is annotated on the fleet file. The checkout fetches
+   characters, the forms Argo CD resolves, and point at a commit that contains `stack/`, and `lifecycle/` too when
+   the file sets `hub`. Each failure is annotated on the fleet file. The checkout fetches
    full history (`fetch-depth: 0`) so tags and branches resolve.
 
 The pin check catches typos and pins like `gh-pages`. It cannot catch a branch deleted after the

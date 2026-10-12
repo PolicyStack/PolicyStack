@@ -78,7 +78,7 @@ stack:
           - name: ready
 
     operatorPolicies:
-      - name: nmstate
+      nmstate:
         enabled: true
         description: "Kubernetes NMState operator"
         displayName: "Kubernetes NMState Operator"
@@ -97,6 +97,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       - name: nmstate-instance

@@ -25,7 +25,7 @@ stack:
 
     # @description: OperatorPolicy installing the NFD subscription
     operatorPolicies:
-      - name: node-feature-discovery
+      node-feature-discovery:
         enabled: true
         description: "Node Feature Discovery Operator"
         displayName: "Node Feature Discovery Operator"
@@ -44,6 +44,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     # @description: Namespace label patch + NodeFeatureDiscovery CR instance
     configPolicies:

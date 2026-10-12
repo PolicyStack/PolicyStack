@@ -104,7 +104,7 @@ stack:
 
     # @description: OperatorPolicy installing the cert-manager subscription
     operatorPolicies:
-      - name: cert-manager
+      cert-manager:
         enabled: true
         description: "cert-manager Operator (Red Hat build)"
         displayName: "cert-manager Operator for Red Hat OpenShift"
@@ -123,6 +123,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     # @description: Configuration policies
     configPolicies:

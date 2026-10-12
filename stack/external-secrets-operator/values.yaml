@@ -25,7 +25,7 @@ stack:
 
     # @description: OperatorPolicy installing the External Secrets subscription
     operatorPolicies:
-      - name: external-secrets
+      external-secrets:
         enabled: true
         description: "External Secrets Operator (Red Hat build)"
         displayName: "External Secrets Operator for Red Hat OpenShift"
@@ -45,6 +45,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     # @description: Adds the cluster-monitoring label to the operator namespace
     configPolicies:

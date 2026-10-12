@@ -12,11 +12,12 @@ var (
 	allowedSeverity   = []string{"low", "medium", "high", "critical"}
 	allowedRemed      = []string{"inform", "enforce"}
 	allowedCompliance = []string{"musthave", "mustnothave", "mustonlyhave"}
-	allowedUpgrade    = []string{"Automatic", "Manual", "None"}
+	allowedUpgrade    = []string{"None", "Automatic"}
 )
 
 // EnumCheck (POLICY030) validates the enum fields ACM rejects when invalid:
-// severity, remediationAction, complianceType and upgradeApproval.
+// severity, remediationAction, complianceType and upgradeApproval, plus the other
+// operatorPolicies fields operatorFindings covers.
 type EnumCheck struct{}
 
 func (EnumCheck) ID() string   { return "POLICY030" }
@@ -59,11 +60,8 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 		emit("configPolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedRemed, "configPolicies", strconv.Itoa(i), "remediationAction")
 		emit("configPolicies["+strconv.Itoa(i)+"].complianceType", p.ComplianceType, allowedCompliance, "configPolicies", strconv.Itoa(i), "complianceType")
 	}
-	for i, p := range comp.OperatorPolicies {
-		emit("operatorPolicies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "operatorPolicies", strconv.Itoa(i), "severity")
-		emit("operatorPolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedRemed, "operatorPolicies", strconv.Itoa(i), "remediationAction")
-		emit("operatorPolicies["+strconv.Itoa(i)+"].complianceType", p.ComplianceType, allowedCompliance, "operatorPolicies", strconv.Itoa(i), "complianceType")
-		emit("operatorPolicies["+strconv.Itoa(i)+"].upgradeApproval", p.UpgradeApproval, allowedUpgrade, "operatorPolicies", strconv.Itoa(i), "upgradeApproval")
+	for k, p := range comp.OperatorPolicies.Sorted() {
+		out = append(out, operatorFindings(c.ID(), ctx.Element, ctx.Element.ValuesFile, ctx.Element.ValuesDoc, k, p)...)
 	}
 	for i, p := range comp.CertificatePolicies {
 		emit("certificatePolicies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "certificatePolicies", strconv.Itoa(i), "severity")

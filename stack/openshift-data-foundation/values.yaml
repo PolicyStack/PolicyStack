@@ -128,7 +128,7 @@ stack:
           - name: ready
 
     operatorPolicies:
-      - name: odf
+      odf:
         enabled: true
         description: "OpenShift Data Foundation operator"
         displayName: "OpenShift Data Foundation"
@@ -147,6 +147,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       - name: storagecluster

@@ -141,7 +141,7 @@ stack:
           - name: install
 
     operatorPolicies:
-      - name: acs
+      acs:
         enabled: true
         description: "Advanced Cluster Security operator"
         displayName: "Advanced Cluster Security for Kubernetes"
@@ -158,6 +158,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       # @description: Central itself, plus the config it reads at startup

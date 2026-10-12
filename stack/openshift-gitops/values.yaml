@@ -94,7 +94,7 @@ stack:
           - name: instance
 
     operatorPolicies:
-      - name: gitops
+      gitops:
         enabled: true
         description: "OpenShift GitOps operator"
         displayName: "Red Hat OpenShift GitOps"
@@ -111,6 +111,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       - name: ca-bundle

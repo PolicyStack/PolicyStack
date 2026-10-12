@@ -191,3 +191,14 @@ func TestWriteRender(t *testing.T) {
 		})
 	}
 }
+
+func TestDedupe(t *testing.T) {
+	layer := checks.Finding{RuleID: "POLICY032", Element: "a", File: "/v/prod.yaml", Line: 4, Message: "m"}
+	perCluster := checks.Finding{RuleID: "POLICY001", Element: "a", Cluster: "x", Message: "m"}
+	other := perCluster
+	other.Cluster = "y"
+	got := dedupe([]checks.Finding{layer, perCluster, layer, other, perCluster, layer})
+	if want := []checks.Finding{layer, perCluster, other}; !slices.Equal(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}

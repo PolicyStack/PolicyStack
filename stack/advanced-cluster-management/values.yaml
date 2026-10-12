@@ -112,7 +112,7 @@ stack:
           - name: hub
 
     operatorPolicies:
-      - name: acm
+      acm:
         enabled: true
         description: "Advanced Cluster Management operator"
         displayName: "Advanced Cluster Management for Kubernetes"
@@ -131,6 +131,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       - name: mch

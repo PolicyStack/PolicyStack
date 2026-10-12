@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-12 18:31:18*
 
 ## Component Configuration
 
@@ -82,7 +82,7 @@ Default policy metadata applied unless overridden per-policy
 | Compliance Type | `musthave` | Compliance requirement |
 | Remediation | `enforce` | Remediation action |
 | Severity | `medium` | Severity level |
-| Upgrade Approval | `Automatic` | Pin upgrades by listing approved CSVs under `versions:` instead of changing this |
+| Upgrade Approval | `Automatic` | Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades |
 
 **Subscription Details:**
 | Parameter | Value | Description |

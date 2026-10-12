@@ -6,8 +6,11 @@ package chart
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -63,7 +66,7 @@ type Component struct {
 	Enabled             bool                `yaml:"enabled"`
 	Policies            []Policy            `yaml:"policies"`
 	ConfigPolicies      []SubPolicy         `yaml:"configPolicies"`
-	OperatorPolicies    []OperatorPolicy    `yaml:"operatorPolicies"`
+	OperatorPolicies    OperatorPolicies    `yaml:"operatorPolicies"`
 	CertificatePolicies []CertificatePolicy `yaml:"certificatePolicies"`
 	PolicySets          []PolicySet         `yaml:"policySets"`
 	Default             *Default            `yaml:"default"`
@@ -75,6 +78,9 @@ type Component struct {
 	// Legacy spellings the chart never reads, modelled only so they can be reported.
 	LegacyEnable        *bool    `yaml:"enable"`
 	LegacyDefaultPolicy *Default `yaml:"defaultPolicy"`
+	// LegacyOperatorPolicies is set when operatorPolicies is the pre-3.0 list, which policy-library
+	// 3.x rejects.
+	LegacyOperatorPolicies bool `yaml:"-"`
 }
 
 // Default is the per-component defaults block. policy-library reads only
@@ -157,7 +163,7 @@ type SubPolicy struct {
 	RawTemplate       bool            `yaml:"rawTemplate"`
 }
 
-// OperatorPolicy mirrors operatorPolicies entries.
+// OperatorPolicy mirrors operatorPolicies entries. Name is the map key.
 type OperatorPolicy struct {
 	Name              string          `yaml:"name"`
 	Enabled           bool            `yaml:"enabled"`
@@ -166,9 +172,66 @@ type OperatorPolicy struct {
 	RemediationAction string          `yaml:"remediationAction"`
 	ComplianceType    string          `yaml:"complianceType"`
 	UpgradeApproval   string          `yaml:"upgradeApproval"`
+	Versions          []string        `yaml:"versions"`
+	Subscription      Subscription    `yaml:"subscription"`
 	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
 	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
 	IgnorePending     bool            `yaml:"ignorePending"`
+	// HasName reports an explicit `name:` in a map entry, which policy-library ignores.
+	HasName bool `yaml:"-"`
+}
+
+// Subscription is the part of operatorPolicies.<key>.subscription the checks inspect.
+type Subscription struct {
+	StartingCSV         string `yaml:"startingCSV"`
+	InstallPlanApproval string `yaml:"installPlanApproval"`
+}
+
+// OperatorPolicies is keyed by entry name (policy-library 3.x).
+type OperatorPolicies map[string]OperatorPolicy
+
+// UnmarshalYAML decodes the map shape, taking Name from the key. The pre-3.0 list shape is keyed by
+// each entry's name, so older trees still load; Component.LegacyOperatorPolicies reports it.
+func (o *OperatorPolicies) UnmarshalYAML(n *yaml.Node) error {
+	switch n.Kind {
+	case yaml.MappingNode:
+		*o = OperatorPolicies{}
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			var p OperatorPolicy
+			if err := n.Content[i+1].Decode(&p); err != nil {
+				return err
+			}
+			p.Name, p.HasName = n.Content[i].Value, mapValue(n.Content[i+1], "name") != nil
+			if _, dup := (*o)[p.Name]; dup {
+				return fmt.Errorf("line %d: operatorPolicies key %q already defined", n.Content[i].Line, p.Name)
+			}
+			(*o)[p.Name] = p
+		}
+		return nil
+	case yaml.SequenceNode:
+		var items []OperatorPolicy
+		if err := n.Decode(&items); err != nil {
+			return err
+		}
+		*o = OperatorPolicies{}
+		for _, p := range items {
+			(*o)[p.Name] = p
+		}
+		return nil
+	default:
+		return fmt.Errorf("operatorPolicies: unexpected yaml kind %d at line %d", n.Kind, n.Line)
+	}
+}
+
+// Sorted yields the entries in key order, so findings are deterministic.
+func (o OperatorPolicies) Sorted() iter.Seq2[string, OperatorPolicy] {
+	return func(yield func(string, OperatorPolicy) bool) {
+		for _, k := range slices.Sorted(maps.Keys(o)) {
+			if !yield(k, o[k]) {
+				return
+			}
+		}
+	}
 }
 
 // CertificatePolicy mirrors certificatePolicies entries.
@@ -334,7 +397,13 @@ func decodeComponent(doc *yaml.Node) (string, *Component, error) {
 	if err := valueNode.Decode(&c); err != nil {
 		return keyNode.Value, nil, fmt.Errorf("decode stack.%s: %w", keyNode.Value, err)
 	}
+	c.LegacyOperatorPolicies = IsLegacyOperatorPolicies(mapValue(valueNode, "operatorPolicies"))
 	return keyNode.Value, &c, nil
+}
+
+// IsLegacyOperatorPolicies reports whether an operatorPolicies node has the pre-3.0 list shape.
+func IsLegacyOperatorPolicies(n *yaml.Node) bool {
+	return n != nil && n.Kind == yaml.SequenceNode
 }
 
 func mapValue(m *yaml.Node, key string) *yaml.Node {

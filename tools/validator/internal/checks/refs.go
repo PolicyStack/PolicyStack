@@ -37,13 +37,13 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 	}
 
 	var out []Finding
-	emit := func(ref, sub, valuePath string, idx int) {
+	emit := func(ref, sub, valuePath, idx string) {
 		if ref == "" {
 			return
 		}
 		enabled, exists := policies[ref]
 		if !exists {
-			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, strconv.Itoa(idx), "policyRef")
+			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, idx, "policyRef")
 			out = append(out, Finding{
 				RuleID: c.ID(), Severity: SevError,
 				Element: ctx.Element.ChartName,
@@ -56,7 +56,7 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 			if toggled[ref] {
 				return
 			}
-			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, strconv.Itoa(idx), "policyRef")
+			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, idx, "policyRef")
 			out = append(out, Finding{
 				RuleID: c.ID(), Severity: SevError,
 				Element: ctx.Element.ChartName,
@@ -70,19 +70,19 @@ func (c *PolicyRefCheck) Run(ctx Context) []Finding {
 		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
-		emit(p.PolicyRef, p.Name, "configPolicies", i)
+		emit(p.PolicyRef, p.Name, "configPolicies", strconv.Itoa(i))
 	}
-	for i, p := range comp.OperatorPolicies {
+	for k, p := range comp.OperatorPolicies.Sorted() {
 		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
-		emit(p.PolicyRef, p.Name, "operatorPolicies", i)
+		emit(p.PolicyRef, p.Name, "operatorPolicies", k)
 	}
 	for i, p := range comp.CertificatePolicies {
 		if !comp.IsEnabled(p.Name, p.Enabled) {
 			continue
 		}
-		emit(p.PolicyRef, p.Name, "certificatePolicies", i)
+		emit(p.PolicyRef, p.Name, "certificatePolicies", strconv.Itoa(i))
 	}
 	return out
 }

@@ -43,7 +43,7 @@ stack:
           - name: install
 
     operatorPolicies:
-      - name: mtv
+      mtv:
         enabled: true
         description: "Migration Toolkit for Virtualization"
         displayName: "Migration Toolkit for Virtualization Operator"
@@ -63,6 +63,8 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     configPolicies:
       # @description: Adds the cluster-monitoring label so the operator's metrics are scraped

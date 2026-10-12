@@ -65,12 +65,13 @@ func (c *NameLengthCheck) Run(ctx Context) []Finding {
 	}
 
 	// Sub-policy: literal metadata.name = <parent>-<sub> ≤ 63.
-	emitSub := func(parent, sub, kind, valuePath string, idx int) {
+	// path locates the entry's name: <list>, <i>, name, or operatorPolicies, <key>.
+	emitSub := func(parent, sub, kind string, path ...string) {
 		full := fmt.Sprintf("%s-%s", parent, sub)
 		if len(full) <= MaxPolicyNameLen {
 			return
 		}
-		loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, strconv.Itoa(idx), "name")
+		loc := sourceloc.Find(ctx.Element.ValuesDoc, append([]string{"stack", ctx.Element.StackKey}, path...)...)
 		out = append(out, Finding{
 			RuleID:   c.ID(),
 			Severity: SevError,
@@ -99,19 +100,19 @@ func (c *NameLengthCheck) Run(ctx Context) []Finding {
 		if p.Name == "" {
 			continue
 		}
-		emitSub(p.PolicyRef, p.Name, "ConfigurationPolicy", "configPolicies", i)
+		emitSub(p.PolicyRef, p.Name, "ConfigurationPolicy", "configPolicies", strconv.Itoa(i), "name")
 	}
-	for i, p := range comp.OperatorPolicies {
+	for k, p := range comp.OperatorPolicies.Sorted() {
 		if p.Name == "" {
 			continue
 		}
-		emitSub(p.PolicyRef, p.Name, "OperatorPolicy", "operatorPolicies", i)
+		emitSub(p.PolicyRef, p.Name, "OperatorPolicy", "operatorPolicies", k)
 	}
 	for i, p := range comp.CertificatePolicies {
 		if p.Name == "" {
 			continue
 		}
-		emitSub(p.PolicyRef, p.Name, "CertificatePolicy", "certificatePolicies", i)
+		emitSub(p.PolicyRef, p.Name, "CertificatePolicy", "certificatePolicies", strconv.Itoa(i), "name")
 	}
 	return out
 }
@@ -133,9 +134,9 @@ func (c *DuplicateNameCheck) Run(ctx Context) []Finding {
 	seen := map[string]string{}
 	var out []Finding
 
-	check := func(rendered, source, valuePath string, idx int) {
+	check := func(rendered, source string, path ...string) {
 		if prior, ok := seen[rendered]; ok {
-			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey, valuePath, strconv.Itoa(idx), "name")
+			loc := sourceloc.Find(ctx.Element.ValuesDoc, append([]string{"stack", ctx.Element.StackKey}, path...)...)
 			out = append(out, Finding{
 				RuleID:   "POLICY002",
 				Severity: SevError,
@@ -155,25 +156,25 @@ func (c *DuplicateNameCheck) Run(ctx Context) []Finding {
 		if p.Name == "" {
 			continue
 		}
-		check(fmt.Sprintf("%s-%s", p.Name, rel), "policies["+strconv.Itoa(i)+"].name", "policies", i)
+		check(fmt.Sprintf("%s-%s", p.Name, rel), "policies["+strconv.Itoa(i)+"].name", "policies", strconv.Itoa(i), "name")
 	}
 	for i, p := range comp.ConfigPolicies {
 		if p.Name == "" {
 			continue
 		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "configPolicies["+strconv.Itoa(i)+"].name", "configPolicies", i)
+		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "configPolicies["+strconv.Itoa(i)+"].name", "configPolicies", strconv.Itoa(i), "name")
 	}
-	for i, p := range comp.OperatorPolicies {
+	for k, p := range comp.OperatorPolicies.Sorted() {
 		if p.Name == "" {
 			continue
 		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "operatorPolicies["+strconv.Itoa(i)+"].name", "operatorPolicies", i)
+		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "operatorPolicies."+k, "operatorPolicies", k)
 	}
 	for i, p := range comp.CertificatePolicies {
 		if p.Name == "" {
 			continue
 		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "certificatePolicies["+strconv.Itoa(i)+"].name", "certificatePolicies", i)
+		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "certificatePolicies["+strconv.Itoa(i)+"].name", "certificatePolicies", strconv.Itoa(i), "name")
 	}
 	return out
 }

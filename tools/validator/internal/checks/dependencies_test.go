@@ -25,7 +25,7 @@ func certManager(t *testing.T) *chart.Element {
       - name: bare
         enabled: true
     operatorPolicies:
-      - name: cert-manager
+      cert-manager:
         enabled: true
         policyRef: install
 `)
@@ -51,7 +51,7 @@ func TestPolicy011_ValidReferencesAreSilent(t *testing.T) {
           - name: pinned
             release: other-thing-somecluster
     operatorPolicies:
-      - name: loki
+      loki:
         enabled: true
         policyRef: install
     configPolicies:
@@ -79,7 +79,7 @@ func TestPolicy011_DanglingAndBadReferences(t *testing.T) {
         dependencies:
           - name: instal
     operatorPolicies:
-      - name: op
+      op:
         enabled: true
         policyRef: install
     configPolicies:
@@ -150,7 +150,7 @@ func TestPolicy011_DanglingAndBadReferences(t *testing.T) {
         enabled: true
         policyRef: stack
         waitForOperator: nosuchop
-`, "matches no enabled entry in operatorPolicies[]"},
+`, "matches no enabled operatorPolicies.nosuchop"},
 
 		{"extraDependencies typo", `
     policies:
@@ -188,7 +188,7 @@ func TestPolicy011_HardDisabledTargetIsAnError(t *testing.T) {
       - name: install
         enabled: false
     operatorPolicies:
-      - name: cert-manager
+      cert-manager:
         enabled: true
         policyRef: install
 `)
@@ -218,6 +218,7 @@ func TestPolicy031_DeadKeys(t *testing.T) {
 		{"legacy enable", "stack:\n  myElement:\n    enable: true\n", "renders nothing", SevError},
 		{"legacy defaultPolicy", "stack:\n  myElement:\n    enabled: true\n    defaultPolicy:\n      severity: high\n", "silently dropped", SevError},
 		{"default.severity", "stack:\n  myElement:\n    enabled: true\n    default:\n      severity: high\n", "not consumed by policy-library", SevWarning},
+		{"legacy operatorPolicies list", "stack:\n  myElement:\n    enabled: true\n    operatorPolicies:\n      - name: op\n        policyRef: p\n", "requires a map keyed by entry name", SevError},
 		{"rawTemplate arity", "stack:\n  myElement:\n    enabled: true\n    configPolicies:\n      - name: cp\n        rawTemplate: true\n        templateNames:\n          - name: a\n          - name: b\n", "exactly one templateNames entry", SevError},
 	}
 	for _, tc := range cases {
@@ -308,7 +309,7 @@ func TestPolicy011_ToggledOffTargetIsNotAnError(t *testing.T) {
       - name: install
         enabled: true
     operatorPolicies:
-      - name: cert-manager
+      cert-manager:
         enabled: true
         policyRef: install
 `)
@@ -392,7 +393,7 @@ func TestPolicy003_CoversToggledOffAndOperatorTriples(t *testing.T) {
       - name: aws
         enabled: true
     operatorPolicies:
-      - name: thing
+      thing:
         enabled: true
         policyRef: aws
 `)

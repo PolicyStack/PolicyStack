@@ -10,7 +10,7 @@ Every chart also reads the top-level keys `policyNamespace`, `selector` and `pla
 
 ## Rendered objects
 
-Names build on the release, which is the Application name ([Applications](applicationset.md#applications)). In the table, `<policy>`, `<set>` and `<name>` are the `name` fields of `policies[]`, `policySets[]` and the template lists. An entry is enabled when its `enabled` field is true, unless its [toggle](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) overrides it.
+Names build on the release, which is the Application name ([Applications](applicationset.md#applications)). In the table, `<policy>`, `<set>` and `<name>` are the `name` fields of `policies[]`, `policySets[]` and the template lists, or the key of an `operatorPolicies` entry. An entry is enabled when its `enabled` field is true, unless its [toggle](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) overrides it.
 
 | Object | Name | Rendered when |
 |---|---|---|

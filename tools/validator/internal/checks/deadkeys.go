@@ -39,6 +39,9 @@ func (c *DeadKeyCheck) Run(ctx Context) []Finding {
 	if comp.LegacyDefaultPolicy != nil {
 		add(SevError, "`defaultPolicy:` is never read by policy-library - its categories/controls/standards are silently dropped. Rename it to `default:`", "defaultPolicy")
 	}
+	if comp.LegacyOperatorPolicies {
+		add(SevError, legacyOperatorPolicies, "operatorPolicies")
+	}
 	if comp.Default != nil {
 		// policy-library consumes only categories/controls/standards from `default`.
 		if comp.Default.Severity != "" {

@@ -24,7 +24,7 @@ stack:
 
     # @description: OperatorPolicy installing the subscription
     operatorPolicies:
-      - name: rhdh
+      rhdh:
         enabled: true
         description: "Red Hat Developer Hub (Backstage) internal developer portal"
         # @desc: Must match the CSV displayName so the generated status check can find it
@@ -39,8 +39,10 @@ stack:
           name: rhdh
           source: redhat-operators
           sourceNamespace: openshift-marketplace
-        # @desc: To pin upgrades, list approved CSVs under `versions:` and leave this Automatic
+        # @desc: Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     # @description: Configuration policies
     configPolicies:

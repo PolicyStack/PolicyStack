@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -31,7 +32,7 @@ type elementIndex struct {
 	policyRenders map[string]bool
 	// subPolicies["<policyRef>/<name>"] is the kind of that sub-policy.
 	subPolicies map[string]string
-	// operators[name] is an operatorPolicy's owning policy.
+	// operators[key] is an operatorPolicy's owning policy.
 	operators map[string]string
 	// policyToggled[name] reports whether a policy's enablement is toggle-governed.
 	policyToggled map[string]bool
@@ -132,11 +133,10 @@ func (c *DependencyCheck) checkElement(ix *elementIndex, all map[string]*element
 		}
 	}
 
-	// *.extraDependencies default to kind ConfigurationPolicy; waitForOperator names operatorPolicies[].
+	// *.extraDependencies default to kind ConfigurationPolicy; waitForOperator names operatorPolicies keys.
 	type sub struct {
-		list  string
-		idx   int
-		name  string
+		where string   // configPolicies[0] "name" or operatorPolicies.<key>
+		path  []string // list, index or operatorPolicies, key
 		ref   string
 		extra []chart.DepEntry
 		wait  chart.WaitForOperator
@@ -144,29 +144,28 @@ func (c *DependencyCheck) checkElement(ix *elementIndex, all map[string]*element
 	var subs []sub
 	for i, p := range comp.ConfigPolicies {
 		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{"configPolicies", i, p.Name, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
+			subs = append(subs, sub{fmt.Sprintf("configPolicies[%d] %q", i, p.Name), []string{"configPolicies", strconv.Itoa(i)}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
 		}
 	}
-	for i, p := range comp.OperatorPolicies {
+	for k, p := range comp.OperatorPolicies.Sorted() {
 		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{"operatorPolicies", i, p.Name, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
+			subs = append(subs, sub{"operatorPolicies." + k, []string{"operatorPolicies", k}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
 		}
 	}
 	for i, p := range comp.CertificatePolicies {
 		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{"certificatePolicies", i, p.Name, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
+			subs = append(subs, sub{fmt.Sprintf("certificatePolicies[%d] %q", i, p.Name), []string{"certificatePolicies", strconv.Itoa(i)}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
 		}
 	}
 	for _, s := range subs {
-		where := fmt.Sprintf("%s[%d] %q", s.list, s.idx, s.name)
 		for j, d := range s.extra {
-			path := []string{s.list, strconv.Itoa(s.idx), "extraDependencies", strconv.Itoa(j), "name"}
-			out = append(out, c.checkDep(ix, all, d, "ConfigurationPolicy", s.ref, where, path)...)
+			path := append(slices.Clone(s.path), "extraDependencies", strconv.Itoa(j), "name")
+			out = append(out, c.checkDep(ix, all, d, "ConfigurationPolicy", s.ref, s.where, path)...)
 		}
 		for _, op := range s.wait {
 			if _, ok := ix.operators[op]; !ok {
-				add(fmt.Sprintf("%s: waitForOperator %q matches no enabled entry in operatorPolicies[]", where, op),
-					s.list, strconv.Itoa(s.idx), "waitForOperator")
+				add(fmt.Sprintf("%s: waitForOperator %q matches no enabled operatorPolicies.%s", s.where, op, op),
+					append(slices.Clone(s.path), "waitForOperator")...)
 			}
 		}
 	}

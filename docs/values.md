@@ -40,7 +40,7 @@ Helm merges the files in order.
 - **Maps merge** key by key. A later file sets only the keys it changes: [nonprod-west-1.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/clusters/nonprod-west-1.yaml) sets `retention` and `storage` under `stack.userWorkloadMonitoring.config.prometheus`, and the element defaults supply the rest.
 - **Lists replace.** A later list overwrites the whole earlier list: [dc2.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/datacenters/dc2.yaml) restates the element's default registries next to its mirror.
 
-An element's policy entries are a list, so a layer cannot change one entry without restating them all. It flips an entry through the [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) map instead, and settings go in the `config` map that the element's converters read ([Conventions](elements.md#conventions)).
+An element's `policies` and `configPolicies` are lists, so a layer cannot change one entry without restating them all. It flips an entry through the [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) map instead, and settings go in the `config` map that the element's converters read ([Conventions](elements.md#conventions)). `operatorPolicies` is a map keyed by entry name, so a layer sets one field of one entry, such as `stack.metallb.operatorPolicies.metallb.versions`. `versions` itself is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)).
 
 ## Layout
 

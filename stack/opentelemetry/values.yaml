@@ -24,7 +24,7 @@ stack:
 
     # @description: OperatorPolicy installing the subscription
     operatorPolicies:
-      - name: otel
+      otel:
         enabled: true
         description: "Red Hat build of OpenTelemetry for distributed tracing"
         # @desc: Must match the CSV displayName so the generated status check can find it
@@ -39,8 +39,10 @@ stack:
           name: opentelemetry-product
           source: redhat-operators
           sourceNamespace: openshift-marketplace
-        # @desc: Pin upgrades by listing approved CSVs under `versions:` instead of changing this
+        # @desc: Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
 
     # @description: Configuration policies
     configPolicies:

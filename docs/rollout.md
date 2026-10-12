@@ -100,31 +100,41 @@ Do not reuse the cluster's name while its fleet file exists. A cluster imported 
 
 ## Operator upgrades
 
-Each `operatorPolicies[]` entry renders an OperatorPolicy ([Operator Policy Options](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operator-policy-options)). `upgradeApproval` and `versions` decide upgrades:
+Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Operator Policy Options](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operator-policy-options), [Version pinning](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#version-pinning)). `upgradeApproval` is `None` or `Automatic`. ACM rejects `Manual` and `subscription.installPlanApproval`. `upgradeApproval` and `versions` decide upgrades:
 
 | `upgradeApproval` | `versions` | Effect when enforced |
 |---|---|---|
 | `Automatic` | empty | The Subscription is set to automatic approval. OLM installs every upgrade the channel offers. |
 | `Automatic` | listed | The Subscription is set to manual approval. The policy approves an InstallPlan only when the CSV it installs is in `versions` or equals `subscription.startingCSV`. |
-| `None` | either | The policy approves the initial install only, subject to `versions`. It never approves an upgrade. |
+| `None` | either | The policy approves the initial install only, filtered by `versions` and `subscription.startingCSV`. It never approves an upgrade, even to a CSV in `versions`. |
 
 An informing policy approves nothing, it reports an installed CSV missing from a non-empty `versions` as noncompliant.
 
-The metallb element ships with `upgradeApproval: Automatic` and no `versions`. To control its upgrades, add `versions` to its entry in [`stack/metallb/values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/stack/metallb/values.yaml):
+`versions` entries are exact CSV names, with no ranges or wildcards. An entry can hold several comma-separated names (ACM 2.14+) or a template (ACM 2.13+).
+
+Elements ship unpinned, with `upgradeApproval: Automatic` and `versions: []`. Pin in a layer. `operatorPolicies` is a map keyed by entry name, so the layer sets only the fields it changes ([Merge rules](values.md#merge-rules)). To pin metallb on every prod cluster:
 
 ```yaml
+# values/environments/prod.yaml
 stack:
   metallb:
     operatorPolicies:
-      - name: metallb
-        # other fields unchanged
-        upgradeApproval: Automatic
+      metallb:
         versions:
           - <installed CSV>
+        subscription:
+          startingCSV: <installed CSV>
 ```
 
-`oc get csv -n metallb-system` on the managed cluster shows the installed CSV. On a cluster that does not have the operator yet, OLM resolves the Subscription to the channel's latest CSV. If that CSV is not in `versions`, the policy does not approve the install. To install a listed version there, set `subscription.startingCSV` to it.
+`oc get csv -n metallb-system` on the managed cluster shows the installed CSV. On a cluster that does not have the operator yet, OLM resolves the Subscription to the channel's latest CSV, and the policy does not approve it unless it is listed. `startingCSV` installs the pinned CSV there instead. Leave it out when the pin is the channel head.
 
-When a newer CSV is available, the OperatorPolicy status names it in a message that starts `an InstallPlan to update to [<csv>]`. Add that CSV name to `versions`, then promote the revision that has it one cluster at a time, by editing each cluster's fleet file ([Promoting and rolling back](#promoting-and-rolling-back)).
+A layer can only override keys the element defines. The validator rejects a new key as POLICY032 ([Validation](validation.md)), and the render fails if the key has no `policyRef`.
 
-Keep `versions` in the element's `values.yaml`. `operatorPolicies` is a list, and lists replace across the cascade ([Merge rules](values.md#merge-rules)), so overriding `versions` from another layer means restating the whole list there.
+When a newer CSV is available, the OperatorPolicy status names it in a message that starts `an InstallPlan to update to [<csv>]`. OLM picks that CSV from the channel's upgrade graph, the policy only approves or holds it, so a CSV in `versions` installs only once OLM offers it. Bump in two steps:
+
+1. Add the new CSV to `versions` next to the old one. Promote the revision that has it one cluster at a time, by editing each cluster's fleet file ([Promoting and rolling back](#promoting-and-rolling-back)).
+2. Once every cluster runs the new CSV, remove the old one, move `startingCSV` to the new one, and promote again.
+
+Dropping the old CSV in the same change makes each cluster noncompliant until its upgrade finishes.
+
+To unpin, set `versions: []` in a layer that outranks the pin, or delete the pin. To turn an operator off on some clusters, set `enabled: false` on its key or `toggles.<key>: false` ([Disabling an element](#disabling-an-element)). Never set the key to `null`. Disable the entries that name it in `waitForOperator` in the same layer, or the render fails. This stops managing the operator but does not uninstall it.

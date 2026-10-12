@@ -185,14 +185,12 @@ configPolicies:
 #### Array Item Documentation
 
 ```yaml
-# @description: Approved versions for controlled upgrades
+# @description: CSVs the OperatorPolicy may install
 versions:
-  # @desc: Initial stable release
-  - v1.0.0
-  # @desc: Security patch with CVE-2024-001 fix
-  - v1.0.1
-  # @desc: Performance improvements
-  - v1.1.0
+  # @desc: Currently installed
+  - example-operator.v1.0.0
+  # @desc: Next bump, remove v1.0.0 once every cluster runs it
+  - example-operator.v1.0.1
 ```
 
 #### Multi-line Annotations

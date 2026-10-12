@@ -311,6 +311,10 @@ class DocumentationGenerator:
         
         if not component:
             return None
+        
+        if isinstance(component.get('operatorPolicies'), list):
+            raise ValueError(f"{values_file}: operatorPolicies must be a map keyed by entry name "
+                             "(policy-library 3.0.0); convert the list")
             
         md = []
         md.append(f"# {chart_name} - Policy Library Documentation")
@@ -624,15 +628,9 @@ class DocumentationGenerator:
             if sub_policies['operators']:
                 md.append("##### Operator Policies")
                 md.append("")
-                for idx, operator in enumerate(sub_policies['operators']):
-                    actual_idx = None
-                    for i, o in enumerate(component.get('operatorPolicies', [])):
-                        if o.get('name') == operator.get('name'):
-                            actual_idx = i
-                            break
-                    if actual_idx is not None:
-                        operator_path = ['stack', component_name, 'operatorPolicies', actual_idx]
-                        self._generate_operator_policy_section(md, operator, policy_name, comments, operator_path)
+                for operator in sub_policies['operators']:
+                    operator_path = ['stack', component_name, 'operatorPolicies', operator['name']]
+                    self._generate_operator_policy_section(md, operator, policy_name, comments, operator_path)
             
             if sub_policies['certificates']:
                 md.append("##### Certificate Policies")
@@ -728,10 +726,8 @@ class DocumentationGenerator:
         operator_name = operator['name']
         md.append(f"###### 🔧 Operator: {operator_name}")
         
-        # description field, then annotation by name, then by index
-        desc = (operator.get('description') or 
-               self.get_field_description(comments, *path[:-1], operator_name) or
-               self.get_field_description(comments, *path))
+        # description field, then annotation on the map key
+        desc = operator.get('description') or self.get_field_description(comments, *path)
         if desc:
             md.append(f"> {desc}")
         
@@ -860,6 +856,11 @@ class DocumentationGenerator:
         
         self._generate_gating_section(md, cert, policy_name)
     
+    def _operator_policies(self, component: Dict) -> List[Dict]:
+        """operatorPolicies entries in YAML order, with the map key as name (as policy-library does)"""
+        return [{**op, 'name': key} for key, op in (component.get('operatorPolicies') or {}).items()
+                if isinstance(op, dict)]
+    
     def _find_sub_policies(self, policy_name: str, component: Dict) -> Dict[str, List]:
         """Find all sub-policies associated with a policy"""
         result = {
@@ -872,7 +873,7 @@ class DocumentationGenerator:
             if config.get('enabled') and config.get('policyRef') == policy_name:
                 result['configs'].append(config)
         
-        for operator in component.get('operatorPolicies', []):
+        for operator in self._operator_policies(component):
             if operator.get('enabled') and operator.get('policyRef') == policy_name:
                 result['operators'].append(operator)
         
@@ -897,7 +898,7 @@ class DocumentationGenerator:
                 if config['policyRef'] not in enabled_policies:
                     result['configs'].append(config['name'])
         
-        for operator in component.get('operatorPolicies', []):
+        for operator in self._operator_policies(component):
             if operator.get('enabled') and operator.get('policyRef'):
                 if operator['policyRef'] not in enabled_policies:
                     result['operators'].append(operator['name'])
@@ -914,7 +915,7 @@ class DocumentationGenerator:
         return {
             'policies': sum(1 for p in component.get('policies', []) if p.get('enabled')),
             'configs': sum(1 for p in component.get('configPolicies', []) if p.get('enabled')),
-            'operators': sum(1 for p in component.get('operatorPolicies', []) if p.get('enabled')),
+            'operators': sum(1 for p in self._operator_policies(component) if p.get('enabled')),
             'certificates': sum(1 for p in component.get('certificatePolicies', []) if p.get('enabled')),
             'policySets': sum(1 for p in component.get('policySets', []) if p.get('enabled'))
         }

@@ -80,9 +80,11 @@ stack:
           - name: config
 
     operatorPolicies:
-      - name: metallb
+      metallb:
         enabled: true
         policyRef: install
+        upgradeApproval: Automatic
+        versions: []
         # namespace, operatorGroup, subscription
 
     configPolicies:
@@ -161,7 +163,8 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
 - **Set `pruneObjectBehavior` before the first enforce.** It decides whether disabling a policy
   deletes what it created, and a later change must sync before the element is disabled
   ([Disabling an element](rollout.md#disabling-an-element)).
-- **Pin operator versions** where an unplanned upgrade would hurt
+- **Pin operator versions in layers, not in the element.** Ship `versions: []` and set it per
+  environment or cluster where an unplanned upgrade would hurt
   ([Operator upgrades](rollout.md#operator-upgrades)).
 - **Keep secrets out of values.** Values live in Git. Read runtime secrets on the hub with an ACM
   hub template, escaped so Helm passes it through:

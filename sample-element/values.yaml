@@ -209,7 +209,7 @@ stack:
         remediationAction: enforce
         complianceType: musthave
         # @desc: Wait for this operator's CSV to reach Succeeded before applying this config.
-        # @desc: Names an entry in operatorPolicies[]; the owning policy is resolved automatically.
+        # @desc: Names a key in operatorPolicies; the owning policy is resolved automatically.
         waitForOperator: acs-operator
         # @desc: Report compliant (rather than NonCompliant) while waiting on the dependency above
         ignorePending: true
@@ -333,7 +333,7 @@ stack:
     # @description: Operator policies for managing OpenShift/Kubernetes operators
     operatorPolicies:
       # @description: OpenShift Compliance Operator for continuous compliance scanning
-      - name: compliance-operator
+      compliance-operator:
         # @desc: Deploy the compliance operator
         enabled: true
         description: "Manages OpenShift Compliance Operator for CIS and NIST scanning"
@@ -400,7 +400,7 @@ stack:
                 cpu: "100m"
                 # @desc: Guaranteed memory allocation
                 memory: "128Mi"
-        # @desc: Approval strategy for operator updates (Automatic/Manual)
+        # @desc: Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades
         upgradeApproval: Automatic
         # @description: Approved versions for controlled operator upgrades
         versions:
@@ -414,7 +414,7 @@ stack:
           - compliance-operator.v1.6.0
       
       # @description: Advanced Cluster Security (ACS/RHACS) for runtime security
-      - name: acs-operator
+      acs-operator:
         # @desc: Deploy ACS for runtime security
         enabled: true
         description: "Runtime security and threat detection with ACS"
@@ -448,15 +448,15 @@ stack:
               requests:
                 cpu: "250m"
                 memory: "256Mi"
-        # @desc: Manual approval for major version changes
-        upgradeApproval: Manual
+        # @desc: None approves the initial install only, never upgrades; versions limits which CSV that may be
+        upgradeApproval: None
         versions:
           - rhacs-operator.v4.4.0
           - rhacs-operator.v4.4.1
           - rhacs-operator.v4.4.2
       
       # @description: OpenShift GitOps (ArgoCD) for continuous deployment
-      - name: openshift-gitops
+      openshift-gitops:
         # @desc: Deploy GitOps operator
         enabled: true
         description: "GitOps operator for declarative continuous deployment"
@@ -483,9 +483,11 @@ stack:
               - name: DISABLE_DEFAULT_ARGOCD
                 value: "false"
         upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
       
       # @description: Monitoring and alerting operator configuration
-      - name: monitoring-operator
+      monitoring-operator:
         # @desc: Configure cluster monitoring
         enabled: true
         description: "Configures Prometheus monitoring and alerting"
@@ -514,7 +516,10 @@ stack:
               - name: prometheus-storage
                 persistentVolumeClaim:
                   claimName: prometheus-data
-        upgradeApproval: Manual
+        # @desc: None approves the initial install only, never upgrades
+        upgradeApproval: None
+        # @desc: Allowed CSV names for the initial install; empty allows whatever the channel offers
+        versions: []
     
     # @description: Certificate policies for TLS certificate management and compliance
     certificatePolicies:

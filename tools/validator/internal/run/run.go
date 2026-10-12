@@ -240,6 +240,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		addFindings(ck.Run(repoCtx))
 	}
 
+	res.Findings = dedupe(res.Findings)
 	for _, f := range res.Findings {
 		if f.Severity == checks.SevError {
 			res.Errors++
@@ -248,6 +249,18 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// dedupe drops repeated findings, such as POLICY032 on a values layer that several clusters share.
+func dedupe(fs []checks.Finding) []checks.Finding {
+	seen := map[checks.Finding]bool{}
+	return slices.DeleteFunc(fs, func(f checks.Finding) bool {
+		if seen[f] {
+			return true
+		}
+		seen[f] = true
+		return false
+	})
 }
 
 // pair is one helm template run: an element and the fleet file it renders for.

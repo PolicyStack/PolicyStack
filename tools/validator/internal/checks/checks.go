@@ -81,6 +81,7 @@ func All() []Check {
 		&UnusedConverterCheck{},  // POLICY021
 		&EnumCheck{},             // POLICY030
 		&DeadKeyCheck{},          // POLICY031
+		&LayerOperatorCheck{},    // POLICY032
 		&PolicySetCheck{},        // POLICY040
 		&LabelCheck{},            // POLICY050
 		&PinningCheck{},          // POLICY060

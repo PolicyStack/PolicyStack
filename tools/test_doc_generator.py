@@ -191,5 +191,88 @@ class ElementReadmeTest(unittest.TestCase):
         self.assertTrue(self.readme.read_text().startswith("# my-el - Policy Library Documentation"))
 
 
+class OperatorPoliciesTest(unittest.TestCase):
+    VALUES = """
+        stack:
+          myEl:
+            enabled: true
+            policies:
+              - name: install
+                enabled: true
+              - name: other
+                enabled: true
+            operatorPolicies:
+              # @desc: Second operator
+              zeta:
+                enabled: true
+                policyRef: install
+                subscription:
+                  name: zeta-operator
+                  # @desc: Pinned starting point
+                  startingCSV: zeta.v1.0.0
+                upgradeApproval: Automatic
+                # @desc: Approved CSVs
+                versions:
+                  - zeta.v1.0.0
+                  - zeta.v1.1.0
+              alpha:
+                enabled: true
+                description: First operator
+                policyRef: install
+                upgradeApproval: None
+                versions: []
+              orphan:
+                enabled: true
+                policyRef: missing
+              disabled:
+                enabled: false
+                policyRef: other
+              unset: null
+        """
+
+    def render(self, values: str) -> str:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        element = Path(tmp.name) / "my-el"
+        element.mkdir()
+        (element / "values.yaml").write_text(textwrap.dedent(values))
+        return doc_generator.DocumentationGenerator().generate_element_docs(element)
+
+    def test_key_is_name_and_yaml_order_kept(self):
+        md = self.render(self.VALUES)
+        self.assertIn("| Name | `install-zeta` |", md)
+        self.assertIn("| Name | `install-alpha` |", md)
+        self.assertLess(md.index("Operator: zeta"), md.index("Operator: alpha"))
+
+    def test_desc_on_key_and_nested_keys(self):
+        md = self.render(self.VALUES)
+        self.assertIn("###### 🔧 Operator: zeta\n> Second operator", md)
+        self.assertIn("###### 🔧 Operator: alpha\n> First operator", md)
+        self.assertIn("| Starting CSV | `zeta.v1.0.0` | Pinned starting point |", md)
+
+    def test_versions(self):
+        md = self.render(self.VALUES)
+        self.assertIn("**Approved Versions:**\n*Approved CSVs*\n- `zeta.v1.0.0`\n- `zeta.v1.1.0`\n", md)
+        self.assertEqual(md.count("**Approved Versions:**"), 1)
+
+    def test_grouping_orphans_and_stats(self):
+        md = self.render(self.VALUES)
+        other = md[md.index("Policy: other"):]
+        self.assertNotIn("Operator:", other[:other.index("---")])
+        self.assertIn("### Orphaned Operator Policies", md)
+        self.assertIn("- orphan\n", md)
+        self.assertIn("| Operator Policies | 3 |", md)
+
+    def test_list_shape_rejected(self):
+        with self.assertRaisesRegex(ValueError, "operatorPolicies must be a map"):
+            self.render("""
+                stack:
+                  myEl:
+                    enabled: true
+                    operatorPolicies:
+                      - name: old
+                """)
+
+
 if __name__ == "__main__":
     unittest.main()

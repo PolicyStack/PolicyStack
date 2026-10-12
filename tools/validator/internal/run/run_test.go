@@ -1,10 +1,16 @@
 package run
 
 import (
+	"cmp"
+	"io/fs"
+	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 )
 
@@ -97,6 +103,89 @@ func TestValueFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := valueFiles(slices.Clone(cascadeFiles), opts, tt.p); !slices.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWriteRender(t *testing.T) {
+	spoke := &fixtures.Cluster{Name: "x", SourceFile: "/fx/x.yaml"}
+	hub := &fixtures.Cluster{Name: "x", SourceFile: "/fx/hubs/x.yaml"}
+	el := &chart.Element{ChartName: "a"}
+	type write struct {
+		p      pair
+		out    string
+		failed *checks.Finding
+	}
+	tests := []struct {
+		name        string
+		fixturesDir string
+		writes      []write
+		want        map[string]string
+	}{
+		{
+			name:   "spoke",
+			writes: []write{{p: pair{el: el, cl: spoke}, out: "kind: Policy\n"}},
+			want:   map[string]string{"x/a.yaml": "kind: Policy\n"},
+		},
+		{
+			name: "hub and spoke share a name",
+			writes: []write{
+				{p: pair{el: el, cl: spoke}, out: "spoke\n"},
+				{p: pair{el: el, cl: hub}, out: "hub\n"},
+			},
+			want: map[string]string{"x/a.yaml": "spoke\n", "hubs/x/a.yaml": "hub\n"},
+		},
+		{
+			name:   "lifecycle",
+			writes: []write{{p: pair{el: &chart.Element{ChartName: "lifecycle"}, cl: spoke, fleetValues: true}, out: "l\n"}},
+			want:   map[string]string{"x/lifecycle.yaml": "l\n"},
+		},
+		{
+			name: "empty render writes nothing",
+			writes: []write{
+				{p: pair{el: el, cl: spoke}, out: ""},
+				{p: pair{el: el, cl: hub}, out: "\n \n"},
+			},
+			want: map[string]string{},
+		},
+		{
+			name: "failure as comments without the tree's paths",
+			writes: []write{{p: pair{el: el, cl: spoke}, out: "ignored", failed: &checks.Finding{
+				Message: "boom in /repo/stack/a/values.yaml\nand /fx/x.yaml",
+			}}},
+			want: map[string]string{"x/a.yaml": "# RENDER000: boom in stack/a/values.yaml\n# and x.yaml\n"},
+		},
+		{
+			name:        "relative fixtures dir with trailing slash",
+			fixturesDir: "fleet/",
+			writes:      []write{{p: pair{el: el, cl: &fixtures.Cluster{Name: "h", SourceFile: "fleet/hubs/h.yaml"}}, out: "h\n"}},
+			want:        map[string]string{"hubs/h/a.yaml": "h\n"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := Options{RepoRoot: "/repo", FixturesDir: cmp.Or(tt.fixturesDir, "/fx"), RenderDir: t.TempDir()}
+			for _, w := range tt.writes {
+				if err := writeRender(opts, w.p, []byte(w.out), w.failed); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got := map[string]string{}
+			err := filepath.WalkDir(opts.RenderDir, func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				b, err := os.ReadFile(path)
+				rel, _ := filepath.Rel(opts.RenderDir, path)
+				got[filepath.ToSlash(rel)] = string(b)
+				return err
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !maps.Equal(got, tt.want) {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})

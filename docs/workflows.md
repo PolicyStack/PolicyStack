@@ -1,12 +1,14 @@
 # CI Workflows
 
 The GitHub Actions workflows live in `.github/workflows/`. The checks run on pull requests and on
-pushes to `main`. Update Documentation fixes stale element READMEs on request.
+pushes to `main`. Update Documentation fixes stale element READMEs on request. Render Diff comments on
+pull requests.
 
 | Workflow | Runs on | Fails when |
 | -------- | ------- | ---------- |
 | Policy Validate (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/`, plus `lifecycle/` for a file that sets `hub` |
 | Documentation Check (`docs-check.yml`) | Changes to `stack/`, the doc generator or its tests | Generator tests fail or a `stack/<element>/README.md` is out of date |
+| Render Diff (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Not a gate. Fails only when the validator does not build |
 | Update Documentation (`docs-update.yml`) | `update-docs` label added to a PR | Not a gate, it fixes what Documentation Check reports |
 | Documentation Site (`docs-site.yml`) | Every PR and push to `main` | The strict build finds a relative `.md` link or anchor that does not resolve, or a missing snippet |
 
@@ -21,8 +23,8 @@ the run in progress.
    the PR diff at the file and line to fix. Errors fail the job, warnings are annotated only.
 3. If `fleet/*.yaml` or `fleet/hubs/*.yaml` exist, runs the validator again with
    `--fixtures-dir fleet`, so a fork checks its fleet files. It renders the PR's `stack/` and
-   `values/` for each file, not the tree at the file's `revision`. Upstream ships no fleet files and
-   skips this step.
+   `values/` for each file, not the tree at the file's `revision`; [Render Diff](#render-diff) renders
+   each at its `revision`. Upstream ships no fleet files and skips this step.
 4. Checks every fleet file's `revision`. It must be a tag, a branch or a commit SHA of 5 to 40 hex
    characters, the forms Argo CD resolves, and point at a commit that contains `stack/`, and `lifecycle/` too when
    the file sets `hub`. Each failure is annotated on the fleet file. The checkout fetches
@@ -36,6 +38,40 @@ POLICY080 is skipped. The chart emits only Policy, PolicySet, Placement and Plac
 the rule skips those kinds, so it would check nothing.
 
 To reproduce locally, see [Validation](validation.md).
+
+## Render Diff
+
+Comments on the PR with each cluster's rendered Policies before and after the merge, so a reviewer
+sees what the change does to every cluster without running anything.
+
+1. Reads the fleet files on the base branch (before) and in the PR merge commit (after). Without
+   `fleet/*.yaml` on either side it uses the examples in `tools/validator/testdata/clusters`.
+2. Resolves each `revision` like the pin check: tag, branch, then SHA. The default branch or `HEAD`
+   means the base tip before and the merge commit after, so a cluster pinned to `main` shows the PR
+   and a cluster pinned to a tag shows nothing until its pin moves. A file with the same content and
+   commit on both sides is not rendered.
+3. Renders each fleet file in a worktree at its commit with
+   `policystack-validator --only RENDER000 --render-dir`, one file per element. An element that
+   renders nothing writes no file. A failed render is written as `# RENDER000:` lines, so it shows
+   in the diff.
+4. Diffs the two trees with `git diff --no-index`. Each fleet file with a change gets one collapsed
+   block listing only the elements that changed. A fleet file added or removed shows every element
+   added or removed.
+5. Posts the result as one comment, edited on every push and deleted when nothing changes. Revisions
+   that do not resolve and trees the validator cannot load are listed above the diff.
+
+The comment stops at about 60,000 characters, under GitHub's 65,536 limit. The full patch is the
+`render-diff.patch` artifact of the run.
+
+PRs from forks and Dependabot get a read-only token, so they get the diff in the job summary
+instead. The job that holds the write token runs no code from the PR.
+
+Placements carry the `Exists` selector from `tools/validator/testdata/baseline.yaml`, not the
+per-cluster selector the ApplicationSet injects. Both sides get the same one, so it never shows as a
+change.
+
+Every rendered commit gets a fresh worktree and runs `helm dependency update` for each chart.
+Expect about half a minute per distinct commit.
 
 ## Documentation Check
 

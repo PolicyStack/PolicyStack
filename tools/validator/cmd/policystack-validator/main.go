@@ -44,6 +44,7 @@ func realMain() error {
 		schemasDir    = flag.String("schemas-dir", "", "extra -schema-location for kubeconform")
 		includeSample = flag.Bool("include-sample-element", false, "validate sample-element/ alongside stack/")
 		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
+		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
 		verbose       = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -106,6 +107,7 @@ func realMain() error {
 		KubeconformBin: resolvedKc,
 		SchemasDir:     *schemasDir,
 		ExtraValues:    extras,
+		RenderDir:      *renderDir,
 		Skip:           splitCSV(*skipFlag),
 		Only:           splitCSV(*onlyFlag),
 		IncludeSample:  *includeSample,

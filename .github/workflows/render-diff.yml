@@ -1,0 +1,202 @@
+name: Render Diff
+
+# Comments each fleet file's rendered Policies before and after the PR. Not a gate.
+# Before: the fleet file on the base branch, rendered at its revision. After: the fleet file with the
+# PR merged, rendered at its revision. A revision naming the default branch, or HEAD, renders the
+# base tip before and the PR merge commit after. Elements that do not change print nothing.
+# The render job runs PR code with a read-only token. The comment job runs none and is skipped for
+# fork and Dependabot PRs, whose token is read-only; they get the render job's summary.
+on:
+  pull_request:
+    paths:
+      - 'stack/**'
+      - 'lifecycle/**'
+      - 'values/**'
+      - 'values.yaml'
+      - 'fleet/**'
+      - 'tools/validator/**'
+      - '.github/workflows/render-diff.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: v3.22.0 # keep equal to validate.yml
+
+jobs:
+  render:
+    name: Render diff
+    # Argo CD reads fleet files from the default branch only.
+    if: github.base_ref == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      body: ${{ steps.diff.outputs.body }}
+    steps:
+      # Checks out the PR merge commit: HEAD^1 is the base tip.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # tags and origin/* branches to resolve pins
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: tools/validator/go.mod
+          cache-dependency-path: tools/validator/go.sum
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Build validator
+        run: make -C tools/validator build
+
+      - name: Render and diff
+        id: diff
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse HEAD^1) merge=$(git rev-parse HEAD)
+          bin=$PWD/tools/validator/bin/policystack-validator
+          baseline=$PWD/tools/validator/testdata/baseline.yaml
+          work=$RUNNER_TEMP/render-diff
+          mkdir -p "$work/before" "$work/after"
+          notes=()
+
+          # fleet <commit> <dir>: fleet file paths at commit, hubs in <dir>/hubs/
+          fleet() { git ls-tree --name-only "$1" -- "$2/" "$2/hubs/" | grep '\.yaml$' || true; }
+          # resolve <commit the default branch means> <revision>: the commit Argo CD renders,
+          # tried in the order of validate.yml's pin check: tag, branch, SHA.
+          resolve() {
+            case $2 in HEAD|"$DEFAULT_BRANCH") echo "$1"; return ;; esac
+            git rev-parse -q --verify "refs/tags/$2^{commit}" ||
+              git rev-parse -q --verify "refs/remotes/origin/$2^{commit}" ||
+              { [[ $2 =~ ^[0-9a-f]{5,40}$ ]] && git rev-parse -q --verify "$2^{commit}"; }
+          }
+
+          # Upstream ships no fleet files: diff the example fleet instead.
+          dir=fleet
+          [ -n "$(fleet "$base" fleet)$(fleet "$merge" fleet)" ] || dir=tools/validator/testdata/clusters
+
+          # Per <side>/<path under $dir>: the blob, its revision and the commit it renders (- if none).
+          declare -A blob rev sha
+          for side in before after; do
+            at=$base
+            if [ "$side" = after ]; then at=$merge; fi
+            for f in $(fleet "$at" "$dir"); do
+              k=$side/${f#"$dir"/}
+              blob[$k]=$(git rev-parse "$at:$f")
+              rev[$k]=$(git cat-file blob "${blob[$k]}" | yq '.revision' -) || rev[$k]='(not valid YAML)'
+              sha[$k]=$(resolve "$at" "${rev[$k]}") || sha[$k]=-
+            done
+          done
+
+          # One fixtures dir per side and commit, hubs kept in hubs/. A file with the same bytes at
+          # the same commit on both sides renders the same, so it is skipped.
+          for k in "${!blob[@]}"; do
+            side=${k%%/*} rel=${k#*/} other=after/${k#*/}
+            if [ "$side" = after ]; then other=before/$rel; fi
+            [ "${sha[$k]} ${blob[$k]}" != "${sha[$other]:-} ${blob[$other]:-}" ] || continue
+            if [ "${sha[$k]}" = - ]; then
+              notes+=("\`$dir/$rel\` ($side): revision \`${rev[$k]}\` is not a tag, branch or commit, not rendered")
+              continue
+            fi
+            mkdir -p "$work/fleet/$side/${sha[$k]}/hubs"
+            git cat-file blob "${blob[$k]}" > "$work/fleet/$side/${sha[$k]}/$rel"
+          done
+
+          # One worktree per commit, shared by both sides so chart dependencies are fetched once.
+          for group in "$work"/fleet/*/*; do
+            [ -d "$group" ] || continue
+            side=$(basename "$(dirname "$group")") c=$(basename "$group")
+            [ -d "$work/tree/$c" ] || git worktree add -q --detach "$work/tree/$c" "$c"
+            echo "::group::Render $side at $c"
+            rc=0
+            "$bin" --repo-root "$work/tree/$c" --fixtures-dir "$group" --extra-values "$baseline" \
+              --only RENDER000 --render-dir "$work/$side" || rc=$?
+            echo "::endgroup::"
+            # Exit 1 is a failed render, written into the render as # RENDER000 comments.
+            if [ "$rc" -gt 1 ]; then
+              notes+=("$side at \`${c:0:7}\`: the validator cannot load this tree (exit $rc), see the job log")
+            fi
+          done
+
+          cd "$work"
+          # gd <before> <after>: the patch, headers naming <fleet file>/<element>.yaml
+          gd() {
+            { git -c core.quotePath=false diff --no-index --no-renames --no-color --no-ext-diff --no-prefix "$@" || [ $? = 1 ]; } |
+              sed -E -e '/^diff --git /s# (before|after)/# #g' -e 's#^(---|\+\+\+) (before|after)/#\1 #'
+          }
+          gd before after > render-diff.patch
+          # label <side> <path under $dir>: `revision` @ commit, or absent
+          label() {
+            local k=$1/$2
+            if [ -z "${blob[$k]:-}" ]; then echo absent; return; fi
+            echo "\`${rev[$k]}\` @ ${sha[$k]:0:7}"
+          }
+          {
+            echo "### Rendered Policies"
+            echo
+            echo "Each fleet file in \`$dir\` rendered at its \`revision\`, before and after this PR. Only changed elements are shown. [Full patch]($RUN_URL#artifacts)"
+            echo
+            if [ ${#notes[@]} -gt 0 ]; then printf -- '- %s\n' "${notes[@]}"; echo; fi
+          } > body.md
+          changed=false budget=60000 left=()
+          [ ${#notes[@]} -eq 0 ] || changed=true
+          # One <details> per changed fleet file; GitHub caps a comment at 65536 characters.
+          for c in $(find before after -name '*.yaml' -printf '%h\n' | cut -d/ -f2- | sort -u); do
+            mkdir -p "before/$c" "after/$c" # git diff --no-index fails on a missing path
+            gd "before/$c" "after/$c" > cluster.patch
+            [ -s cluster.patch ] || continue
+            changed=true
+            hdr="<details><summary><code>$dir/$c.yaml</code>: $(label before "$c.yaml") → $(label after "$c.yaml"), $(grep -c '^diff --git' cluster.patch) element(s)</summary>"
+            room=$(( budget - $(wc -c < body.md) - ${#hdr} - 100 ))
+            if [ "$room" -lt 2000 ]; then left+=("$c"); continue; fi
+            {
+              printf '%s\n\n````diff\n' "$hdr"
+              if [ "$(wc -c < cluster.patch)" -le "$room" ]; then cat cluster.patch
+              else head -c "$room" cluster.patch | sed '$d'; echo '... cut, see the full patch'; fi
+              printf '````\n\n</details>\n\n'
+            } >> body.md
+          done
+          [ ${#left[@]} -eq 0 ] || echo "Left out for length: ${left[*]}. See the full patch." >> body.md
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          if $changed; then
+            cat body.md >> "$GITHUB_STEP_SUMMARY"
+            eof=EOF_$(openssl rand -hex 16) # the body holds PR content: no guessable delimiter
+            { echo "body<<$eof"; cat body.md; echo "$eof"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "No fleet file's rendered Policies change." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          path: ${{ runner.temp }}/render-diff/render-diff.patch
+          archive: false
+
+  comment:
+    name: Comment
+    needs: render
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: render-diff
+          message: ${{ needs.render.outputs.body }}
+          # No change, no comment. A no-op when there is none.
+          delete: ${{ needs.render.outputs.changed != 'true' }}

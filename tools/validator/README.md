@@ -81,6 +81,9 @@ applied to `lifecycle/`, which ships its own `selector`.
 ./bin/policystack-validator --extra-values tools/validator/testdata/baseline.yaml --repo-root .
 ```
 
+`--render-dir <dir>` also writes each render to `<dir>/<fleet file path without .yaml>/<chart>.yaml`,
+a failed one as `# RENDER000:` comments. CI diffs two of these trees on PRs (`render-diff.yml`).
+
 ## Required tools
 
 - `helm` (required)

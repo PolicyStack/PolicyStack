@@ -3,6 +3,7 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -43,6 +44,9 @@ type Options struct {
 	IncludeSample bool
 	Jobs          int
 	Logger        *slog.Logger
+	// RenderDir, when set, receives each render at <RenderDir>/<fleet file path under
+	// FixturesDir, without .yaml>/<chart>.yaml, for diffing two trees.
+	RenderDir string
 }
 
 // Result aggregates the run output.
@@ -106,6 +110,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 
 	res := Result{}
 	var mu sync.Mutex
+	var writeErrs []error
 	addFindings := func(fs []checks.Finding) {
 		if len(fs) == 0 {
 			return
@@ -157,6 +162,13 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		wg.Go(func() {
 			defer func() { <-sem }()
 			c, renderFinding := perCluster(ctx, opts, runner, p)
+			if opts.RenderDir != "" {
+				if err := writeRender(opts, p, c.Rendered, renderFinding); err != nil {
+					mu.Lock()
+					writeErrs = append(writeErrs, err)
+					mu.Unlock()
+				}
+			}
 			if renderFinding != nil && !skipped("RENDER000", opts) {
 				addFindings([]checks.Finding{*renderFinding})
 			}
@@ -194,6 +206,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		})
 	}
 	wg.Wait()
+	if err := errors.Join(writeErrs...); err != nil {
+		return Result{}, fmt.Errorf("write renders: %w", err)
+	}
 
 	// Cross-element POLICY002.
 	if !skipped("POLICY002", opts) {
@@ -291,6 +306,30 @@ func valueFiles(cascadeFiles []string, opts Options, p pair) []string {
 		return append(cascadeFiles, p.cl.SourceFile)
 	}
 	return append(cascadeFiles, opts.ExtraValues...)
+}
+
+// writeRender writes p's render under opts.RenderDir, keyed by the fleet file's path under
+// FixturesDir because a hub and a spoke may share a name. A failed render is written as comments
+// with the tree's own paths removed, so one failure in two worktrees compares equal. An empty
+// render writes nothing.
+func writeRender(opts Options, p pair, out []byte, failed *checks.Finding) error {
+	fx, sep := filepath.Clean(opts.FixturesDir), string(filepath.Separator)
+	if failed != nil {
+		msg := strings.NewReplacer(fx+sep, "", filepath.Clean(opts.RepoRoot)+sep, "").Replace(failed.Message)
+		out = []byte("# RENDER000: " + strings.ReplaceAll(msg, "\n", "\n# ") + "\n")
+	}
+	if len(bytes.TrimSpace(out)) == 0 {
+		return nil
+	}
+	rel, err := filepath.Rel(fx, p.cl.SourceFile)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(opts.RenderDir, strings.TrimSuffix(rel, ".yaml"), p.el.ChartName+".yaml")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, out, 0o644)
 }
 
 // renderErrorFinding turns a TemplateResult error into a RENDER000 finding.

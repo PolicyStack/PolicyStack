@@ -37,6 +37,8 @@ A cluster pinned to a branch picks up every commit pushed to it. A cluster pinne
  valueFiles:
 ```
 
+The PR's [Render Diff](workflows.md#render-diff) comment shows what the new revision changes in the cluster's Policies.
+
 Roll back with `git revert` of that commit, or with a pull request that sets the previous revision. Both go through the same review as any change to `fleet/` ([Protection](applicationset.md#protection)).
 
 Every Application for the cluster switches to the new revision. Application names do not include the revision, so Argo CD updates the same Policies in place. The [Placement](policies.md#placement) selector matches only the cluster's `name` label, so the policies stay bound to the cluster while Argo CD syncs.

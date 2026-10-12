@@ -60,6 +60,8 @@ Pin tags, commit SHAs, protected branches, or a branch you keep until its pin mo
 
 The generator reads `HEAD` rather than `main`, so it follows a rename of the default branch.
 
+The [Render Diff](workflows.md#render-diff) comment on a PR shows each cluster's Policies at its `revision` before and after the merge.
+
 ### The hub
 
 The hub's own ManagedCluster carries ACM's `local-cluster` label. Its fleet file is `fleet/hubs/<hubName>.yaml`, where `hubName` is an appset chart value set once per hub, `acm-dc1` by default ([The appset chart](#the-appset-chart)).

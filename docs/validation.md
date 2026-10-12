@@ -70,6 +70,7 @@ warning POLICY021 [metallb] converters/metallb-cr.yaml is not referenced by any 
 | `--github` | Write GitHub Actions annotations instead of terminal output |
 | `--fixtures-dir` | Fleet files to render instead of the examples, hubs in its `hubs/`. CI passes `fleet` when the repo has fleet files |
 | `--lifecycle-dir` | The lifecycle chart, default `<repo>/lifecycle` |
+| `--render-dir` | Writes each render to `<dir>/<fleet file path without .yaml>/<element>.yaml`, a failed one as `# RENDER000:` lines, nothing for an empty one. [Render Diff](workflows.md#render-diff) diffs two of these |
 
 `--help` lists the rest.
 

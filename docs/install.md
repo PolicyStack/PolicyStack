@@ -38,30 +38,34 @@ oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster
 
 ## Install the ApplicationSet
 
-Set `gitRepo` and `hubName` in [`appset/values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/values.yaml). `gitRepo` is the repository Argo CD reads ([The appset chart](applicationset.md#the-appset-chart)). `hubName` names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, and its Applications, because every hub's own ManagedCluster is named `local-cluster` by default ([The hub](applicationset.md#the-hub)). Then install the chart, passing the root `values.yaml` for `policyNamespace`:
-
-```sh
-helm install appset ./appset -f ./appset/values.yaml -f values.yaml
-```
-
-Every additional hub that reads the same repo, including a passive or disaster recovery hub, needs its own `hubName`. Otherwise it applies the first hub's configuration to itself. Pass it on every `helm install` and `helm upgrade` of that hub, since `helm upgrade` drops `--set` values it is not given again:
+Set `gitRepo` in [`appset/values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/appset/values.yaml), the repository Argo CD reads ([The appset chart](applicationset.md#the-appset-chart)). Then install the chart, passing the root `values.yaml` for `policyNamespace` and this hub's `hubName`. `hubName` names the hub's fleet file, `fleet/hubs/<hubName>.yaml`, and its Applications, because every hub's own ManagedCluster is named `local-cluster` by default ([The hub](applicationset.md#the-hub)):
 
 ```sh
 helm install appset ./appset -f ./appset/values.yaml -f values.yaml --set hubName=<name>
 helm upgrade appset ./appset -f ./appset/values.yaml -f values.yaml --set hubName=<name>
 ```
 
+`hubName` has no default, and the chart fails without it. Every hub that reads the same repo, including a passive or disaster recovery hub, needs its own. Pass it on every `helm upgrade` too, since `helm upgrade` drops `--set` values it is not given again.
+
+On an upgrade from a chart that set `preserveResourcesOnDeletion: true`, existing Applications gain the resources finalizer on their next reconcile, and an Application left OutOfSync on a disabled element prunes on its next automated sync.
+
 The chart creates:
 
 | Object | Name | Namespace | On `helm uninstall` |
 |---|---|---|---|
-| ApplicationSet | `policystack` | `openshift-gitops` | Deleted |
-| ApplicationSet | `policystack-lifecycle` | `openshift-gitops` | Deleted |
+| ApplicationSet | `policystack` | `openshift-gitops` | Kept |
+| ApplicationSet | `policystack-lifecycle` | `openshift-gitops` | Kept |
 | Namespace | `policy` | cluster-scoped | Kept |
 | ManagedClusterSetBinding | `global` | `policy` | Kept |
 
-The namespace and the binding carry `helm.sh/resource-policy: keep`. The binding lets the element Placements in `policy` select clusters ([Placement](policies.md#placement)). Helm refuses to install over an existing object the release does not own. If a hand-made `global` ManagedClusterSetBinding already exists in `policy`, add `--take-ownership` (Helm 3.17 or later) to adopt it. Deleting it instead unbinds the Placements that use it until Helm recreates it.
+Every object carries `helm.sh/resource-policy: keep`. The binding lets the element Placements in `policy` select clusters ([Placement](policies.md#placement)). Helm refuses to install over an existing object the release does not own. If a hand-made `global` ManagedClusterSetBinding already exists in `policy`, add `--take-ownership` (Helm 3.17 or later) to adopt it. Deleting it instead unbinds the Placements that use it until Helm recreates it.
 
-`helm uninstall appset` deletes every Application with the ApplicationSets. The element Policies stay and keep enforcing ([Removing an element](rollout.md#removing-an-element)). The lifecycle Policies are deleted, so every cluster this hub built keeps running, unmanaged ([Abandon](lifecycle.md#abandon)).
+`helm uninstall appset` therefore leaves every Application and Policy running. A later `helm install` under the release name `appset` adopts the objects. To tear PolicyStack down, delete the ApplicationSets:
+
+```sh
+oc delete applicationset policystack policystack-lifecycle -n openshift-gitops
+```
+
+This deletes every Application and every Policy they rendered ([Removing an element](rollout.md#removing-an-element)), and every cluster this hub built keeps running, unmanaged ([Abandon](lifecycle.md#abandon)). Add `--cascade=orphan` to delete only the ApplicationSets and keep the Applications and Policies.
 
 Next: add a fleet file for the hub and each managed cluster ([Onboarding a cluster](rollout.md#onboarding-a-cluster)).

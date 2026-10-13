@@ -3,9 +3,13 @@ kind: ApplicationSet
 metadata:
   name: policystack
   namespace: openshift-gitops
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
+  # Deleting an Application deletes its Policies, so disabling or removing an element or a fleet file
+  # cleans up the hub. The destination is always the hub, and a generator error deletes nothing.
   syncPolicy:
-    preserveResourcesOnDeletion: true
+    preserveResourcesOnDeletion: false
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
   generators:
@@ -47,6 +51,7 @@ spec:
         automated:
           prune: true
           selfHeal: true
+          allowEmpty: true
   templatePatch: |
     {{- $name := .name }}
     {{- if index .metadata.labels "local-cluster" }}
@@ -82,6 +87,8 @@ kind: ApplicationSet
 metadata:
   name: policystack-lifecycle
   namespace: openshift-gitops
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   # Deleting a fleet file, or its hub key, deletes the Application and with it the Policies. No
   # lifecycle policy sets pruneObjectBehavior, so the cluster is abandoned, never destroyed.

@@ -3,6 +3,8 @@ kind: ApplicationSet
 metadata:
   name: policystack-lifecycle
   namespace: openshift-gitops
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   # Deleting a fleet file, or its hub key, deletes the Application and with it the Policies. No
   # lifecycle policy sets pruneObjectBehavior, so the cluster is abandoned, never destroyed.
@@ -25,7 +27,7 @@ spec:
           - key: hub
             operator: In
             values:
-              - {{ .Values.hubName | quote }}
+              - {{ required "hubName must be set (--set hubName=<name>)" .Values.hubName | quote }}
   template:
     metadata:
       name: 'lifecycle-{{ "{{" }} trimSuffix ".yaml" .path.filename {{ "}}" }}'

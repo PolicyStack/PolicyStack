@@ -1,11 +1,16 @@
+{{- $hub := required "hubName must be set (--set hubName=<name>)" .Values.hubName -}}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: policystack
   namespace: openshift-gitops
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
+  # Deleting an Application deletes its Policies, so disabling or removing an element or a fleet file
+  # cleans up the hub. The destination is always the hub, and a generator error deletes nothing.
   syncPolicy:
-    preserveResourcesOnDeletion: true
+    preserveResourcesOnDeletion: false
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
   generators:
@@ -23,7 +28,7 @@ spec:
                     revision: HEAD
                     pathParamPrefix: fleet
                     files:
-                    - path: 'fleet/{{ "{{" }}if index .metadata.labels "local-cluster"{{ "}}" }}hubs/{{ .Values.hubName }}{{ "{{" }}else{{ "}}" }}{{ "{{" }}.name{{ "}}" }}{{ "{{" }}end{{ "}}" }}.yaml'
+                    - path: 'fleet/{{ "{{" }}if index .metadata.labels "local-cluster"{{ "}}" }}hubs/{{ $hub }}{{ "{{" }}else{{ "}}" }}{{ "{{" }}.name{{ "}}" }}{{ "{{" }}end{{ "}}" }}.yaml'
           - git:
               repoURL: '{{ .Values.gitRepo }}'
               revision: '{{ "{{" }}.revision{{ "}}" }}'
@@ -47,10 +52,11 @@ spec:
         automated:
           prune: true
           selfHeal: true
+          allowEmpty: true
   templatePatch: |
     {{ "{{" }}- $name := .name {{ "}}" }}
     {{ "{{" }}- if index .metadata.labels "local-cluster" {{ "}}" }}
-      {{ "{{" }}- $name = {{ .Values.hubName | quote }} {{ "}}" }}
+      {{ "{{" }}- $name = {{ $hub | quote }} {{ "}}" }}
     metadata:
       name: '{{ "{{" }}.path.basenameNormalized{{ "}}" }}-{{ "{{" }} $name {{ "}}" }}'
     {{ "{{" }}- end {{ "}}" }}

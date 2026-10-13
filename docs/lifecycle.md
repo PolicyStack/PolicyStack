@@ -184,7 +184,7 @@ The Application replaces `present-lifecycle-<cluster>` with `absent-lifecycle-<c
 
 If the hypershift-addon restarts between detach and destroy, it can re-create the ManagedCluster. `absent-detach` deletes it again.
 
-Detaching deletes the cluster's Argo CD secret, so the Day-2 ApplicationSet deletes its `<element>-<cluster>` Applications and their Policies stay in `policy`, selecting nothing ([Removing an element](rollout.md#removing-an-element)). ACM deletes the namespaces `<cluster>` and `klusterlet-<cluster>`.
+Detaching deletes the cluster's Argo CD secret, so the Day-2 ApplicationSet deletes its `<element>-<cluster>` Applications and their Policies ([Removing an element](rollout.md#removing-an-element)). The governance add-on is gone by then, so nothing is pruned on the cluster. ACM deletes the namespaces `<cluster>` and `klusterlet-<cluster>`.
 
 Wait until the Policy is Compliant, then delete the fleet file and `values/clusters/<cluster>.yaml`:
 
@@ -196,7 +196,7 @@ Deleting the file earlier abandons the cluster at whichever step it reached ([Ab
 
 ## Abandon
 
-Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>`. The lifecycle ApplicationSet sets `preserveResourcesOnDeletion: false`, so Argo CD deletes the Policies with it. The HostedCluster, NodePools, secrets and manifests stay and keep running, unmanaged. `helm uninstall appset` does the same for every cluster the hub built ([Install the ApplicationSet](install.md#install-the-applicationset)).
+Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>`. The lifecycle ApplicationSet sets `preserveResourcesOnDeletion: false`, so Argo CD deletes the Policies with it. The HostedCluster, NodePools, secrets and manifests stay and keep running, unmanaged. Deleting the ApplicationSets does the same for every cluster the hub built. `helm uninstall appset` keeps them ([Install the ApplicationSet](install.md#install-the-applicationset)).
 
 To re-adopt, restore the file or the key with the same `install` values. The guard passes, since HyperShift created the ManagedCluster, the existing etcd key is kept, and `musthave` reconciles the existing objects.
 

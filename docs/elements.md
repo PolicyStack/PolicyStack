@@ -160,9 +160,10 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
   reports collisions as POLICY003.
 - **Start in `inform`.** Ship a new policy with `remediationAction: inform`, roll it out to a
   nonprod revision, read its compliance, then switch to `enforce`.
-- **Set `pruneObjectBehavior` before the first enforce.** It decides whether disabling a policy
-  deletes what it created, and a later change must sync before the element is disabled
-  ([Disabling an element](rollout.md#disabling-an-element)).
+- **Set `pruneObjectBehavior` only on templates without dependencies, in its own commit.** It
+  decides whether removing a policy deletes what it created, and it must reach the cluster before
+  the removal. The validator rejects it on a template with dependencies as POLICY033
+  ([What happens on the managed cluster](rollout.md#what-happens-on-the-managed-cluster)).
 - **Pin operator versions in layers, not in the element.** Ship `versions: []` and set it per
   environment or cluster where an unplanned upgrade would hurt
   ([Operator upgrades](rollout.md#operator-upgrades)).

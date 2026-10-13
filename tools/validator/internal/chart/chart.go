@@ -132,6 +132,8 @@ type Policy struct {
 	Severity          string     `yaml:"severity"`
 	RemediationAction string     `yaml:"remediationAction"`
 	Dependencies      []DepEntry `yaml:"dependencies"`
+	// OrderManifests overrides the component's orderManifests for this policy when set.
+	OrderManifests *bool `yaml:"orderManifests"`
 }
 
 // DepEntry is one entry of policies[].dependencies or *.extraDependencies.
@@ -161,6 +163,8 @@ type SubPolicy struct {
 	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
 	IgnorePending     bool            `yaml:"ignorePending"`
 	RawTemplate       bool            `yaml:"rawTemplate"`
+	// PruneObjectBehavior is passed through verbatim; ACM defaults it to None.
+	PruneObjectBehavior string `yaml:"pruneObjectBehavior"`
 }
 
 // OperatorPolicy mirrors operatorPolicies entries. Name is the map key.

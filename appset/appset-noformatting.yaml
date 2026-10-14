@@ -72,6 +72,9 @@ spec:
           {{- end }}
           - ../../values/clusters/{{ $name }}.yaml
           valuesObject:
+            {{- range $k := list "version" "channel" }}{{ with dig $k "" $ }}
+            {{ $k }}: {{ . | quote }}
+            {{- end }}{{ end }}
             selectedName: {{ $name }}
             selectedId: {{ .metadata.labels.clusterID }}
             selector:
@@ -144,4 +147,7 @@ spec:
           valuesObject:
             hub: {{ .hub | quote }}
             state: {{ dig "state" "present" . | quote }}
+            {{- range $k := list "version" "channel" }}{{ with dig $k "" $ }}
+            {{ $k }}: {{ . | quote }}
+            {{- end }}{{ end }}
             install: {{ dig "install" dict . | toJson }}

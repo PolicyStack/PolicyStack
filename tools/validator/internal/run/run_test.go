@@ -16,7 +16,7 @@ import (
 
 func TestBuildPairs(t *testing.T) {
 	a, b := &chart.Element{ChartName: "a"}, &chart.Element{ChartName: "b"}
-	lc := &chart.Element{ChartName: "lifecycle"}
+	lc := []*chart.Element{{ChartName: "lifecycle"}}
 	spoke := &fixtures.Cluster{Name: "spoke"}
 	built := &fixtures.Cluster{Name: "built", Hub: "acm-dc1"}
 	retired := &fixtures.Cluster{Name: "retired", Hub: "acm-dc1", State: "absent"}
@@ -26,7 +26,7 @@ func TestBuildPairs(t *testing.T) {
 	tests := []struct {
 		name      string
 		elements  []*chart.Element
-		lifecycle *chart.Element
+		lifecycle []*chart.Element
 		clusters  []*fixtures.Cluster
 		want      []string // "<element>/<cluster>", "+fleet" when the fleet file is appended
 	}{
@@ -103,6 +103,66 @@ func TestValueFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := valueFiles(slices.Clone(cascadeFiles), opts, tt.p); !slices.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSelectEngine(t *testing.T) {
+	hcp, hive := &chart.Element{StackKey: "hypershift"}, &chart.Element{StackKey: "hive"}
+	engines := []*chart.Element{hcp, hive}
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	defaults := write("values.yaml", "install:\n  engine: hypershift\n")
+	aws := write("aws.yaml", "install:\n  engine: hive\n")
+	other := write("other.yaml", "install:\n  platform: KubeVirt\nstack: {}\n")
+	unknown := write("unknown.yaml", "install:\n  engine: siteconfig\n")
+	tests := []struct {
+		name  string
+		files []string
+		want  *chart.Element
+	}{
+		{"chart default", []string{defaults, other}, hcp},
+		{"layer selects", []string{defaults, aws, other}, hive},
+		{"later layer wins", []string{defaults, aws, write("back.yaml", "install:\n  engine: hypershift\n")}, hcp},
+		{"missing file skipped", []string{defaults, aws, filepath.Join(dir, "absent.yaml")}, hive},
+		{"unknown engine falls back to the first", []string{defaults, unknown}, hcp},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := selectEngine(engines, tt.files); got != tt.want {
+				t.Errorf("got %q, want %q", got.StackKey, tt.want.StackKey)
+			}
+		})
+	}
+}
+
+func TestSetString(t *testing.T) {
+	el := &chart.Element{ChartName: "openshift-upgrade"}
+	tests := []struct {
+		name string
+		p    pair
+		want []string
+	}{
+		{"neither set", pair{el: el, cl: &fixtures.Cluster{}}, nil},
+		{"version only", pair{el: el, cl: &fixtures.Cluster{Version: "4.20.12"}}, []string{"version=4.20.12"}},
+		{"channel only", pair{el: el, cl: &fixtures.Cluster{Channel: "stable-4.20"}}, []string{"channel=stable-4.20"}},
+		{"both", pair{el: el, cl: &fixtures.Cluster{Version: "4.20.12", Channel: "stable-4.20"}}, []string{"version=4.20.12", "channel=stable-4.20"}},
+		{
+			name: "lifecycle reads the fleet file instead",
+			p:    pair{el: &chart.Element{ChartName: "lifecycle"}, cl: &fixtures.Cluster{Version: "4.20.12"}, fleetValues: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := setString(tt.p); !slices.Equal(got, tt.want) {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})

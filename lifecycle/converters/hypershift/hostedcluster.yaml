@@ -1,0 +1,74 @@
+{{- /*
+musthave only: fields the operator fills in (networking, etcd, and on KubeVirt dns, platform and
+secretEncryption) are left out, so the policy never fights it.
+
+A version bump reaches the HostedCluster at once. With channel set, it waits until HyperShift lists
+the version in availableUpdates, so a version off the channel's graph is held instead of forced.
+Each existing NodePool keeps its current image until the control plane reports that version
+Completed, since HyperShift does not hold a NodePool back itself. A new NodePool starts on the
+target image. HostedCluster and NodePool release are always managed here.
+*/ -}}
+{{- $i := .Values.install }}
+{{- $c := include "lifecycle.cluster" . }}
+{{- $p := required "install.platform is required" $i.platform }}
+{{- $image := include "lifecycle.releaseImage" . }}
+{{- $v := .Values.version }}
+{{- $services := list }}
+{{- range $name, $strategy := $i.services }}
+{{- if $strategy }}
+{{- $services = append $services (dict "service" $name "servicePublishingStrategy" $strategy) }}
+{{- end }}
+{{- end }}
+{{- $spec := dict "pullSecret" (dict "name" (printf "%s-pull-secret" $c)) "sshKey" (dict "name" (printf "%s-ssh-key" $c)) "platform" (dict "type" $p) "services" $services }}
+{{- if eq $p "Agent" }}
+{{- $_ := set $spec.platform "agent" (dict "agentNamespace" (required "install.agentNamespace is required for Agent" $i.agentNamespace)) }}
+{{- end }}
+{{- if eq $p "KubeVirt" }}
+{{- if $i.baseDomain }}
+{{- $_ := set $spec "dns" (dict "baseDomain" $i.baseDomain) }}
+{{- end }}
+{{- else }}
+{{- $_ := set $spec "dns" (dict "baseDomain" (required "install.baseDomain is required for Agent and None" $i.baseDomain)) }}
+{{- $_ = set $spec "secretEncryption" (dict "type" "aescbc" "aescbc" (dict "activeKey" (dict "name" (printf "%s-etcd-encryption-key" $c)))) }}
+{{- end }}
+{{- $hostedCluster := mergeOverwrite (dict "metadata" (dict "name" $c "namespace" $i.namespace) "spec" $spec) (deepCopy $i.hostedCluster) }}
+{{- $_ := unset $hostedCluster.spec "release" }}
+{{- with .Values.channel }}
+{{- $_ := set $hostedCluster.spec "channel" . }}
+{{- end }}
+{{ "{{-" }} $hc := lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }} {{ "}}" }}
+{{ "{{-" }} $upgraded := false {{ "}}" }}
+{{ "{{-" }} range (dig "status" "version" "history" list $hc) {{ "}}" }}
+{{ "{{-" }} if and (eq .version {{ $v | quote }}) (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $upgraded = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- if .Values.channel }}
+{{ "{{-" }} $known := or (not $hc) (eq (dig "status" "version" "desired" "version" "" $hc) {{ $v | quote }}) {{ "}}" }}
+{{ "{{-" }} range (dig "status" "version" "availableUpdates" list $hc) {{ "}}" }}
+{{ "{{-" }} if eq .version {{ $v | quote }} {{ "}}" }}{{ "{{-" }} $known = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hypershift.openshift.io/v1beta1
+    kind: HostedCluster
+    {{- $hostedCluster | toYaml | nindent 4 }}
+      {{- /* spec is the last key toYaml writes, so release lands in it */}}
+      release:
+        image: '{{ if .Values.channel }}{{ "{{" }} if $known {{ "}}" }}{{ $image }}{{ "{{" }} else {{ "}}" }}{{ "{{" }} dig "spec" "release" "image" {{ $image | quote }} $hc {{ "}}" }}{{ "{{" }} end {{ "}}" }}{{ else }}{{ $image }}{{ end }}'
+{{- range $pool, $override := $i.nodePools }}
+{{- $np := dict "clusterName" $c "platform" (dict "type" $p) "management" (dict "upgradeType" (ternary "Replace" "InPlace" (eq $p "KubeVirt"))) }}
+{{- if eq $p "KubeVirt" }}
+{{- $_ := set $np.platform "kubevirt" dict }}
+{{- end }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hypershift.openshift.io/v1beta1
+    kind: NodePool
+    metadata:
+      name: {{ $c }}-{{ $pool }}
+      namespace: {{ $i.namespace }}
+    spec: {{- mergeOverwrite $np (omit (deepCopy $override) "release") | toYaml | nindent 6 }}
+{{ "{{-" }} $np := lookup "hypershift.openshift.io/v1beta1" "NodePool" {{ $i.namespace | quote }} "{{ $c }}-{{ $pool }}" {{ "}}" }}
+      release:
+        image: '{{ "{{" }} if or (not $np) $upgraded {{ "}}" }}{{ $image }}{{ "{{" }} else {{ "}}" }}{{ "{{" }} dig "spec" "release" "image" {{ $image | quote }} $np {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
+{{- end }}

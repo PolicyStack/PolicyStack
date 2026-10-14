@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
@@ -87,20 +88,23 @@ func indexElement(el *chart.Element) *elementIndex {
 }
 
 func (c *DependencyCheck) Run(ctx Context) []Finding {
+	// byChart resolves element: references. Each lifecycle component is an Element of its own and
+	// is checked against itself.
 	byChart := map[string]*elementIndex{}
-	var names []string
+	var ixs []*elementIndex
 	for _, el := range ctx.AllElements {
 		if el == nil || el.Values == nil {
 			continue
 		}
-		byChart[el.ChartName] = indexElement(el)
-		names = append(names, el.ChartName)
+		ix := indexElement(el)
+		byChart[el.ChartName] = ix
+		ixs = append(ixs, ix)
 	}
-	sort.Strings(names)
+	slices.SortStableFunc(ixs, func(a, b *elementIndex) int { return strings.Compare(a.el.ChartName, b.el.ChartName) })
 
 	var out []Finding
-	for _, n := range names {
-		out = append(out, c.checkElement(byChart[n], byChart)...)
+	for _, ix := range ixs {
+		out = append(out, c.checkElement(ix, byChart)...)
 	}
 	return out
 }

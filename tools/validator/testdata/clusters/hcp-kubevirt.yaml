@@ -1,7 +1,6 @@
 revision: main
 hub: acm-dc1
+version: 4.20.8
 valueFiles:
   - environments/nonprod.yaml
   - platforms/kubevirt.yaml
-install:
-  version: 4.20.8

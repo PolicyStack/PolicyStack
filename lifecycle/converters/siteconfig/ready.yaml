@@ -1,0 +1,18 @@
+{{- /*
+Compliant once the ClusterInstance reports Provisioned. While not, a mustnothave on the existing
+ClusterInstance forces NonCompliant.
+*/ -}}
+{{- $c := include "lifecycle.cluster" . }}
+{{ "{{-" }} $provisioned := false {{ "}}" }}
+{{ "{{-" }} range (dig "status" "conditions" list (lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }})) {{ "}}" }}
+{{ "{{-" }} if and (eq .type "Provisioned") (eq .status "True") {{ "}}" }}{{ "{{-" }} $provisioned = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if not $provisioned {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: siteconfig.open-cluster-management.io/v1alpha1
+    kind: ClusterInstance
+    metadata:
+      name: {{ $c }}
+      namespace: {{ $c }}
+{{ "{{-" }} end {{ "}}" }}

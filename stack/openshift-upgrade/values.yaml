@@ -2,22 +2,18 @@ stack:
   # @description: Drive and observe OpenShift cluster version upgrades
   openshiftUpgrade:
     # @desc: Master control to enable/disable all policies in this element
-    enabled: false
+    enabled: true
 
-    # @description: Both actions are high-impact and switched independently. An upgrade starts only
-    # @description: when a target version is set and `upgrade` is on.
+    # @description: The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each
+    # @description: policy renders only when its input is set; turning a toggle off pauses it.
     toggles:
-      # @desc: Pin the ClusterVersion channel (requires config.channel)
-      channel: false
-      # @desc: Drive the cluster to config.targetVersion, and report on progress
-      upgrade: false
+      # @desc: Pin the ClusterVersion channel to the fleet file's channel
+      channel: true
+      # @desc: Drive the cluster to the fleet file's version, and report on progress
+      upgrade: true
 
-    # @description: Upgrade target
+    # @description: Upgrade graph
     config:
-      # @desc: Upgrade channel, e.g. stable-4.20
-      channel: ""
-      # @desc: Exact version to upgrade to, e.g. 4.20.29. Required when the upgrade toggle is on.
-      targetVersion: ""
       # @desc: Upgrade graph service
       upstream: https://api.openshift.com/api/upgrades_info/v1/graph
 

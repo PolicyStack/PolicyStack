@@ -1,7 +1,6 @@
 {{- /*
 Runs once the HostedCluster is gone. Leaves the shared namespace and the credential alone.
 */ -}}
-{{- $i := .Values.install }}
 {{- $c := include "lifecycle.cluster" . }}
 {{- range list "pull-secret" "ssh-key" "etcd-encryption-key" }}
 - complianceType: mustnothave
@@ -10,12 +9,6 @@ Runs once the HostedCluster is gone. Leaves the shared namespace and the credent
     kind: Secret
     metadata:
       name: {{ $c }}-{{ . }}
-      namespace: {{ $i.namespace }}
+      namespace: {{ $.Values.install.namespace }}
 {{- end }}
-{{- range $i.manifests }}
-- complianceType: mustnothave
-  objectDefinition:
-    apiVersion: {{ .apiVersion }}
-    kind: {{ .kind }}
-    metadata: {{- pick .metadata "name" "namespace" | toYaml | nindent 6 }}
-{{- end }}
+{{- include "lifecycle.cleanupManifests" . }}

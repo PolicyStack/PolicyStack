@@ -1,5 +1,39 @@
 # Listed as platforms/aws.yaml in a fleet file's valueFiles.
 # Node elements create MachineSets by cloning the cluster's worker MachineSet.
+#
+# install is read only by lifecycle/, for a cluster a hub builds with Hive (docs/lifecycle.md). The
+# fleet file or values/clusters/<cluster>.yaml sets baseDomain and install.hive.platform.aws.region.
+install:
+  engine: hive
+  credential:
+    namespace: hive-credentials
+    name: aws
+  hive:
+    installConfig:
+      controlPlane:
+        name: master
+        architecture: amd64
+        replicas: 3
+        platform:
+          aws:
+            type: m6i.xlarge
+      compute:
+        - name: worker
+          architecture: amd64
+          replicas: 3
+          platform:
+            aws:
+              type: m6i.xlarge
+      networking:
+        networkType: OVNKubernetes
+        clusterNetwork:
+          - cidr: 10.128.0.0/14
+            hostPrefix: 23
+        machineNetwork:
+          - cidr: 10.0.0.0/16
+        serviceNetwork:
+          - 172.30.0.0/16
+
 stack:
   infraNodes:
     toggles:

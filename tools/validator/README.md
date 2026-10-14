@@ -33,18 +33,19 @@ In CI:
 | POLICY003  | error    | Two different elements render a policy-template with the same name. ACM requires template names to be unique across every Policy on a cluster, so `policies[].name: install` + `configPolicies[].name: ns-monitoring` in two elements is rejected on-cluster with "Template name must be unique". Covers toggled-off entries and the `-ns`/`-status` templates an operatorPolicy generates |
 | POLICY010  | error    | `policyRef` points to nonexistent or disabled parent policy |
 | POLICY011  | error    | dependency reference that can never be satisfied: unknown `dependencies`/`extraDependencies` target, unknown `element:`, `element:` on a template kind, `waitForOperator` naming no enabled operator, or a target policy policy-library never emits (no enabled sub-policy attached) |
-| POLICY020  | error    | `templateNames[].name` has no matching `converters/<name>.yaml` |
+| POLICY020  | error    | `templateNames[].name` has no matching `converters/<name>.yaml`; `<name>` may contain `/`, as in `hypershift/ready` |
 | POLICY021  | warning  | Converter file not referenced by any `templateNames[].name` |
 | POLICY030  | error/warning | Invalid enum: severity / remediationAction / complianceType / upgradeApproval (`None` or `Automatic`). In `operatorPolicies` entries also: `subscription.installPlanApproval` set, a `versions` entry or `subscription.startingCSV` that is not a valid CSV name (templated entries skipped, comma-separated `versions` entries split), and a `name:` key, which is ignored (warning) |
 | POLICY031  | error/warning | values keys policy-library never reads: `enable:` (element renders nothing) and `defaultPolicy:` (metadata silently dropped) are errors; `default.severity`/`.remediationAction`/`.disabled` are warnings. Also flags `rawTemplate: true` with more than one `templateNames` entry, and `operatorPolicies` as a list (policy-library 3.x needs a map) |
 | POLICY032  | error/warning | `stack.<el>.operatorPolicies` in a values layer: a key the element's `values.yaml` does not define, a list, or any POLICY030 operator problem. Reported once per layer file |
 | POLICY033  | error/warning | `configPolicies[].pruneObjectBehavior` other than `None`: an invalid value, an effective `remediationAction` other than `enforce` (a policy-level value overrides the template's), or any dependency (`waitForOperator`, `extraDependencies`, parent `dependencies`, `orderManifests` unless first template, `orderPolicies` unless first Policy), since ACM deletes the template whenever the dependency is unmet. `DeleteAll` is a warning |
+| POLICY034  | error    | Top-level `version` or `channel` in a values layer: only the fleet file sets them. Reported once per layer file |
 | POLICY040  | error    | `policySets[].policies[]` references a name not in `policies[]` |
-| POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; empty `hub`, `hub` with no `hubs/<hub>.yaml`, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
+| POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state`, `version`, `channel` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; `version` that is not `x.y.z`, `install.version`; empty `hub`, `version` or `channel`, `hub` with no `hubs/<hub>.yaml`, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY080  | error    | `kubeconform` schema check on rendered manifests |
-| POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:` |
+| POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key. Every other check then runs on each engine's component, and each fixture renders the one its `install.engine` selects |
 | RENDER000  | error    | `helm template` failed |
 
 <!-- --8<-- [end:rules] -->
@@ -58,11 +59,15 @@ drive the cascade in list order (matches `appset.yaml`).
 
 | Fixture | Covers |
 |---|---|
-| `prod-east-1`, `nonprod-west-1` | Import-only spokes |
+| `prod-east-1`, `nonprod-west-1` | Import-only spokes: a `channel` pin, and a `version` and `channel` upgrade |
 | `hubs/acm-dc1` | The hub the `hcp-*` fixtures name |
 | `hcp-kubevirt` | KubeVirt hosted cluster, defaults from `values/platforms/kubevirt.yaml` |
-| `hcp-agent` | Agent hosted cluster with two NodePools and `values/clusters/hcp-agent.yaml` |
+| `hcp-agent` | Agent hosted cluster with two NodePools, `channel` and `values/clusters/hcp-agent.yaml` |
 | `hcp-retired` | `state: absent`, the destroy chain |
+| `hive-aws` | Hive cluster on AWS, defaults from `values/platforms/aws.yaml` |
+| `hive-retired` | Hive `state: absent` |
+| `sno-edge` | SiteConfig single-node cluster, defaults from `values/platforms/baremetal.yaml` |
+| `sno-retired` | SiteConfig `state: absent` |
 
 Override with `--fixtures-dir`, for example `--fixtures-dir fleet` to check a
 real fleet. Other files are ignored, `.yml` included.

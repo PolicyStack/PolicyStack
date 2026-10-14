@@ -1,0 +1,13 @@
+revision: main
+hub: acm-dc1
+version: 4.20.8
+channel: stable-4.20
+valueFiles:
+  - environments/nonprod.yaml
+  - platforms/aws.yaml
+install:
+  baseDomain: aws.example.com
+  hive:
+    platform:
+      aws:
+        region: us-east-2

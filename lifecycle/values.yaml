@@ -1,29 +1,37 @@
-# Rendered once per fleet file whose hub is this hub. hub, state and install come from the fleet
-# file; any values cascade layer can set install defaults. docs/lifecycle.md documents every key.
+# Rendered once per fleet file whose hub is this hub. hub, state, version, channel and install come
+# from the fleet file; any values cascade layer can set install defaults. docs/lifecycle.md
+# documents every key.
 
 # hubName of the hub that builds the cluster
 hub: ""
 # present builds and reconciles the cluster, absent destroys it
 state: present
+# OpenShift release, x.y.z. Bumping it upgrades the cluster (docs/upgrades.md).
+version: ""
+# Upgrade channel, e.g. stable-4.20. Optional.
+channel: ""
 
 install:
-  # KubeVirt, Agent or None. Fixed at create.
+  # What builds the cluster: hypershift, hive or siteconfig, the stack component below that
+  # renders. Fixed at create.
+  engine: hypershift
+  # hypershift: KubeVirt, Agent or None. Fixed at create.
   platform: ""
-  # OpenShift release, x.y.z. Bumping it upgrades the control plane, then every NodePool.
-  version: ""
   # The release image is <releaseRepository>:<version>-multi. Point it at a mirror when disconnected.
   releaseRepository: quay.io/openshift-release-dev/ocp-release
-  # Namespace of the HostedCluster, its NodePools and the secrets copied from the credential
+  # hypershift: namespace of the HostedCluster, its NodePools and the secrets copied from the
+  # credential. hive and siteconfig use namespace <cluster>.
   namespace: clusters
-  # ACM console credential (Infrastructure > Credentials) holding pullSecret and ssh-publickey
+  # ACM console credential (Infrastructure > Credentials) holding pullSecret and ssh-publickey, and
+  # for hive the cloud credentials
   credential:
     namespace: ""
     name: ""
-  # Required for Agent and None. KubeVirt detects it when empty.
+  # Required for hive, siteconfig, and Agent and None. KubeVirt detects it when empty.
   baseDomain: ""
-  # Namespace of the InfraEnv and its Agents. Required for Agent.
+  # hypershift: namespace of the InfraEnv and its Agents. Required for Agent.
   agentNamespace: ""
-  # servicePublishingStrategy per service. Fixed at create. null drops an entry.
+  # hypershift: servicePublishingStrategy per service. Fixed at create. null drops an entry.
   services:
     APIServer:
       type: LoadBalancer
@@ -33,12 +41,32 @@ install:
       type: Route
     Ignition:
       type: Route
-  # metadata and spec merged over the generated HostedCluster
+  # hypershift: metadata and spec merged over the generated HostedCluster
   hostedCluster: {}
-  # NodePool spec per pool, merged over the generated spec. The NodePool is named <cluster>-<pool>.
+  # hypershift: NodePool spec per pool, merged over the generated spec. The NodePool is named
+  # <cluster>-<pool>.
   nodePools: {}
-  # Extra hub objects, created before the HostedCluster and deleted after it is gone
+  # Extra hub objects, created before the cluster and deleted after it is gone
   manifests: []
+  # Only with engine hive, which reads:
+  #   platform:          exactly one of aws, gcp or azure. The install-config platform; region,
+  #                      baseDomainResourceGroupName and cloudName also go to the ClusterDeployment.
+  #   installConfig:     merged under the generated install-config: controlPlane, compute,
+  #                      networking. The chart sets apiVersion, metadata.name, baseDomain, platform.
+  #                      sshKey defaults to the credential's ssh-publickey.
+  #   clusterDeployment: metadata and spec merged over the generated ClusterDeployment
+  hive: {}
+  # Only with engine siteconfig, which reads:
+  #   templates:         ai (assisted installer, default) or ibi (image-based install, single node)
+  #   templateNamespace: namespace of the stock template ConfigMaps, open-cluster-management by
+  #                      default: the MultiClusterHub's namespace
+  #   bmcCredential:     namespace and name of a hub Secret with username and password, copied for
+  #                      every node's BMC
+  #   clusterInstance:   ClusterInstance spec merged under the generated one: clusterType,
+  #                      networkType, machineNetwork, apiVIPs and the rest
+  #   nodes:             map of hostName to its ClusterInstance node: bmcAddress, bootMACAddress,
+  #                      role, nodeNetwork and the rest
+  siteconfig: {}
 
 # The hub's own ManagedCluster, whatever localClusterName is
 selector:
@@ -47,8 +75,9 @@ selector:
       key: local-cluster
       operator: Exists
 
+# One component per engine; install.engine picks the one that renders.
 stack:
-  lifecycle:
+  hypershift:
     enabled: true
     # Each template waits for the one before it in the same Policy
     orderManifests: true
@@ -99,7 +128,7 @@ stack:
         severity: high
         rawTemplate: true
         templateNames:
-          - name: credentials
+          - name: hypershift/credentials
 
       - name: manifests
         enabled: true
@@ -119,7 +148,20 @@ stack:
         severity: high
         rawTemplate: true
         templateNames:
-          - name: hostedcluster
+          - name: hypershift/hostedcluster
+
+      # An enforced create is Compliant once the API accepts it, so gate on the rollout finishing
+      - name: ready
+        enabled: true
+        description: "Wait for the control plane and every NodePool to reach version"
+        policyRef: present
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: hypershift/ready
+        customMessage:
+          noncompliant: "Waiting for the control plane and every NodePool to reach version"
 
       - name: guard
         enabled: true
@@ -165,7 +207,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hostedcluster-ref
+          - name: hypershift/hostedcluster-ref
 
       - name: destroyed
         enabled: true
@@ -175,7 +217,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hostedcluster-ref
+          - name: hypershift/hostedcluster-ref
         customMessage:
           noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
 
@@ -187,4 +229,289 @@ stack:
         severity: medium
         rawTemplate: true
         templateNames:
-          - name: cleanup
+          - name: hypershift/cleanup
+
+  hive:
+    enabled: true
+    # Each template waits for the one before it in the same Policy
+    orderManifests: true
+    # Every release lands on the hub, so template names carry the cluster name
+    suffixTemplateNames: true
+
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # No Policy-level remediationAction: it would override the inform gates below.
+    # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
+    policies:
+      - name: present
+        enabled: true
+        description: "Install the cluster with Hive"
+        severity: high
+        disabled: false
+
+      - name: absent
+        enabled: true
+        description: "Detach, then deprovision the cluster"
+        severity: high
+        disabled: false
+
+    configPolicies:
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: present
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+
+      - name: credentials
+        enabled: true
+        description: "Namespace, pull secret, cloud credentials and install-config"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: hive/credentials
+
+      - name: manifests
+        enabled: true
+        description: "Extra hub objects from install.manifests"
+        policyRef: present
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: manifests
+
+      - name: cluster
+        enabled: true
+        description: "ClusterDeployment, ManagedCluster and KlusterletAddonConfig"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: hive/clusterdeployment
+
+      # An enforced create is Compliant once the API accepts it, so gate on the install finishing
+      - name: ready
+        enabled: true
+        description: "Wait for Hive to install the cluster"
+        policyRef: present
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: hive/installed
+        customMessage:
+          noncompliant: "Waiting for Hive to install the cluster"
+
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: absent
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to detach it"
+
+      # Detach first, so the klusterlet cleans up while the cluster is still up
+      - name: detach
+        enabled: true
+        description: "Delete the ManagedCluster"
+        policyRef: absent
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: detach
+
+      # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
+      - name: detached
+        enabled: true
+        description: "Wait for the ManagedCluster to be gone"
+        policyRef: absent
+        remediationAction: inform
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: managedcluster
+        customMessage:
+          noncompliant: "Waiting for the ManagedCluster to be deleted"
+
+      - name: destroy
+        enabled: true
+        description: "Delete the ClusterDeployment"
+        policyRef: absent
+        remediationAction: enforce
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: hive/clusterdeployment-ref
+
+      - name: destroyed
+        enabled: true
+        description: "Wait for Hive to deprovision the cluster"
+        policyRef: absent
+        remediationAction: inform
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: hive/clusterdeployment-ref
+        customMessage:
+          noncompliant: "Waiting for Hive to deprovision the cluster"
+
+      - name: cleanup
+        enabled: true
+        description: "Delete Namespace <cluster> and install.manifests"
+        policyRef: absent
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: hive/cleanup
+
+  siteconfig:
+    enabled: true
+    # Each template waits for the one before it in the same Policy
+    orderManifests: true
+    # Every release lands on the hub, so template names carry the cluster name
+    suffixTemplateNames: true
+
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # No Policy-level remediationAction: it would override the inform gates below.
+    # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
+    policies:
+      - name: present
+        enabled: true
+        description: "Install the cluster with SiteConfig"
+        severity: high
+        disabled: false
+
+      - name: absent
+        enabled: true
+        description: "Delete the ClusterInstance and what it rendered"
+        severity: high
+        disabled: false
+
+    configPolicies:
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: present
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+
+      - name: credentials
+        enabled: true
+        description: "Namespace, pull secret and BMC secret"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: siteconfig/credentials
+
+      - name: manifests
+        enabled: true
+        description: "Extra hub objects from install.manifests"
+        policyRef: present
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: manifests
+
+      - name: cluster
+        enabled: true
+        description: "ClusterImageSet and ClusterInstance"
+        policyRef: present
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: siteconfig/clusterinstance
+
+      # An enforced create is Compliant once the API accepts it, so gate on the install finishing
+      - name: ready
+        enabled: true
+        description: "Wait for SiteConfig to install the cluster"
+        policyRef: present
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: siteconfig/ready
+        customMessage:
+          noncompliant: "Waiting for the ClusterInstance to report Provisioned"
+
+      - name: guard
+        enabled: true
+        description: "Refuse a ManagedCluster this hub did not build"
+        policyRef: absent
+        remediationAction: inform
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: guard
+        customMessage:
+          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to destroy it"
+
+      # No detach: the ClusterInstance renders and owns the ManagedCluster, and deletes it after the
+      # BareMetalHosts. SiteConfig would re-create a ManagedCluster deleted on its own.
+      - name: destroy
+        enabled: true
+        description: "Delete the ClusterInstance"
+        policyRef: absent
+        remediationAction: enforce
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: siteconfig/clusterinstance-ref
+
+      - name: destroyed
+        enabled: true
+        description: "Wait for SiteConfig to delete what it rendered"
+        policyRef: absent
+        remediationAction: inform
+        complianceType: mustnothave
+        severity: high
+        templateNames:
+          - name: siteconfig/clusterinstance-ref
+        customMessage:
+          noncompliant: "Waiting for SiteConfig to delete the BareMetalHosts, ManagedCluster and install objects"
+
+      - name: cleanup
+        enabled: true
+        description: "Delete Namespace <cluster>, ClusterImageSet lifecycle-<cluster> and install.manifests"
+        policyRef: absent
+        remediationAction: enforce
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: siteconfig/cleanup

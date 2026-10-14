@@ -191,6 +191,18 @@ func TestResolve_testdata(t *testing.T) {
 		"foo-hcp-retired": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/kubevirt.yaml",
 		},
+		"foo-hive-aws": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/aws.yaml",
+		},
+		"foo-hive-retired": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/aws.yaml",
+		},
+		"foo-sno-edge": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml", "values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",
+		},
+		"foo-sno-retired": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml", "values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",
+		},
 		"foo-acm-dc1": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml",
 			"values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",

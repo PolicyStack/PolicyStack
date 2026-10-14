@@ -20,7 +20,7 @@ stack:
       availabilityConfig: High
       # @desc: Whether the hub also manages itself as `local-cluster`
       selfManaged: true
-      # @desc: Enable the SiteConfig component, needed for cluster provisioning
+      # @desc: Enable the SiteConfig component, needed by the lifecycle siteconfig engine
       siteConfig: false
       # @description: ACM Search database storage
       search:

@@ -3,8 +3,8 @@ Inform-only completion signal. Compliant once the cluster has reached or passed 
 then it forces NonCompliant. `current` is the latest Completed history entry, so it advances only
 when an update completes and does not flap mid-upgrade.
 */ -}}
-{{- $cfg := .Values.stack.openshiftUpgrade.config }}
-{{ "{{" }}- $target := "{{ $cfg.targetVersion }}" {{ "}}" }}
+{{ "{{" }}- if {{ include "openshift-upgrade.standalone" . }} {{ "}}" }}
+{{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
 {{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
 {{ "{{" }}- $current := "" {{ "}}" }}
 {{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
@@ -21,4 +21,5 @@ when an update completes and does not flap mid-upgrade.
     kind: ClusterVersion
     metadata:
       name: version
+{{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}

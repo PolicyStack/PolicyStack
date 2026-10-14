@@ -1,0 +1,9 @@
+{{- /*
+Deleting the ClusterInstance deletes everything it rendered, highest sync wave first: the
+BareMetalHosts, then the ManagedCluster, then the install objects.
+*/ -}}
+apiVersion: siteconfig.open-cluster-management.io/v1alpha1
+kind: ClusterInstance
+metadata:
+  name: {{ include "lifecycle.cluster" . }}
+  namespace: {{ include "lifecycle.cluster" . }}

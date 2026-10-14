@@ -211,8 +211,12 @@ func TestLoadDir_testdata(t *testing.T) {
 		{"hcp-agent", "acm-dc1", ""},
 		{"hcp-kubevirt", "acm-dc1", ""},
 		{"hcp-retired", "acm-dc1", "absent"},
+		{"hive-aws", "acm-dc1", ""},
+		{"hive-retired", "acm-dc1", "absent"},
 		{"nonprod-west-1", "", ""},
 		{"prod-east-1", "", ""},
+		{"sno-edge", "acm-dc1", ""},
+		{"sno-retired", "acm-dc1", "absent"},
 		{"acm-dc1", "", ""},
 	}
 	if len(got) != len(want) {
@@ -234,6 +238,8 @@ func TestParse(t *testing.T) {
 		revision   string
 		valueFiles []string
 		hub, state string
+		version    string
+		channel    string
 		issues     []Issue // Message is a substring of the actual message
 	}{
 		{
@@ -288,13 +294,13 @@ func TestParse(t *testing.T) {
 			name:     "unknown key",
 			in:       "revision: main\nlabels:\n  a: b\n",
 			revision: "main",
-			issues:   []Issue{{Line: 2, Message: "unknown key labels: only revision, valueFiles, hub, state and install are allowed"}},
+			issues:   []Issue{{Line: 2, Message: "unknown key labels: only revision, valueFiles, hub, state, version, channel and install are allowed"}},
 		},
 		{
 			name:     "old config key",
 			in:       "revision: main\nconfig:\n  environment.10: prod\n",
 			revision: "main",
-			issues:   []Issue{{Line: 2, Message: "unknown key config: only revision, valueFiles, hub, state and install are allowed"}},
+			issues:   []Issue{{Line: 2, Message: "unknown key config: only revision, valueFiles, hub, state, version, channel and install are allowed"}},
 		},
 		{
 			name: "misspelt revision",
@@ -369,11 +375,45 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:       "hub-built cluster",
-			in:         "revision: main\nhub: acm-dc1\nstate: present\nvalueFiles:\n  - platforms/kubevirt.yaml\ninstall:\n  version: 4.20.8\n",
+			in:         "revision: main\nhub: acm-dc1\nstate: present\nversion: 4.20.8\nchannel: stable-4.20\nvalueFiles:\n  - platforms/kubevirt.yaml\ninstall:\n  platform: KubeVirt\n",
 			revision:   "main",
 			valueFiles: []string{"platforms/kubevirt.yaml"},
 			hub:        "acm-dc1",
 			state:      "present",
+			version:    "4.20.8",
+			channel:    "stable-4.20",
+		},
+		{name: "imported cluster upgrade", in: "revision: main\nversion: 4.20.12\n", revision: "main", version: "4.20.12"},
+		{name: "prerelease version", in: "revision: main\nversion: 4.21.0-ec.2\n", revision: "main", version: "4.21.0-ec.2"},
+		{name: "channel only", in: "revision: main\nchannel: eus-4.20\n", revision: "main", channel: "eus-4.20"},
+		{
+			name:     "minor version",
+			in:       "revision: main\nversion: \"4.20\"\n",
+			revision: "main",
+			version:  "4.20",
+			issues:   []Issue{{Line: 2, Message: `version "4.20" must be an x.y.z release`}},
+		},
+		{
+			// Argo CD would pass 4.2, so the cluster would aim at the wrong release.
+			name:     "unquoted minor version",
+			in:       "revision: main\nversion: 4.20\n",
+			revision: "main",
+			issues:   []Issue{{Line: 2, Message: "version is read by Argo CD as 4.2 (float64), not a string"}},
+		},
+		{name: "empty version", in: "revision: main\nversion: \"\"\n", revision: "main", issues: []Issue{{Line: 2, Message: "version is empty"}}},
+		{name: "null channel", in: "revision: main\nchannel:\n", revision: "main", issues: []Issue{{Line: 2, Message: "channel has no value"}}},
+		{
+			name:     "numeric channel",
+			in:       "revision: main\nchannel: 4.20\n",
+			revision: "main",
+			issues:   []Issue{{Line: 2, Message: "channel is read by Argo CD as 4.2 (float64)"}},
+		},
+		{
+			name:     "install.version",
+			in:       "revision: main\nhub: acm-dc1\ninstall:\n  version: 4.20.8\n",
+			revision: "main",
+			hub:      "acm-dc1",
+			issues:   []Issue{{Line: 4, Message: "install.version is replaced by the top-level version key"}},
 		},
 		{name: "absent", in: "revision: main\nhub: acm-dc1\nstate: absent\n", revision: "main", hub: "acm-dc1", state: "absent"},
 		{name: "empty install", in: "revision: main\nhub: acm-dc1\ninstall: {}\n", revision: "main", hub: "acm-dc1"},
@@ -456,7 +496,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name:     "install without hub",
-			in:       "revision: main\ninstall:\n  version: 4.20.8\n",
+			in:       "revision: main\ninstall:\n  platform: KubeVirt\n",
 			revision: "main",
 			issues:   []Issue{{Line: 3, Message: "install requires hub"}},
 		},
@@ -495,6 +535,9 @@ func TestParse(t *testing.T) {
 			}
 			if c.Hub != tt.hub || c.State != tt.state {
 				t.Errorf("Hub, State = %q, %q, want %q, %q", c.Hub, c.State, tt.hub, tt.state)
+			}
+			if c.Version != tt.version || c.Channel != tt.channel {
+				t.Errorf("Version, Channel = %q, %q, want %q, %q", c.Version, c.Channel, tt.version, tt.channel)
 			}
 			if len(c.Issues) != len(tt.issues) {
 				t.Fatalf("got %d issues, want %d: %+v", len(c.Issues), len(tt.issues), c.Issues)

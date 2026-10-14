@@ -1,0 +1,20 @@
+revision: main
+hub: acm-dc1
+state: absent
+version: 4.20.8
+channel: stable-4.20
+valueFiles:
+  - environments/prod.yaml
+  - datacenters/dc1.yaml
+  - platforms/baremetal.yaml
+install:
+  siteconfig:
+    clusterInstance:
+      clusterType: SNO
+      machineNetwork:
+        - cidr: 10.20.30.0/24
+    nodes:
+      sno-retired.dc1.example.com:
+        role: master
+        bmcAddress: redfish-virtualmedia://10.20.0.11/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:55"

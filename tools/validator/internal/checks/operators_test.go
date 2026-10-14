@@ -144,3 +144,41 @@ stack:
 		})
 	}
 }
+
+func TestPolicy034_FleetKeysInLayers(t *testing.T) {
+	cases := []struct {
+		name, layer string
+		lines       []int // one finding per line, version before channel
+	}{
+		{"neither", "stack: {}\n", nil},
+		{"version", "stack: {}\nversion: 4.20.8\n", []int{2}},
+		{"channel", "channel: stable-4.20\n", []int{1}},
+		{"both", "channel: stable-4.20\nversion: 4.20.8\n", []int{2, 1}},
+		{"nested keys are not top-level", "install:\n  version: 4.20.8\nstack:\n  x:\n    channel: a\n", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// The element's own defaults may declare both keys.
+			el := loadElement(t, "version: \"\"\nchannel: \"\"\nstack:\n  myElement: {}\n", "", nil)
+			layer := filepath.Join(t.TempDir(), "prod.yaml")
+			if err := os.WriteFile(layer, []byte(tc.layer), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cl := &cascade.Resolved{ClusterName: "x", ValueFiles: []string{el.ValuesFile, layer}}
+			got := (&LayerFleetKeyCheck{}).Run(Context{Element: el, Cluster: cl})
+			if len(got) != len(tc.lines) {
+				t.Fatalf("got %d findings, want %d: %+v", len(got), len(tc.lines), got)
+			}
+			for i, f := range got {
+				if f.RuleID != "POLICY034" || f.File != layer || f.Line != tc.lines[i] || f.Cluster != "" || f.Element != "" {
+					t.Errorf("unexpected finding: %+v", f)
+				}
+			}
+			// The lifecycle chart's cascade ends with the fleet file, which sets both by design.
+			el.Engines = []string{"hypershift"}
+			if got := (&LayerFleetKeyCheck{}).Run(Context{Element: el, Cluster: cl}); len(got) != 0 {
+				t.Errorf("lifecycle pair: got %+v, want none", got)
+			}
+		})
+	}
+}

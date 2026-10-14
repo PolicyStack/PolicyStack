@@ -4,8 +4,10 @@
 package chart
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"iter"
 	"maps"
 	"os"
@@ -34,6 +36,18 @@ type Element struct {
 	ValuesDoc *yaml.Node
 	// Key under `stack:`. Empty when values.yaml has no stack block.
 	StackKey string
+	// Components holds every component under `stack:`, in file order. StackKey and
+	// Values.Component are the one this Element checks.
+	Components []NamedComponent
+	// Engines is the install.engine enum from values.schema.json: each names a stack component, of
+	// which install.engine renders one. Set only for the lifecycle chart.
+	Engines []string
+}
+
+// NamedComponent is one component under `stack:` and its key.
+type NamedComponent struct {
+	Key       string
+	Component *Component
 }
 
 // Dependency is a single entry from Chart.yaml `dependencies:`.
@@ -356,9 +370,17 @@ func Load(dir, policyNamespace string) (*Element, error) {
 		return nil, fmt.Errorf("parse values.yaml: %w", err)
 	}
 
-	stackKey, comp, err := decodeComponent(&doc)
+	engines, err := loadEngines(filepath.Join(dir, "values.schema.json"))
 	if err != nil {
 		return nil, err
+	}
+	comps, err := decodeComponents(&doc, engines != nil)
+	if err != nil {
+		return nil, err
+	}
+	var first NamedComponent
+	if len(comps) > 0 {
+		first = comps[0]
 	}
 
 	el := &Element{
@@ -369,40 +391,62 @@ func Load(dir, policyNamespace string) (*Element, error) {
 		Dependencies:  cy.Dependencies,
 		Values: &Values{
 			PolicyNamespace: policyNamespace,
-			Component:       comp,
+			Component:       first.Component,
 		},
-		ValuesDoc: &doc,
-		StackKey:  stackKey,
+		ValuesDoc:  &doc,
+		StackKey:   first.Key,
+		Components: comps,
+		Engines:    engines,
 	}
 	return el, nil
 }
 
-// decodeComponent finds the single key under `stack:` in values.yaml and
-// decodes that subtree into a Component.
-func decodeComponent(doc *yaml.Node) (string, *Component, error) {
+// LoadComponents loads a chart as one Element per stack component: the lifecycle chart renders
+// one engine's component per cluster, so each is checked like an element. Any other chart loads as
+// a single Element.
+func LoadComponents(dir, policyNamespace string) ([]*Element, error) {
+	el, err := Load(dir, policyNamespace)
+	if err != nil {
+		return nil, err
+	}
+	if el.Engines == nil || len(el.Components) < 2 {
+		return []*Element{el}, nil
+	}
+	out := make([]*Element, len(el.Components))
+	for i, c := range el.Components {
+		e := *el
+		e.StackKey = c.Key
+		e.Values = &Values{PolicyNamespace: policyNamespace, Component: c.Component}
+		out[i] = &e
+	}
+	return out, nil
+}
+
+// decodeComponents decodes the first key under `stack:` in values.yaml, the element, or every key
+// in file order when all is set: the lifecycle chart has one component per engine.
+func decodeComponents(doc *yaml.Node, all bool) ([]NamedComponent, error) {
 	if doc == nil || doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 {
-		return "", nil, nil
+		return nil, nil
 	}
 	root := doc.Content[0]
 	if root.Kind != yaml.MappingNode {
-		return "", nil, nil
+		return nil, nil
 	}
 	stackNode := mapValue(root, "stack")
 	if stackNode == nil || stackNode.Kind != yaml.MappingNode {
-		return "", nil, nil
+		return nil, nil
 	}
-	if len(stackNode.Content) < 2 {
-		return "", nil, nil
+	var out []NamedComponent
+	for i := 0; i+1 < len(stackNode.Content) && (all || len(out) == 0); i += 2 {
+		keyNode, valueNode := stackNode.Content[i], stackNode.Content[i+1]
+		var c Component
+		if err := valueNode.Decode(&c); err != nil {
+			return nil, fmt.Errorf("decode stack.%s: %w", keyNode.Value, err)
+		}
+		c.LegacyOperatorPolicies = IsLegacyOperatorPolicies(mapValue(valueNode, "operatorPolicies"))
+		out = append(out, NamedComponent{Key: keyNode.Value, Component: &c})
 	}
-	// One element per chart, so the first key under stack: is the element.
-	keyNode := stackNode.Content[0]
-	valueNode := stackNode.Content[1]
-	var c Component
-	if err := valueNode.Decode(&c); err != nil {
-		return keyNode.Value, nil, fmt.Errorf("decode stack.%s: %w", keyNode.Value, err)
-	}
-	c.LegacyOperatorPolicies = IsLegacyOperatorPolicies(mapValue(valueNode, "operatorPolicies"))
-	return keyNode.Value, &c, nil
+	return out, nil
 }
 
 // IsLegacyOperatorPolicies reports whether an operatorPolicies node has the pre-3.0 list shape.
@@ -417,6 +461,33 @@ func mapValue(m *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// loadEngines returns properties.install.properties.engine.enum from a values.schema.json, nil when
+// the file or the enum is absent.
+func loadEngines(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var s struct {
+		Properties struct {
+			Install struct {
+				Properties struct {
+					Engine struct {
+						Enum []string `json:"enum"`
+					} `json:"engine"`
+				} `json:"properties"`
+			} `json:"install"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &s); err != nil {
+		return nil, fmt.Errorf("parse values.schema.json: %w", err)
+	}
+	return s.Properties.Install.Properties.Engine.Enum, nil
 }
 
 func loadPolicyNamespace(path string) (string, error) {

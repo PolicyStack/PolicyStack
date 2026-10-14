@@ -4,8 +4,8 @@ Inform-only guard: checks that the target version is reachable from the cluster'
 Validity is computed in the template, which is reliable where ACM status matching is not. When
 invalid, a mustnothave on the ClusterVersion (an existence check) forces NonCompliant.
 */ -}}
-{{- $cfg := .Values.stack.openshiftUpgrade.config }}
-{{ "{{" }}- $target := "{{ $cfg.targetVersion }}" {{ "}}" }}
+{{ "{{" }}- if {{ include "openshift-upgrade.standalone" . }} {{ "}}" }}
+{{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
 {{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
 {{ "{{" }}- $desired := (index (index $status "desired" | default dict) "version" | default "") {{ "}}" }}
 {{ "{{" }}- $current := "" {{ "}}" }}
@@ -27,4 +27,5 @@ invalid, a mustnothave on the ClusterVersion (an existence check) forces NonComp
     kind: ClusterVersion
     metadata:
       name: version
+{{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}

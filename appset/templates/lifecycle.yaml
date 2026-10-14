@@ -60,4 +60,7 @@ spec:
           valuesObject:
             hub: {{ "{{" }} .hub | quote {{ "}}" }}
             state: {{ "{{" }} dig "state" "present" . | quote {{ "}}" }}
+            {{ "{{" }}- range $k := list "version" "channel" {{ "}}" }}{{ "{{" }} with dig $k "" $ {{ "}}" }}
+            {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             install: {{ "{{" }} dig "install" dict . | toJson {{ "}}" }}

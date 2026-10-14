@@ -1,0 +1,50 @@
+{{- /*
+ClusterDeployment, then the ManagedCluster and KlusterletAddonConfig ACM imports it with once
+Hive marks it installed. Without the KlusterletAddonConfig the cluster gets no policy, application
+or search add-ons.
+
+Hive rejects changes to provisioning, so releaseImage is read back from the live object: a later
+version bump never reaches it, and the cluster upgrades through openshift-upgrade instead. Hive
+sets spec.installed itself; the policy leaves it out. installAttemptsLimit 1, as the console sets,
+stops Hive from retrying a failed install, and its cloud resources, forever.
+*/ -}}
+{{- $h := .Values.install.hive }}
+{{- $c := include "lifecycle.cluster" . }}
+{{- $p := include "lifecycle.hivePlatform" . }}
+{{- $image := include "lifecycle.releaseImage" . }}
+{{- $platform := pick (get $h.platform $p) "region" "baseDomainResourceGroupName" "cloudName" }}
+{{- $_ := set $platform "credentialsSecretRef" (dict "name" (printf "%s-creds" $c)) }}
+{{- $spec := dict "baseDomain" .Values.install.baseDomain "clusterName" $c "installAttemptsLimit" 1 "platform" (dict $p $platform) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "provisioning" (dict "installConfigSecretRef" (dict "name" (printf "%s-install-config" $c))) }}
+{{- $clusterDeployment := mergeOverwrite (dict "metadata" (dict "name" $c "namespace" $c) "spec" $spec) (deepCopy ($h.clusterDeployment | default dict)) }}
+{{- $_ = set $clusterDeployment.spec.provisioning "releaseImage" "{{ $releaseImage }}" }}
+{{ "{{-" }} $releaseImage := dig "spec" "provisioning" "releaseImage" {{ $image | quote }} (lookup "hive.openshift.io/v1" "ClusterDeployment" {{ $c | quote }} {{ $c | quote }}) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hive.openshift.io/v1
+    kind: ClusterDeployment
+    {{- $clusterDeployment | toYaml | nindent 4 }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: cluster.open-cluster-management.io/v1
+    kind: ManagedCluster
+    metadata:
+      name: {{ $c }}
+      annotations: {{- include "lifecycle.ownerAnnotations" . | nindent 8 }}
+    spec:
+      hubAcceptsClient: true
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: agent.open-cluster-management.io/v1
+    kind: KlusterletAddonConfig
+    metadata:
+      name: {{ $c }}
+      namespace: {{ $c }}
+    spec:
+      applicationManager:
+        enabled: true
+      certPolicyController:
+        enabled: true
+      policyController:
+        enabled: true
+      searchCollector:
+        enabled: true

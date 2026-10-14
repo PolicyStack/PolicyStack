@@ -1,0 +1,11 @@
+{{- /*
+Runs once the ClusterDeployment is gone, and with it deprovisioning. Deleting Namespace <cluster>
+deletes the copied secrets. Leaves the credential alone.
+*/ -}}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ include "lifecycle.cluster" . }}
+{{- include "lifecycle.cleanupManifests" . }}

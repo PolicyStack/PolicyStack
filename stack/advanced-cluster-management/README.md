@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-14 05:18:24*
 
 ## Component Configuration
 
@@ -41,7 +41,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | --- | ------- | ----------- |
 | `availabilityConfig` | `High` | High or Basic. Basic runs single replicas and suits lab hubs. |
 | `selfManaged` | `True` | Whether the hub also manages itself as `local-cluster` |
-| `siteConfig` | `False` | Enable the SiteConfig component, needed for cluster provisioning |
+| `siteConfig` | `False` | Enable the SiteConfig component, needed by the lifecycle siteconfig engine |
 | `search` | `(dict)` | ACM Search database storage |
 | `observability` | `(dict)` | Observability sizing |
 | `addons` | `(dict)` | Policy addon tuning, keyed by addon name. The shipped defaults raise the stock concurrency and rate limits, which are the usual bottleneck at scale. |

@@ -415,3 +415,27 @@ func TestPolicy003_CoversToggledOffAndOperatorTriples(t *testing.T) {
 		}
 	}
 }
+
+// TestPolicy011_EveryLifecycleComponent: the lifecycle chart loads as one Element per engine, all
+// named lifecycle. A broken reference in any of them is reported, not only in the last.
+func TestPolicy011_EveryLifecycleComponent(t *testing.T) {
+	const ok = `
+    policies:
+      - name: present
+        enabled: true
+    configPolicies:
+      - name: guard
+        enabled: true
+        policyRef: present
+`
+	broken := elementNamed(t, "lifecycle", "hypershift", ok+`        extraDependencies:
+          - name: gaurd
+`)
+	fine := elementNamed(t, "lifecycle", "hive", ok)
+	for _, order := range [][]*chart.Element{{broken, fine}, {fine, broken}} {
+		got := runDeps(order...)
+		if len(got) != 1 || !strings.Contains(got[0].Message, "gaurd") {
+			t.Errorf("order %s,%s: got %+v", order[0].StackKey, order[1].StackKey, got)
+		}
+	}
+}

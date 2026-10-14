@@ -1,0 +1,18 @@
+{{- /*
+Runs once the ClusterInstance is gone. Deleting Namespace <cluster> deletes the copied secrets;
+ACM usually deletes it first. Leaves the credentials alone.
+*/ -}}
+{{- $c := include "lifecycle.cluster" . }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ $c }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: hive.openshift.io/v1
+    kind: ClusterImageSet
+    metadata:
+      name: lifecycle-{{ $c }}
+{{- include "lifecycle.cleanupManifests" . }}

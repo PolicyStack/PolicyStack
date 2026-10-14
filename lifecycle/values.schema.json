@@ -4,12 +4,14 @@
   "properties": {
     "hub": {"type": "string"},
     "state": {"enum": ["present", "absent"]},
+    "version": {"type": "string", "pattern": "^$|^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$"},
+    "channel": {"type": "string"},
     "install": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "engine": {"enum": ["hypershift", "hive", "siteconfig"]},
         "platform": {"enum": ["", "KubeVirt", "Agent", "None"]},
-        "version": {"type": "string", "pattern": "^$|^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.]+)?$"},
         "releaseRepository": {"type": "string", "minLength": 1},
         "namespace": {"type": "string", "minLength": 1},
         "credential": {
@@ -35,8 +37,71 @@
         "manifests": {
           "type": "array",
           "items": {"type": "object", "required": ["apiVersion", "kind", "metadata"]}
+        },
+        "hive": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "platform": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "aws": {"type": "object", "required": ["region"]},
+                "gcp": {"type": "object", "required": ["region", "projectID"]},
+                "azure": {"type": "object", "required": ["region", "baseDomainResourceGroupName"]}
+              }
+            },
+            "installConfig": {"type": "object"},
+            "clusterDeployment": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "metadata": {"type": "object"},
+                "spec": {"type": "object"}
+              }
+            }
+          }
+        },
+        "siteconfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "templates": {"enum": ["ai", "ibi"]},
+            "templateNamespace": {"type": "string", "minLength": 1},
+            "bmcCredential": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["namespace", "name"],
+              "properties": {
+                "namespace": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1}
+              }
+            },
+            "clusterInstance": {"type": "object"},
+            "nodes": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {"type": "object", "required": ["bmcAddress", "bootMACAddress"]}
+            }
+          },
+          "if": {"required": ["templates"], "properties": {"templates": {"const": "ibi"}}},
+          "then": {"properties": {"nodes": {"maxProperties": 1}}}
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"engine": {"const": "hive"}}},
+          "then": {"properties": {"hive": {"required": ["platform"]}}},
+          "else": {"properties": {"hive": {"maxProperties": 0}}}
+        },
+        {
+          "if": {"properties": {"engine": {"const": "siteconfig"}}},
+          "then": {"properties": {"siteconfig": {"required": ["bmcCredential", "nodes"]}}},
+          "else": {"properties": {"siteconfig": {"maxProperties": 0}}}
+        }
+      ]
     }
   }
 }

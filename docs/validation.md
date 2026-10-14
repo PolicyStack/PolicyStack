@@ -4,14 +4,21 @@
 `tools/validator/testdata/clusters`, building the list of values files the way the ApplicationSet
 does ([Order](values.md#order)). It checks the element sources and the rendered output. The
 fixtures are the example [fleet files](applicationset.md#fleet-files): `prod-east-1.yaml`,
-`nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and three clusters the hub builds:
-`hcp-kubevirt.yaml`, `hcp-agent.yaml` and `hcp-retired.yaml` (`state: absent`). A file is named
+`nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and seven clusters the hub builds:
+`hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hive-aws.yaml`, `sno-edge.yaml`, and `hcp-retired.yaml`,
+`hive-retired.yaml` and `sno-retired.yaml` (`state: absent`). A file is named
 after its cluster, so `hubs/acm-dc1.yaml` renders as `acm-dc1` and reads
 `values/clusters/acm-dc1.yaml`. Their files in `values/` are rendered too.
 
 For each fixture that sets `hub`, it also renders the `lifecycle/` chart as `lifecycle-<cluster>`,
 with the fixture file appended to the cascade in place of the ApplicationSet's `valuesObject`
 ([Cluster lifecycle](lifecycle.md)).
+
+Neither Helm nor the checks evaluate the ACM templates the lifecycle chart escapes, such as the
+HostedCluster upgrade hold or the ClusterDeployment and ClusterImageSet release image read-backs. The Go tests in
+`tools/validator/internal/acmtemplates` render the fixtures and resolve those templates with
+go-template-utils, the library the config-policy-controller uses, against fake hub objects. A change
+to a lifecycle converter's ACM template needs a case there.
 
 It needs Go and Helm. Use the Helm major version that CI pins
 ([Policy Validate](workflows.md#policy-validate)). kubeconform is optional, without it on `PATH`,
@@ -36,9 +43,9 @@ injects a selector for the one cluster instead ([Placement](policies.md#placemen
 with `--extra-values` take precedence over the whole cascade. They are not applied to `lifecycle/`,
 which ships its own `selector`.
 
-The validator runs `helm dependency update` on an element only when its `charts/` directory holds no
-`.tgz`, otherwise it renders with the archive already there. After bumping the policy-library
-version, delete the stale archives with `rm -rf stack/*/charts lifecycle/charts`. A CI checkout has none.
+The validator runs `helm dependency update` on an element unless its `charts/` directory already holds
+`<name>-<version>.tgz` for every dependency in `Chart.yaml`, so a policy-library bump fetches the new
+archive and replaces the stale one.
 
 ## Output
 

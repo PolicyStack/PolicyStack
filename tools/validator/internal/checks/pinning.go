@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -23,7 +24,10 @@ func (c *PinningCheck) Run(ctx Context) []Finding {
 			if dep.Name != "policy-library" {
 				continue
 			}
-			versions[dep.Version] = append(versions[dep.Version], el.ChartName)
+			// The lifecycle chart's components share one Chart.yaml.
+			if !slices.Contains(versions[dep.Version], el.ChartName) {
+				versions[dep.Version] = append(versions[dep.Version], el.ChartName)
+			}
 		}
 	}
 	if len(versions) <= 1 {

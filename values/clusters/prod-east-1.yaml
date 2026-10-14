@@ -3,6 +3,7 @@
 # The file name must match the ManagedCluster name; a mismatch is skipped silently. Fleet file
 # fleet/prod-east-1.yaml on the default branch:
 #   revision: main             # required; branch, tag or SHA
+#   channel: stable-4.20       # pins the update channel; version would also upgrade it
 #   valueFiles:
 #     - environments/prod.yaml
 #     - datacenters/dc1.yaml
@@ -26,14 +27,6 @@ stack:
   # Replaces worker and infra nodes that stay NotReady.
   machineHealthChecks:
     enabled: true
-
-  # Pins the channel only. Turning on the `upgrade` toggle with config.targetVersion starts an upgrade.
-  openshiftUpgrade:
-    enabled: true
-    toggles:
-      channel: true
-    config:
-      channel: stable-4.20
 
   userWorkloadMonitoring:
     enabled: true

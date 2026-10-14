@@ -12,7 +12,7 @@ Lowest precedence first. Paths are relative to `stack/<element>`, the Applicatio
 4. `../../values/clusters/<name>.yaml`, where `<name>` is the ManagedCluster name, or `hubName` on the hub ([The hub](applicationset.md#the-hub)).
 5. `valuesObject`, the keys the ApplicationSet [injects](applicationset.md#injected-values). Argo CD ranks it above every values file.
 
-A lifecycle Application reads the same files with paths relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. Its `valuesObject` holds the fleet file's `hub`, `state` and `install` ([Values](lifecycle.md#values)). Elements ignore the top-level `install` key and only `lifecycle/` reads it, so one cluster file can hold both `install` and `stack`.
+A lifecycle Application reads the same files with paths relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. Its `valuesObject` holds the fleet file's `hub`, `state`, `version`, `channel` and `install` ([Values](lifecycle.md#values)). Elements ignore the top-level `install` key and only `lifecycle/` reads it, so one cluster file can hold both `install` and `stack`.
 
 ## Missing files
 
@@ -58,23 +58,23 @@ values/
 
 ## Example files
 
-The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configure the example clusters. They are a starting point, not a complete configuration. Every element ships with `enabled: false`, and the layer that should run an element turns it on. The Read by column names the example fleet files that list the file, or the cluster whose name matches it.
+The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configure the example clusters. They are a starting point, not a complete configuration. Every element but `openshift-upgrade` ships with `enabled: false`, and the layer that should run an element turns it on. `openshift-upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)). The Read by column names the example fleet files that list the file, or the cluster whose name matches it.
 
 | File | Read by | Holds |
 |---|---|---|
-| `values/environments/prod.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent` | The security and compliance baseline for every prod cluster: cert-manager, External Secrets, the Compliance Operator, manual remediations and cluster DNS |
-| `values/environments/nonprod.yaml` | `nonprod-west-1`, `hcp-kubevirt`, `hcp-retired` | Placeholder, sets nothing |
-| `values/datacenters/dc1.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent` | `install.baseDomain` for hosted clusters built in dc1. Turns no element on |
+| `values/environments/prod.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | The security and compliance baseline for every prod cluster: cert-manager, External Secrets, the Compliance Operator, manual remediations and cluster DNS |
+| `values/environments/nonprod.yaml` | `nonprod-west-1`, `hcp-kubevirt`, `hcp-retired`, `hive-aws`, `hive-retired` | Placeholder, sets nothing |
+| `values/datacenters/dc1.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | `install.baseDomain` for clusters built in dc1. Turns no element on |
 | `values/datacenters/dc2.yaml` | `nonprod-west-1` | Site facts only: the registry allowlist through the dc2 mirror. Turns no element on |
-| `values/platforms/aws.yaml` | `prod-east-1` | Toggles for the node elements: clone the worker MachineSet |
+| `values/platforms/aws.yaml` | `prod-east-1`, `hive-aws`, `hive-retired` | Toggles for the node elements: clone the worker MachineSet. `install`: engine `hive`, the credential and the install-config machine pools |
 | `values/platforms/vmware.yaml` | No example | Toggles for the node elements: clone each worker MachineSet, one per vSphere failure domain |
-| `values/platforms/baremetal.yaml` | `hubs/acm-dc1` | Toggles for the node elements: no infra MachineSets, and storage nodes are existing nodes labeled in place |
+| `values/platforms/baremetal.yaml` | `hubs/acm-dc1`, `sno-edge`, `sno-retired` | Toggles for the node elements: no infra MachineSets, and storage nodes are existing nodes labeled in place. `install`: engine `siteconfig`, the credentials and `networkType` |
 | `values/platforms/kubevirt.yaml` | `hcp-kubevirt`, `hcp-retired` | `install` only: platform `KubeVirt`, the credential and a `workers` NodePool of 2 |
 | `values/platforms/agent.yaml` | `hcp-agent` | `install` only: platform `Agent`, the Agent namespace and the credential. No default NodePool |
 | `values/tenants/payments.yaml` | No example | A custom layer: the GitOps operator without its instance, plus a payments team Argo CD |
 | `values/acm/acm-dc1.yaml` | `hubs/acm-dc1` | Reserved for the hub's own ACM and GitOps elements. Left commented out so PolicyStack does not reconcile its own delivery path |
 | `values/clusters/acm-dc1.yaml` | The hub, `hubName: acm-dc1` | The hub's elements, and a commented list of the elements left off and why |
-| `values/clusters/prod-east-1.yaml` | ManagedCluster `prod-east-1` | Infra nodes, machine health checks, an update channel pin and user workload monitoring |
+| `values/clusters/prod-east-1.yaml` | ManagedCluster `prod-east-1` | Infra nodes, machine health checks and user workload monitoring. Its fleet file pins the update channel |
 | `values/clusters/hcp-agent.yaml` | `lifecycle-hcp-agent` and ManagedCluster `hcp-agent` | `install`: configure services. `stack`: the guest's MetalLB ingress pool |
 | `values/clusters/nonprod-west-1.yaml` | ManagedCluster `nonprod-west-1` | Enforces the dc2 registry allowlist, the cluster's own MetalLB address pool, and user workload monitoring |
 | `values/clusters/aws-prod.yaml` | ManagedCluster `aws-prod` | Values for an AWS test cluster: the OpenShift Data Foundation to Loki storage chain and additional operator installs. Rename it to the target ManagedCluster name before use, its header lists the fleet file it expects |

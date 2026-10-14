@@ -83,6 +83,7 @@ func All() []Check {
 		&DeadKeyCheck{},          // POLICY031
 		&LayerOperatorCheck{},    // POLICY032
 		&PruneCheck{},            // POLICY033
+		&LayerFleetKeyCheck{},    // POLICY034
 		&PolicySetCheck{},        // POLICY040
 		&LabelCheck{},            // POLICY050
 		&PinningCheck{},          // POLICY060

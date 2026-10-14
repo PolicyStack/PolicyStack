@@ -1,4 +1,5 @@
 revision: main
+channel: stable-4.20
 valueFiles:
   - environments/prod.yaml
   - datacenters/dc1.yaml

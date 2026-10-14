@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
@@ -82,17 +84,15 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	// Absence is decided by Chart.yaml alone: Helm and Argo CD render a chart without values.yaml,
 	// so a missing values.yaml must fail the load rather than skip the chart.
-	var lifecycle *chart.Element
+	// lifecycle holds one Element per engine component.
+	var lifecycle []*chart.Element
 	if _, err := os.Stat(filepath.Join(opts.LifecycleDir, "Chart.yaml")); errors.Is(err, fs.ErrNotExist) {
 		opts.Logger.Warn("no lifecycle chart found", "lifecycle-dir", opts.LifecycleDir)
-	} else if lifecycle, err = chart.Load(opts.LifecycleDir, ns); err != nil {
+	} else if lifecycle, err = chart.LoadComponents(opts.LifecycleDir, ns); err != nil {
 		return Result{}, fmt.Errorf("load lifecycle chart: %w", err)
 	}
-	// The chart and repo phases check the lifecycle chart like any element.
-	all := elements
-	if lifecycle != nil {
-		all = append(slices.Clip(elements), lifecycle)
-	}
+	// The chart and repo phases check each lifecycle component like any element.
+	all := append(slices.Clip(elements), lifecycle...)
 
 	clusters, err := fixtures.LoadDir(opts.FixturesDir)
 	if err != nil {
@@ -271,11 +271,14 @@ type pair struct {
 	// ApplicationSet's valuesObject (hub, state, install). Its revision and valueFiles keys are
 	// not chart values and have no effect.
 	fleetValues bool
+	// engines are the lifecycle chart's components; perCluster checks the one install.engine
+	// selects. Empty for an element.
+	engines []*chart.Element
 }
 
-// buildPairs pairs every element with every fleet file, and lifecycle, when non-nil, with the
+// buildPairs pairs every element with every fleet file, and lifecycle, when non-empty, with the
 // fleet files that set hub: the lifecycle ApplicationSet selects only those.
-func buildPairs(elements []*chart.Element, lifecycle *chart.Element, clusters []*fixtures.Cluster) []pair {
+func buildPairs(elements []*chart.Element, lifecycle []*chart.Element, clusters []*fixtures.Cluster) []pair {
 	var pairs []pair
 	for _, el := range elements {
 		for _, cl := range clusters {
@@ -283,8 +286,8 @@ func buildPairs(elements []*chart.Element, lifecycle *chart.Element, clusters []
 		}
 	}
 	for _, cl := range clusters {
-		if lifecycle != nil && cl.Hub != "" {
-			pairs = append(pairs, pair{el: lifecycle, cl: cl, fleetValues: true})
+		if len(lifecycle) > 0 && cl.Hub != "" {
+			pairs = append(pairs, pair{el: lifecycle[0], cl: cl, fleetValues: true, engines: lifecycle})
 		}
 	}
 	return pairs
@@ -294,6 +297,9 @@ func perCluster(ctx context.Context, opts Options, runner *render.Runner, p pair
 	el := p.el
 	res := cascade.Resolve(p.cl, el.Dir, el.ChartName, opts.RepoRoot, opts.ValuesDir)
 	res.ValueFiles = valueFiles(res.ValueFiles, opts, p)
+	if len(p.engines) > 0 {
+		el = selectEngine(p.engines, res.ValueFiles)
+	}
 	c := checks.Context{
 		Element: el,
 		Cluster: &res,
@@ -319,6 +325,33 @@ func valueFiles(cascadeFiles []string, opts Options, p pair) []string {
 		return append(cascadeFiles, p.cl.SourceFile)
 	}
 	return append(cascadeFiles, opts.ExtraValues...)
+}
+
+// selectEngine returns the component that install.engine selects in the cascade, the last file
+// setting it winning, as Helm merges them. An engine with no component fails the chart's schema,
+// which RENDER000 reports, so the first component stands in.
+func selectEngine(engines []*chart.Element, files []string) *chart.Element {
+	engine := ""
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		var v struct {
+			Install struct {
+				Engine string `yaml:"engine"`
+			} `yaml:"install"`
+		}
+		if yaml.Unmarshal(data, &v) == nil && v.Install.Engine != "" {
+			engine = v.Install.Engine
+		}
+	}
+	for _, e := range engines {
+		if e.StackKey == engine {
+			return e
+		}
+	}
+	return engines[0]
 }
 
 // setString stands in for the version and channel the Day-2 ApplicationSet passes in valuesObject

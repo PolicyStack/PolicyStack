@@ -1,0 +1,10 @@
+{{- /*
+Compliant once Hive has installed the cluster.
+*/ -}}
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: {{ include "lifecycle.cluster" . }}
+  namespace: {{ include "lifecycle.cluster" . }}
+spec:
+  installed: true

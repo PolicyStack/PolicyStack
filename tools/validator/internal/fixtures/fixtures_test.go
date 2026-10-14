@@ -211,6 +211,8 @@ func TestLoadDir_testdata(t *testing.T) {
 		{"hcp-agent", "acm-dc1", ""},
 		{"hcp-kubevirt", "acm-dc1", ""},
 		{"hcp-retired", "acm-dc1", "absent"},
+		{"hive-aws", "acm-dc1", ""},
+		{"hive-retired", "acm-dc1", "absent"},
 		{"nonprod-west-1", "", ""},
 		{"prod-east-1", "", ""},
 		{"acm-dc1", "", ""},

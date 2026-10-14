@@ -10,7 +10,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "engine": {"enum": ["hypershift"]},
+        "engine": {"enum": ["hypershift", "hive"]},
         "platform": {"enum": ["", "KubeVirt", "Agent", "None"]},
         "releaseRepository": {"type": "string", "minLength": 1},
         "namespace": {"type": "string", "minLength": 1},
@@ -37,8 +37,37 @@
         "manifests": {
           "type": "array",
           "items": {"type": "object", "required": ["apiVersion", "kind", "metadata"]}
+        },
+        "hive": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "platform": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "aws": {"type": "object", "required": ["region"]},
+                "gcp": {"type": "object", "required": ["region", "projectID"]},
+                "azure": {"type": "object", "required": ["region", "baseDomainResourceGroupName"]}
+              }
+            },
+            "installConfig": {"type": "object"},
+            "clusterDeployment": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "metadata": {"type": "object"},
+                "spec": {"type": "object"}
+              }
+            }
+          }
         }
-      }
+      },
+      "if": {"properties": {"engine": {"const": "hive"}}},
+      "then": {"properties": {"hive": {"required": ["platform"]}}},
+      "else": {"properties": {"hive": {"maxProperties": 0}}}
     }
   }
 }

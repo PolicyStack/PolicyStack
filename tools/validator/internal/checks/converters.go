@@ -70,11 +70,14 @@ func (c *UnusedConverterCheck) Run(ctx Context) []Finding {
 		return nil
 	}
 
+	// Every component's references count: the lifecycle chart's engines share converters/.
 	referenced := map[string]struct{}{}
-	for _, cp := range ctx.Element.Values.Component.ConfigPolicies {
-		for _, tn := range cp.TemplateNames {
-			if tn.Name != "" {
-				referenced[tn.Name] = struct{}{}
+	for _, nc := range ctx.Element.Components {
+		for _, cp := range nc.Component.ConfigPolicies {
+			for _, tn := range cp.TemplateNames {
+				if tn.Name != "" {
+					referenced[tn.Name] = struct{}{}
+				}
 			}
 		}
 	}

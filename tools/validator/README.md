@@ -45,7 +45,7 @@ In CI:
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY080  | error    | `kubeconform` schema check on rendered manifests |
-| POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key |
+| POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key. Every other check then runs on each engine's component, and each fixture renders the one its `install.engine` selects |
 | RENDER000  | error    | `helm template` failed |
 
 <!-- --8<-- [end:rules] -->
@@ -64,6 +64,8 @@ drive the cascade in list order (matches `appset.yaml`).
 | `hcp-kubevirt` | KubeVirt hosted cluster, defaults from `values/platforms/kubevirt.yaml` |
 | `hcp-agent` | Agent hosted cluster with two NodePools, `channel` and `values/clusters/hcp-agent.yaml` |
 | `hcp-retired` | `state: absent`, the destroy chain |
+| `hive-aws` | Hive cluster on AWS, defaults from `values/platforms/aws.yaml` |
+| `hive-retired` | Hive `state: absent` |
 
 Override with `--fixtures-dir`, for example `--fixtures-dir fleet` to check a
 real fleet. Other files are ignored, `.yml` included.

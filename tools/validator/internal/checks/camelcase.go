@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
@@ -30,7 +28,10 @@ func (c *CamelCaseCheck) Run(ctx Context) []Finding {
 	}
 	if el.Engines != nil {
 		var out []Finding
-		keys := stackKeys(el.ValuesDoc)
+		var keys []string
+		for _, c := range el.Components {
+			keys = append(keys, c.Key)
+		}
 		for _, k := range keys {
 			if !slices.Contains(el.Engines, k) {
 				out = append(out, finding(fmt.Sprintf("stack key %q is not an install.engine in values.schema.json %v, so it never renders", k, el.Engines), "stack", k))
@@ -49,17 +50,4 @@ func (c *CamelCaseCheck) Run(ctx Context) []Finding {
 	}
 	return []Finding{finding(fmt.Sprintf("stack key %q does not match camelCase form of Chart.yaml name %q (expected %q)",
 		el.StackKey, el.ChartName, want), "stack", el.StackKey)}
-}
-
-// stackKeys lists the keys under `stack:` in document order.
-func stackKeys(doc *yaml.Node) []string {
-	n := sourceloc.FindNode(doc, "stack")
-	if n == nil || n.Kind != yaml.MappingNode {
-		return nil
-	}
-	var out []string
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		out = append(out, n.Content[i].Value)
-	}
-	return out
 }

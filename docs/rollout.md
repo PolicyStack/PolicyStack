@@ -4,7 +4,7 @@ A cluster runs what Git holds at the revision its [fleet file](applicationset.md
 
 ## Onboarding a cluster
 
-A cluster either already exists and is imported, or a hub builds it from its fleet file. To have a hub build it, add `hub`, `version` and `install` to the fleet file in step 2 and skip step 1: the hub creates the hosted cluster, ACM imports it, and the steps below then apply as written ([Cluster lifecycle](lifecycle.md)).
+A cluster either already exists and is imported, or a hub builds it from its fleet file. To have a hub build it, add `hub`, `version` and `install` to the fleet file in step 2 and skip step 1: the hub creates the cluster, ACM imports it, and the steps below then apply as written ([Cluster lifecycle](lifecycle.md)).
 
 1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
 2. Open a pull request to the default branch that adds `fleet/<cluster>.yaml`, named exactly like the ManagedCluster ([Fleet files](applicationset.md#fleet-files)). The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).

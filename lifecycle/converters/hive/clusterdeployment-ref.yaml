@@ -1,0 +1,9 @@
+{{- /*
+Deleting the ClusterDeployment makes Hive deprovision the cluster's cloud resources, using
+<cluster>-creds, which stays until cleanup.
+*/ -}}
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: {{ include "lifecycle.cluster" . }}
+  namespace: {{ include "lifecycle.cluster" . }}

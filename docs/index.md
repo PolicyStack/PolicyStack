@@ -2,7 +2,7 @@
 
 PolicyStack manages OpenShift cluster configuration as Red Hat Advanced Cluster Management (ACM) policies kept in Git. Each directory under `stack/` is an element, a Helm chart that renders policies through the [policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md) chart. On the ACM hub, an Argo CD ApplicationSet creates one Application per element for every managed cluster that has a [fleet file](applicationset.md#fleet-files), which pins the cluster to a Git revision. Argo CD renders each Application at that revision and syncs it to the hub only. ACM delivers each policy to the single cluster it targets, where the governance add-on enforces it or reports compliance.
 
-A fleet file that names a hub in `hub` also makes that hub build the cluster as a hosted control plane, and destroy it on `state: absent` ([Cluster lifecycle](lifecycle.md)).
+A fleet file that names a hub in `hub` also makes that hub build the cluster, with HyperShift, Hive or SiteConfig, and destroy it on `state: absent` ([Cluster lifecycle](lifecycle.md)).
 
 ```mermaid
 flowchart LR

@@ -10,7 +10,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "engine": {"enum": ["hypershift", "hive"]},
+        "engine": {"enum": ["hypershift", "hive", "siteconfig"]},
         "platform": {"enum": ["", "KubeVirt", "Agent", "None"]},
         "releaseRepository": {"type": "string", "minLength": 1},
         "namespace": {"type": "string", "minLength": 1},
@@ -63,11 +63,45 @@
               }
             }
           }
+        },
+        "siteconfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "templates": {"enum": ["ai", "ibi"]},
+            "templateNamespace": {"type": "string", "minLength": 1},
+            "bmcCredential": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["namespace", "name"],
+              "properties": {
+                "namespace": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1}
+              }
+            },
+            "clusterInstance": {"type": "object"},
+            "nodes": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {"type": "object", "required": ["bmcAddress", "bootMACAddress"]}
+            }
+          },
+          "if": {"required": ["templates"], "properties": {"templates": {"const": "ibi"}}},
+          "then": {"properties": {"nodes": {"maxProperties": 1}}}
         }
       },
-      "if": {"properties": {"engine": {"const": "hive"}}},
-      "then": {"properties": {"hive": {"required": ["platform"]}}},
-      "else": {"properties": {"hive": {"maxProperties": 0}}}
+      "allOf": [
+        {
+          "if": {"properties": {"engine": {"const": "hive"}}},
+          "then": {"properties": {"hive": {"required": ["platform"]}}},
+          "else": {"properties": {"hive": {"maxProperties": 0}}}
+        },
+        {
+          "if": {"properties": {"engine": {"const": "siteconfig"}}},
+          "then": {"properties": {"siteconfig": {"required": ["bmcCredential", "nodes"]}}},
+          "else": {"properties": {"siteconfig": {"maxProperties": 0}}}
+        }
+      ]
     }
   }
 }

@@ -12,8 +12,7 @@ The hub renders the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tr
 |---|---|---|---|
 | `hypershift` (default) | One HostedCluster and its NodePools. The control plane runs on the hub that builds the cluster. | `KubeVirt`, `Agent`, `None` | From the hub ([Upgrades](#upgrades)) |
 | `hive` | A standalone cluster, installed by a Hive ClusterDeployment in the cloud account of the credential. | `aws`, `gcp`, `azure` | On the cluster, by `openshift-upgrade` ([Upgrades](#upgrades)) |
-
-SiteConfig is not supported yet.
+| `siteconfig` | A standalone cluster on bare metal, installed by a SiteConfig ClusterInstance through the assisted installer (`ai`) or image-based install (`ibi`). | Hosts with a Redfish BMC | On the cluster, by `openshift-upgrade` ([Upgrades](#upgrades)) |
 
 ## Prerequisites
 
@@ -44,6 +43,10 @@ On every hub that builds clusters:
 
 - `hive`: a console credential of type `aws`, `gcp` or `azr` (Azure). Hive reads `aws_access_key_id` and `aws_secret_access_key`, `osServiceAccount.json`, or `osServicePrincipal.json`. `platforms/aws.yaml` expects Secret `aws` in namespace `hive-credentials`. Create it in the console, or with `oc` as above in that namespace, with those keys and the label `cluster.open-cluster-management.io/type` set to its type. A region, `projectID` or `baseDomainResourceGroupName` in the credential is ignored. Set them in `install.hive.platform`.
 - `hive`: a public DNS zone for `install.baseDomain` in the cloud account, and quota for the cluster. Hive is on by default in the multicluster engine.
+- `siteconfig`: the SiteConfig component, off by default. The `advancedClusterManagement` element turns it on with `config.siteConfig: true`. Without it, `present-cluster-<cluster>` is NonCompliant on the missing ClusterInstance kind.
+- `siteconfig`: central infrastructure management. That means an AgentServiceConfig named `agent`, and a Provisioning `provisioning-configuration` with `watchAllNamespaces: true`, plus `provisioningNetwork: Disabled` on a hub that has none. The hub needs the OpenShift `baremetal` capability. On an AWS hub, the image service needs an NLB IngressController ([Enabling central infrastructure management](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/)). The default AgentServiceConfig OS images cover OpenShift 4.19 to 4.22; list older ones in `osImages`.
+- `siteconfig`: a console credential with `pullSecret` and `ssh-publickey`, type `hostinventory`, and a hub Secret with the BMC's `username` and `password`. `platforms/baremetal.yaml` expects `bm-credentials/hostinventory` and `bm-credentials/bmc`. Each host's BMC must be reachable from the hub, and each host must reach the hub's assisted image service and API by name. DNS must resolve `api.<cluster>.<baseDomain>`, and for `HighlyAvailable` also `api-int` and `*.apps`, from the hosts and from the hub. Without the hub's record, ACM never imports the cluster and Day-2 never starts.
+- `siteconfig` with `ibi`: the multicluster engine `image-based-install-operator` component, set on the MultiClusterEngine, not the MultiClusterHub. Each host must be preinstalled with a seed image out of band, and `version` must be the seed's version.
 - `hypershift`: a LoadBalancer implementation on the hub, such as MetalLB. The default publishes each cluster's API server through a `LoadBalancer` Service on the hub ([install keys](#install-keys)).
 - `KubeVirt`: OpenShift Virtualization on the hub.
 - `Agent`: an InfraEnv in `install.agentNamespace`, and approved Agents labeled to match each NodePool's `agentLabelSelector`.
@@ -79,9 +82,9 @@ Defaults are from [`lifecycle/values.yaml`](https://github.com/PolicyStack/Polic
 | `engine` | `hypershift` | The engine that builds the cluster ([Scope](#scope)). Immutable. |
 | `platform` | required for `hypershift` | `KubeVirt`, `Agent` or `None`. Immutable. |
 | `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | The release image is `<releaseRepository>:<version>-multi`. Point it at a mirror when disconnected. |
-| `namespace` | `clusters` | `hypershift`: namespace of the HostedCluster, its NodePools and the copied secrets. The control plane runs in `<namespace>-<cluster>`. `hive` uses namespace `<cluster>`. |
+| `namespace` | `clusters` | `hypershift`: namespace of the HostedCluster, its NodePools and the copied secrets. The control plane runs in `<namespace>-<cluster>`. `hive` and `siteconfig` use namespace `<cluster>`. |
 | `credential.namespace`, `credential.name` | required | The console credential. |
-| `baseDomain` | `""` | Required for `hive` and on `Agent` and `None`. On `KubeVirt`, HyperShift detects it when empty. Immutable. |
+| `baseDomain` | `""` | Required for `hive` and `siteconfig`, and on `Agent` and `None`. On `KubeVirt`, HyperShift detects it when empty. Immutable. |
 | `agentNamespace` | `""` | `hypershift`: namespace of the InfraEnv and its Agents. Required on `Agent`. |
 | `services` | `APIServer`: `LoadBalancer`; `OAuthServer`, `Konnectivity`, `Ignition`: `Route` | Map of service name to its `servicePublishingStrategy`. `null` drops an entry. HyperShift requires these four. Immutable. |
 | `hostedCluster` | `{}` | `metadata` and `spec` merged over the generated HostedCluster. `spec.release` is ignored. |
@@ -90,14 +93,21 @@ Defaults are from [`lifecycle/values.yaml`](https://github.com/PolicyStack/Polic
 | `hive.platform` | required for `hive` | Exactly one of `aws`, `gcp` or `azure`: the install-config `platform`. `region` is required, plus `projectID` on GCP and `baseDomainResourceGroupName` on Azure. `region`, `baseDomainResourceGroupName` and `cloudName` also go to the ClusterDeployment. Immutable. |
 | `hive.installConfig` | `{}` | Merged under the generated install-config: `controlPlane`, `compute`, `networking` and the rest of the [install-config](https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/installing_on_aws/). The chart sets `apiVersion`, `metadata.name`, `baseDomain` and `platform`. `sshKey` defaults to the credential's `ssh-publickey`. Hive drops fields its installer version does not know. |
 | `hive.clusterDeployment` | `{}` | `metadata` and `spec` merged over the generated ClusterDeployment. `spec.provisioning.releaseImage` is ignored. |
+| `siteconfig.templates` | `ai` | `ai` or `ibi`: the stock `<templates>-cluster-templates-v1` and `<templates>-node-templates-v1` ConfigMaps. `ibi` installs single-node OpenShift only. Immutable. |
+| `siteconfig.templateNamespace` | `open-cluster-management` | Namespace of those ConfigMaps, the MultiClusterHub's. |
+| `siteconfig.bmcCredential.namespace`, `.name` | required for `siteconfig` | Hub Secret with `username` and `password`, copied to `<cluster>-bmc` for every node. |
+| `siteconfig.clusterInstance` | `{}` | Merged under the generated [ClusterInstance](https://github.com/stolostron/siteconfig/blob/release-2.16/api/v1alpha1/clusterinstance_types.go) spec: `clusterType` (`SNO` or `HighlyAvailable`), `networkType`, `machineNetwork`, `apiVIPs`, `ingressVIPs` and the rest. |
+| `siteconfig.nodes` | required for `siteconfig` | Map of hostName to its ClusterInstance node: `bmcAddress` and `bootMACAddress` required, plus `role`, `nodeNetwork`, `rootDeviceHints` and the rest. Being a map, layers merge per host. |
 
-`hypershift` and `hive` keys are each read only by their engine, and the schema rejects `hive` keys unless `engine` is `hive`.
+`hypershift`, `hive` and `siteconfig` keys are each read only by their engine, and the schema rejects `hive` or `siteconfig` keys unless `engine` selects them.
 
 The generated HostedCluster sets the release image, `pullSecret` `<cluster>-pull-secret`, `sshKey` `<cluster>-ssh-key`, the platform, `services`, and `dns.baseDomain` when set. On `Agent` it adds `platform.agent.agentNamespace`. On `Agent` and `None` it adds `secretEncryption` with the key `<cluster>-etcd-encryption-key`. Networking, etcd and everything else are left to HyperShift's defaults: set them in `hostedCluster.spec`.
 
 Each NodePool gets `clusterName`, the release image ([Upgrades](#upgrades) covers when it changes), the platform, and `management.upgradeType`: `Replace` on `KubeVirt`, `InPlace` otherwise. A pool with no `replicas` gets HyperShift's default of 0. On `Agent`, a pool without an `agentLabelSelector` claims any free Agent in the namespace, which is why `platforms/agent.yaml` ships no default pool.
 
 The generated ClusterDeployment `<cluster>/<cluster>` sets `baseDomain`, `clusterName`, the platform with `credentialsSecretRef` `<cluster>-creds`, `pullSecretRef` `<cluster>-pull-secret`, `provisioning.installConfigSecretRef` `<cluster>-install-config`, the release image `<releaseRepository>:<version>-multi`, and `installAttemptsLimit: 1`, so a failed install is not retried. The install-config carries no `pullSecret`: Hive fills it in. Set `architecture: amd64` on `controlPlane` and each `compute` pool, as `platforms/aws.yaml` does. Otherwise it follows the architecture of the hub node that runs the install.
+
+The generated ClusterInstance `<cluster>/<cluster>` sets `clusterName`, `baseDomain`, `pullSecretRef` `<cluster>-pull-secret`, `sshPublicKey` from the credential at create, the templates, `clusterImageSetNameRef` `lifecycle-<cluster>`, and on each node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and the node templates. ClusterImageSet `lifecycle-<cluster>` holds `<releaseRepository>:<version>-multi`. `bootMode` defaults to `UEFI` and `automatedCleaningMode` to `disabled`. SiteConfig rejects any spec change from create until the install completes, so nothing in the spec follows a later `version` or credential change: the image set name is fixed, and its image and the SSH key are read back from the live objects ([Immutable fields](#immutable-fields)). The stock `ai` KlusterletAddonConfig leaves application-manager off, without which ACM never creates the cluster's Argo CD secret, so the chart suppresses it and renders its own with every add-on on. With `-multi`, the assisted installer accepts at most 3 control-plane nodes.
 
 ### Values
 
@@ -129,10 +139,10 @@ Merge `fleet/<cluster>.yaml` with `hub` to the default branch, together with `va
 | Template | Mode | Does |
 |---|---|---|
 | `present-guard-<cluster>` | inform | NonCompliant if a ManagedCluster of that name exists without the engine's owner annotations ([Ownership](#ownership)). That stops the chain ([Troubleshooting](#troubleshooting)). |
-| `present-credentials-<cluster>` | enforce | `hypershift`: Namespace `install.namespace`; `<cluster>-pull-secret` and `<cluster>-ssh-key` copied from the credential; on `Agent` and `None`, `<cluster>-etcd-encryption-key`. `hive`: Namespace `<cluster>`; `<cluster>-pull-secret`, `<cluster>-creds` with only the keys Hive reads, and `<cluster>-install-config`. |
+| `present-credentials-<cluster>` | enforce | `hypershift`: Namespace `install.namespace`; `<cluster>-pull-secret` and `<cluster>-ssh-key` copied from the credential; on `Agent` and `None`, `<cluster>-etcd-encryption-key`. `hive`: Namespace `<cluster>`; `<cluster>-pull-secret`, `<cluster>-creds` with only the keys Hive reads, and `<cluster>-install-config`. `siteconfig`: Namespace `<cluster>`, `<cluster>-pull-secret` and `<cluster>-bmc`. |
 | `present-manifests-<cluster>` | enforce | `install.manifests`, as given. |
-| `present-cluster-<cluster>` | enforce | `hypershift`: the HostedCluster, then one NodePool per `nodePools` entry. `hive`: the ClusterDeployment, then ManagedCluster `<cluster>` with the owner annotation, and its KlusterletAddonConfig with every add-on on. |
-| `present-ready-<cluster>` | inform | `hypershift`: NonCompliant until the HostedCluster's version history shows `version` Completed and every NodePool reports `version`. `hive`: NonCompliant until the ClusterDeployment's `spec.installed` is true. The Policy, and with it the Application's health, then means the cluster is built, and for `hypershift` upgraded, not just applied. A `hive` cluster's upgrades show on the cluster ([Upgrades](#upgrades)). |
+| `present-cluster-<cluster>` | enforce | `hypershift`: the HostedCluster, then one NodePool per `nodePools` entry. `hive`: the ClusterDeployment, then ManagedCluster `<cluster>` with the owner annotation, and its KlusterletAddonConfig with every add-on on. `siteconfig`: ClusterImageSet `lifecycle-<cluster>`, the ClusterInstance, and its KlusterletAddonConfig with every add-on on. SiteConfig renders the BareMetalHosts, the install objects and the ManagedCluster. |
+| `present-ready-<cluster>` | inform | `hypershift`: NonCompliant until the HostedCluster's version history shows `version` Completed and every NodePool reports `version`. `hive`: NonCompliant until the ClusterDeployment's `spec.installed` is true. `siteconfig`: NonCompliant until the ClusterInstance's `Provisioned` condition is True. The Policy, and with it the Application's health, then means the cluster is built, and for `hypershift` upgraded, not just applied. A `hive` or `siteconfig` cluster's upgrades show on the cluster ([Upgrades](#upgrades)). |
 
 ### Ownership
 
@@ -142,6 +152,7 @@ The guard and detach act only on a ManagedCluster that carries its engine's owne
 |---|---|---|
 | `hypershift` | `open-cluster-management/created-via: hypershift`, `import.open-cluster-management.io/hosting-cluster-name: <hub ManagedCluster>` | The hypershift-addon, on a cluster hosted on this hub |
 | `hive` | `lifecycle.policystack.io/hub: <hubName>` | `present-cluster-<cluster>` |
+| `siteconfig` | `lifecycle.policystack.io/hub: <hubName>` | SiteConfig, from the ClusterInstance's `extraAnnotations` |
 
 The credential is read with managed-cluster templates resolved on the hub, so it can live in any namespace. The etcd key is generated once, while neither the key nor the HostedCluster exists. A key deleted after create is not regenerated, since a new key cannot decrypt etcd: restore it from a backup.
 
@@ -157,7 +168,7 @@ oc get hostedcluster hcp-kubevirt -n clusters \
   -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.message}{"\n"}{end}'
 ```
 
-For `hive`, `oc get clusterdeployment -n <cluster>` and the install pod's logs, `oc logs -f -n <cluster> -l hive.openshift.io/install=true -c installer`, show progress. An AWS install takes about 45 minutes.
+For `siteconfig`, `oc get clusterinstance,bmh,agentclusterinstall,agent -n <cluster>` shows progress; an SNO install takes about an hour. For `hive`, `oc get clusterdeployment -n <cluster>` and the install pod's logs, `oc logs -f -n <cluster> -l hive.openshift.io/install=true -c installer`, show progress. An AWS install takes about 45 minutes.
 
 The ConfigurationPolicies live in the hub's ManagedCluster namespace, `local-cluster` by default. A template that has not run yet is Pending. The cluster is done when `present-lifecycle-<cluster>` is Compliant. A render error, such as a missing `version`, shows on the Application instead:
 
@@ -170,7 +181,7 @@ oc get applications.argoproj.io lifecycle-hcp-kubevirt -n openshift-gitops \
 
 No step is needed:
 
-1. `hypershift`: once the HostedCluster is available, the hypershift-addon creates ManagedCluster `<cluster>` and its KlusterletAddonConfig. `hive`: once Hive sets `spec.installed`, ACM imports the ManagedCluster the chart created.
+1. `hypershift`: once the HostedCluster is available, the hypershift-addon creates ManagedCluster `<cluster>` and its KlusterletAddonConfig. `hive`: once Hive sets `spec.installed`, ACM imports the ManagedCluster the chart created. `siteconfig`: the same, with the ManagedCluster SiteConfig rendered.
 2. The ManagedCluster joins `global`. The GitOpsCluster creates its Argo CD cluster secret, and ACM adds the `clusterID` label once the cluster reports ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
 3. The Day-2 ApplicationSet pairs the secret with the same fleet file and creates `<element>-<cluster>` Applications. It ignores `hub`, `state` and `install`.
 
@@ -186,14 +197,15 @@ The chart owns the HostedCluster's and every NodePool's `release`; a `release` k
 
 `present-lifecycle-<cluster>` is Compliant again once the control plane and every NodePool report the new version.
 
-A `hive` cluster upgrades on the cluster, through `openshift-upgrade`, like an imported one. Hive rejects changes to the ClusterDeployment's release image, so the chart keeps the image it installed with. It installs from the `-multi` payload, so the cluster is a multi-architecture cluster and its updates are too.
+A `hive` or `siteconfig` cluster upgrades on the cluster, through `openshift-upgrade`, like an imported one. Hive rejects changes to the ClusterDeployment's release image, and the assisted installer to the image set, so the chart keeps the image it installed with. It installs from the `-multi` payload, so the cluster is a multi-architecture cluster and its updates are too.
 
 ## Immutable fields
 
-HyperShift and Hive reject changes to these after create, among others:
+HyperShift, Hive and SiteConfig reject changes to these, among others:
 
 - HostedCluster: `services`, `platform`, `networking`, `etcd`, `issuerURL`, `controllerAvailabilityPolicy`, `fips`, and `dns.baseDomain` once set. `secretEncryption` cannot be removed.
 - NodePool: `clusterName`, `platform.type`, `arch`, `management.upgradeType`.
+- ClusterInstance: everything from create until the install completes, then everything but `extraAnnotations`, `extraLabels`, `suppressedManifests`, `pruneManifests`, and adding a node. `musthave` keeps list entries it does not render, so removing a host from `siteconfig.nodes`, or changing one after install, also needs `oc edit clusterinstance <cluster> -n <cluster>`. A failed install cannot be fixed in place: set `state: absent`, then `present` again with the fix.
 - ClusterDeployment: everything but `installAttemptsLimit`, `powerState`, `preserveOnDelete` and a few others. `baseDomain` and `hive.platform` included. `hive.installConfig` and `hive.platform` changes reach the Secret but not the installed cluster.
 
 Editing one in the cascade does not change the cluster. The update is rejected and `present-cluster-<cluster>` goes NonCompliant with the API server's message. Revert the value. To change a NodePool's `upgradeType` or `arch`, add a new pool and remove the old one.
@@ -228,6 +240,14 @@ The Application replaces `present-lifecycle-<cluster>` with `absent-lifecycle-<c
 | `absent-destroyed-<cluster>` | Waits until the ClusterDeployment is gone, which is when deprovision finished. Hive needs `<cluster>-creds` and `<cluster>-install-config` until then. |
 | `absent-cleanup-<cluster>` | Deletes Namespace `<cluster>` and every `install.manifests` object. ACM usually deletes the namespace first. Leaves the credential. |
 
+`siteconfig` has no detach: the ClusterInstance owns the ManagedCluster, and SiteConfig would re-create one deleted on its own. Its chain is guard, then:
+
+| Template | Does |
+|---|---|
+| `absent-destroy-<cluster>` | Deletes the ClusterInstance. SiteConfig deletes what it rendered, highest sync wave first: with `ai` the BareMetalHosts, then the ManagedCluster, then the install objects. With `ai` the hosts keep running the cluster: the assisted installer detached their BareMetalHosts, so deleting them powers nothing off. With `ibi` the hosts reboot and likely power off. Disks are not wiped either way; power off or reuse the hosts by hand. |
+| `absent-destroyed-<cluster>` | Waits until the ClusterInstance is gone, a few minutes at least. |
+| `absent-cleanup-<cluster>` | Deletes Namespace `<cluster>`, ClusterImageSet `lifecycle-<cluster>` and every `install.manifests` object. Leaves the credentials. |
+
 If the hypershift-addon restarts between detach and destroy, it can re-create the ManagedCluster. `absent-detach` deletes it again.
 
 Detaching deletes the cluster's Argo CD secret, so the Day-2 ApplicationSet deletes its `<element>-<cluster>` Applications and their Policies ([Removing an element](rollout.md#removing-an-element)). The governance add-on is gone by then, so nothing is pruned on the cluster. On `hypershift`, ACM deletes the namespaces `<cluster>` and `klusterlet-<cluster>`. On `hive`, ACM deletes Namespace `<cluster>` once the ClusterDeployment is gone.
@@ -242,9 +262,9 @@ Deleting the file earlier abandons the cluster at whichever step it reached ([Ab
 
 ## Abandon
 
-Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>`. The lifecycle ApplicationSet sets `preserveResourcesOnDeletion: false`, so Argo CD deletes the Policies with it. The cluster, its secrets and manifests stay and keep running, unmanaged: the HostedCluster and NodePools, or the ClusterDeployment, ManagedCluster and KlusterletAddonConfig. Deleting the ApplicationSets does the same for every cluster the hub built. `helm uninstall appset` keeps them ([Install the ApplicationSet](install.md#install-the-applicationset)).
+Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>`. The lifecycle ApplicationSet sets `preserveResourcesOnDeletion: false`, so Argo CD deletes the Policies with it. The cluster, its secrets and manifests stay and keep running, unmanaged: the HostedCluster and NodePools; the ClusterDeployment, ManagedCluster and KlusterletAddonConfig; or the ClusterImageSet, ClusterInstance and everything SiteConfig rendered from it. Deleting the ApplicationSets does the same for every cluster the hub built. `helm uninstall appset` keeps them ([Install the ApplicationSet](install.md#install-the-applicationset)).
 
-To re-adopt, restore the file or the key with the same `install` values. The guard passes, since the ManagedCluster carries the owner annotations, the existing etcd key and ClusterDeployment release image are kept, and `musthave` reconciles the existing objects.
+To re-adopt, restore the file or the key with the same `install` values. The guard passes, since the ManagedCluster carries the owner annotations, the existing etcd key and the ClusterDeployment and ClusterImageSet release images are kept, and `musthave` reconciles the existing objects.
 
 Moving a cluster to another hub is unsupported. Changing `hub` abandons the cluster on the old hub and builds a second one, with the same name, on the new hub. Destroy it on the old hub, then build it on the new one.
 
@@ -266,7 +286,11 @@ Setting a pool to `null` does not remove it: the schema rejects it. A pool defin
 
 **Hive deprovision stuck.** `absent-destroyed-<cluster>` stays NonCompliant and the ClusterDeployment shows `DeprovisionLaunchError`, or its ClusterDeprovision `AuthenticationFailure`. The cloud credentials are wrong or were rotated. Fix the keys in `<cluster>-creds` itself: the absent Policy no longer copies the credential. A HiveConfig with `deleteProtection: enabled` rejects the delete outright: `absent-destroy-<cluster>` is NonCompliant with `cannot delete while annotation is present`. Remove the `hive.openshift.io/protected-delete` annotation from the ClusterDeployment.
 
-**Rebuilding a name.** Nothing can be created in Namespace `<cluster>` while it is still terminating after a destroy, and the first template that writes there stays NonCompliant until it is gone: `present-cluster-<cluster>` on `hypershift`, where ACM refuses the ManagedCluster, and `present-credentials-<cluster>` on `hive`, with `because it is being terminated`. Wait for `oc get ns <cluster>` to return NotFound.
+**SiteConfig install failed or spec rejected.** `present-cluster-<cluster>` is NonCompliant with a webhook denial, or `present-ready-<cluster>` stays NonCompliant and the ClusterInstance shows `Provisioned` False. A spec change before the install completes, and any change after it fails, is rejected. Check `oc get clusterinstance <cluster> -n <cluster> -o jsonpath='{.status.conditions}'` and the AgentClusterInstall. Destroy, fix the values, and build again. A wrong ref, such as `templateNamespace`, can also be fixed by creating the missing object under the referenced name.
+
+**SiteConfig deletion paused.** `absent-destroyed-<cluster>` stays NonCompliant and the ClusterInstance carries the `clusterinstance.siteconfig.open-cluster-management.io/paused` annotation. A rendered object, usually a BareMetalHost or the ManagedCluster, was not gone within 30 minutes. Fix what holds it, then remove the annotation.
+
+**Rebuilding a name.** Nothing can be created in Namespace `<cluster>` while it is still terminating after a destroy, and the first template that writes there stays NonCompliant until it is gone: `present-cluster-<cluster>` on `hypershift`, where ACM refuses the ManagedCluster, and `present-credentials-<cluster>` on `hive` and `siteconfig`, with `because it is being terminated`. Wait for `oc get ns <cluster>` to return NotFound.
 
 **Missing credential.** An unset `credential.namespace` or `credential.name` fails the render, and the Application shows `install.credential.namespace is required`. A credential Secret that does not exist on the hub turns `present-credentials-<cluster>` NonCompliant with a template error, and nothing after it runs. Without a `pullSecret` key, `.dockerconfigjson` is empty, the API server rejects the Secret, and `present-credentials-<cluster>` stays NonCompliant. Without an `ssh-publickey` key no error shows: `hypershift` copies an empty key, and `hive` leaves `sshKey` out. On `hive`, a missing cloud key is copied into `<cluster>-creds` as an empty value, so `present-credentials-<cluster>` stays Compliant and the install fails on the ClusterDeployment instead.
 

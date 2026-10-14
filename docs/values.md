@@ -62,13 +62,13 @@ The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/v
 
 | File | Read by | Holds |
 |---|---|---|
-| `values/environments/prod.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent` | The security and compliance baseline for every prod cluster: cert-manager, External Secrets, the Compliance Operator, manual remediations and cluster DNS |
+| `values/environments/prod.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | The security and compliance baseline for every prod cluster: cert-manager, External Secrets, the Compliance Operator, manual remediations and cluster DNS |
 | `values/environments/nonprod.yaml` | `nonprod-west-1`, `hcp-kubevirt`, `hcp-retired`, `hive-aws`, `hive-retired` | Placeholder, sets nothing |
-| `values/datacenters/dc1.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent` | `install.baseDomain` for hosted clusters built in dc1. Turns no element on |
+| `values/datacenters/dc1.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | `install.baseDomain` for clusters built in dc1. Turns no element on |
 | `values/datacenters/dc2.yaml` | `nonprod-west-1` | Site facts only: the registry allowlist through the dc2 mirror. Turns no element on |
 | `values/platforms/aws.yaml` | `prod-east-1`, `hive-aws`, `hive-retired` | Toggles for the node elements: clone the worker MachineSet. `install`: engine `hive`, the credential and the install-config machine pools |
 | `values/platforms/vmware.yaml` | No example | Toggles for the node elements: clone each worker MachineSet, one per vSphere failure domain |
-| `values/platforms/baremetal.yaml` | `hubs/acm-dc1` | Toggles for the node elements: no infra MachineSets, and storage nodes are existing nodes labeled in place |
+| `values/platforms/baremetal.yaml` | `hubs/acm-dc1`, `sno-edge`, `sno-retired` | Toggles for the node elements: no infra MachineSets, and storage nodes are existing nodes labeled in place. `install`: engine `siteconfig`, the credentials and `networkType` |
 | `values/platforms/kubevirt.yaml` | `hcp-kubevirt`, `hcp-retired` | `install` only: platform `KubeVirt`, the credential and a `workers` NodePool of 2 |
 | `values/platforms/agent.yaml` | `hcp-agent` | `install` only: platform `Agent`, the Agent namespace and the credential. No default NodePool |
 | `values/tenants/payments.yaml` | No example | A custom layer: the GitOps operator without its instance, plus a payments team Argo CD |

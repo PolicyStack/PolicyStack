@@ -155,29 +155,44 @@ func TestOwnership(t *testing.T) {
 	hcpOwner := map[string]string{"open-cluster-management/created-via": "hypershift", "import.open-cluster-management.io/hosting-cluster-name": "local-cluster"}
 	hiveOwner := map[string]string{"lifecycle.policystack.io/hub": "acm-dc1"}
 	imported := map[string]string{"open-cluster-management/created-via": "other"}
+	otherHub := map[string]string{"lifecycle.policystack.io/hub": "acm-dc2"}
 	for _, tt := range []struct {
 		cluster string
 		owner   map[string]string
 		foreign []map[string]string
+		detach  bool // SiteConfig deletes the ManagedCluster itself, so its absent chain has none
 	}{
-		{"hcp-retired", hcpOwner, []map[string]string{imported, hiveOwner}},
-		{"hive-retired", hiveOwner, []map[string]string{imported, hcpOwner, {"lifecycle.policystack.io/hub": "acm-dc2"}}},
+		{"hcp-retired", hcpOwner, []map[string]string{imported, hiveOwner}, true},
+		{"hive-retired", hiveOwner, []map[string]string{imported, hcpOwner, otherHub}, true},
+		{"sno-retired", hiveOwner, []map[string]string{imported, hcpOwner, otherHub}, false},
 	} {
 		t.Run(tt.cluster, func(t *testing.T) {
-			guard := hubResolved(t, rawTemplate(t, tt.cluster, "absent-guard-"+tt.cluster))
-			detach := hubResolved(t, rawTemplate(t, tt.cluster, "absent-detach-"+tt.cluster))
+			raws := rawTemplates(t, tt.cluster)
+			guard := hubResolved(t, raws["absent-guard-"+tt.cluster])
+			detach, ok := raws["absent-detach-"+tt.cluster]
+			if ok != tt.detach {
+				t.Fatalf("absent-detach rendered: %v, want %v", ok, tt.detach)
+			}
+			detach = hubResolved(t, detach)
 			// No ManagedCluster: the guard renders nothing (Compliant), detach has nothing to delete.
 			if objs := resolve(t, guard); len(objs) != 0 {
 				t.Errorf("guard without a ManagedCluster: %+v", objs)
 			}
 			own := managedCluster(tt.cluster, tt.owner)
-			if objs := resolve(t, detach, own); len(objs) != 1 || objs[0].ComplianceType != "mustnothave" {
-				t.Errorf("detach of an owned ManagedCluster: %+v", objs)
+			if objs := resolve(t, guard, own); len(objs) != 1 || !maps.Equal(objs[0].ObjectDefinition.GetAnnotations(), tt.owner) {
+				t.Errorf("guard of an owned ManagedCluster: %+v", objs)
+			}
+			if tt.detach {
+				if objs := resolve(t, detach, own); len(objs) != 1 || objs[0].ComplianceType != "mustnothave" {
+					t.Errorf("detach of an owned ManagedCluster: %+v", objs)
+				}
 			}
 			for _, f := range tt.foreign {
 				mc := managedCluster(tt.cluster, f)
-				if objs := resolve(t, detach, mc); len(objs) != 0 {
-					t.Errorf("detach deletes a ManagedCluster annotated %v", f)
+				if tt.detach {
+					if objs := resolve(t, detach, mc); len(objs) != 0 {
+						t.Errorf("detach deletes a ManagedCluster annotated %v", f)
+					}
 				}
 				// The guard asserts the owner annotations, so a foreign ManagedCluster is NonCompliant.
 				objs := resolve(t, guard, mc)

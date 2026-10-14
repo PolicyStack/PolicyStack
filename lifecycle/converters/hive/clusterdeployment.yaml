@@ -11,7 +11,7 @@ stops Hive from retrying a failed install, and its cloud resources, forever.
 {{- $h := .Values.install.hive }}
 {{- $c := include "lifecycle.cluster" . }}
 {{- $p := include "lifecycle.hivePlatform" . }}
-{{- $image := printf "%s:%s-multi" .Values.install.releaseRepository (required "version is required" .Values.version) }}
+{{- $image := include "lifecycle.releaseImage" . }}
 {{- $platform := pick (get $h.platform $p) "region" "baseDomainResourceGroupName" "cloudName" }}
 {{- $_ := set $platform "credentialsSecretRef" (dict "name" (printf "%s-creds" $c)) }}
 {{- $spec := dict "baseDomain" .Values.install.baseDomain "clusterName" $c "installAttemptsLimit" 1 "platform" (dict $p $platform) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "provisioning" (dict "installConfigSecretRef" (dict "name" (printf "%s-install-config" $c))) }}

@@ -1,0 +1,61 @@
+{{- /*
+ClusterImageSet lifecycle-<cluster>, then the ClusterInstance SiteConfig renders the install from.
+
+SiteConfig rejects any ClusterInstance spec change until the install completes, and after it only a
+few, so nothing in the spec follows a later change. The image set's name never changes, and its
+releaseImage and the ClusterInstance's sshPublicKey are read back from the live objects: a version
+bump or a rotated credential key reaches neither, and the cluster upgrades through openshift-upgrade
+instead. The image set carries no channel label, which would let MCE's cluster-image-set-controller
+delete it.
+
+The owner annotation reaches the ManagedCluster through extraAnnotations, since SiteConfig renders
+and owns it. The stock ai KlusterletAddonConfig turns application-manager off, without which ACM
+never creates the cluster's Argo CD secret, so it is suppressed and rendered here with every add-on
+on, as the hive engine does.
+*/ -}}
+{{- $s := .Values.install.siteconfig }}
+{{- $c := include "lifecycle.cluster" . }}
+{{- $t := $s.templates | default "ai" }}
+{{- $ns := $s.templateNamespace | default "open-cluster-management" }}
+{{- $nodes := list }}
+{{- range $host, $node := required "install.siteconfig.nodes is required" $s.nodes }}
+{{- $nodes = append $nodes (mergeOverwrite (deepCopy $node) (dict "hostName" $host "bmcCredentialsName" (dict "name" (printf "%s-bmc" $c)) "templateRefs" (list (dict "name" (printf "%s-node-templates-v1" $t) "namespace" $ns)))) }}
+{{- end }}
+{{- $spec := dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.ownerAnnotations" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "nodes" $nodes }}
+{{- $spec = mergeOverwrite (deepCopy ($s.clusterInstance | default dict)) $spec }}
+{{- $_ := unset $spec "sshPublicKey" }}
+{{ "{{-" }} $releaseImage := dig "spec" "releaseImage" {{ include "lifecycle.releaseImage" . | quote }} (lookup "hive.openshift.io/v1" "ClusterImageSet" "" "lifecycle-{{ $c }}") {{ "}}" }}
+{{ "{{-" }} $ssh := dig "spec" "sshPublicKey" (fromSecret {{ include "lifecycle.credential" . }} "ssh-publickey" | base64dec) (lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }}) {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: hive.openshift.io/v1
+    kind: ClusterImageSet
+    metadata:
+      name: lifecycle-{{ $c }}
+    spec:
+      releaseImage: '{{ "{{" }} $releaseImage {{ "}}" }}'
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: siteconfig.open-cluster-management.io/v1alpha1
+    kind: ClusterInstance
+    metadata:
+      name: {{ $c }}
+      namespace: {{ $c }}
+    spec: {{- $spec | toYaml | nindent 6 }}
+      sshPublicKey: {{ "{{" }} printf "%q" $ssh {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: agent.open-cluster-management.io/v1
+    kind: KlusterletAddonConfig
+    metadata:
+      name: {{ $c }}
+      namespace: {{ $c }}
+    spec:
+      applicationManager:
+        enabled: true
+      certPolicyController:
+        enabled: true
+      policyController:
+        enabled: true
+      searchCollector:
+        enabled: true

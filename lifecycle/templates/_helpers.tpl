@@ -12,6 +12,8 @@ built here, so lifecycle never builds over it or detaches it.
 - hypershift: set by the hypershift-addon when it auto-imports a HostedCluster hosted on this hub.
   The hub template resolves to the hub's own ManagedCluster name.
 - hive: set by the hive engine on the ManagedCluster it creates.
+- siteconfig: set by SiteConfig on the ManagedCluster it renders, from the ClusterInstance's
+  extraAnnotations.
 */}}
 {{- define "lifecycle.ownerAnnotations" -}}
 {{- if eq .Values.install.engine "hypershift" -}}
@@ -20,6 +22,13 @@ import.open-cluster-management.io/hosting-cluster-name: '{{ "{{hub" }} .ManagedC
 {{- else -}}
 lifecycle.policystack.io/hub: {{ .Values.hub | quote }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+<releaseRepository>:<version>-multi, the release every engine installs.
+*/}}
+{{- define "lifecycle.releaseImage" -}}
+{{- printf "%s:%s-multi" .Values.install.releaseRepository (required "version is required" .Values.version) -}}
 {{- end -}}
 
 {{/*

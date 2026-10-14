@@ -1,6 +1,22 @@
 # Listed as platforms/baremetal.yaml in a fleet file's valueFiles.
 # Bare metal has no MachineSets, so storage nodes are designated by labelling existing nodes and
 # infra MachineSet creation is off entirely.
+#
+# install is read only by lifecycle/, for a cluster a hub builds with SiteConfig and the assisted
+# installer (docs/lifecycle.md). The fleet file or values/clusters/<cluster>.yaml sets the nodes and
+# the machine network.
+install:
+  engine: siteconfig
+  credential:
+    namespace: bm-credentials
+    name: hostinventory
+  siteconfig:
+    bmcCredential:
+      namespace: bm-credentials
+      name: bmc
+    clusterInstance:
+      networkType: OVNKubernetes
+
 stack:
   infraNodes:
     toggles:

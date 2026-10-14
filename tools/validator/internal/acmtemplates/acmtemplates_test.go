@@ -40,6 +40,8 @@ var kinds = []struct {
 	{"hypershift.openshift.io/v1beta1", "HostedCluster", "hostedclusters", true},
 	{"hypershift.openshift.io/v1beta1", "NodePool", "nodepools", true},
 	{"hive.openshift.io/v1", "ClusterDeployment", "clusterdeployments", true},
+	{"hive.openshift.io/v1", "ClusterImageSet", "clusterimagesets", false},
+	{"siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", "clusterinstances", true},
 }
 
 // object is one resolved object-templates-raw entry.
@@ -51,6 +53,16 @@ type object struct {
 // rawTemplate renders lifecycle/ for the fixture fleet file cluster, with setString ranking above
 // the fleet file, and returns the object-templates-raw of ConfigurationPolicy name.
 func rawTemplate(t *testing.T, cluster, name string, setString ...string) string {
+	t.Helper()
+	raw, ok := rawTemplates(t, cluster, setString...)[name]
+	if !ok {
+		t.Fatalf("no ConfigurationPolicy %q rendered for %s", name, cluster)
+	}
+	return raw
+}
+
+// rawTemplates is rawTemplate for every ConfigurationPolicy with object-templates-raw, by name.
+func rawTemplates(t *testing.T, cluster string, setString ...string) map[string]string {
 	t.Helper()
 	helm, err := exec.LookPath("helm")
 	if err != nil {
@@ -79,6 +91,7 @@ func rawTemplate(t *testing.T, cluster, name string, setString ...string) string
 	if tr.Err != nil {
 		t.Fatalf("helm template: %v: %s", tr.Err, tr.Stderr)
 	}
+	out := map[string]string{}
 	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(tr.Stdout), 4096)
 	for {
 		var doc struct {
@@ -102,13 +115,12 @@ func rawTemplate(t *testing.T, cluster, name string, setString ...string) string
 			t.Fatal(err)
 		}
 		for _, pt := range doc.Spec.PolicyTemplates {
-			if pt.ObjectDefinition.Metadata.Name == name {
-				return pt.ObjectDefinition.Spec.Raw
+			if pt.ObjectDefinition.Spec.Raw != "" {
+				out[pt.ObjectDefinition.Metadata.Name] = pt.ObjectDefinition.Spec.Raw
 			}
 		}
 	}
-	t.Fatalf("no ConfigurationPolicy %q rendered for %s", name, cluster)
-	return ""
+	return out
 }
 
 // resolve evaluates raw with live objects (YAML documents) in the fake cluster. A nil result is

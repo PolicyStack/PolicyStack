@@ -66,6 +66,8 @@ drive the cascade in list order (matches `appset.yaml`).
 | `hcp-retired` | `state: absent`, the destroy chain |
 | `hive-aws` | Hive cluster on AWS, defaults from `values/platforms/aws.yaml` |
 | `hive-retired` | Hive `state: absent` |
+| `sno-edge` | SiteConfig single-node cluster, defaults from `values/platforms/baremetal.yaml` |
+| `sno-retired` | SiteConfig `state: absent` |
 
 Override with `--fixtures-dir`, for example `--fixtures-dir fleet` to check a
 real fleet. Other files are ignored, `.yml` included.

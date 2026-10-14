@@ -215,6 +215,8 @@ func TestLoadDir_testdata(t *testing.T) {
 		{"hive-retired", "acm-dc1", "absent"},
 		{"nonprod-west-1", "", ""},
 		{"prod-east-1", "", ""},
+		{"sno-edge", "acm-dc1", ""},
+		{"sno-retired", "acm-dc1", "absent"},
 		{"acm-dc1", "", ""},
 	}
 	if len(got) != len(want) {

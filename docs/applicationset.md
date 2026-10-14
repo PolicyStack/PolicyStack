@@ -31,7 +31,7 @@ valueFiles:
 
 Any file under `values/` can be listed. `tenants/payments.yaml` is a custom layer: add the file and list it where it should rank. An old `config.<baseDomain>/<category>.<priority>: <value>` label becomes the entry `<category>s/<value>.yaml`, placed in priority order.
 
-Upstream ships no live fleet files, since a shipped file would configure a real cluster as soon as someone installs from upstream. The examples are the validator's fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters): `prod-east-1.yaml`, `nonprod-west-1.yaml`, `hubs/acm-dc1.yaml`, and the hub-built `hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hcp-retired.yaml`, `hive-aws.yaml` and `hive-retired.yaml`.
+Upstream ships no live fleet files, since a shipped file would configure a real cluster as soon as someone installs from upstream. The examples are the validator's fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters): `prod-east-1.yaml`, `nonprod-west-1.yaml`, `hubs/acm-dc1.yaml`, and the hub-built `hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hcp-retired.yaml`, `hive-aws.yaml`, `hive-retired.yaml`, `sno-edge.yaml` and `sno-retired.yaml`.
 
 The ApplicationSet reads fleet files only from the repo's default branch, as `HEAD`. Copies of `fleet/` on other branches have no effect. Changing the default branch re-points every cluster to the fleet files on the new branch, and a cluster without one there loses its Applications.
 

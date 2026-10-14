@@ -11,8 +11,8 @@ target image. HostedCluster and NodePool release are always managed here.
 {{- $i := .Values.install }}
 {{- $c := include "lifecycle.cluster" . }}
 {{- $p := required "install.platform is required" $i.platform }}
-{{- $v := required "version is required" .Values.version }}
-{{- $image := printf "%s:%s-multi" $i.releaseRepository $v }}
+{{- $image := include "lifecycle.releaseImage" . }}
+{{- $v := .Values.version }}
 {{- $services := list }}
 {{- range $name, $strategy := $i.services }}
 {{- if $strategy }}

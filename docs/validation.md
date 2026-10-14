@@ -4,9 +4,9 @@
 `tools/validator/testdata/clusters`, building the list of values files the way the ApplicationSet
 does ([Order](values.md#order)). It checks the element sources and the rendered output. The
 fixtures are the example [fleet files](applicationset.md#fleet-files): `prod-east-1.yaml`,
-`nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and five clusters the hub builds:
-`hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hive-aws.yaml`, and `hcp-retired.yaml` and
-`hive-retired.yaml` (`state: absent`). A file is named
+`nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and seven clusters the hub builds:
+`hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hive-aws.yaml`, `sno-edge.yaml`, and `hcp-retired.yaml`,
+`hive-retired.yaml` and `sno-retired.yaml` (`state: absent`). A file is named
 after its cluster, so `hubs/acm-dc1.yaml` renders as `acm-dc1` and reads
 `values/clusters/acm-dc1.yaml`. Their files in `values/` are rendered too.
 
@@ -15,7 +15,7 @@ with the fixture file appended to the cascade in place of the ApplicationSet's `
 ([Cluster lifecycle](lifecycle.md)).
 
 Neither Helm nor the checks evaluate the ACM templates the lifecycle chart escapes, such as the
-HostedCluster upgrade hold or the ClusterDeployment release image read-back. The Go tests in
+HostedCluster upgrade hold or the ClusterDeployment and ClusterImageSet release image read-backs. The Go tests in
 `tools/validator/internal/acmtemplates` render the fixtures and resolve those templates with
 go-template-utils, the library the config-policy-controller uses, against fake hub objects. A change
 to a lifecycle converter's ACM template needs a case there.

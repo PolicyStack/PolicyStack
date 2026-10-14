@@ -15,3 +15,16 @@ detaches it. The hub template resolves to the hub's own ManagedCluster name.
 open-cluster-management/created-via: hypershift
 import.open-cluster-management.io/hosting-cluster-name: '{{ "{{hub" }} .ManagedClusterName {{ "hub}}" }}'
 {{- end -}}
+
+{{/*
+Deletes install.manifests. Each engine's cleanup converter ends with it, once the cluster is gone.
+*/}}
+{{- define "lifecycle.cleanupManifests" -}}
+{{- range .Values.install.manifests }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: {{ .apiVersion }}
+    kind: {{ .kind }}
+    metadata: {{- pick .metadata "name" "namespace" | toYaml | nindent 6 }}
+{{- end }}
+{{- end -}}

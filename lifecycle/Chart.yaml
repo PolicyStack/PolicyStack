@@ -1,8 +1,8 @@
 apiVersion: v2
 name: lifecycle
-description: "Creates and destroys a hosted cluster from its fleet file"
+description: "Builds, upgrades and destroys a cluster from its fleet file"
 type: application
-version: 0.1.0
+version: 0.2.0
 dependencies:
   - name: policy-library
     version: "3.1.0"

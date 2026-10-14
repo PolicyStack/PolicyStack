@@ -15,8 +15,10 @@ A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.
 | `hub` | No | `hubName` of the hub that builds the cluster. Without it the cluster must be imported ([Cluster lifecycle](lifecycle.md)). |
 | `state` | No | `present` (default) or `absent`. `absent` destroys the cluster ([Destroy](lifecycle.md#destroy)). Requires `hub`. |
 | `install` | No | The cluster to build ([Fleet keys](lifecycle.md#fleet-keys)). Requires `hub`. |
+| `version` | No | OpenShift release, `x.y.z`, the cluster runs. Bumping it upgrades the cluster ([Upgrades](upgrades.md)). Required with `hub`. |
+| `channel` | No | Upgrade channel, such as `stable-4.20` ([Upgrades](upgrades.md)). |
 
-No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`. The Day-2 ApplicationSet ignores the three lifecycle keys. Argo CD reads fleet files as YAML 1.1, so `revision` must be a YAML string. Quote a revision YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
+No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`. The Day-2 ApplicationSet ignores the three lifecycle keys. `version` and `channel` go only in the fleet file, never in a values layer, so the clusters an upgrade moves are the fleet files it changes. Argo CD reads fleet files as YAML 1.1, so `revision`, `version` and `channel` must be YAML strings. Quote one YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
 
 ```yaml
 # fleet/prod-east-1.yaml
@@ -207,6 +209,7 @@ Each Application passes these keys to Helm in `valuesObject`, built from the clu
 | `selectedName` | The cluster name, or `hubName` on the hub. |
 | `selectedId` | The `clusterID` label. |
 | `selector.matchExpressions` | A map with one `In` expression on the `name` label, under the key `name`. |
+| `version`, `channel` | The fleet file's keys, only when it sets them. |
 
 Elements can read every key. The policy-library chart turns `selector` into each Placement's cluster selector ([Placement](policies.md#placement)). On the hub, `selectedName` is `hubName`, but the `name` expression holds the hub's ManagedCluster name. An element that needs a fact such as the environment reads a key that the matching values file sets. For `prod-east-1`:
 
@@ -222,7 +225,7 @@ selector:
         - "prod-east-1"
 ```
 
-A lifecycle Application gets no selector. It passes the fleet file's own keys instead: `hub`, `state` (default `present`) and `install` (default `{}`). They rank above every values file, so the fleet file's `install` overrides the cascade ([Values](lifecycle.md#values)).
+A lifecycle Application gets no selector. It passes the fleet file's own keys instead: `hub`, `state` (default `present`), `version` and `channel` when set, and `install` (default `{}`). They rank above every values file, so the fleet file's `install` overrides the cascade ([Values](lifecycle.md#values)).
 
 ## The appset chart
 

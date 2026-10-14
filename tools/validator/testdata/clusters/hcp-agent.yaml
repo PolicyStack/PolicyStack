@@ -1,11 +1,12 @@
 revision: main
 hub: acm-dc1
+version: 4.20.8
+channel: stable-4.20
 valueFiles:
   - environments/prod.yaml
   - datacenters/dc1.yaml
   - platforms/agent.yaml
 install:
-  version: 4.20.8
   nodePools:
     compute:
       replicas: 3

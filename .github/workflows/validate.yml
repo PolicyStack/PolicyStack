@@ -78,7 +78,9 @@ jobs:
 
       # Catches typos and pins like gh-pages. A pinned branch deleted later still freezes the
       # ApplicationSet (docs/applicationset.md#revision). A file that sets hub is also rendered
-      # from lifecycle/ at its revision.
+      # from lifecycle/ at its revision, which must read the top-level version key, and a file that
+      # sets version or channel needs an openshift-upgrade that reads them. A pin to the PR's base
+      # branch is checked against the merge commit, which is what it resolves to once merged.
       - name: Check fleet pins
         run: |
           shopt -s nullglob
@@ -89,7 +91,13 @@ jobs:
             rev=$(yq '.revision' "$f") || { echo "::error file=$f::not valid YAML"; failed=1; continue; }
             dirs=(stack) need="a stack/ directory"
             if [ -n "$(yq '.hub // ""' "$f")" ]; then
-              dirs+=(lifecycle) need="stack/ and lifecycle/ directories"
+              dirs+=(lifecycle/converters/hypershift) need="stack/ and lifecycle/converters/hypershift/ directories"
+            fi
+            if [ -n "$(yq '.version // .channel // ""' "$f")" ]; then
+              dirs+=(stack/openshift-upgrade/templates/_helpers.tpl) need="$need, and an openshift-upgrade that reads version"
+            fi
+            if [ -n "${GITHUB_BASE_REF:-}" ] && [ "$rev" = "$GITHUB_BASE_REF" ] && has HEAD "${dirs[@]}"; then
+              continue
             fi
             # The forms Argo CD resolves: a tag, a branch, or a commit SHA of 5 to 40 hex characters.
             found=0

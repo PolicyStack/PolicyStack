@@ -39,6 +39,7 @@ dependencies:
 	if len(convertersFiles) > 0 {
 		_ = os.MkdirAll(filepath.Join(dir, "converters"), 0o755)
 		for _, n := range convertersFiles {
+			_ = os.MkdirAll(filepath.Dir(filepath.Join(dir, "converters", n)), 0o755)
 			_ = os.WriteFile(filepath.Join(dir, "converters", n), []byte("kind: ConfigMap\n"), 0o644)
 		}
 	}
@@ -218,6 +219,30 @@ stack:
 	}
 }
 
+func TestPolicy020_021_ConverterSubdirectories(t *testing.T) {
+	el := loadElement(t, `
+stack:
+  myElement:
+    enable: true
+    configPolicies:
+      - name: c
+        enabled: true
+        policyRef: foo
+        templateNames:
+          - name: hypershift/ready
+          - name: shared
+          - name: hive/missing
+`, "", []string{"hypershift/ready.yaml", "shared.yaml", "hive/dead.yaml", "hypershift/ready.txt"})
+	missing := (&MissingConverterCheck{}).Run(Context{Element: el})
+	if len(missing) != 1 || !strings.Contains(missing[0].Message, "converters/hive/missing.yaml") {
+		t.Errorf("POLICY020 = %+v, want only hive/missing", missing)
+	}
+	unused := (&UnusedConverterCheck{}).Run(Context{Element: el})
+	if len(unused) != 1 || !strings.Contains(unused[0].Message, "converters/hive/dead.yaml") {
+		t.Errorf("POLICY021 = %+v, want only hive/dead", unused)
+	}
+}
+
 func TestPolicy030_BadEnums(t *testing.T) {
 	el := loadElement(t, `
 stack:
@@ -256,6 +281,46 @@ stack:
 	}
 	if !strings.Contains(got[0].Message, "imaginary") {
 		t.Errorf("unexpected: %s", got[0].Message)
+	}
+}
+
+func TestPolicy090_Engines(t *testing.T) {
+	const schema = `{"properties": {"install": {"properties": {"engine": {"enum": ["hypershift", "hive"]}}}}}`
+	tests := []struct {
+		name   string
+		values string
+		want   []string // substrings, one per finding
+	}{
+		{"one component per engine", "stack:\n  hypershift: {}\n  hive: {}\n", nil},
+		{"component without engine", "stack:\n  hypershift: {}\n  hive: {}\n  lifecycle: {}\n", []string{`stack key "lifecycle" is not an install.engine`}},
+		{"engine without component", "stack:\n  hypershift: {}\n", []string{`install.engine "hive" in values.schema.json has no stack.hive component`}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, body := range map[string]string{
+				"Chart.yaml":         "apiVersion: v2\nname: lifecycle\nversion: 0.1.0\n",
+				"values.yaml":        tt.values,
+				"values.schema.json": schema,
+			} {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			el, err := chart.Load(dir, "policy")
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := (&CamelCaseCheck{}).Run(Context{Element: el})
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d findings, want %d: %+v", len(got), len(tt.want), got)
+			}
+			for i, w := range tt.want {
+				if !strings.Contains(got[i].Message, w) || got[i].Line == 0 {
+					t.Errorf("[%d] got %q at line %d, want %q with a line", i, got[i].Message, got[i].Line, w)
+				}
+			}
+		})
 	}
 }
 

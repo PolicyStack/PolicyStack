@@ -36,9 +36,9 @@ injects a selector for the one cluster instead ([Placement](policies.md#placemen
 with `--extra-values` take precedence over the whole cascade. They are not applied to `lifecycle/`,
 which ships its own `selector`.
 
-The validator runs `helm dependency update` on an element only when its `charts/` directory holds no
-`.tgz`, otherwise it renders with the archive already there. After bumping the policy-library
-version, delete the stale archives with `rm -rf stack/*/charts lifecycle/charts`. A CI checkout has none.
+The validator runs `helm dependency update` on an element unless its `charts/` directory already holds
+`<name>-<version>.tgz` for every dependency in `Chart.yaml`, so a policy-library bump fetches the new
+archive and replaces the stale one.
 
 ## Output
 

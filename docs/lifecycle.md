@@ -6,7 +6,13 @@ The hub renders the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tr
 
 ## Scope
 
-Hosted control planes only: one HostedCluster and its NodePools, on the `KubeVirt`, `Agent` or `None` platform. The control plane runs on the hub that builds the cluster. Hive, SiteConfig and other engines are not supported ([Other engines](#other-engines)).
+`install.engine` picks what builds the cluster. Each engine is one component of the chart, with its own converters in `lifecycle/converters/<engine>/` ([Adding an engine](#adding-an-engine)).
+
+| Engine | Builds | Platforms | Upgrades |
+|---|---|---|---|
+| `hypershift` (default) | One HostedCluster and its NodePools. The control plane runs on the hub that builds the cluster. | `KubeVirt`, `Agent`, `None` | From the hub ([Upgrades](#upgrades)) |
+
+Hive and SiteConfig are not supported yet.
 
 ## Prerequisites
 
@@ -45,6 +51,8 @@ On every hub that builds clusters:
 |---|---|---|
 | `hub` | none | `hubName` of the hub that builds and owns the cluster ([The hub](applicationset.md#the-hub)). Without it the cluster is import-only. |
 | `state` | `present` | `present` builds and reconciles the cluster. `absent` destroys it ([Destroy](#destroy)). Requires `hub`. |
+| `version` | none | OpenShift release, `x.y.z`. Required. Bumping it upgrades the cluster ([Upgrades](#upgrades)). |
+| `channel` | none | Upgrade channel, such as `stable-4.20`. Optional ([Upgrades](#upgrades)). |
 | `install` | none | What to build. Requires `hub`. Any values layer can set the same keys. The fleet file wins ([Values](#values)). |
 
 The cluster name is the fleet file name. It must be a DNS label of at most 38 characters ([Naming limits](policies.md#naming-limits)).
@@ -53,11 +61,10 @@ The cluster name is the fleet file name. It must be a DNS label of at most 38 ch
 # fleet/hcp-kubevirt.yaml
 revision: main
 hub: acm-dc1
+version: 4.20.8
 valueFiles:
   - environments/nonprod.yaml
   - platforms/kubevirt.yaml
-install:
-  version: 4.20.8
 ```
 
 ### `install` keys
@@ -66,15 +73,15 @@ Defaults are from [`lifecycle/values.yaml`](https://github.com/PolicyStack/Polic
 
 | Key | Default | Notes |
 |---|---|---|
+| `engine` | `hypershift` | The engine that builds the cluster ([Scope](#scope)). Immutable. |
 | `platform` | required | `KubeVirt`, `Agent` or `None`. Immutable. |
-| `version` | required | `x.y.z`. Bumping it upgrades the cluster ([Upgrades](#upgrades)). |
 | `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | The release image is `<releaseRepository>:<version>-multi`. Point it at a mirror when disconnected. |
 | `namespace` | `clusters` | Namespace of the HostedCluster, its NodePools and the copied secrets. The control plane runs in `<namespace>-<cluster>`. |
 | `credential.namespace`, `credential.name` | required | The console credential. |
 | `baseDomain` | `""` | Required on `Agent` and `None`. On `KubeVirt`, HyperShift detects it when empty. |
 | `agentNamespace` | `""` | Namespace of the InfraEnv and its Agents. Required on `Agent`. |
 | `services` | `APIServer`: `LoadBalancer`; `OAuthServer`, `Konnectivity`, `Ignition`: `Route` | Map of service name to its `servicePublishingStrategy`. `null` drops an entry. HyperShift requires these four. Immutable. |
-| `hostedCluster` | `{}` | `metadata` and `spec` merged over the generated HostedCluster. |
+| `hostedCluster` | `{}` | `metadata` and `spec` merged over the generated HostedCluster. `spec.release` is ignored. |
 | `nodePools` | `{}` | Map of pool name to a NodePool `spec` merged over the generated one. The NodePool is `<cluster>-<pool>`. |
 | `manifests` | `[]` | Extra hub objects, each with `apiVersion`, `kind` and `metadata`. Created before the HostedCluster, deleted after it. |
 
@@ -90,16 +97,16 @@ The lifecycle Application reads the same cascade as the cluster's Day-2 Applicat
 2. `values.yaml`
 3. Each `valueFiles` entry, in list order
 4. `values/clusters/<cluster>.yaml`
-5. `hub`, `state` and `install` from the fleet file, passed in `valuesObject`
+5. `hub`, `state`, `version`, `channel` and `install` from the fleet file, passed in `valuesObject`
 
-Shared defaults go in the layers: the platform and credential in `values/platforms/kubevirt.yaml` or `agent.yaml`, `baseDomain` in a datacenter file, per-cluster services and manifests in `values/clusters/<cluster>.yaml`. The fleet file then holds little more than `version`. For `hcp-agent` ([fixture](https://github.com/PolicyStack/PolicyStack/blob/main/tools/validator/testdata/clusters/hcp-agent.yaml)):
+Shared defaults go in the layers: the platform and credential in `values/platforms/kubevirt.yaml` or `agent.yaml`, `baseDomain` in a datacenter file, per-cluster services and manifests in `values/clusters/<cluster>.yaml`. The fleet file then holds little more than `version`, which no layer may set. For `hcp-agent` ([fixture](https://github.com/PolicyStack/PolicyStack/blob/main/tools/validator/testdata/clusters/hcp-agent.yaml)):
 
 | Key | Set by |
 |---|---|
 | `platform`, `agentNamespace`, `credential` | `values/platforms/agent.yaml` |
 | `baseDomain` | `values/datacenters/dc1.yaml` |
 | `services`, `hostedCluster`, `manifests` | `values/clusters/hcp-agent.yaml` |
-| `version`, `nodePools` | The fleet file |
+| `nodePools` | The fleet file |
 
 Maps merge across layers, so `services` and `nodePools` entries combine. `manifests` is a list and replaces ([Merge rules](values.md#merge-rules)). A shared default is part of every cluster that reads it: changing `services` or `baseDomain` in a platform or datacenter file turns every existing cluster built from it NonCompliant ([Immutable fields](#immutable-fields)).
 
@@ -113,6 +120,7 @@ Merge `fleet/<cluster>.yaml` with `hub` to the default branch, together with `va
 | `present-credentials-<cluster>` | enforce | Namespace `install.namespace`; `<cluster>-pull-secret` and `<cluster>-ssh-key` copied from the credential; on `Agent` and `None`, `<cluster>-etcd-encryption-key`. |
 | `present-manifests-<cluster>` | enforce | `install.manifests`, as given. |
 | `present-cluster-<cluster>` | enforce | The HostedCluster, then one NodePool per `nodePools` entry. |
+| `present-ready-<cluster>` | inform | NonCompliant until the HostedCluster's version history shows `version` Completed and every NodePool reports `version`. The Policy, and with it the Application's health, then means the cluster is built or upgraded, not just applied. |
 
 The credential is read with managed-cluster templates resolved on the hub, so it can live in any namespace. The etcd key is generated once, while neither the key nor the HostedCluster exists. A key deleted after create is not regenerated, since a new key cannot decrypt etcd: restore it from a backup.
 
@@ -128,7 +136,7 @@ oc get hostedcluster hcp-kubevirt -n clusters \
   -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.message}{"\n"}{end}'
 ```
 
-The ConfigurationPolicies live in the hub's ManagedCluster namespace, `local-cluster` by default. A template that has not run yet is Pending. The HostedCluster is done when `Available` is True. A render error, such as a missing `version`, shows on the Application instead:
+The ConfigurationPolicies live in the hub's ManagedCluster namespace, `local-cluster` by default. A template that has not run yet is Pending. The cluster is done when `present-lifecycle-<cluster>` is Compliant. A render error, such as a missing `version`, shows on the Application instead:
 
 ```sh
 oc get applications.argoproj.io lifecycle-hcp-kubevirt -n openshift-gitops \
@@ -147,9 +155,13 @@ No step is needed:
 
 ## Upgrades
 
-Bump `install.version`. The HostedCluster takes the new release image at once. Each existing NodePool keeps its current image until the HostedCluster's version history shows the new version `Completed`, then moves to it: HyperShift only reports version skew, it does not hold a NodePool back. A NodePool added during an upgrade starts on the new image. `KubeVirt` pools replace their VMs, other platforms upgrade nodes in place.
+Bump `version` in the fleet file ([Upgrades](upgrades.md) covers every cluster). Without `channel`, the HostedCluster takes the new release image at once. With `channel`, the chart sets `spec.channel` and holds the current image until HyperShift lists `version` in the HostedCluster's `status.version.availableUpdates`, so a version off the channel's update graph waits instead of being forced. Change `channel` in the same commit as a minor bump: HyperShift lists the new channel's updates once the HostedCluster carries it. While held, `present-ready-<cluster>` stays NonCompliant.
 
-The chart owns every NodePool's `release`; a `release` key in a `nodePools` entry is ignored. A minor upgrade that HyperShift blocks because `ClusterVersionUpgradeable` is False needs the annotation `hypershift.openshift.io/force-upgrade-to: <release image>` in `hostedCluster.metadata.annotations`.
+Each existing NodePool keeps its current image until the HostedCluster's version history shows the new version `Completed`, then moves to it: HyperShift only reports version skew, it does not hold a NodePool back. A NodePool added during an upgrade starts on the new image. `KubeVirt` pools replace their VMs, other platforms upgrade nodes in place.
+
+The chart owns the HostedCluster's and every NodePool's `release`; a `release` key in `hostedCluster.spec` or a `nodePools` entry is ignored. A minor upgrade that HyperShift blocks because `ClusterVersionUpgradeable` is False needs the annotation `hypershift.openshift.io/force-upgrade-to: <release image>` in `hostedCluster.metadata.annotations`. A version that is not an available update needs `channel` removed as well.
+
+`present-lifecycle-<cluster>` is Compliant again once the control plane and every NodePool report the new version.
 
 ## Immutable fields
 
@@ -241,6 +253,13 @@ done
 oc get agents -n hardware-inventory
 ```
 
-## Other engines
+## Adding an engine
 
-v1 builds HostedClusters only, and the schema rejects unknown `install` keys. Another engine, such as a Hive ClusterDeployment or a SiteConfig ClusterInstance, would add an `install` key selecting it, converters for its objects, and its own absent chain with inform gates. `hub` and `state`, the ApplicationSet and the guard stay as they are.
+An engine `<e>` is a component of [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle). `templates/policy.yaml` renders the component that `install.engine` names, so the ApplicationSet, `hub`, `state`, `version` and the shared converters stay as they are. To add one:
+
+1. Put its converters in `converters/<e>/`: the objects to create, the root object by identity alone for destroy, and its credentials. Freeze every field the engine rejects changes to by reading it back with `lookup`, so a later `version` bump never touches it. End its cleanup converter with `include "lifecycle.cleanupManifests"`.
+2. Add `stack.<e>` to `values.yaml`, with two Policies, `present` and `absent`, and no Policy-level `remediationAction` or `pruneObjectBehavior`. Each chain starts with an inform guard. `present` ends with an inform ready gate. `absent` ends with destroy (enforce `mustnothave`), destroyed (inform `mustnothave`, since an enforced delete is Compliant as soon as it is accepted), then cleanup. The shared `guard`, `detach`, `managedcluster` and `manifests` converters serve every engine whose ManagedCluster carries the owner annotations.
+3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and the `stack` components differ ([Validation](validation.md)).
+4. Add a present and an absent fleet file to `tools/validator/testdata/clusters/`, and a column to this page's tables.
+
+An engine whose clusters upgrade from the hub maps `version` onto its objects, as `hypershift` does. One that only installs, such as a Hive ClusterDeployment, uses `version` at create and leaves upgrades to `openshift-upgrade` on the cluster ([Upgrades](upgrades.md)).

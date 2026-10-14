@@ -73,6 +73,9 @@ spec:
           {{ "{{" }}- end {{ "}}" }}
           - ../../values/clusters/{{ "{{" }} $name {{ "}}" }}.yaml
           valuesObject:
+            {{ "{{" }}- range $k := list "version" "channel" {{ "}}" }}{{ "{{" }} with dig $k "" $ {{ "}}" }}
+            {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             selectedName: {{ "{{" }} $name {{ "}}" }}
             selectedId: {{ "{{" }} .metadata.labels.clusterID {{ "}}" }}
             selector:

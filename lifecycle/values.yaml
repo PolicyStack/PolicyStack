@@ -1,16 +1,21 @@
-# Rendered once per fleet file whose hub is this hub. hub, state and install come from the fleet
-# file; any values cascade layer can set install defaults. docs/lifecycle.md documents every key.
+# Rendered once per fleet file whose hub is this hub. hub, state, version, channel and install come
+# from the fleet file; any values cascade layer can set install defaults. docs/lifecycle.md
+# documents every key.
 
 # hubName of the hub that builds the cluster
 hub: ""
 # present builds and reconciles the cluster, absent destroys it
 state: present
+# OpenShift release, x.y.z. Bumping it upgrades the cluster (docs/upgrades.md).
+version: ""
+# Upgrade channel, e.g. stable-4.20. Optional.
+channel: ""
 
 install:
+  # What builds the cluster: the stack component below that renders. Fixed at create.
+  engine: hypershift
   # KubeVirt, Agent or None. Fixed at create.
   platform: ""
-  # OpenShift release, x.y.z. Bumping it upgrades the control plane, then every NodePool.
-  version: ""
   # The release image is <releaseRepository>:<version>-multi. Point it at a mirror when disconnected.
   releaseRepository: quay.io/openshift-release-dev/ocp-release
   # Namespace of the HostedCluster, its NodePools and the secrets copied from the credential
@@ -47,8 +52,9 @@ selector:
       key: local-cluster
       operator: Exists
 
+# One component per engine; install.engine picks the one that renders.
 stack:
-  lifecycle:
+  hypershift:
     enabled: true
     # Each template waits for the one before it in the same Policy
     orderManifests: true
@@ -99,7 +105,7 @@ stack:
         severity: high
         rawTemplate: true
         templateNames:
-          - name: credentials
+          - name: hypershift/credentials
 
       - name: manifests
         enabled: true
@@ -119,7 +125,20 @@ stack:
         severity: high
         rawTemplate: true
         templateNames:
-          - name: hostedcluster
+          - name: hypershift/hostedcluster
+
+      # An enforced create is Compliant once the API accepts it, so gate on the rollout finishing
+      - name: ready
+        enabled: true
+        description: "Wait for the control plane and every NodePool to reach version"
+        policyRef: present
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: hypershift/ready
+        customMessage:
+          noncompliant: "Waiting for the control plane and every NodePool to reach version"
 
       - name: guard
         enabled: true
@@ -165,7 +184,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hostedcluster-ref
+          - name: hypershift/hostedcluster-ref
 
       - name: destroyed
         enabled: true
@@ -175,7 +194,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hostedcluster-ref
+          - name: hypershift/hostedcluster-ref
         customMessage:
           noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
 
@@ -187,4 +206,4 @@ stack:
         severity: medium
         rawTemplate: true
         templateNames:
-          - name: cleanup
+          - name: hypershift/cleanup

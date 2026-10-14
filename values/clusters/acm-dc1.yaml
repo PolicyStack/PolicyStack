@@ -59,7 +59,7 @@ stack:
 # Nothing to act on:
 #   infraNodes, workerNodes - no separate worker pool on a compact cluster.
 #   machineHealthChecks - generates one check per MachineSet, and bare metal has none.
-#   openshiftUpgrade - leave off until you actually want a version pinned or driven.
+#   openshiftUpgrade - acts only on version and channel in fleet/hubs/acm-dc1.yaml, which sets neither.
 #
 # Hub self-management (see values/acm/acm-dc1.yaml):
 #   advancedClusterManagement, openshiftGitops.

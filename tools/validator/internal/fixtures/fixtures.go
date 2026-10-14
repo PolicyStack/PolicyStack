@@ -30,7 +30,10 @@ type Cluster struct {
 	// Hub is the hubName of the hub that builds the cluster; empty for an
 	// import-only cluster. State is present or absent, empty meaning present.
 	Hub, State string
-	SourceFile string
+	// Version and Channel drive upgrades; empty when unset. Every Application
+	// for the cluster receives them in valuesObject.
+	Version, Channel string
+	SourceFile       string
 	// Issues lists problems in the file. POLICY050 reports them.
 	Issues []Issue
 
@@ -49,6 +52,8 @@ type fleetFile struct {
 	ValueFiles []yaml.Node `yaml:"valueFiles"`
 	Hub        yaml.Node   `yaml:"hub"`
 	State      yaml.Node   `yaml:"state"`
+	Version    yaml.Node   `yaml:"version"`
+	Channel    yaml.Node   `yaml:"channel"`
 	Install    yaml.Node   `yaml:"install"`
 }
 
@@ -60,8 +65,13 @@ type argoFile struct {
 	ValueFiles []any `json:"valueFiles"`
 	Hub        any   `json:"hub"`
 	State      any   `json:"state"`
+	Version    any   `json:"version"`
+	Channel    any   `json:"channel"`
 	Install    any   `json:"install"`
 }
+
+// release is the x.y.z form lifecycle/values.schema.json requires of version.
+var release = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$`)
 
 // dnsLabel is the RFC 1123 label a HostedCluster name must be.
 var dnsLabel = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`)
@@ -171,19 +181,7 @@ func parse(data []byte) *Cluster {
 
 	// Kind is 0 when the key is absent. Argo CD's selector compares hub as a string.
 	c.hubLine = f.Hub.Line
-	switch h := a.Hub.(type) {
-	case nil:
-		if f.Hub.Kind != 0 {
-			c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub has no value"})
-		}
-	case string:
-		if h == "" {
-			c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub is empty"})
-		}
-		c.Hub = h
-	default:
-		c.Issues = append(c.Issues, Issue{Line: f.Hub.Line, Message: "hub " + notString(h)})
-	}
+	c.Hub = optionalString(c, "hub", f.Hub, a.Hub)
 	switch s := a.State.(type) {
 	case string:
 		if s != "present" && s != "absent" {
@@ -197,7 +195,21 @@ func parse(data []byte) *Cluster {
 	default:
 		c.Issues = append(c.Issues, Issue{Line: f.State.Line, Message: "state " + notString(s)})
 	}
-	if _, ok := a.Install.(map[string]any); !ok && f.Install.Kind != 0 {
+	c.Version = optionalString(c, "version", f.Version, a.Version)
+	if c.Version != "" && !release.MatchString(c.Version) {
+		c.Issues = append(c.Issues, Issue{Line: f.Version.Line, Message: fmt.Sprintf("version %q must be an x.y.z release", c.Version)})
+	}
+	c.Channel = optionalString(c, "channel", f.Channel, a.Channel)
+	switch in := a.Install.(type) {
+	case map[string]any:
+		if _, ok := in["version"]; ok {
+			c.Issues = append(c.Issues, Issue{Line: f.Install.Line, Message: "install.version is replaced by the top-level version key"})
+		}
+	case nil:
+		if f.Install.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: f.Install.Line, Message: "install must be a map"})
+		}
+	default:
 		c.Issues = append(c.Issues, Issue{Line: f.Install.Line, Message: "install must be a map"})
 	}
 	if f.Hub.Kind == 0 {
@@ -209,6 +221,25 @@ func parse(data []byte) *Cluster {
 		}
 	}
 	return c
+}
+
+// optionalString returns a key that, when set, must be a non-empty string, recording an issue on c
+// otherwise.
+func optionalString(c *Cluster, key string, n yaml.Node, v any) string {
+	switch s := v.(type) {
+	case string:
+		if s == "" {
+			c.Issues = append(c.Issues, Issue{Line: n.Line, Message: key + " is empty"})
+		}
+		return s
+	case nil:
+		if n.Kind != 0 {
+			c.Issues = append(c.Issues, Issue{Line: n.Line, Message: key + " has no value"})
+		}
+	default:
+		c.Issues = append(c.Issues, Issue{Line: n.Line, Message: key + " " + notString(s)})
+	}
+	return ""
 }
 
 // notString describes a value Argo CD would not template as written.
@@ -226,7 +257,7 @@ func yamlIssue(msg string) Issue {
 	}
 	if field, ok := strings.CutPrefix(is.Message, "field "); ok {
 		if name, _, ok := strings.Cut(field, " not found in type "); ok {
-			is.Message = "unknown key " + name + ": only revision, valueFiles, hub, state and install are allowed"
+			is.Message = "unknown key " + name + ": only revision, valueFiles, hub, state, version, channel and install are allowed"
 		}
 	}
 	return is

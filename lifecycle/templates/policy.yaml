@@ -1,8 +1,10 @@
 {{- /*
 Rendered once per fleet file whose hub is this hub (appset/templates/lifecycle.yaml). Without hub,
-as under helm lint, nothing renders. state picks which of the two Policies renders.
+as under helm lint, nothing renders. install.engine picks the stack component, and state which of
+its two Policies renders.
 */ -}}
 {{- if .Values.hub }}
-{{- $_ := set .Values.stack.lifecycle "toggles" (dict "present" (eq .Values.state "present") "absent" (eq .Values.state "absent")) }}
-{{- include "policy-library.render" . }}
+{{- $engine := .Values.install.engine }}
+{{- $_ := set (index .Values.stack $engine) "toggles" (dict "present" (eq .Values.state "present") "absent" (eq .Values.state "absent")) }}
+{{- include "policy-library.render" (merge (dict "component" $engine) .) }}
 {{- end }}

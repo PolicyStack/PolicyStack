@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Runner caches `helm dependency update` per element and runs `helm template`.
@@ -33,8 +35,8 @@ func New(helmBin string) *Runner {
 }
 
 // EnsureDeps runs `helm dependency update` on elementDir at most once per
-// process, and not at all when charts/ already holds a .tgz. Later calls
-// return the first call's error.
+// process, and not at all when charts/ already holds every Chart.yaml
+// dependency at its pinned version. Later calls return the first call's error.
 func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	v, _ := r.depOnce.LoadOrStore(elementDir, &sync.Once{})
 	once := v.(*sync.Once)
@@ -55,9 +57,25 @@ func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	return nil
 }
 
+// alreadyDownloaded reports whether charts/<name>-<version>.tgz exists for every dependency, so a
+// stale archive left by an earlier pin is never rendered in place of the pinned one.
 func alreadyDownloaded(elementDir string) bool {
-	matches, _ := filepath.Glob(filepath.Join(elementDir, "charts", "*.tgz"))
-	return len(matches) > 0
+	data, err := os.ReadFile(filepath.Join(elementDir, "Chart.yaml"))
+	if err != nil {
+		return false
+	}
+	var c struct {
+		Dependencies []struct{ Name, Version string }
+	}
+	if yaml.Unmarshal(data, &c) != nil {
+		return false
+	}
+	for _, d := range c.Dependencies {
+		if !FileExists(filepath.Join(elementDir, "charts", d.Name+"-"+d.Version+".tgz")) {
+			return false
+		}
+	}
+	return true
 }
 
 // TemplateResult is the captured output of a helm template invocation.
@@ -69,11 +87,15 @@ type TemplateResult struct {
 	ErrLine int
 }
 
-// Template runs `helm template <release> <element> -f <values...>`.
-func (r *Runner) Template(ctx context.Context, elementDir, releaseName string, valueFiles []string) TemplateResult {
+// Template runs `helm template <release> <element> -f <values...> --set-string <setString...>`.
+// setString entries are key=value and rank above every values file, as valuesObject does.
+func (r *Runner) Template(ctx context.Context, elementDir, releaseName string, valueFiles, setString []string) TemplateResult {
 	args := []string{"template", releaseName, elementDir}
 	for _, vf := range valueFiles {
 		args = append(args, "-f", vf)
+	}
+	for _, kv := range setString {
+		args = append(args, "--set-string", kv)
 	}
 	cmd := exec.CommandContext(ctx, r.HelmBin, args...)
 	var stdout, stderr bytes.Buffer

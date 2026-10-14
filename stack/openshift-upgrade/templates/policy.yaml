@@ -1,1 +1,12 @@
+{{- /*
+version and channel come from the fleet file (appset/templates/appset.yaml). Each policy renders only
+when its input is set, so a cluster with neither gets nothing, not even a Placement.
+*/ -}}
+{{- $u := .Values.stack.openshiftUpgrade }}
+{{- if or $u.config.targetVersion $u.config.channel }}
+{{- fail "stack.openshiftUpgrade.config.targetVersion and config.channel are replaced by the fleet file's version and channel (docs/upgrades.md)" }}
+{{- end }}
+{{- $_ := set $u.toggles "channel" (and $u.toggles.channel (not (empty .Values.channel))) }}
+{{- $_ = set $u.toggles "upgrade" (and $u.toggles.upgrade (not (empty .Values.version))) }}
+{{- $_ = set $u "enabled" (and $u.enabled (or $u.toggles.channel $u.toggles.upgrade)) }}
 {{- include "policy-library.render" . -}}

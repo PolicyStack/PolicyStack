@@ -302,7 +302,7 @@ func perCluster(ctx context.Context, opts Options, runner *render.Runner, p pair
 	if err := runner.EnsureDeps(ctx, el.Dir); err != nil {
 		opts.Logger.Warn("dependency update failed", "element", el.ChartName, "err", err)
 	}
-	tr := runner.Template(ctx, el.Dir, res.ReleaseName, res.ValueFiles)
+	tr := runner.Template(ctx, el.Dir, res.ReleaseName, res.ValueFiles, setString(p))
 	if tr.Err != nil && !errors.Is(tr.Err, context.Canceled) {
 		return c, renderErrorFinding(el, &res, tr)
 	}
@@ -319,6 +319,22 @@ func valueFiles(cascadeFiles []string, opts Options, p pair) []string {
 		return append(cascadeFiles, p.cl.SourceFile)
 	}
 	return append(cascadeFiles, opts.ExtraValues...)
+}
+
+// setString stands in for the version and channel the Day-2 ApplicationSet passes in valuesObject
+// when the fleet file sets them. A lifecycle pair reads them from the appended fleet file.
+func setString(p pair) []string {
+	if p.fleetValues {
+		return nil
+	}
+	var out []string
+	if p.cl.Version != "" {
+		out = append(out, "version="+p.cl.Version)
+	}
+	if p.cl.Channel != "" {
+		out = append(out, "channel="+p.cl.Channel)
+	}
+	return out
 }
 
 // writeRender writes p's render under opts.RenderDir, keyed by the fleet file's path under

@@ -4,8 +4,10 @@
 package chart
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"iter"
 	"maps"
 	"os"
@@ -34,6 +36,9 @@ type Element struct {
 	ValuesDoc *yaml.Node
 	// Key under `stack:`. Empty when values.yaml has no stack block.
 	StackKey string
+	// Engines is the install.engine enum from values.schema.json: each names a stack component, of
+	// which install.engine renders one. Set only for the lifecycle chart.
+	Engines []string
 }
 
 // Dependency is a single entry from Chart.yaml `dependencies:`.
@@ -360,6 +365,10 @@ func Load(dir, policyNamespace string) (*Element, error) {
 	if err != nil {
 		return nil, err
 	}
+	engines, err := loadEngines(filepath.Join(dir, "values.schema.json"))
+	if err != nil {
+		return nil, err
+	}
 
 	el := &Element{
 		ChartName:     cy.Name,
@@ -373,6 +382,7 @@ func Load(dir, policyNamespace string) (*Element, error) {
 		},
 		ValuesDoc: &doc,
 		StackKey:  stackKey,
+		Engines:   engines,
 	}
 	return el, nil
 }
@@ -417,6 +427,33 @@ func mapValue(m *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// loadEngines returns properties.install.properties.engine.enum from a values.schema.json, nil when
+// the file or the enum is absent.
+func loadEngines(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var s struct {
+		Properties struct {
+			Install struct {
+				Properties struct {
+					Engine struct {
+						Enum []string `json:"enum"`
+					} `json:"engine"`
+				} `json:"properties"`
+			} `json:"install"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &s); err != nil {
+		return nil, fmt.Errorf("parse values.schema.json: %w", err)
+	}
+	return s.Properties.Install.Properties.Engine.Enum, nil
 }
 
 func loadPolicyNamespace(path string) (string, error) {

@@ -4,14 +4,14 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-14 03:41:36*
 
 ## Component Configuration
 
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
 | Component | `openshiftUpgrade` | Drive and observe OpenShift cluster version upgrades |
-| Enabled | `False` | Master control to enable/disable all policies in this element |
+| Enabled | `True` | Master control to enable/disable all policies in this element |
 
 ## Default Policy Metadata
 
@@ -29,8 +29,8 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 
 | Toggle | Default | Description |
 | ------ | ------- | ----------- |
-| `channel` | `False` | Pin the ClusterVersion channel (requires config.channel) |
-| `upgrade` | `False` | Drive the cluster to config.targetVersion, and report on progress |
+| `channel` | `True` | Pin the ClusterVersion channel to the fleet file's channel |
+| `upgrade` | `True` | Drive the cluster to the fleet file's version, and report on progress |
 
 ## Configuration
 
@@ -38,8 +38,6 @@ Values intended to be overridden per environment, datacenter, or cluster.
 
 | Key | Default | Description |
 | --- | ------- | ----------- |
-| `channel` | `` | Upgrade channel, e.g. stable-4.20 |
-| `targetVersion` | `` | Exact version to upgrade to, e.g. 4.20.29. Required when the upgrade toggle is on. |
 | `upstream` | `https://api.openshift.com/api/upgrades_info/v1/graph` | Upgrade graph service |
 
 ## Policies

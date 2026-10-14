@@ -1,14 +1,14 @@
 {{- /*
-Trigger the upgrade. The target version and upstream graph are values; the current version and
-whether an upgrade is already in progress are only readable on the managed cluster, so they stay
-ACM templating.
+Trigger the upgrade to the fleet file's version. The target and upstream graph are values; the
+current version and whether an upgrade is already in progress are only readable on the managed
+cluster, so they stay ACM templating.
 
 Only scalar spec fields are asserted. Completion is reported by the separate status policy because
 ACM does not match status lists reliably.
 */ -}}
 {{- $cfg := .Values.stack.openshiftUpgrade.config }}
-{{- if not $cfg.targetVersion }}{{- fail "stack.openshiftUpgrade.config.targetVersion must be set when the upgrade toggle is on" }}{{- end }}
-{{ "{{" }}- $target := "{{ $cfg.targetVersion }}" {{ "}}" }}
+{{ "{{" }}- if {{ include "openshift-upgrade.standalone" . }} {{ "}}" }}
+{{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
 {{ "{{" }}- $upstream := "{{ $cfg.upstream }}" {{ "}}" }}
 {{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
 {{ "{{" }}- $current := "" {{ "}}" }}
@@ -32,4 +32,5 @@ ACM does not match status lists reliably.
       desiredUpdate:
         version: '{{ "{{" }} $target {{ "}}" }}'
       {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}

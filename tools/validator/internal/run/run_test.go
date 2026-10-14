@@ -109,6 +109,31 @@ func TestValueFiles(t *testing.T) {
 	}
 }
 
+func TestSetString(t *testing.T) {
+	el := &chart.Element{ChartName: "openshift-upgrade"}
+	tests := []struct {
+		name string
+		p    pair
+		want []string
+	}{
+		{"neither set", pair{el: el, cl: &fixtures.Cluster{}}, nil},
+		{"version only", pair{el: el, cl: &fixtures.Cluster{Version: "4.20.12"}}, []string{"version=4.20.12"}},
+		{"channel only", pair{el: el, cl: &fixtures.Cluster{Channel: "stable-4.20"}}, []string{"channel=stable-4.20"}},
+		{"both", pair{el: el, cl: &fixtures.Cluster{Version: "4.20.12", Channel: "stable-4.20"}}, []string{"version=4.20.12", "channel=stable-4.20"}},
+		{
+			name: "lifecycle reads the fleet file instead",
+			p:    pair{el: &chart.Element{ChartName: "lifecycle"}, cl: &fixtures.Cluster{Version: "4.20.12"}, fleetValues: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := setString(tt.p); !slices.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestWriteRender(t *testing.T) {
 	spoke := &fixtures.Cluster{Name: "x", SourceFile: "/fx/x.yaml"}
 	hub := &fixtures.Cluster{Name: "x", SourceFile: "/fx/hubs/x.yaml"}

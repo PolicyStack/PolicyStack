@@ -76,3 +76,42 @@ func (c *LayerOperatorCheck) Run(ctx Context) []Finding {
 	}
 	return out
 }
+
+// LayerFleetKeyCheck (POLICY034) rejects version and channel in a values layer: only the fleet file
+// sets them, so the clusters an upgrade moves are the fleet files it changes. Every cluster has
+// element pairs, so lifecycle pairs, whose cascade ends with the fleet file itself, are skipped.
+// Findings carry no cluster, so run.Run reports each once.
+type LayerFleetKeyCheck struct{}
+
+func (LayerFleetKeyCheck) ID() string   { return "POLICY034" }
+func (LayerFleetKeyCheck) Phase() Phase { return PhaseCluster }
+
+func (c *LayerFleetKeyCheck) Run(ctx Context) []Finding {
+	if ctx.Element == nil || ctx.Cluster == nil || ctx.Element.Engines != nil {
+		return nil
+	}
+	var out []Finding
+	for _, file := range ctx.Cluster.ValueFiles {
+		if file == ctx.Element.ValuesFile {
+			continue
+		}
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		var doc yaml.Node
+		if yaml.Unmarshal(data, &doc) != nil {
+			continue
+		}
+		for _, k := range []string{"version", "channel"} {
+			if loc := sourceloc.Find(&doc, k); loc.Line != 0 {
+				out = append(out, Finding{
+					RuleID: c.ID(), Severity: SevError,
+					Message: k + " is set in a values layer: only the fleet file may set it",
+					File:    file, Line: loc.Line, Col: loc.Col,
+				})
+			}
+		}
+	}
+	return out
+}

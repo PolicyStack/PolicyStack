@@ -1,0 +1,25 @@
+{{- /*
+Compliant once the control plane reports version Completed and every NodePool reports it, so the
+Policy, and the Application with it, stays NonCompliant until an install or upgrade is done. While
+not done, a mustnothave on the existing HostedCluster forces NonCompliant.
+*/ -}}
+{{- $i := .Values.install }}
+{{- $c := include "lifecycle.cluster" . }}
+{{- $v := .Values.version | quote }}
+{{ "{{-" }} $hc := lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }} {{ "}}" }}
+{{ "{{-" }} $ready := false {{ "}}" }}
+{{ "{{-" }} range (dig "status" "version" "history" list $hc) {{ "}}" }}
+{{ "{{-" }} if and (eq .version {{ $v }}) (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $ready = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- range $pool, $_ := $i.nodePools }}
+{{ "{{-" }} $ready = and $ready (eq (dig "status" "version" "" (lookup "hypershift.openshift.io/v1beta1" "NodePool" {{ $i.namespace | quote }} "{{ $c }}-{{ $pool }}")) {{ $v }}) {{ "}}" }}
+{{- end }}
+{{ "{{-" }} if not $ready {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: hypershift.openshift.io/v1beta1
+    kind: HostedCluster
+    metadata:
+      name: {{ $c }}
+      namespace: {{ $i.namespace }}
+{{ "{{-" }} end {{ "}}" }}

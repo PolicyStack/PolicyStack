@@ -27,9 +27,8 @@ The script prompts for a name and a description, then:
 
 Then finish it by hand:
 
-1. Delete `charts/` and `Chart.lock` from the new directory if they exist. They are gitignored, but
-   the script copies whatever your checkout of `sample-element/` holds, and the validator renders
-   with an existing archive instead of fetching the pinned library version.
+1. Delete `charts/` and `Chart.lock` from the new directory if they exist. They are gitignored, and
+   the script copies whatever your checkout of `sample-element/` holds.
 2. Cut `values.yaml` down. The sample shows every option of every policy type, keep what the
    element uses, and keep `enabled: false`.
 3. Replace `converters/example.yaml` with one file per `templateNames` entry. The validator fails on

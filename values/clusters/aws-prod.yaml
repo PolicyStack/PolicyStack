@@ -143,7 +143,8 @@ stack:
 #   openshiftImageRegistry - the AWS installer already backs the registry with real S3. Switching it
 #                           to a NooBaa bucket is a storage migration, not a config test.
 #   certManager api-cert / ingress-cert, workerNodes kubelet, compliance remediate,
-#   infraNodes, workloadPartitioning, openshiftUpgrade - held back by choice.
+#   infraNodes, workloadPartitioning - held back by choice. openshiftUpgrade acts only on the fleet
+#   file's version and channel.
 #   advancedClusterManagement / openshiftGitops - hub-only, and the hub has no ODF.
 #   openshiftVirtualization - needs metal instances on AWS.
 #   localStorage, lvm       - no extra disks; ODF consumes gp3-csi directly here.

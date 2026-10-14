@@ -2,7 +2,7 @@ package checks
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -100,23 +100,21 @@ func (c *UnusedConverterCheck) Run(ctx Context) []Finding {
 	return out
 }
 
+// actualConverters keys every converter under dir by its path relative to dir, without extension,
+// as templateNames reference it: converters/hypershift/ready.yaml is "hypershift/ready".
 func actualConverters(dir string) map[string]struct{} {
 	out := map[string]struct{}{}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return out
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
 		}
-		n := e.Name()
-		switch {
-		case strings.HasSuffix(n, ".yaml"):
-			out[strings.TrimSuffix(n, ".yaml")] = struct{}{}
-		case strings.HasSuffix(n, ".yml"):
-			out[strings.TrimSuffix(n, ".yml")] = struct{}{}
+		rel, _ := filepath.Rel(dir, path)
+		for _, ext := range []string{".yaml", ".yml"} {
+			if name, ok := strings.CutSuffix(filepath.ToSlash(rel), ext); ok {
+				out[name] = struct{}{}
+			}
 		}
-	}
+		return nil
+	})
 	return out
 }

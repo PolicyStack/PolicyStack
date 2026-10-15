@@ -535,13 +535,13 @@ stack:
         # @desc: Medium severity for expiring certs
         severity: medium
         # @desc: Alert when certs expire within 30 days (720 hours)
-        minimumDuration: 720
+        minimumDuration: 720h
         # @desc: Alert when CA certs expire within 90 days
-        minimumCADuration: 2160
+        minimumCADuration: 2160h
         # @desc: Flag certs valid longer than 1 year as non-compliant
-        maximumDuration: 8760
+        maximumDuration: 8760h
         # @desc: Flag CA certs valid longer than 5 years
-        maximumCADuration: 43800
+        maximumCADuration: 43800h
         # @desc: Select all namespaces with TLS secrets
         namespaceSelector:
           matchExpressions:
@@ -569,7 +569,7 @@ stack:
         remediationAction: inform
         severity: high
         # @desc: Minimum 90 days validity
-        minimumDuration: 2160
+        minimumDuration: 2160h
         # @desc: Check ingress certificates
         namespaceSelector:
           matchLabels:

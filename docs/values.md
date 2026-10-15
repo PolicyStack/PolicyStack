@@ -42,6 +42,24 @@ Helm merges the files in order.
 
 An element's `policies` and `configPolicies` are lists, so a layer cannot change one entry without restating them all. It flips an entry through the [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) map instead, and settings go in the `config` map that the element's converters read ([Conventions](elements.md#conventions)). `operatorPolicies` is a map keyed by entry name, so a layer sets one field of one entry, such as `stack.metallb.operatorPolicies.metallb.versions`. `versions` itself is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)).
 
+## Schema
+
+Each element aliases its `policy-library` dependency as `stack`, so Helm checks the merged `stack` key against the library's [values.schema.json](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/values.schema.json). The check runs after every layer and `valuesObject` merge. An unknown key or a wrong type then fails the render instead of producing a different policy:
+
+```text
+Error: values don't meet the specifications of the schema(s) in the following chart(s):
+stack:
+- at '/certManager': additional properties 'enabeld' not allowed
+```
+
+Argo CD reports a failed render as a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so a typo under one element in a shared layer fails every Application that reads that layer. The schema does not check:
+
+- top-level keys, such as `policyNamespace` or `selector`;
+- element names under `stack`, so `stack.certManagr` is still ignored;
+- anything inside `config`, `templateParameters` or the selectors.
+
+Never set `skipSchemaValidation` on the ApplicationSet.
+
 ## Layout
 
 ```text

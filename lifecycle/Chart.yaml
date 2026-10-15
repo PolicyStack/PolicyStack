@@ -5,5 +5,6 @@ type: application
 version: 0.2.0
 dependencies:
   - name: policy-library
-    version: "3.1.0"
+    alias: stack
+    version: "3.2.0"
     repository: "https://policystack.github.io/PolicyStack-chart"

@@ -41,7 +41,7 @@ Then finish it by hand:
 
 | Path | Contents |
 | ---- | -------- |
-| `Chart.yaml` | Name, description and the `policy-library` dependency |
+| `Chart.yaml` | Name, description and the `policy-library` dependency, aliased `stack` so its [schema](values.md#schema) checks the values |
 | `templates/policy.yaml` | One line: `{{- include "policy-library.render" . -}}` |
 | `values.yaml` | Defaults for every setting, under the key described in [Element values](policies.md#element-values) |
 | `converters/<name>.yaml` | The manifest for one `configPolicies[].templateNames` entry, rendered with Helm's `tpl`. It reads `.Values`, and `.Parameters` (that config policy's `templateParameters`) when the config policy sets `enableTemplateParameters` |

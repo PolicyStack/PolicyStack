@@ -1,4 +1,5 @@
-{{- /* Console shortcut to Quay. The route host is only known on the managed cluster. */ -}}
+{{- /* Console shortcut to Quay. The route host is only known on the managed cluster, so the link is
+skipped until the Route exists. */ -}}
 apiVersion: console.openshift.io/v1
 kind: ConsoleLink
 metadata:
@@ -6,7 +7,7 @@ metadata:
 spec:
   location: ApplicationMenu
   text: {{ .Parameters.consoleText | quote }}
-  href: 'https://{{ "{{" }} (lookup "route.openshift.io/v1" "Route" "{{ .Parameters.namespace }}" "{{ .Parameters.routeName }}").spec.host {{ "}}" }}'
+  href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "{{ .Parameters.namespace }}" "{{ .Parameters.routeName }}").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
   applicationMenu:
     section: Red Hat applications
     imageURL: {{ .Parameters.consoleImageUrl }}

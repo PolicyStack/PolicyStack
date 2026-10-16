@@ -1,0 +1,24 @@
+# POLICY081 coverage, second pass: the branches all-on.yaml cannot take at the same time.
+stack:
+  infraNodes:
+    enabled: true
+    toggles:
+      workloads: false
+      restore: true
+  storageNodes:
+    enabled: true
+    toggles:
+      baremetal: true
+    config:
+      nodes: [worker-0, worker-1, worker-2]
+  nmstate:
+    enabled: true
+    toggles:
+      nncp: true
+    config:
+      hosts:
+        worker-0:
+          hostname: worker-0.example.com
+          networking:
+            interfaces:
+              bond0: {mac: "aa:bb:cc:dd:ee:ff"}

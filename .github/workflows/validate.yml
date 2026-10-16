@@ -52,18 +52,36 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: Vet, test and build validator
-        run: make -C tools/validator lint test build
+      - name: Vet and build validator
+        id: build
+        run: make -C tools/validator lint build
 
       # POLICY080 is skipped: the chart only emits Policy, PlacementBinding and Placement, which
-      # kubeconform has no schemas for, so it would validate nothing.
+      # kubeconform has no schemas for, so it would validate nothing. POLICY081 runs in the next
+      # step, where every converter renders.
       - name: Validate policies
         run: |
           tools/validator/bin/policystack-validator \
             --github \
             --repo-root . \
             --extra-values tools/validator/testdata/baseline.yaml \
-            --skip POLICY080
+            --skip POLICY080,POLICY081
+
+      # The profiles turn on every element and toggle (docs/validation.md#acm-templates). sort -u
+      # drops what both report. Runs after a failed step too, so the PR shows its annotations.
+      - name: Evaluate ACM templates
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          failed=0
+          for profile in tools/validator/testdata/profiles/*.yaml; do
+            tools/validator/bin/policystack-validator \
+              --github \
+              --repo-root . \
+              --extra-values "tools/validator/testdata/baseline.yaml,$profile" \
+              --only RENDER000,POLICY081 >> "$RUNNER_TEMP/acm.txt" || failed=1
+          done
+          sort -u "$RUNNER_TEMP/acm.txt"
+          exit "$failed"
 
       # Upstream ships no fleet files. A fork validates its real fleet here.
       - name: Validate fleet
@@ -113,3 +131,8 @@ jobs:
             fi
           done
           exit "$failed"
+
+      # Last, so a failing test does not hide the annotations above.
+      - name: Test validator
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: make -C tools/validator test

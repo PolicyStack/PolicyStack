@@ -45,6 +45,7 @@ In CI:
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY080  | error    | `kubeconform` schema check on rendered manifests |
+| POLICY081  | error    | An escaped ACM template ACM would fail to resolve, resolved hub then managed on an empty cluster: an undefined function in any branch, a failed call such as `index` on nil, a hub lookup outside the policy namespace without `hubTemplateOptions.serviceAccountName`, a kind discovery does not serve, or output with `<no value>` or an object without `apiVersion`/`kind`. A missing object is not a failure. Findings name the sub-policy without its cluster suffix and carry no cluster, so a broken template reports once |
 | POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key. Every other check then runs on each engine's component, and each fixture renders the one its `install.engine` selects |
 | RENDER000  | error    | `helm template` failed |
 
@@ -90,6 +91,12 @@ applied to `lifecycle/`, which ships its own `selector`.
 
 `--render-dir <dir>` also writes each render to `<dir>/<fleet file path without .yaml>/<chart>.yaml`,
 a failed one as `# RENDER000:` comments. CI diffs two of these trees on PRs (`render-diff.yml`).
+
+### Profiles
+
+`testdata/profiles/` turns on every element and toggle, so POLICY081 reaches every converter.
+`variants.yaml` holds what `all-on.yaml` cannot set at the same time. `TestProfileCoverage` fails for
+a converter with ACM templates that no profile renders.
 
 ## Required tools
 

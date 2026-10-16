@@ -1,6 +1,7 @@
 {{- /*
 Concatenates the two injected CA bundles into the single Secret AAP consumes. Both inputs are
-populated by cluster operators on the managed cluster, so they are read with ACM templating.
+populated by cluster operators on the managed cluster, so they are read with ACM templating, and
+the Secret is skipped until both are.
 */ -}}
 apiVersion: v1
 kind: Secret
@@ -9,4 +10,4 @@ metadata:
   namespace: {{ .Parameters.namespace }}
 type: Opaque
 data:
-  trusted-ca-bundle: '{{ "{{" }} printf "%s\n%s" (index (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.serviceCaName }}").data "service-ca.crt") (index (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.trustedCaName }}").data "ca-bundle.crt") | base64enc {{ "}}" }}'
+  trusted-ca-bundle: '{{ "{{" }} $svc := dig "data" "service-ca.crt" "" (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.serviceCaName }}") {{ "}}" }}{{ "{{" }} $trusted := dig "data" "ca-bundle.crt" "" (lookup "v1" "ConfigMap" "{{ .Parameters.namespace }}" "{{ .Parameters.trustedCaName }}") {{ "}}" }}{{ "{{" }} skipObject (not (and $svc $trusted)) {{ "}}" }}{{ "{{" }} printf "%s\n%s" $svc $trusted | base64enc {{ "}}" }}'

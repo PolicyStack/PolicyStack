@@ -170,8 +170,10 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
   hub template, escaped so Helm passes it through:
   `'{{ "{{" }}hub fromSecret "<namespace>" "<secret>" "<key>" hub{{ "}}" }}'`
   ([example](https://github.com/PolicyStack/PolicyStack/blob/main/stack/advanced-cluster-security/converters/acs-sync-collector.yaml)).
-  Helm and the validator see escaped templates as plain strings, so a mistake shows up only on the
-  cluster, as a `template-error` violation.
+  Hub lookups are limited to the policy namespace. To read another, set
+  `policies[].hubTemplateOptions.serviceAccountName` to a ServiceAccount in the policy namespace
+  that can read it, as advanced-cluster-security does. The validator evaluates escaped templates
+  as POLICY081 ([ACM templates](validation.md#acm-templates)).
 - **Try changes on one cluster first.** Push a branch, then pin a nonprod cluster's fleet file to it
   with a pull request to the default branch
   ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)). Keep the branch until the

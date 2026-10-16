@@ -8,7 +8,7 @@ pull requests.
 | -------- | ------- | ---------- |
 | Policy Validate (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/`, plus `lifecycle/converters/hypershift/` for a file that sets `hub` and an `openshift-upgrade` that reads `version` for a file that sets `version` or `channel` |
 | Documentation Check (`docs-check.yml`) | Changes to `stack/`, the doc generator or its tests | Generator tests fail or a `stack/<element>/README.md` is out of date |
-| Render Diff (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Not a gate. Fails only when the validator does not build |
+| Render Diff (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml` or `fleet/`, in a repo with fleet files | Not a gate. Fails only when the validator does not build |
 | Update Documentation (`docs-update.yml`) | `update-docs` label added to a PR | Not a gate, it fixes what Documentation Check reports |
 | Documentation Site (`docs-site.yml`) | Every PR and push to `main` | The strict build finds a relative `.md` link or anchor that does not resolve, or a missing snippet |
 
@@ -17,60 +17,85 @@ the run in progress.
 
 ## Policy Validate
 
-1. Checks gofmt, vets, tests and builds `tools/validator` (`make -C tools/validator lint test build`)
-   with the Go version from `tools/validator/go.mod`.
+1. Checks gofmt, vets and builds `tools/validator` (`make -C tools/validator lint build`) with the
+   Go version from `tools/validator/go.mod`.
 2. Runs the validator against the fixture clusters with `--github`, so each finding is annotated on
    the PR diff at the file and line to fix. Errors fail the job, warnings are annotated only.
-3. If `fleet/*.yaml` or `fleet/hubs/*.yaml` exist, runs the validator again with
+3. Runs it again with `--only RENDER000,POLICY081` for each profile in
+   `tools/validator/testdata/profiles`, which turn every element on, so every converter's ACM
+   templates are evaluated ([ACM templates](validation.md#acm-templates)). A finding both profiles
+   report is annotated once. This step runs even when step 2 fails, so the PR shows its annotations
+   too.
+4. If `fleet/*.yaml` or `fleet/hubs/*.yaml` exist, runs the validator again with
    `--fixtures-dir fleet`, so a fork checks its fleet files. It renders the PR's `stack/` and
    `values/` for each file, not the tree at the file's `revision`; [Render Diff](#render-diff) renders
    each at its `revision`. Upstream ships no fleet files and skips this step.
-4. Checks every fleet file's `revision`. It must be a tag, a branch or a commit SHA of 5 to 40 hex
+5. Checks every fleet file's `revision`. It must be a tag, a branch or a commit SHA of 5 to 40 hex
    characters, the forms Argo CD resolves, and point at a commit that contains `stack/`. A file that
    sets `hub` also needs `lifecycle/converters/hypershift/`, and one that sets `version` or `channel`
    an `openshift-upgrade` that reads them; older revisions ignore both keys. A pin to the PR's base
    branch is checked against the merge commit. Each failure is annotated on the fleet file. The checkout fetches
    full history (`fetch-depth: 0`) so tags and branches resolve.
+6. Runs the validator's tests (`make -C tools/validator test`), last so a failing test does not hide
+   the annotations.
 
 The pin check catches typos and pins like `gh-pages`. It cannot catch a branch deleted after the
 merge, which fails generation for every cluster. See [Revision](applicationset.md#revision).
 
 Helm is pinned by `HELM_VERSION` in the workflow. Keep it on the major the hub's Argo CD uses.
 POLICY080 is skipped. The chart emits only Policy, PolicySet, Placement and PlacementBinding, and
-the rule skips those kinds, so it would check nothing.
+the rule skips those kinds, so it would check nothing. Step 2 skips POLICY081, which step 3 runs on
+every converter. The fleet step keeps it.
 
 To reproduce locally, see [Validation](validation.md).
 
 ## Render Diff
 
-Comments on the PR with each cluster's rendered Policies before and after the merge, so a reviewer
-sees what the change does to every cluster without running anything.
+Comments on the PR with what the merge changes in each real cluster's rendered Policies. Only
+clusters in `fleet/` count: a repo without fleet files, or a PR that changes no cluster's render,
+gets no comment.
 
-1. Reads the fleet files on the base branch (before) and in the PR merge commit (after). Without
-   `fleet/*.yaml` on either side it uses the examples in `tools/validator/testdata/clusters`.
+```markdown
+### Fleet render: 3 cluster(s) change
+
+> [!WARNING]
+> `edge-3` pins `v1.4`, which is not a tag, branch or commit. Merging stops Argo CD from generating Applications for every cluster until it is fixed.
+
+| Cluster | Revision | Changes |
+|---|---|---|
+| `prod-east-1` | `main` | user-workload-monitoring: 1 Policy changed |
+| `nonprod-west-1` | `v1.0.0` → `main` | metallb: **render failed** |
+| `edge-2` | new at `main` | 6 elements, 21 objects added |
+```
+
+Below the table, each cluster has a collapsed block with the diff of each changed element, or the
+Helm error of a failed render. Changes count rendered objects by kind and name. An element that
+failed on the base branch and renders now shows `render fixed`, one that fails the same way on both
+sides shows nothing. A cluster added or removed gets a total and no diff.
+
+A fleet file whose `revision` does not resolve, or whose tree the validator cannot load, is a
+warning above the table instead of a row.
+
+How it works, in `.github/scripts/render-diff.sh`:
+
+1. Reads the fleet files on the base branch (before) and in the PR merge commit (after).
 2. Resolves each `revision` like the pin check: tag, branch, then SHA. The default branch or `HEAD`
    means the base tip before and the merge commit after, so a cluster pinned to `main` shows the PR
-   and a cluster pinned to a tag shows nothing until its pin moves. A file with the same content and
-   commit on both sides is not rendered.
-3. Renders each fleet file in a worktree at its commit with
-   `policystack-validator --only RENDER000 --render-dir`, one file per element. An element that
-   renders nothing writes no file. A failed render is written as `# RENDER000:` lines, so it shows
-   in the diff.
-4. Diffs the two trees with `git diff --no-index`. Each fleet file with a change gets one collapsed
-   block listing only the elements that changed. A fleet file added or removed shows every element
-   added or removed.
-5. Posts the result as one comment, edited on every push and deleted when nothing changes. Revisions
-   that do not resolve and trees the validator cannot load are listed above the diff.
+   and a cluster pinned to a tag changes only when its pin moves. A cluster with the same file and
+   commit on both sides is skipped.
+3. Renders each remaining fleet file in a worktree at its commit with
+   `policystack-validator --only RENDER000 --render-dir`.
+4. Compares the two sides per element and posts the comment, edited on every push and deleted when
+   nothing changes.
 
 The comment stops at about 60,000 characters, under GitHub's 65,536 limit. The full patch is the
 `render-diff.patch` artifact of the run.
 
-PRs from forks and Dependabot get a read-only token, so they get the diff in the job summary
+PRs from forks and Dependabot get a read-only token, so they get the result in the job summary
 instead. The job that holds the write token runs no code from the PR.
 
-Placements carry the `Exists` selector from `tools/validator/testdata/baseline.yaml`, not the
-per-cluster selector the ApplicationSet injects. Both sides get the same one, so it never shows as a
-change.
+Placements carry the `Exists` selector from `tools/validator/testdata/baseline.yaml`, standing in
+for the one the ApplicationSet injects. Both sides get the same one, so it never shows as a change.
 
 Every rendered commit gets a fresh worktree and runs `helm dependency update` for each chart.
 Expect about half a minute per distinct commit.

@@ -1,0 +1,13 @@
+{{- /* openshift-gitops for the GitOpsCluster Placement, policyNamespace for the element Placements. */ -}}
+{{- range list "openshift-gitops" .Values.policyNamespace }}
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: {{ . }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  clusterSet: global
+{{- end }}

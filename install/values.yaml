@@ -1,0 +1,6 @@
+# The repository Argo CD reads: your fork. Required, set once at install.
+gitRepo: ""
+# Names this hub's fleet file, fleet/hubs/<hubName>.yaml. Required, set once at install, unique per hub reading gitRepo.
+hubName: ""
+# Must equal policyNamespace in the root values.yaml, which the elements read. CI checks it.
+policyNamespace: policy

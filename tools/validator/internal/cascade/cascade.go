@@ -1,8 +1,8 @@
 // Package cascade resolves a fleet file into the ordered list of values files
 // passed to helm.
 //
-// It mirrors the valueFiles block in appset/templates/appset.yaml. Keep the two
-// in sync; any divergence is a bug. appset/templates/lifecycle.yaml applies the
+// It mirrors the valueFiles block in install/templates/appset.yaml. Keep the two
+// in sync; any divergence is a bug. install/templates/lifecycle.yaml applies the
 // same cascade to lifecycle/, and run.Run appends the fleet file for its
 // valuesObject.
 //

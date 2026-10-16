@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Element is a single chart under stack/<name>/ or the sample-element/.
+// Element is a single chart under stack/<name>/ or tools/sample-element/.
 type Element struct {
 	// Name from Chart.yaml (kebab-case). Prefix of the helm Release.Name.
 	ChartName string

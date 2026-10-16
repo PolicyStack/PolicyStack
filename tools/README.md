@@ -28,7 +28,7 @@ The PolicyStack tools provide:
 ./tools/create-element.sh <name> "<description>"
 ```
 
-Copies `sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
+Copies `tools/sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
 with its camelCase form, and sets the description. It prompts for missing arguments and refuses a
 name that is not lowercase kebab-case or already exists. The new element passes the validator as is.
 See [Creating an element](../docs/elements.md#creating-an-element).

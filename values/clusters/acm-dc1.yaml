@@ -1,7 +1,7 @@
 # Per-cluster values for the ACM hub in dc1.
 #
 # The hub's ManagedCluster carries local-cluster="true", so the ApplicationSet names it by the
-# appset chart's hubName (default acm-dc1) instead of its ManagedCluster name. This file is
+# install chart's hubName instead of its ManagedCluster name. This file is
 # values/clusters/<hubName>.yaml, and the Helm release becomes <element>-acm-dc1.
 #
 # Fleet file on the default branch, fleet/hubs/<hubName>.yaml:

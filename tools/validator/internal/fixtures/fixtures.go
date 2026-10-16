@@ -21,7 +21,7 @@ import (
 // Cluster is one fleet file.
 type Cluster struct {
 	// Name is the file name without .yaml: the ManagedCluster name for a
-	// spoke, the appset chart's hubName for a hub.
+	// spoke, the install chart's hubName for a hub.
 	Name     string
 	Revision string
 	// ValueFiles lists paths under values/, lowest precedence first.

@@ -1,4 +1,5 @@
 {{- $hub := required "hubName must be set (--set hubName=<name>)" .Values.hubName -}}
+{{- $_ := required "gitRepo must be set (--set gitRepo=<url>)" .Values.gitRepo -}}
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:

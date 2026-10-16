@@ -5,10 +5,11 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
-      - 'sample-element/**'
+      - 'tools/sample-element/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
+      - 'install/**'
       - 'tools/validator/**'
       - '.github/workflows/validate.yml'
   push:
@@ -16,10 +17,11 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
-      - 'sample-element/**'
+      - 'tools/sample-element/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
+      - 'install/**'
       - 'tools/validator/**'
       - '.github/workflows/validate.yml'
   workflow_dispatch:
@@ -133,6 +135,27 @@ jobs:
               failed=1
             fi
           done
+          exit "$failed"
+
+      # install/ is run by hand on each hub, so nothing else renders it. The required values must fail
+      # an install, and policyNamespace must equal the root values.yaml that the elements read. Runs
+      # after a failed step too.
+      - name: Check install charts
+        if: ${{ !cancelled() }}
+        run: |
+          failed=0
+          set -- --set hubName=ci --set gitRepo=https://example.invalid/r.git
+          helm lint install "$@" || failed=1
+          for v in hubName gitRepo; do
+            helm template ci install "$@" --set "$v=" 2>&1 | grep -q "$v must be set" ||
+              { echo "::error file=install/values.yaml::$v is not required"; failed=1; }
+          done
+          [ "$(yq .policyNamespace install/values.yaml)" = "$(yq .policyNamespace values.yaml)" ] ||
+            { echo "::error file=install/values.yaml::policyNamespace differs from values.yaml"; failed=1; }
+          kinds=$(helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml |
+            yq ea '[select(.kind) | .kind] | sort | join(",")')
+          [ "$kinds" = "MultiClusterHub,Namespace,Namespace,OperatorGroup,OperatorGroup,Subscription,Subscription" ] ||
+            { echo "::error file=install/operators/templates/operators.yaml::rendered $kinds"; failed=1; }
           exit "$failed"
 
       # Last, so a failing test does not hide the annotations above.

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: policystack-operators
+description: First install of ACM and OpenShift GitOps, rendered from the acm and gitops element values
+type: application
+version: 0.1.0

@@ -4,5 +4,14 @@
 # Reserved for elements that manage the hub's own control plane - acm and
 # gitops. Both are deliberately left disabled: this cluster's ACM and ArgoCD are what
 # deploy PolicyStack, so having PolicyStack reconcile them means a bad value can break the delivery
-# path that would otherwise fix it. Enable them here once the rest of the stack is proven.
+# path that would otherwise fix it. Enable them here once the rest of the stack is proven
+# (docs/install.md#hand-the-operators-to-policystack). instance and link stay off so PolicyStack
+# never reconciles the Argo CD instance that delivers it:
 #stack:
+#  acm:
+#    enabled: true
+#  gitops:
+#    enabled: true
+#    toggles:
+#      instance: false
+#      link: false

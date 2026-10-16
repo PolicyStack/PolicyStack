@@ -1,0 +1,63 @@
+{{- /*
+Renders the objects the acm and gitops elements adopt, with the same names and spec: the
+OperatorPolicy looks up the Subscription by namespace and package name, and an OperatorGroup of
+another name is NonCompliant. Pass stack/acm/values.yaml and stack/gitops/values.yaml with -f.
+*/ -}}
+{{- range $el := list "gitops" "acm" }}
+{{- with index $.Values.stack $el "operatorPolicies" $el }}
+{{- if or .versions (ne .upgradeApproval "Automatic") }}
+{{- fail (printf "%s: versions and upgradeApproval pins apply only after handover (docs/install.md)" $el) }}
+{{- end }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .namespace }}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: {{ .operatorGroup.name }}
+  namespace: {{ .namespace }}
+{{- with .operatorGroup.targetNamespaces }}
+spec:
+  targetNamespaces: {{- toYaml . | nindent 4 }}
+{{- else }}
+spec: {}
+{{- end }}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: {{ .subscription.name }}
+  namespace: {{ .namespace }}
+spec:
+  name: {{ .subscription.name }}
+  channel: {{ .subscription.channel }}
+  source: {{ .subscription.source }}
+  sourceNamespace: {{ .subscription.sourceNamespace }}
+  installPlanApproval: Automatic
+  {{- with .subscription.config }}
+  config: {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- /* Same spec as stack/acm/converters/multiclusterhub.yaml. */}}
+{{- $cfg := .Values.stack.acm.config }}
+---
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  namespace: {{ .Values.stack.acm.operatorPolicies.acm.namespace }}
+spec:
+  availabilityConfig: {{ $cfg.availabilityConfig }}
+  {{- if not $cfg.selfManaged }}
+  disableHubSelfManagement: true
+  {{- end }}
+  {{- if $cfg.siteConfig }}
+  overrides:
+    components:
+      - name: siteconfig
+        enabled: true
+  {{- end }}

@@ -19,6 +19,7 @@ nav = [
     { "Rolling out changes" = "rollout.md" },
     { "Cluster lifecycle" = "lifecycle.md" },
     { "Lifecycle reference" = "lifecycle-reference.md" },
+    { "Global Hub" = "global-hub.md" },
     { "Upgrades" = "upgrades.md" },
   ] },
   { "Development" = [

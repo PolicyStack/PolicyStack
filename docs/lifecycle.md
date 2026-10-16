@@ -5,7 +5,7 @@ Add `hub` to a cluster's fleet file and that hub builds the cluster. Set `state:
 How it works:
 
 1. The hub's ApplicationSet `policystack-lifecycle` creates Application `lifecycle-<cluster>` for each fleet file that names the hub.
-2. The Application renders the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle) chart into Policy `present-lifecycle-<cluster>`, placed on the hub itself.
+2. The Application renders the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle) chart into Policy `present-lifecycle-<cluster>`, placed on the hub itself. A managed hub imported into a Global Hub in default mode does not manage itself, so its parent renders and places the Policy for it ([Global Hub](global-hub.md#lifecycle)).
 3. ACM governance on the hub creates the cluster's objects one step at a time, each step waiting for the one before it.
 4. When the install finishes, ACM imports the cluster and the Day-2 ApplicationSet takes over. No manual step.
 
@@ -30,8 +30,8 @@ A hosted control plane runs as pods on the hub. `hive` and `siteconfig` build st
 On every hub that builds clusters:
 
 - ACM 2.16 or later.
-- The hub manages itself: its ManagedCluster has the `local-cluster` label, the default.
-- `fleet/hubs/<hubName>.yaml` exists for the hub.
+- The hub manages itself: its ManagedCluster has the `local-cluster` label, the default. Or it is a default-mode Global Hub managed hub, and the global hub runs PolicyStack.
+- `fleet/hubs/<hubName>.yaml` exists for the hub, or `fleet/<hubName>.yaml` for a default-mode managed hub.
 - For `hypershift`: the hypershift-addon on the hub, on by default. Check with `oc get managedclusteraddon hypershift-addon -n local-cluster`.
 - A credential Secret on the hub with `pullSecret` and `ssh-publickey`, plus the cloud keys for `hive`. Each example below shows the command. To show it under Infrastructure > Credentials in the console, add the labels `cluster.open-cluster-management.io/credentials=` and `cluster.open-cluster-management.io/type=<type>`.
 
@@ -414,8 +414,8 @@ Maps merge across layers and lists replace ([Merge rules](values.md#merge-rules)
 For every engine:
 
 ```sh
-oc get policy -n policy present-lifecycle-<cluster>                 # Compliant = built
-oc get configurationpolicy -n local-cluster | grep <cluster>        # each step
+oc get policy -n pstack present-lifecycle-<cluster>                 # Compliant = built
+oc get configurationpolicy -n local-cluster | grep <cluster>        # each step; -n <managed-hub> in default mode
 oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonpath='{.status.conditions}'   # render errors
 ```
 
@@ -446,7 +446,7 @@ Set `state: absent` in the fleet file and merge:
 The hub removes the cluster from ACM, deletes it, waits until it is gone, then deletes the secrets and `install.manifests` it created. Detaching deletes the cluster's Day-2 Applications and Policies without pruning anything on the cluster. Wait for the Policy, then delete the fleet file and `values/clusters/<cluster>.yaml`:
 
 ```sh
-oc get policy -n policy absent-lifecycle-<cluster>
+oc get policy -n pstack absent-lifecycle-<cluster>
 ```
 
 What is left:

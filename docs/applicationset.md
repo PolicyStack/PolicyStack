@@ -2,7 +2,7 @@
 
 The ApplicationSet `policystack` in `openshift-gitops` on the hub creates one Argo CD Application per element for every managed cluster that has a fleet file. The fleet file picks the Git revision and the values files. The template is [`install/templates/appset.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
 
-A second ApplicationSet, `policystack-lifecycle`, creates one Application per fleet file that names this hub in `hub`. That Application builds or destroys the cluster ([Cluster lifecycle](lifecycle.md)). Its template is [`install/templates/lifecycle.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/lifecycle.yaml).
+A second ApplicationSet, `policystack-lifecycle`, creates one Application per fleet file that names this hub in `hub`, or a managed hub it builds for ([Global Hub](global-hub.md)). That Application builds or destroys the cluster ([Cluster lifecycle](lifecycle.md)). Its template is [`install/templates/lifecycle.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/lifecycle.yaml).
 
 ## Fleet files
 
@@ -18,7 +18,7 @@ A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.
 | `version` | No | OpenShift release, `x.y.z`, the cluster runs. Bumping it upgrades the cluster ([Upgrades](upgrades.md)). Required with `hub`. |
 | `channel` | No | Upgrade channel, such as `stable-4.20` ([Upgrades](upgrades.md)). |
 
-No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`. The Day-2 ApplicationSet ignores the three lifecycle keys. `version` and `channel` go only in the fleet file, never in a values layer, so the clusters an upgrade moves are the fleet files it changes. Argo CD reads fleet files as YAML 1.1, so `revision`, `version` and `channel` must be YAML strings. Quote one YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
+No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`, or a default-mode managed hub's `fleet/<hub>.yaml` ([Global Hub](global-hub.md#layout)). The Day-2 ApplicationSet ignores the three lifecycle keys. `version` and `channel` go only in the fleet file, never in a values layer, so the clusters an upgrade moves are the fleet files it changes. Argo CD reads fleet files as YAML 1.1, so `revision`, `version` and `channel` must be YAML strings. Quote one YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
 
 ```yaml
 # fleet/prod-east-1.yaml
@@ -144,26 +144,50 @@ The GitOpsCluster from [Install PolicyStack](install.md#install-policystack) cre
 
 ### Lifecycle generator
 
-`policystack-lifecycle` has one generator, as rendered with `hubName=acm-dc1`:
+`policystack-lifecycle` has two generators, as rendered with `hubName=acm-dc1`:
 
 ```yaml
 generators:
-  - git:
-      repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
-      revision: HEAD
-      files:
-      - path: 'fleet/*.yaml'
-      - path: 'fleet/*/*.yaml'
-        exclude: true
-    selector:
-      matchExpressions:
-        - key: hub
-          operator: In
-          values:
-            - "acm-dc1"
+  - matrix:
+      generators:
+        - clusters:
+            selector:
+              matchExpressions:
+                - key: local-cluster
+                  operator: Exists
+        - git: &fleet
+            repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+            revision: HEAD
+            files:
+            - path: 'fleet/*.yaml'
+            - path: 'fleet/*/*.yaml'
+              exclude: true
+          selector:
+            matchExpressions:
+              - key: hub
+                operator: In
+                values:
+                  - "acm-dc1"
+  - matrix:
+      generators:
+        - git: *fleet
+          selector:
+            matchExpressions:
+              - key: hub
+                operator: Exists
+        - clusters:
+            selector:
+              matchLabels:
+                apps.open-cluster-management.io/cluster-name: '{{ if regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" (toString .hub) }}{{ .hub }}{{ end }}'
+                global-hub.open-cluster-management.io/deploy-mode: default
 ```
 
-It reads every fleet file at `HEAD` and needs no cluster secret, since the cluster does not exist yet. Argo CD's default globbing lets `*` match `/`, so `fleet/*.yaml` also matches files in subdirectories, and the `exclude` entry drops them: the hub files and anything else under a subdirectory, which neither ApplicationSet nor the validator reads. The selector keeps only files whose `hub` is this hub's `hubName`. A file without `hub` never matches, so imported clusters get no lifecycle Application.
+Both read every fleet file at `HEAD`. Argo CD's default globbing lets `*` match `/`, so `fleet/*.yaml` also matches files in subdirectories, and the `exclude` entry drops them: the hub files and anything else under a subdirectory, which neither ApplicationSet nor the validator reads. A file without `hub` never matches, so imported clusters get no lifecycle Application.
+
+1. The hub's own clusters. The selector keeps files whose `hub` is this hub's `hubName`, paired with the hub's own cluster secret. A hub that does not manage itself has none and builds nothing.
+2. Clusters of default-mode managed hubs ([Global Hub](global-hub.md#lifecycle)). Each file with `hub` is paired with the cluster secret of the ManagedCluster it names, if that cluster is a managed hub imported in default mode. The fleet files come first because Argo CD templates a child generator's fields but not its `selector`. A `hub` that is not a DNS label matches nothing, since as a label value it would fail the whole ApplicationSet.
+
+The cluster secret supplies `.name`, the ManagedCluster the Policies are placed on.
 
 ## Applications
 
@@ -225,7 +249,7 @@ selector:
         - "prod-east-1"
 ```
 
-A lifecycle Application gets no selector. It passes the fleet file's own keys instead: `hub`, `state` (default `present`), `version` and `channel` when set, and `install` (default `{}`). They rank above every values file, so the fleet file's `install` overrides the cascade ([Values](lifecycle.md#values)).
+A lifecycle Application passes `selector.matchExpressions.hub`, one `In` expression on the `name` label holding the name of the hub's ManagedCluster the Policies apply to, and the fleet file's own keys: `hub`, `state` (default `present`), `version` and `channel` when set, and `install` (default `{}`). They rank above every values file, so the fleet file's `install` overrides the cascade ([Values](lifecycle.md#values)).
 
 ## The install chart
 
@@ -234,7 +258,7 @@ The [install chart](https://github.com/PolicyStack/PolicyStack/tree/main/install
 | Value | Set in | Use |
 |---|---|---|
 | `gitRepo` | `--set` at `helm install` | The repository the git generators read and every Application renders from. Required. |
-| `hubName` | `--set` at `helm install` | Names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, its Applications and its cluster values file. Selects the fleet files whose `hub` this hub builds. Required ([The hub](#the-hub)). |
+| `hubName` | `--set` at `helm install` | Names this hub's fleet file, `fleet/hubs/<hubName>.yaml`, its Applications and its cluster values file. Selects the fleet files whose `hub` this hub builds. Unused on a default-mode Global Hub managed hub ([Global Hub](global-hub.md)). Required ([The hub](#the-hub)). |
 | `policyNamespace` | `install/values.yaml` | The namespace the chart creates. Elements read the same value from the root `values.yaml`, and CI checks the two match. Do not change it. |
 
 `helm upgrade --reset-then-reuse-values` keeps `gitRepo` and `hubName`. To see the ApplicationSets as Argo CD gets them:

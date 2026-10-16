@@ -1,6 +1,6 @@
-# Rendered once per fleet file whose hub is this hub. hub, state, version, channel and install come
-# from the fleet file; any values cascade layer can set install defaults. docs/lifecycle.md
-# documents every key.
+# Rendered once per fleet file that sets hub, on that hub or on its Global Hub parent. hub, state,
+# version, channel and install come from the fleet file; any values cascade layer can set install
+# defaults. docs/lifecycle.md documents every key.
 
 # hubName of the hub that builds the cluster
 hub: ""
@@ -68,7 +68,8 @@ install:
   #                      role, nodeNetwork and the rest
   siteconfig: {}
 
-# The hub's own ManagedCluster, whatever localClusterName is
+# The hub ManagedCluster the Policies apply to. The lifecycle ApplicationSet replaces it with that
+# cluster's name; this default stands in for helm lint and the validator.
 selector:
   matchExpressions:
     hub:

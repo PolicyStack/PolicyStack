@@ -43,7 +43,7 @@ A top-level `placement:` key in any cascade file merges into that spec ([Placeme
 
 An ACM Placement selects only clusters in ManagedClusterSets bound to its namespace. The install chart binds `global` into `policyNamespace` ([Install PolicyStack](install.md#install-policystack)).
 
-The `lifecycle/` chart is the exception ([Cluster lifecycle](lifecycle.md)). Its Policies build clusters on the hub, so its `values.yaml` sets `selector` to one `Exists` expression on the `local-cluster` label, and no `selector` is injected. Every lifecycle release lands on the hub, where ACM requires template names to be unique across all Policies, so the chart sets the policy-library option [`suffixTemplateNames`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#root-component-options). Its template names are `<policy>-<name>-<cluster>`, such as `present-credentials-hcp-agent`.
+The `lifecycle/` chart is the exception ([Cluster lifecycle](lifecycle.md)). Its Policies build clusters on a hub, so the lifecycle ApplicationSet injects `selector`, one `In` expression on the `name` label for the hub the Policies apply to. The `Exists` expression on `local-cluster` in its `values.yaml` only serves `helm lint` and the validator ([Lifecycle generator](applicationset.md#lifecycle-generator)). Every lifecycle release lands on the hub, where ACM requires template names to be unique across all Policies, so the chart sets the policy-library option [`suffixTemplateNames`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#root-component-options). Its template names are `<policy>-<name>-<cluster>`, such as `present-credentials-hcp-agent`.
 
 ## Naming limits
 

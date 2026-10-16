@@ -145,7 +145,7 @@ func TestSelectEngine(t *testing.T) {
 }
 
 func TestSetString(t *testing.T) {
-	el := &chart.Element{ChartName: "openshift-upgrade"}
+	el := &chart.Element{ChartName: "upgrade"}
 	tests := []struct {
 		name string
 		p    pair

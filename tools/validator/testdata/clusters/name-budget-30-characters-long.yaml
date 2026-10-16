@@ -1,0 +1,5 @@
+# The longest cluster name every element must fit, 30 characters. The profiles step in
+# validate.yml checks POLICY001 here with every element and toggle on.
+revision: main
+valueFiles:
+  - environments/nonprod.yaml

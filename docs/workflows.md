@@ -6,7 +6,7 @@ pull requests.
 
 | Workflow | Runs on | Fails when |
 | -------- | ------- | ---------- |
-| Policy Validate (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/`, plus `lifecycle/converters/hypershift/` for a file that sets `hub` and an `openshift-upgrade` that reads `version` for a file that sets `version` or `channel` |
+| Policy Validate (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `sample-element/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Validator tests fail, the validator reports an error, or a fleet file's `revision` does not resolve to a commit with `stack/`, plus `lifecycle/converters/hypershift/` for a file that sets `hub` and an `upgrade` element that reads `version` for a file that sets `version` or `channel` |
 | Documentation Check (`docs-check.yml`) | Changes to `stack/`, the doc generator or its tests | Generator tests fail or a `stack/<element>/README.md` is out of date |
 | Render Diff (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml` or `fleet/`, in a repo with fleet files | Not a gate. Fails only when the validator does not build |
 | Update Documentation (`docs-update.yml`) | `update-docs` label added to a PR | Not a gate, it fixes what Documentation Check reports |
@@ -19,8 +19,9 @@ the run in progress.
 
 1. Checks gofmt, vets and builds `tools/validator` (`make -C tools/validator lint build`) with the
    Go version from `tools/validator/go.mod`.
-2. Runs the validator against the fixture clusters with `--github`, so each finding is annotated on
-   the PR diff at the file and line to fix. Errors fail the job, warnings are annotated only.
+2. Runs the validator against the fixture clusters with `--github` and `--include-sample-element`,
+   so `sample-element/` stays valid. Each finding is annotated on the PR diff at the file and line
+   to fix. Errors fail the job, warnings are annotated only.
 3. Runs it again with `--only RENDER000,POLICY081` for each profile in
    `tools/validator/testdata/profiles`, which turn every element on, so every converter's ACM
    templates are evaluated ([ACM templates](validation.md#acm-templates)). A finding both profiles
@@ -33,7 +34,7 @@ the run in progress.
 5. Checks every fleet file's `revision`. It must be a tag, a branch or a commit SHA of 5 to 40 hex
    characters, the forms Argo CD resolves, and point at a commit that contains `stack/`. A file that
    sets `hub` also needs `lifecycle/converters/hypershift/`, and one that sets `version` or `channel`
-   an `openshift-upgrade` that reads them; older revisions ignore both keys. A pin to the PR's base
+   an `upgrade` element that reads them; older revisions ignore both keys. A pin to the PR's base
    branch is checked against the merge commit. Each failure is annotated on the fleet file. The checkout fetches
    full history (`fetch-depth: 0`) so tags and branches resolve.
 6. Runs the validator's tests (`make -C tools/validator test`), last so a failing test does not hide
@@ -63,7 +64,7 @@ gets no comment.
 
 | Cluster | Revision | Changes |
 |---|---|---|
-| `prod-east-1` | `main` | user-workload-monitoring: 1 Policy changed |
+| `prod-east-1` | `main` | user-monitoring: 1 Policy changed |
 | `nonprod-west-1` | `v1.0.0` → `main` | metallb: **render failed** |
 | `edge-2` | new at `main` | 6 elements, 21 objects added |
 ```

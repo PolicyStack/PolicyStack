@@ -1,0 +1,11 @@
+{{- /* Pin the ClusterVersion upgrade channel to the fleet file's channel. */ -}}
+{{ "{{" }}- if {{ include "upgrade.standalone" . }} {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      name: version
+    spec:
+      channel: {{ .Values.channel | quote }}
+{{ "{{" }}- end {{ "}}" }}

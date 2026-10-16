@@ -20,7 +20,7 @@ built here, so lifecycle never builds over it or detaches it.
 open-cluster-management/created-via: hypershift
 import.open-cluster-management.io/hosting-cluster-name: '{{ "{{hub" }} .ManagedClusterName {{ "hub}}" }}'
 {{- else -}}
-lifecycle.policystack.io/hub: {{ .Values.hub | quote }}
+lifecycle.policystk.io/hub: {{ .Values.hub | quote }}
 {{- end -}}
 {{- end -}}
 

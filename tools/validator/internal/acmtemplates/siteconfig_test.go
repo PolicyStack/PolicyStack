@@ -77,7 +77,7 @@ spec: {releaseImage: "quay.io/openshift-release-dev/ocp-release:4.20.8-multi"}
 			t.Errorf("spec.%s %q, want %q", path, got, want)
 		}
 	}
-	if got := field(ci, "spec", "extraAnnotations", "ManagedCluster", "lifecycle.policystack.io/hub"); got != "acm-dc1" {
+	if got := field(ci, "spec", "extraAnnotations", "ManagedCluster", "lifecycle.policystk.io/hub"); got != "acm-dc1" {
 		t.Errorf("owner annotation %q", got)
 	}
 	// The stock ai KlusterletAddonConfig turns application-manager off, which stops Day-2.

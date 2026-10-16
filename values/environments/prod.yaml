@@ -10,26 +10,26 @@ stack:
     enabled: true
 
   # External secret sync. Operator only until a ClusterSecretStore is configured.
-  externalSecretsOperator:
+  eso:
     enabled: true
 
   # STIG scanning. Scans are observational; applying remediations reboots nodes, so `remediate`
   # stays off until the first scan results have been reviewed.
-  openshiftComplianceOperator:
+  compliance:
     enabled: true
 
   # Opinionated cluster remediations.
-  manualRemediations:
+  remediations:
     enabled: true
     toggles:
       # Removes the Samples Operator imagestreams. Safe, and frees a noticeable amount of pull
       # traffic and etcd space on a lab cluster.
-      remove-samples: true
+      samples: true
       # Registry allowlist is ENFORCED cluster-wide: anything not listed can no longer be pulled.
       # Left off until the registries this cluster actually pulls from are confirmed against
       # config.allowedRegistries - a missing entry breaks new image pulls.
       registries: false
 
   # Let cluster DNS schedule onto every node, including tainted ones.
-  openshiftDns:
+  dns:
     enabled: true

@@ -5,10 +5,10 @@
 #     - environments/prod.yaml
 #     - tenants/payments.yaml
 stack:
-  # gitopsDev needs the ArgoCD CRD from the GitOps operator on the same cluster. The platform ArgoCD
+  # teamGitops needs the ArgoCD CRD from the GitOps operator on the same cluster. The platform ArgoCD
   # instance is not needed for that, so only the operator is installed. ca-bundle and link configure
   # that instance, so they go off with it; link would otherwise wait on it indefinitely.
-  openshiftGitops:
+  gitops:
     enabled: true
     toggles:
       instance: false
@@ -17,7 +17,7 @@ stack:
 
   # A team ArgoCD in openshift-gitops-payments. teams is a map, so a cluster file can add more teams
   # without restating this one.
-  gitopsDev:
+  teamGitops:
     enabled: true
     config:
       teams:

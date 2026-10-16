@@ -15,7 +15,7 @@
 #     - platforms/aws.yaml
 #
 # On top of the prod baseline (cert-manager CA, external-secrets, compliance scan,
-# manual-remediations, cluster DNS), this cluster tests what bare metal could not.
+# remediations, cluster DNS), this cluster tests what bare metal could not.
 stack:
 
   # --- newly testable now that a default StorageClass exists -------------------------------------
@@ -24,7 +24,7 @@ stack:
   # cluster-monitoring-config rather than replacing it, plus the dict-built UWM config.
   # StorageClass is pinned rather than left to the cluster default, so the test stays deterministic
   # even while ODF is installing.
-  userWorkloadMonitoring:
+  userMonitoring:
     enabled: true
     config:
       storageClass: gp3-csi
@@ -41,7 +41,7 @@ stack:
   # one MachineHealthCheck per worker MachineSet, which exercises the runtime lookup loop.
   # NOTE: an unhealthy worker now gets REPLACED, and ODF OSDs live on workers here - maxUnhealthy
   # (40%) is what stops that cascading.
-  machineHealthChecks:
+  machineHealth:
     enabled: true
 
   # --- storage chain: the only thing that exercises cross-element dependencies for real ----------
@@ -65,7 +65,7 @@ stack:
 
   # Deliberately tiny: 1 device set x 3 replicas x 100Gi = 300Gi of gp3, rather than the 12TiB the
   # element ships as a production default. `lean` keeps the Ceph pods small too.
-  openshiftDataFoundation:
+  odf:
     enabled: true
     config:
       resourceProfile: lean
@@ -80,17 +80,17 @@ stack:
       defaultStorageClass: gp3-csi
 
   # Needed by loki for the ClusterLogForwarder CRD.
-  openshiftLogging:
+  logging:
     enabled: true
 
   # Needed by loki for the console logging UI plugin.
-  clusterObservability:
+  coo:
     enabled: true
 
   # The payoff: loki proves three cross-element `element:` dependencies at once -
-  #   stack            -> ready@openshift-data-foundation
-  #   forwarder        -> install@openshift-logging
-  #   observability-ui -> install@cluster-observability
+  #   stack            -> ready@odf
+  #   forwarder        -> install@logging
+  #   observability-ui -> install@coo
   # and its chunks land in a NooBaa bucket from ODF.
   loki:
     enabled: true
@@ -103,11 +103,11 @@ stack:
       storageClass: gp3-csi
 
   # --- already proven on the hub, cheap to run again --------------------------------------------
-  nodeFeatureDiscovery:
+  nfd:
     enabled: true
   nodeMaintenance:
     enabled: true
-  openshiftPipelines:
+  pipelines:
     enabled: true
 
   # --- operator installs, to widen coverage of the OperatorPolicy path --------------------------
@@ -117,9 +117,9 @@ stack:
     enabled: true
   opentelemetry:
     enabled: true
-  servicemesh3operator:
+  servicemesh:
     enabled: true
-  trustedArtifactSigner:
+  artifactSigner:
     enabled: true
   developerHub:
     enabled: true
@@ -137,14 +137,14 @@ stack:
 
 # Deliberately off, and why:
 #
-#   servicemesh3-ambient  - installs IstioCNI and ztunnel, which changes cluster networking. The
+#   ambient-mesh          - installs IstioCNI and ztunnel, which changes cluster networking. The
 #                           four operators it depends on are enabled above, so turning this on is a
 #                           one-liner when you want it (and it adds a 5-way cross-element test).
-#   openshiftImageRegistry - the AWS installer already backs the registry with real S3. Switching it
+#   imageRegistry - the AWS installer already backs the registry with real S3. Switching it
 #                           to a NooBaa bucket is a storage migration, not a config test.
 #   certManager api-cert / ingress-cert, workerNodes kubelet, compliance remediate,
-#   infraNodes, workloadPartitioning - held back by choice. openshiftUpgrade acts only on the fleet
+#   infraNodes, partitioning - held back by choice. upgrade acts only on the fleet
 #   file's version and channel.
-#   advancedClusterManagement / openshiftGitops - hub-only, and the hub has no ODF.
-#   openshiftVirtualization - needs metal instances on AWS.
+#   acm / gitops - hub-only, and the hub has no ODF.
+#   virtualization - needs metal instances on AWS.
 #   localStorage, lvm       - no extra disks; ODF consumes gp3-csi directly here.

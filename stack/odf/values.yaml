@@ -1,0 +1,243 @@
+stack:
+  # @description: "OpenShift Data Foundation: Ceph storage and the NooBaa object gateway"
+  odf:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Optional pieces, switchable per cluster
+    toggles:
+      # @desc: PV-pool backing store for NooBaa. Not needed when fronting a cloud object store.
+      noobaa-pvpool: false
+      # @desc: Suppress the permanent NooBaa PodDisruptionBudgetAtLimit alert
+      pdb-alert: true
+
+    # @description: Storage sizing and posture
+    config:
+      # @desc: balanced, lean or performance
+      resourceProfile: balanced
+      # @desc: StorageClass marked default cluster-wide. Every other class is marked non-default.
+      defaultStorageClass: ocs-storagecluster-ceph-rbd
+      # @desc: Allow OSDs to be unevenly distributed. Set true on bare metal when the storage node
+      # @desc: count is not a multiple of three. Leave unset to let ODF decide.
+      flexibleScaling: null
+      # Ceph CSI node-plugin tolerations are not managed. The field lives on csi.ceph.io
+      # OperatorConfig/ceph-csi-operator-config, owned by ceph-csi-operator; enforcing it caused an
+      # update/violation flap, and the operator honours it only when the Driver sets no tolerations.
+      # StorageCluster has no field for it: spec.placement excludes csi and spec.csi carries only
+      # readAffinity. The node plugin already runs on every schedulable node; tolerating extra
+      # taints is a per-cluster concern.
+      # @desc: Whether ODF runs the NooBaa multicloud gateway (manage or ignore)
+      multiCloudGateway: manage
+      # @description: The disks backing Ceph
+      deviceSet:
+        # @desc: Device sets per replica
+        count: 2
+        # @desc: OSD replicas. Three is the supported topology.
+        replicas: 3
+        # @desc: PVC size per OSD
+        size: 2Ti
+        # @desc: StorageClass the OSD PVCs come from. With the local-storage element, point this at
+        # @desc: its LocalVolumeSet StorageClass and set size to "1" to consume whole devices.
+        storageClassName: gp3-csi
+      # @description: Encryption at rest
+      encryption:
+        enabled: true
+        clusterWide: true
+        keyRotationSchedule: "@weekly"
+      network:
+        # @desc: Encrypt Ceph in-cluster traffic
+        encryptionEnabled: true
+      # @description: NooBaa PV-pool sizing, used when the noobaa-pvpool toggle is on
+      noobaa:
+        numVolumes: 1
+        volumeSize: 500Gi
+        requests:
+          cpu: 500m
+          memory: 500Mi
+        limits:
+          cpu: 1000m
+          memory: 4000Mi
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CP Contingency Planning
+        - SC System and Communications Protection
+      controls:
+        - CP-9 System Backup
+        - SC-28 Protection of Information at Rest
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: install
+        enabled: true
+        description: "Install and manage the ODF operator"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+      # @description: The StorageCluster waits for dedicated storage nodes so OSDs land on them.
+      # @description: Requires the storage-nodes element enabled on this cluster; the dependency
+      # @description: below is satisfied only by a rendered policy. Dependencies have no toggle: to
+      # @description: run ODF without dedicated storage nodes, drop that dependency in your values.
+      - name: cluster
+        enabled: true
+        description: "Deploy the StorageCluster"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+        dependencies:
+          - name: install
+          # @desc: Cross-element: the storage-nodes element on this same cluster
+          - name: ready
+            element: storage-nodes
+
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until ODF has published its StorageClasses"
+        # @desc: Other elements depend on this policy by name; it is the "storage is usable" contract.
+        # @desc: It asserts StorageClasses, not StorageCluster conditions: every StorageCluster
+        # @desc: condition tracks live Ceph health, and a flapping ACM dependency puts every
+        # @desc: dependent policy into Pending. The `health` policy reports live health; nothing
+        # @desc: depends on it.
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: cluster
+
+      # @description: Live StorageCluster health, split out of `ready` so that its flapping cannot
+      # @description: pause the five elements that depend on `ready`. Nothing depends on this one.
+      - name: health
+        enabled: true
+        description: "Reports live StorageCluster health"
+        remediationAction: inform
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: ready
+
+      - name: config
+        enabled: true
+        description: "Default StorageClass, console plugin and NooBaa tuning"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: ready
+
+    operatorPolicies:
+      odf:
+        enabled: true
+        description: "OpenShift Data Foundation operator"
+        displayName: "OpenShift Data Foundation"
+        policyRef: install
+        severity: medium
+        remediationAction: enforce
+        complianceType: musthave
+        namespace: openshift-storage
+        operatorGroup:
+          name: openshift-storage-operatorgroup
+          targetNamespaces:
+            - openshift-storage
+        subscription:
+          channel: stable-4.20
+          name: odf-operator
+          source: redhat-operators
+          sourceNamespace: openshift-marketplace
+        upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []
+
+    configPolicies:
+      - name: storagecluster
+        enabled: true
+        description: "StorageCluster and Ceph CSI placement"
+        policyRef: cluster
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        waitForOperator: odf
+        ignorePending: true
+        templateNames:
+          - name: storage-cluster
+        enableTemplateParameters: true
+        templateParameters: &odfParams
+          name: ocs-storagecluster
+          namespace: openshift-storage
+
+      - name: available
+        enabled: true
+        description: "ODF StorageClasses exist"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: storage-cluster-ready
+        enableTemplateParameters: true
+        templateParameters: *odfParams
+
+      - name: conditions
+        enabled: true
+        description: "StorageCluster reports Available and not Degraded"
+        policyRef: health
+        complianceType: musthave
+        remediationAction: inform
+        severity: medium
+        templateNames:
+          - name: storage-cluster-health
+        enableTemplateParameters: true
+        templateParameters: *odfParams
+
+      - name: storageclass
+        enabled: true
+        description: "Default StorageClass selection"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        # @desc: One object per StorageClass the cluster has
+        rawTemplate: true
+        templateNames:
+          - name: default-storageclass
+        enableTemplateParameters: true
+        templateParameters: *odfParams
+
+      - name: console
+        enabled: true
+        description: "ODF console plugin"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: odf-console-plugin
+        enableTemplateParameters: true
+        templateParameters: *odfParams
+
+      - name: noobaa-pvpool
+        enabled: true
+        description: "NooBaa PV-pool backing store"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: noobaa-backing-store
+        enableTemplateParameters: true
+        templateParameters: *odfParams
+
+      - name: pdb-alert
+        enabled: true
+        description: "Suppress the NooBaa PDB alert"
+        policyRef: config
+        complianceType: musthave
+        remediationAction: enforce
+        severity: low
+        templateNames:
+          - name: noobaa-pdb-alert
+        enableTemplateParameters: true
+        templateParameters: *odfParams

@@ -47,11 +47,11 @@ An element that exists at the new revision but not the old one gets a new Applic
 
 ## Disabling an element
 
-Set `enabled: false` under the element's key in a layer that outranks every layer enabling it ([Order](values.md#order)). `values/environments/prod.yaml` enables `openshiftDns`, to turn it off on `prod-east-1` only, add this to `values/clusters/prod-east-1.yaml`:
+Set `enabled: false` under the element's key in a layer that outranks every layer enabling it ([Order](values.md#order)). `values/environments/prod.yaml` enables `dns`, to turn it off on `prod-east-1` only, add this to `values/clusters/prod-east-1.yaml`:
 
 ```yaml
 stack:
-  openshiftDns:
+  dns:
     enabled: false
 ```
 

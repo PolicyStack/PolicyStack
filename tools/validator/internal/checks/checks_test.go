@@ -339,6 +339,38 @@ stack:
 	}
 }
 
+func TestPolicy091_ElementNames(t *testing.T) {
+	el := func(dir, name string) *chart.Element { return &chart.Element{Dir: dir, ChartName: name} }
+	tests := []struct {
+		name string
+		els  []*chart.Element
+		want []string // substrings, one per finding
+	}{
+		{"distinct", []*chart.Element{el("stack/gitops", "gitops"), el("stack/team-gitops", "team-gitops"), el("lifecycle", "lifecycle")}, nil},
+		{"lifecycle components share a dir", []*chart.Element{el("lifecycle", "lifecycle"), el("lifecycle", "lifecycle")}, nil},
+		{"no hyphen after prefix", []*chart.Element{el("stack/acm", "acm"), el("stack/acms", "acms")}, nil},
+		{"prefix", []*chart.Element{el("stack/gitops-dev", "gitops-dev"), el("stack/gitops", "gitops")},
+			[]string{`gitops-dev on cluster "c" and gitops on cluster "dev-c" share the release name gitops-dev-c`}},
+		{"reserved lifecycle", []*chart.Element{el("stack/lifecycle-extras", "lifecycle-extras"), el("lifecycle", "lifecycle")},
+			[]string{`element name "lifecycle-extras" starts with element name "lifecycle"`}},
+		{"same chart name", []*chart.Element{el("stack/a", "loki"), el("stack/b", "loki")},
+			[]string{`element name "loki" is also the chart name in a`}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := (&ElementNameCheck{}).Run(Context{AllElements: tt.els})
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d findings, want %d: %+v", len(got), len(tt.want), got)
+			}
+			for i, w := range tt.want {
+				if !strings.Contains(got[i].Message, w) {
+					t.Errorf("[%d] got %q, want %q", i, got[i].Message, w)
+				}
+			}
+		})
+	}
+}
+
 func TestPolicy050_FleetFileIssues(t *testing.T) {
 	if got := (&LabelCheck{}).Run(Context{Cluster: &cascade.Resolved{ClusterName: "x"}}); len(got) != 0 {
 		t.Fatalf("expected no findings for a clean fleet file, got %+v", got)

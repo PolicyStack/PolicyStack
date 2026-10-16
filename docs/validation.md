@@ -6,7 +6,9 @@ does ([Order](values.md#order)). It checks the element sources and the rendered 
 fixtures are the example [fleet files](applicationset.md#fleet-files): `prod-east-1.yaml`,
 `nonprod-west-1.yaml`, the hub's `hubs/acm-dc1.yaml`, and seven clusters the hub builds:
 `hcp-kubevirt.yaml`, `hcp-agent.yaml`, `hive-aws.yaml`, `sno-edge.yaml`, and `hcp-retired.yaml`,
-`hive-retired.yaml` and `sno-retired.yaml` (`state: absent`). A file is named
+`hive-retired.yaml` and `sno-retired.yaml` (`state: absent`), plus
+`name-budget-30-characters-long.yaml`, which holds every element to a 30-character cluster name
+([Naming limits](policies.md#naming-limits)). A file is named
 after its cluster, so `hubs/acm-dc1.yaml` renders as `acm-dc1` and reads
 `values/clusters/acm-dc1.yaml`. Their files in `values/` are rendered too.
 
@@ -27,7 +29,7 @@ From the repo root, the same commands CI runs, without `--github`:
 
 ```sh
 make -C tools/validator lint test build
-tools/validator/bin/policystack-validator --repo-root . --extra-values tools/validator/testdata/baseline.yaml --skip POLICY080,POLICY081
+tools/validator/bin/policystack-validator --repo-root . --extra-values tools/validator/testdata/baseline.yaml --include-sample-element --skip POLICY080,POLICY081
 for p in tools/validator/testdata/profiles/*.yaml; do
   tools/validator/bin/policystack-validator --repo-root . --only RENDER000,POLICY081 \
     --extra-values "tools/validator/testdata/baseline.yaml,$p"

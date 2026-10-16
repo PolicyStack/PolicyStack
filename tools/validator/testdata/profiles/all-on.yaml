@@ -1,19 +1,19 @@
 # POLICY081 coverage: every element and toggle on, so CI evaluates every converter's ACM
 # templates. A new element or toggle goes here; TestProfileCoverage fails until it does.
 stack:
-  advancedClusterManagement:
+  acm:
     enabled: true
     toggles:
       observability: true
       search: true
       addons: true
-  advancedClusterSecurity:
+  acs:
     enabled: true
     toggles:
       central: true
       secured: true
       console: true
-  ansibleAutomationPlatform:
+  aap:
     enabled: true
     toggles:
       storage: true
@@ -25,15 +25,15 @@ stack:
       ca: true
       api-cert: true
       ingress-cert: true
-  clusterObservability:
+  coo:
     enabled: true
   developerHub:
     enabled: true
   devSpaces:
     enabled: true
-  externalSecretsOperator:
+  eso:
     enabled: true
-  gitopsDev:
+  teamGitops:
     enabled: true
   infraNodes:
     enabled: true
@@ -56,13 +56,13 @@ stack:
       observability-ui: true
   lvm:
     enabled: true
-  machineHealthChecks:
+  machineHealth:
     enabled: true
-  manualRemediations:
+  remediations:
     enabled: true
     toggles:
       registries: true
-      remove-samples: true
+      samples: true
   masterNodes:
     enabled: true
   metallb:
@@ -85,42 +85,42 @@ stack:
           networking:
             interfaces:
               bond0: {mac: "aa:bb:cc:dd:ee:ff"}
-  nodeFeatureDiscovery:
+  nfd:
     enabled: true
   nodeMaintenance:
     enabled: true
-  openshiftComplianceOperator:
+  compliance:
     enabled: true
     toggles:
       remediate: true
-  openshiftDataFoundation:
+  odf:
     enabled: true
     toggles:
       noobaa-pvpool: true
       pdb-alert: true
-  openshiftDns:
+  dns:
     enabled: true
-  openshiftGitops:
+  gitops:
     enabled: true
     toggles:
       instance: true
       ca-bundle: true
       link: true
-  openshiftImageRegistry:
+  imageRegistry:
     enabled: true
     toggles:
       pvc: true
       s3: true
-  openshiftLogging:
+  logging:
     enabled: true
-  openshiftPipelines:
+  pipelines:
     enabled: true
-  openshiftUpgrade:
+  upgrade:
     enabled: true
     toggles:
       channel: true
       upgrade: true
-  openshiftVirtualization:
+  virtualization:
     enabled: true
   opentelemetry:
     enabled: true
@@ -128,11 +128,11 @@ stack:
     enabled: true
     toggles:
       configure: true
-  servicemesh3Ambient:
+  ambientMesh:
     enabled: true
     toggles:
       tracing: true
-  servicemesh3operator:
+  servicemesh:
     enabled: true
   storageNodes:
     enabled: true
@@ -143,9 +143,9 @@ stack:
       ready: true
   tempo:
     enabled: true
-  trustedArtifactSigner:
+  artifactSigner:
     enabled: true
-  userWorkloadMonitoring:
+  userMonitoring:
     enabled: true
   workerNodes:
     enabled: true
@@ -153,7 +153,7 @@ stack:
       config: true
       machines: true
       ready: true
-  workloadPartitioning:
+  partitioning:
     enabled: true
     config:
       reservedCpus: 0-1

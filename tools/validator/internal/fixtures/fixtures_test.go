@@ -213,6 +213,7 @@ func TestLoadDir_testdata(t *testing.T) {
 		{"hcp-retired", "acm-dc1", "absent"},
 		{"hive-aws", "acm-dc1", ""},
 		{"hive-retired", "acm-dc1", "absent"},
+		{"name-budget-30-characters-long", "", ""},
 		{"nonprod-west-1", "", ""},
 		{"prod-east-1", "", ""},
 		{"sno-edge", "acm-dc1", ""},

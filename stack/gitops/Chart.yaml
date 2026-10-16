@@ -1,0 +1,11 @@
+apiVersion: v2
+name: gitops
+description: "OpenShift GitOps operator and the platform ArgoCD instance"
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "3.3.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

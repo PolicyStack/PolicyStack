@@ -13,7 +13,7 @@
 # the AWS MachineSet path for node elements. This file adds the cluster's own workload.
 stack:
   # One m6i.2xlarge infra node in each of three zones. The `workloads` toggle moves ingress, the
-  # registry, monitoring and GitOps onto them; the GitOps part needs openshiftGitops on this cluster.
+  # registry, monitoring and GitOps onto them; the GitOps part needs gitops on this cluster.
   infraNodes:
     enabled: true
     config:
@@ -25,10 +25,10 @@ stack:
       instanceType: m6i.2xlarge
 
   # Replaces worker and infra nodes that stay NotReady.
-  machineHealthChecks:
+  machineHealth:
     enabled: true
 
-  userWorkloadMonitoring:
+  userMonitoring:
     enabled: true
     config:
       prometheus:

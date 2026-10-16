@@ -1,0 +1,14 @@
+{{- /* Console link to ArgoCD. The route host is only known on the managed cluster, so the link
+is skipped until the Route exists. */ -}}
+{{- $cfg := .Values.stack.gitops.config }}
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: {{ .Parameters.argoName }}
+spec:
+  location: ApplicationMenu
+  text: {{ .Parameters.consoleText | quote }}
+  href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "{{ $cfg.namespace }}" "{{ .Parameters.argoName }}-server").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
+  applicationMenu:
+    section: Red Hat applications
+    imageURL: {{ .Parameters.imageUrl }}

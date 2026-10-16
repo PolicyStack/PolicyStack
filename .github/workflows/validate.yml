@@ -5,6 +5,7 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
+      - 'sample-element/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
+      - 'sample-element/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'
@@ -65,6 +67,7 @@ jobs:
             --github \
             --repo-root . \
             --extra-values tools/validator/testdata/baseline.yaml \
+            --include-sample-element \
             --skip POLICY080,POLICY081
 
       # The profiles turn on every element and toggle (docs/validation.md#acm-templates). sort -u
@@ -97,13 +100,13 @@ jobs:
       # Catches typos and pins like gh-pages. A pinned branch deleted later still freezes the
       # ApplicationSet (docs/applicationset.md#revision). A file that sets hub is also rendered
       # from lifecycle/ at its revision, which must read the top-level version key, and a file that
-      # sets version or channel needs an openshift-upgrade that reads them. A pin to the PR's base
+      # sets version or channel needs an upgrade element that reads them. A pin to the PR's base
       # branch is checked against the merge commit, which is what it resolves to once merged.
       - name: Check fleet pins
         run: |
           shopt -s nullglob
-          # has <commit> <dir>...: true when every dir exists at commit
-          has() { local c=$1; shift; for d; do git cat-file -e "$c:$d" 2>/dev/null || return 1; done; }
+          # has <commit> <dir>...: true when every dir exists at commit. a|b accepts either.
+          has() { local c=$1 d a; shift; for d; do for a in ${d//|/ }; do git cat-file -e "$c:$a" 2>/dev/null && continue 2; done; return 1; done; }
           failed=0
           for f in fleet/*.yaml fleet/hubs/*.yaml; do
             rev=$(yq '.revision' "$f") || { echo "::error file=$f::not valid YAML"; failed=1; continue; }
@@ -112,7 +115,7 @@ jobs:
               dirs+=(lifecycle/converters/hypershift) need="stack/ and lifecycle/converters/hypershift/ directories"
             fi
             if [ -n "$(yq '.version // .channel // ""' "$f")" ]; then
-              dirs+=(stack/openshift-upgrade/templates/_helpers.tpl) need="$need, and an openshift-upgrade that reads version"
+              dirs+=("stack/upgrade/templates/_helpers.tpl|stack/openshift-upgrade/templates/_helpers.tpl") need="$need, and an upgrade element that reads version"
             fi
             if [ -n "${GITHUB_BASE_REF:-}" ] && [ "$rev" = "$GITHUB_BASE_REF" ] && has HEAD "${dirs[@]}"; then
               continue

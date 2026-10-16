@@ -11,7 +11,7 @@
 # specific to this cluster.
 stack:
   # Enforces the dc2 registry allowlist. Images from any registry not on that list stop pulling.
-  manualRemediations:
+  remediations:
     enabled: true
     toggles:
       registries: true
@@ -34,7 +34,7 @@ stack:
 
   # Needs a default StorageClass, or set config.storageClass. Maps merge across the cascade, so only
   # the keys that differ from the element defaults are listed.
-  userWorkloadMonitoring:
+  userMonitoring:
     enabled: true
     config:
       prometheus:

@@ -6,14 +6,10 @@ This directory contains automation utilities for PolicyStack development and doc
 
 - [Overview](#overview)
 - [create-element.sh](#create-elementsh)
-  - [Purpose](#purpose)
-  - [Usage](#usage)
-  - [Configuration](#configuration)
-  - [Implementation Details](#implementation-details)
 - [doc-generator.py](#doc-generatorpy)
-  - [Purpose](#purpose-1)
+  - [Purpose](#purpose)
   - [Architecture](#architecture)
-  - [Usage](#usage-1)
+  - [Usage](#usage)
   - [Comment Annotation System](#comment-annotation-system)
   - [Output Format](#output-format)
 - [CI/CD Integration](#cicd-integration)
@@ -28,82 +24,14 @@ The PolicyStack tools provide:
 
 ## create-element.sh
 
-### Purpose
-
-The element creation script automates the scaffolding of new PolicyStack elements by:
-- Copying a template chart structure
-- Replacing placeholder values with user-provided names
-- Converting naming conventions (kebab-case to camelCase)
-- Ensuring consistent element structure across the stack
-
-### Usage
-
 ```bash
-# Basic usage
-./tools/create-element.sh
-
-# The script will prompt for:
-# 1. Chart name (alphanumeric and dashes only)
-# 2. Chart description
+./tools/create-element.sh <name> "<description>"
 ```
 
-#### Example
-
-```bash
-$ ./tools/create-element.sh
-=== Element Chart Setup Script ===
-
-Enter the chart name (only letters, numbers, and dashes allowed): security-baseline
-Enter the chart description: Baseline security controls for cluster hardening
-
-Creating new Element chart...
-- Name: security-baseline
-- Description: Baseline security controls for cluster hardening
-- CamelCase name: securityBaseline
-- Destination: ./stack/security-baseline
-
-✓ Element chart successfully created!
-Location: ./stack/security-baseline
-```
-
-### Configuration
-
-The script uses configurable variables at the top of the file:
-
-```bash
-# Configuration
-SOURCE_DIR="./sample-element"    # Template source directory
-DESTINATION_BASE="./stack"       # Where elements are created
-```
-
-### Implementation Details
-
-#### Name Transformation
-
-The script performs automatic name transformation for values.yaml compatibility:
-
-```bash
-# Input: security-baseline
-# Output in values.yaml: securityBaseline
-```
-
-This transformation ensures proper helm value referencing in the PolicyStack structure.
-
-#### File Modifications
-
-1. **Chart.yaml**: Updates name and description fields
-2. **values.yaml**: Replaces the sample's stack key (the camelCase form of its chart name, `myTest`) with the new camelCase name
-3. **Directory Structure**: Preserves the complete template structure including:
-   - `templates/` directory with policy.yaml
-   - `converters/` directory for manifest templates
-   - `.gitignore` for helm dependencies
-
-#### Error Handling
-
-- Validates input names (alphanumeric + dashes only)
-- Checks for existing directories with overwrite confirmation
-- Verifies source template existence
-- Provides colored output for better UX
+Copies `sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
+with its camelCase form, and sets the description. It prompts for missing arguments and refuses a
+name that is not lowercase kebab-case or already exists. The new element passes the validator as is.
+See [Creating an element](../docs/elements.md#creating-an-element).
 
 ## doc-generator.py
 
@@ -250,13 +178,6 @@ when an element README is stale. Adding the `update-docs` label runs `docs-updat
 regenerates and commits `stack/*/README.md` to the PR branch. See [docs/workflows.md](../docs/workflows.md).
 
 ## Best Practices
-
-### For create-element.sh
-
-1. **Naming Conventions**: Use kebab-case for element names (e.g., `security-baseline`, not `security_baseline`)
-2. **Descriptions**: Write clear, concise descriptions that explain the element's purpose
-3. **Template Maintenance**: Keep `sample-element` minimal but complete
-4. **Version Control**: Commit new elements immediately after creation
 
 ### For doc-generator.py
 

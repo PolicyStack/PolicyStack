@@ -1,0 +1,31 @@
+{{- /*
+Inform-only guard: checks that the target version is reachable from the cluster's current version.
+
+Validity is computed in the template, which is reliable where ACM status matching is not. When
+invalid, a mustnothave on the ClusterVersion (an existence check) forces NonCompliant.
+*/ -}}
+{{ "{{" }}- if {{ include "upgrade.standalone" . }} {{ "}}" }}
+{{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
+{{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
+{{ "{{" }}- $desired := (index (index $status "desired" | default dict) "version" | default "") {{ "}}" }}
+{{ "{{" }}- $current := "" {{ "}}" }}
+{{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
+{{ "{{" }}-   if and (eq $current "") (eq (index $h "state") "Completed") {{ "}}" }}{{ "{{" }}- $current = (index $h "version") {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $inAvail := false {{ "}}" }}
+{{ "{{" }}- range $u := (index $status "availableUpdates" | default list) {{ "}}" }}
+{{ "{{" }}-   if eq (index $u "version") $target {{ "}}" }}{{ "{{" }}- $inAvail = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $valid := false {{ "}}" }}
+{{ "{{" }}- if regexMatch "^[0-9]+[.][0-9]+[.][0-9]+" $target {{ "}}" }}
+{{ "{{" }}-   $valid = or $inAvail (eq $desired $target) (and (ne $current "") (semverCompare (printf ">= %s" $target) $current)) {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if and (ne $target "") (not $valid) {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      name: version
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

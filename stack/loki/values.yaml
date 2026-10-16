@@ -7,9 +7,9 @@ stack:
     # @description: Optional components. Each depends on a different element, so each has its own
     # @description: toggle.
     toggles:
-      # @desc: Forward cluster logs into Loki. Requires the openshift-logging element.
+      # @desc: Forward cluster logs into Loki. Requires the logging element.
       forwarder: false
-      # @desc: Add the Logging view to the console. Requires the cluster-observability element.
+      # @desc: Add the Logging view to the console. Requires the coo element.
       observability-ui: false
 
     # @description: Loki sizing and ingestion limits
@@ -65,7 +65,7 @@ stack:
         dependencies:
           - name: install
           - name: ready
-            element: openshift-data-foundation
+            element: odf
 
       # @description: The forwarder needs the logging operator's CRDs, which live in a different
       # @description: element on the same cluster.
@@ -78,7 +78,7 @@ stack:
         dependencies:
           - name: stack
           - name: install
-            element: openshift-logging
+            element: logging
 
       # @description: The console plugin is served by the Cluster Observability operator.
       - name: observability-ui
@@ -90,7 +90,7 @@ stack:
         dependencies:
           - name: forwarder
           - name: install
-            element: cluster-observability
+            element: coo
 
     operatorPolicies:
       loki:

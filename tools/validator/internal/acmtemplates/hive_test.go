@@ -131,7 +131,7 @@ spec:
 				t.Error("spec.installed is Hive's to set")
 			}
 			mc := find(t, objs, "ManagedCluster", "hive-aws")
-			if mc.ObjectDefinition.GetAnnotations()["lifecycle.policystack.io/hub"] != "acm-dc1" {
+			if mc.ObjectDefinition.GetAnnotations()["lifecycle.policystk.io/hub"] != "acm-dc1" {
 				t.Errorf("ManagedCluster annotations %v", mc.ObjectDefinition.GetAnnotations())
 			}
 			find(t, objs, "KlusterletAddonConfig", "hive-aws")
@@ -153,9 +153,9 @@ func indent(s, prefix string) string {
 // engine's owner annotations. The hub's own ManagedCluster is local-cluster in the fake hub.
 func TestOwnership(t *testing.T) {
 	hcpOwner := map[string]string{"open-cluster-management/created-via": "hypershift", "import.open-cluster-management.io/hosting-cluster-name": "local-cluster"}
-	hiveOwner := map[string]string{"lifecycle.policystack.io/hub": "acm-dc1"}
+	hiveOwner := map[string]string{"lifecycle.policystk.io/hub": "acm-dc1"}
 	imported := map[string]string{"open-cluster-management/created-via": "other"}
-	otherHub := map[string]string{"lifecycle.policystack.io/hub": "acm-dc2"}
+	otherHub := map[string]string{"lifecycle.policystk.io/hub": "acm-dc2"}
 	for _, tt := range []struct {
 		cluster string
 		owner   map[string]string

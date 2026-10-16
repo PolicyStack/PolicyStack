@@ -4,7 +4,7 @@ Hive marks it installed. Without the KlusterletAddonConfig the cluster gets no p
 or search add-ons.
 
 Hive rejects changes to provisioning, so releaseImage is read back from the live object: a later
-version bump never reaches it, and the cluster upgrades through openshift-upgrade instead. Hive
+version bump never reaches it, and the cluster upgrades through the upgrade element instead. Hive
 sets spec.installed itself; the policy leaves it out. installAttemptsLimit 1, as the console sets,
 stops Hive from retrying a failed install, and its cloud resources, forever.
 */ -}}

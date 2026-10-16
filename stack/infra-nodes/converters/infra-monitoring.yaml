@@ -2,7 +2,7 @@
 Pin the monitoring stack onto infra nodes.
 
 cluster-monitoring-config holds a single YAML string, so a musthave would replace every other setting
-in it, including `enableUserWorkload` from the user-workload-monitoring element. The existing config
+in it, including `enableUserWorkload` from the user-monitoring element. The existing config
 is read on the managed cluster and the placement keys are merged in, so both elements can manage the
 same ConfigMap.
 */ -}}

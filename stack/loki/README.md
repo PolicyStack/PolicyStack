@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-16 02:34:20*
 
 ## Component Configuration
 
@@ -29,8 +29,8 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 
 | Toggle | Default | Description |
 | ------ | ------- | ----------- |
-| `forwarder` | `False` | Forward cluster logs into Loki. Requires the openshift-logging element. |
-| `observability-ui` | `False` | Add the Logging view to the console. Requires the cluster-observability element. |
+| `forwarder` | `False` | Forward cluster logs into Loki. Requires the logging element. |
+| `observability-ui` | `False` | Add the Logging view to the console. Requires the coo element. |
 
 ## Configuration
 
@@ -114,7 +114,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Resolves To | Kind | Awaited State |
 | ----------- | ---- | ------------- |
 | `install-<release>` | `Policy` | `Compliant` |
-| `ready-openshift-data-foundation-<cluster>` | `Policy` | `Compliant` |
+| `ready-odf-<cluster>` | `Policy` | `Compliant` |
 
 #### Compliance Metadata
 | Type | Values | Description |
@@ -212,7 +212,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Resolves To | Kind | Awaited State |
 | ----------- | ---- | ------------- |
 | `stack-<release>` | `Policy` | `Compliant` |
-| `install-openshift-logging-<cluster>` | `Policy` | `Compliant` |
+| `install-logging-<cluster>` | `Policy` | `Compliant` |
 
 #### Compliance Metadata
 | Type | Values | Description |
@@ -336,7 +336,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Resolves To | Kind | Awaited State |
 | ----------- | ---- | ------------- |
 | `forwarder-<release>` | `Policy` | `Compliant` |
-| `install-cluster-observability-<cluster>` | `Policy` | `Compliant` |
+| `install-coo-<cluster>` | `Policy` | `Compliant` |
 
 #### Compliance Metadata
 | Type | Values | Description |

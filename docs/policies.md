@@ -4,7 +4,7 @@ Elements render their ACM objects with the [policy-library](https://github.com/P
 
 ## Element values
 
-An element reads `stack.<key>`, where `<key>` is the camelCase form of the chart name in its `Chart.yaml`. The `user-workload-monitoring` chart reads `stack.userWorkloadMonitoring`. Files in the [values cascade](values.md#order) use the same keys, so one cluster file configures many elements and each chart reads only its own key. The validator reports a mismatched key as POLICY090.
+An element reads `stack.<key>`, where `<key>` is the camelCase form of the chart name in its `Chart.yaml`. The `user-monitoring` chart reads `stack.userMonitoring`. Files in the [values cascade](values.md#order) use the same keys, so one cluster file configures many elements and each chart reads only its own key. The validator reports a mismatched key as POLICY090.
 
 Every chart also reads the top-level keys `policyNamespace`, `selector` and `placement`. Nothing renders unless `stack.<key>.enabled` is true.
 
@@ -52,6 +52,8 @@ ACM replicates each Policy into the cluster's namespace on the hub, and names an
 The lifecycle release is `lifecycle-<cluster>` and its longest Policy is `present`, so the replicated name is `policy.present-lifecycle-<cluster>`: 25 characters plus the cluster name, which leaves the cluster name at most 38. Its longest template, `present-credentials-<cluster>`, is shorter than 63 for any such name.
 
 Validator rule POLICY001 holds `<policyNamespace>.<policy>-<release>`, `<policyNamespace>.<set>-<release>` and every template name (`<policy>-<name>`) to 63 characters ([Rules](validation.md#rules)).
+
+Every element fits a cluster or hub name of up to 30 characters. CI holds new elements to that: POLICY001 checks every policy in each element's `values.yaml`, enabled or not, against fixture `name-budget-30-characters-long`. Most elements fit 35 or more.
 
 Worked example: metallb on `nonprod-west-1`, release `metallb-nonprod-west-1`. The cluster file turns on the `addressing` toggle, `quota` stays toggled off and renders nothing.
 

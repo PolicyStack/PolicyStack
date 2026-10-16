@@ -15,7 +15,7 @@
 # On top of the prod baseline in values/environments/prod.yaml, this cluster runs:
 stack:
   # Node labelling for hardware features. The NodeFeatureDiscovery CR waits on the operator's CSV.
-  nodeFeatureDiscovery:
+  nfd:
     enabled: true
 
   # Drain/uncordon support for maintenance windows.
@@ -23,29 +23,29 @@ stack:
     enabled: true
 
   # Tekton.
-  openshiftPipelines:
+  pipelines:
     enabled: true
 
   # Serves the console plugins used by the logging and tracing UIs.
-  clusterObservability:
+  coo:
     enabled: true
 
   # Logging operator only. The LokiStack, log forwarder and logging UI all live in the `loki`
   # element, which needs ODF object storage - see "deliberately off" below.
-  openshiftLogging:
+  logging:
     enabled: true
 
 # Deliberately off on this cluster, and why. Each is a one-line `enabled: true` when the blocker
 # clears, so this doubles as the backlog.
 #
 # No object storage (3-node compact, no spare disks):
-#   storageNodes, localStorage, openshiftDataFoundation - nothing to back Ceph with.
-#   loki, openshiftImageRegistry (s3 mode), servicemesh3Ambient (tracing) and the ACM
-#   observability toggle all depend on openshiftDataFoundation's `ready` policy, so enabling any of
+#   storageNodes, localStorage, odf - nothing to back Ceph with.
+#   loki, imageRegistry (s3 mode), ambientMesh (tracing) and the ACM
+#   observability toggle all depend on odf's `ready` policy, so enabling any of
 #   them now would leave a Policy sitting Pending forever.
 #
 # No default StorageClass:
-#   userWorkloadMonitoring - its Prometheus, Thanos Ruler and Alertmanager configs always request
+#   userMonitoring - its Prometheus, Thanos Ruler and Alertmanager configs always request
 #   PVCs, so without a StorageClass the statefulsets stay Pending. Enable it once storage exists, or
 #   after adding a StorageClass from some other source.
 #
@@ -53,18 +53,18 @@ stack:
 #   masterNodes - the KubeletConfig triggers a MachineConfig rollout, which on a 3-node compact
 #   cluster is a rolling reboot of all three control-plane nodes. Fine to enable, but do it in a
 #   window rather than as part of a first smoke test.
-#   workloadPartitioning - same rollout, and it needs reservedCpus/isolatedCpus computed for this
+#   partitioning - same rollout, and it needs reservedCpus/isolatedCpus computed for this
 #   hardware. The render fails loudly if they are unset rather than guessing.
 #
 # Nothing to act on:
 #   infraNodes, workerNodes - no separate worker pool on a compact cluster.
-#   machineHealthChecks - generates one check per MachineSet, and bare metal has none.
-#   openshiftUpgrade - acts only on version and channel in fleet/hubs/acm-dc1.yaml, which sets neither.
+#   machineHealth - generates one check per MachineSet, and bare metal has none.
+#   upgrade - acts only on version and channel in fleet/hubs/acm-dc1.yaml, which sets neither.
 #
 # Hub self-management (see values/acm/acm-dc1.yaml):
-#   advancedClusterManagement, openshiftGitops.
+#   acm, gitops.
 #
 # Heavier operators, off to keep the first run readable rather than for any technical reason:
-#   advancedClusterSecurity, ansibleAutomationPlatform, quay, openshiftVirtualization, mtv, lvm,
-#   metallb, nmstate, kiali, tempo, opentelemetry, servicemesh3operator, devSpaces, developerHub,
-#   trustedArtifactSigner, gitopsDev.
+#   acs, aap, quay, virtualization, mtv, lvm,
+#   metallb, nmstate, kiali, tempo, opentelemetry, servicemesh, devSpaces, developerHub,
+#   artifactSigner, teamGitops.

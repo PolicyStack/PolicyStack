@@ -3,20 +3,20 @@ Readiness for the label-existing-nodes path.
 
 machineset-ready.yaml only asserts readyReplicas on MachineSets named "<infra>-storage-*". The
 baremetal/label path creates none, so that check reports Compliant immediately and the `ready`
-policy gates nothing; dependents such as openshift-data-foundation would proceed before any node
+policy gates nothing; dependents such as odf would proceed before any node
 is designated.
 
 This asserts designation (config.replicas nodes carry the storage label), not node readiness.
-openshift-data-foundation's `cluster` policy depends on this one, and ACM puts a policy whose
+odf's `cluster` policy depends on this one, and ACM puts a policy whose
 dependency is not Compliant into Pending, which stops enforcement. A liveness check here would
 feed back on itself: ODF load makes a storage node blip, this gate flips, ACM stops enforcing the
 StorageCluster, ODF churns, and the node blips again. Designation (the nodes exist and are
 dedicated) is what the gate needs, and it changes only when the label policy changes it. Live
-storage health is reported by openshift-data-foundation's `health` policy, and node health by the
+storage health is reported by odf's `health` policy, and node health by the
 node elements.
 
 Until the labels exist, a mustnothave on an object that always exists forces NonCompliant, since a
-ConfigurationPolicy cannot assert a count. The openshift-upgrade element uses the same technique.
+ConfigurationPolicy cannot assert a count. The upgrade element uses the same technique.
 
 Both readiness converters render an empty list when not applicable, which the chart emits as [].
 */ -}}

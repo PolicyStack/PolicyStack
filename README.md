@@ -26,7 +26,7 @@ On the ACM hub, with the [prerequisites](https://policystack.github.io/PolicySta
      - platforms/aws.yaml
    ```
 
-Every element ships disabled except `openshift-upgrade`, which acts only on a fleet file's `version` and `channel` ([Upgrades](https://policystack.github.io/PolicyStack/upgrades/)). Enable an element in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystack.github.io/PolicyStack/values/).
+Every element ships disabled except `upgrade`, which acts only on a fleet file's `version` and `channel` ([Upgrades](https://policystack.github.io/PolicyStack/upgrades/)). Enable an element in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystack.github.io/PolicyStack/values/).
 
 To have the hub build a hosted cluster instead of importing one, meet the [lifecycle prerequisites](https://policystack.github.io/PolicyStack/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
 ```yaml

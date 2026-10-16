@@ -65,7 +65,7 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: openshift-data-foundation and local-storage depend on this
+      # @description: odf and local-storage depend on this
       # @description: policy by name, so it is the readiness gate for the whole storage stack.
       - name: ready
         enabled: true

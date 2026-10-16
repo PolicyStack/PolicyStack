@@ -9,33 +9,40 @@ Application, and so the Helm release, takes the directory name
 ([Applications](applicationset.md#applications)). The values key comes from the chart name.
 `element:` dependencies and the validator assume the two match.
 
+Keep the name short: use the product's common abbreviation (`acm`, `odf`) or a plain noun
+(`logging`), without an `openshift-` prefix or `-operator` suffix. The name must not start with
+another element's name followed by `-`, since `gitops` on cluster `dev-c` and `gitops-dev` on
+cluster `c` would both be release `gitops-dev-c` (POLICY091). `lifecycle` is reserved. Element
+and policy names are part of every object name, so renaming one recreates its Policies on every
+cluster.
+
 ## Creating an element
 
 From the repo root:
 
 ```sh
-./tools/create-element.sh
+./tools/create-element.sh <name> "<description>"
 ```
 
-The script prompts for a name and a description, then:
+It prompts for whatever is not given, then copies
+[`sample-element/`](https://github.com/PolicyStack/PolicyStack/tree/main/sample-element) to
+`stack/<name>/`, replacing `my-element` with the name and `myElement` with its camelCase form
+(`cert-manager` reads `stack.certManager`). It refuses a name that is not lowercase kebab-case or
+already exists. The result passes the validator as is.
 
-1. Copies `sample-element/` to `stack/<name>/`. If that directory exists and you confirm the
-   overwrite, it is deleted first.
-2. Sets `name` and `description` in `Chart.yaml`.
-3. Renames the sample's `stack.myTest` key to the camelCase name. `security-baseline` reads
-   `stack.securityBaseline`.
+The sample is the [metallb](#conventions) pattern cut to one of each piece: an operator under an
+`install` policy, a `config` policy that depends on it, a toggle, and one converter that reads
+`config`. Policies start in `inform`. Then:
 
-Then finish it by hand:
+1. Set the operator's `namespace`, `operatorGroup` and `subscription` in `values.yaml`.
+2. Replace `converters/<name>-configmap.yaml` with one file per `templateNames` entry. The validator
+   fails on a missing converter (POLICY020) and warns on an unused one (POLICY021).
+3. Describe each setting with `# @desc:` and generate the README ([Element reference](#element-reference)).
+4. Run the [validator](validation.md).
+5. Turn the element on for one nonprod cluster in its `values/clusters/<cluster>.yaml`.
 
-1. Delete `charts/` and `Chart.lock` from the new directory if they exist. They are gitignored, and
-   the script copies whatever your checkout of `sample-element/` holds.
-2. Cut `values.yaml` down. The sample shows every option of every policy type, keep what the
-   element uses, and keep `enabled: false`.
-3. Replace `converters/example.yaml` with one file per `templateNames` entry. The validator fails on
-   a missing converter (POLICY020) and warns on an unused one (POLICY021).
-4. Describe each setting with `# @desc:` and generate the README ([Element reference](#element-reference)).
-5. Run the [validator](validation.md).
-6. Turn the element on for one nonprod cluster in its `values/clusters/<cluster>.yaml`.
+Every option of every policy type is in the
+[policy-library README](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md).
 
 ## Layout
 
@@ -169,10 +176,10 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
 - **Keep secrets out of values.** Values live in Git. Read runtime secrets on the hub with an ACM
   hub template, escaped so Helm passes it through:
   `'{{ "{{" }}hub fromSecret "<namespace>" "<secret>" "<key>" hub{{ "}}" }}'`
-  ([example](https://github.com/PolicyStack/PolicyStack/blob/main/stack/advanced-cluster-security/converters/acs-sync-collector.yaml)).
+  ([example](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/converters/acs-sync-collector.yaml)).
   Hub lookups are limited to the policy namespace. To read another, set
   `policies[].hubTemplateOptions.serviceAccountName` to a ServiceAccount in the policy namespace
-  that can read it, as advanced-cluster-security does. The validator evaluates escaped templates
+  that can read it, as acs does. The validator evaluates escaped templates
   as POLICY081 ([ACM templates](validation.md#acm-templates)).
 - **Try changes on one cluster first.** Push a branch, then pin a nonprod cluster's fleet file to it
   with a pull request to the default branch

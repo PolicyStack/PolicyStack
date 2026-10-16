@@ -1,0 +1,67 @@
+stack:
+  # @description: OpenShift Logging element
+  logging:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+    
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      # @desc: Categories for organizing policies in ACM console and reports
+      categories:
+        - CM Configuration Management
+      # @desc: Specific security controls addressed by these policies
+      controls:
+        - CM-2 Baseline Configuration
+      # @desc: Compliance standards and frameworks
+      standards:
+        - NIST SP 800-53
+    
+    # @description: Main policy definitions that group related configurations and operators
+    policies:
+      # @description: Policy for any operator installation
+      - name: install
+        enabled: true
+        namespace: open-cluster-management
+        description: "Policy for any operator installation"
+        # @desc: Set on the Policy, so it overrides every template's action, including the
+        # @desc: OperatorPolicy below. With inform, the operator is reported missing, not installed.
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+    
+    # @description: Operator policies for managing OpenShift/Kubernetes operators
+    operatorPolicies:
+      # @description: OpenShift Logging Operator for aggregating logs.
+      cluster-logging:
+        enabled: true
+        description: "Installs the OpenShift logging operator"
+        # @desc: Human-friendly display name in OLM
+        displayName: "Red Hat OpenShift Logging"
+        # @desc: Links to the install parent policy
+        policyRef: install
+        # @desc: High or medium, depending on security requirements
+        severity: high
+        # @desc: Automatically install and configure
+        remediationAction: enforce
+        # @desc: Operator must be present
+        complianceType: musthave
+        # @desc: Target namespace for operator installation
+        namespace: openshift-logging
+        # @description: Operator group configuration for OLM
+        operatorGroup:
+          # @desc: Name of the operator group resource
+          name: openshift-logging-group
+        # @description: Subscription details for operator catalog
+        subscription:
+          # @desc: Update channel
+          channel: stable-6.5
+          # @desc: Operator package name in catalog
+          name: cluster-logging
+          # @desc: Catalog source name
+          source: redhat-operators
+          # @desc: Namespace containing the catalog
+          sourceNamespace: openshift-marketplace
+        # @desc: Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades
+        upgradeApproval: Automatic
+        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
+        versions: []

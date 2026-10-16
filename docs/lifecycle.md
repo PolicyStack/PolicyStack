@@ -17,8 +17,8 @@ The cluster is built when `present-lifecycle-<cluster>` is Compliant. Nothing ou
 
 | You want | `engine` | Example | Upgraded by |
 |---|---|---|---|
-| OpenShift on AWS, GCP or Azure | `hive` | [AWS](#aws), [GCP](#gcp), [Azure](#azure) | `openshift-upgrade` on the cluster |
-| OpenShift on bare metal with a BMC | `siteconfig` | [Bare metal](#bare-metal) | `openshift-upgrade` on the cluster |
+| OpenShift on AWS, GCP or Azure | `hive` | [AWS](#aws), [GCP](#gcp), [Azure](#azure) | `upgrade` on the cluster |
+| OpenShift on bare metal with a BMC | `siteconfig` | [Bare metal](#bare-metal) | `upgrade` on the cluster |
 | Hosted control plane, workers as VMs on the hub | `hypershift` (default), `platform: KubeVirt` | [KubeVirt](#kubevirt) | The hub |
 | Hosted control plane, bare-metal workers | `hypershift`, `platform: Agent` | [Agent](#agent) | The hub |
 | Hosted control plane, workers you boot yourself | `hypershift`, `platform: None` | [None](#none) | The hub |
@@ -180,7 +180,7 @@ install:
 
 Needs:
 
-- SiteConfig on the hub: `stack.advancedClusterManagement.config.siteConfig: true` in the hub's values layer.
+- SiteConfig on the hub: `stack.acm.config.siteConfig: true` in the hub's values layer.
 - Central infrastructure management: an AgentServiceConfig named `agent`, and the Provisioning `provisioning-configuration` with `watchAllNamespaces: true` (plus `provisioningNetwork: Disabled` on a hub without one). See [Enabling central infrastructure management](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/).
 - Hosts with a Redfish BMC that supports virtual media, reachable from the hub. Each host must reach the hub's image service and API.
 - DNS for `api.<cluster>.<baseDomain>`, resolvable from the hosts and the hub. Multi-node clusters also need `api-int` and `*.apps`.
@@ -360,7 +360,7 @@ HyperShift's default service network is `172.31.0.0/16`, the AWS default VPC ran
 | `channel` | none | Update channel, such as `stable-4.20`. Optional. |
 | `install` | none | What to build. Requires `hub`. Every key is in the [reference](lifecycle-reference.md#install-keys). |
 
-The cluster name is the fleet file name: a DNS label of at most 38 characters ([Naming limits](policies.md#naming-limits)). Most `install` keys are fixed at create ([Immutable fields](lifecycle-reference.md#immutable-fields)).
+The cluster name is the fleet file name: a DNS label of at most 30 characters, the most every element fits. The lifecycle chart alone allows 38 ([Naming limits](policies.md#naming-limits)). Most `install` keys are fixed at create ([Immutable fields](lifecycle-reference.md#immutable-fields)).
 
 ## Values
 
@@ -425,7 +425,7 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
 Bump `version` in the fleet file, and `channel` with it on a minor bump ([Upgrades](upgrades.md)).
 
-- `hive` and `siteconfig` clusters upgrade on the cluster through `openshift-upgrade`, like imported ones. The hub keeps the release image the cluster was installed with, since Hive and SiteConfig reject changes to it.
+- `hive` and `siteconfig` clusters upgrade on the cluster through `upgrade`, like imported ones. The hub keeps the release image the cluster was installed with, since Hive and SiteConfig reject changes to it.
 - `hypershift` clusters upgrade from the hub. With `channel` set, the HostedCluster waits until HyperShift lists `version` in `status.version.availableUpdates`. Without `channel`, it moves at once. NodePools follow once the control plane reports the new version Completed. `KubeVirt` pools replace their VMs; other platforms upgrade nodes in place.
 
 During a hosted upgrade `present-lifecycle-<cluster>` is NonCompliant, and Compliant again once the control plane and every NodePool report the new version. A minor upgrade that HyperShift blocks because `ClusterVersionUpgradeable` is False needs the annotation `hypershift.openshift.io/force-upgrade-to: <release image>` in `install.hostedCluster.metadata.annotations`.

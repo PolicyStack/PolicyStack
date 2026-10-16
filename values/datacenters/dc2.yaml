@@ -3,7 +3,7 @@
 # Holds facts about the site, not which elements run. Each cluster opts into elements from
 # values/clusters/<cluster>.yaml, and these values only apply where the element is enabled.
 stack:
-  manualRemediations:
+  remediations:
     config:
       # dc2 pulls through a local mirror. Lists replace rather than merge across the cascade, so the
       # element's default registries have to be restated alongside the mirror.

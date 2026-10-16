@@ -1,9 +1,8 @@
 apiVersion: v2
-name: my-test
-description: test
+name: my-element
+description: Example element. tools/create-element.sh copies it to stack/<name>.
 type: application
 version: 0.1.0
-appVersion: "1.16.0"
 dependencies:
   - name: policy-library
     alias: stack

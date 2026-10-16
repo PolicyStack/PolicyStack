@@ -4,7 +4,7 @@ ClusterImageSet lifecycle-<cluster>, then the ClusterInstance SiteConfig renders
 SiteConfig rejects any ClusterInstance spec change until the install completes, and after it only a
 few, so nothing in the spec follows a later change. The image set's name never changes, and its
 releaseImage and the ClusterInstance's sshPublicKey are read back from the live objects: a version
-bump or a rotated credential key reaches neither, and the cluster upgrades through openshift-upgrade
+bump or a rotated credential key reaches neither, and the cluster upgrades through the upgrade element
 instead. The image set carries no channel label, which would let MCE's cluster-image-set-controller
 delete it.
 

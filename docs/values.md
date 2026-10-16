@@ -37,7 +37,7 @@ oc get applications.argoproj.io infra-nodes-prod-east-1 -n openshift-gitops \
 
 Helm merges the files in order.
 
-- **Maps merge** key by key. A later file sets only the keys it changes: [nonprod-west-1.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/clusters/nonprod-west-1.yaml) sets `retention` and `storage` under `stack.userWorkloadMonitoring.config.prometheus`, and the element defaults supply the rest.
+- **Maps merge** key by key. A later file sets only the keys it changes: [nonprod-west-1.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/clusters/nonprod-west-1.yaml) sets `retention` and `storage` under `stack.userMonitoring.config.prometheus`, and the element defaults supply the rest.
 - **Lists replace.** A later list overwrites the whole earlier list: [dc2.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/datacenters/dc2.yaml) restates the element's default registries next to its mirror.
 
 An element's `policies` and `configPolicies` are lists, so a layer cannot change one entry without restating them all. It flips an entry through the [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) map instead, and settings go in the `config` map that the element's converters read ([Conventions](elements.md#conventions)). `operatorPolicies` is a map keyed by entry name, so a layer sets one field of one entry, such as `stack.metallb.operatorPolicies.metallb.versions`. `versions` itself is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)).
@@ -76,7 +76,7 @@ values/
 
 ## Example files
 
-The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configure the example clusters. They are a starting point, not a complete configuration. Every element but `openshift-upgrade` ships with `enabled: false`, and the layer that should run an element turns it on. `openshift-upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)). The Read by column names the example fleet files that list the file, or the cluster whose name matches it.
+The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configure the example clusters. They are a starting point, not a complete configuration. Every element but `upgrade` ships with `enabled: false`, and the layer that should run an element turns it on. `upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)). The Read by column names the example fleet files that list the file, or the cluster whose name matches it.
 
 | File | Read by | Holds |
 |---|---|---|
@@ -158,7 +158,7 @@ valueFiles:
   - acm/acm-dc1.yaml
 ```
 
-For `node-feature-discovery`, the Application is `node-feature-discovery-acm-dc1`:
+For `nfd`, the Application is `nfd-acm-dc1`:
 
 ```yaml
 valueFiles:

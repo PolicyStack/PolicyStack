@@ -91,6 +91,7 @@ func All() []Check {
 		&KubeconformCheck{},      // POLICY080 (Bin, SchemasDir set by run.buildRegistry)
 		&ACMTemplateCheck{},      // POLICY081
 		&CamelCaseCheck{},        // POLICY090
+		&ElementNameCheck{},      // POLICY091
 		&RenderCheck{},           // RENDER000
 	}
 }

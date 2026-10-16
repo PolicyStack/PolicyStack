@@ -1,0 +1,11 @@
+apiVersion: v2
+name: machine-health
+description: "MachineHealthChecks for automatic replacement of unhealthy nodes"
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "3.3.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

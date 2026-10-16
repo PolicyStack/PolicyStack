@@ -99,8 +99,8 @@ The guard and detach act only on a ManagedCluster with its engine's owner annota
 | Engine | Annotations | Set by |
 |---|---|---|
 | `hypershift` | `open-cluster-management/created-via: hypershift`, `import.open-cluster-management.io/hosting-cluster-name: <hub ManagedCluster>` | The hypershift-addon |
-| `hive` | `lifecycle.policystack.io/hub: <hubName>` | `present-cluster-<cluster>` |
-| `siteconfig` | `lifecycle.policystack.io/hub: <hubName>` | SiteConfig, from the ClusterInstance's `extraAnnotations` |
+| `hive` | `lifecycle.policystk.io/hub: <hubName>` | `present-cluster-<cluster>` |
+| `siteconfig` | `lifecycle.policystk.io/hub: <hubName>` | SiteConfig, from the ClusterInstance's `extraAnnotations` |
 
 A hand-made ManagedCluster needs these annotations, or the guard stops both chains.
 
@@ -163,4 +163,4 @@ An engine `<e>` is a component of [`lifecycle/`](https://github.com/PolicyStack/
 3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and the `stack` components differ ([Validation](validation.md)).
 4. Add an owner case to `lifecycle.ownerAnnotations`, a present and an absent fleet file to `tools/validator/testdata/clusters/`, and an example to [Cluster lifecycle](lifecycle.md).
 
-An engine that upgrades from the hub maps `version` onto its objects, as `hypershift` does. One that only installs uses `version` at create and leaves upgrades to `openshift-upgrade` ([Upgrades](upgrades.md)).
+An engine that upgrades from the hub maps `version` onto its objects, as `hypershift` does. One that only installs uses `version` at create and leaves upgrades to `upgrade` ([Upgrades](upgrades.md)).

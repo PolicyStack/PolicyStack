@@ -1,5 +1,5 @@
 {{- /*
-Rendered once per fleet file whose hub is this hub (install/templates/lifecycle.yaml). Without hub,
+Rendered once per fleet file that sets hub (install/templates/lifecycle.yaml). Without hub,
 as under helm lint, nothing renders. install.engine picks the stack component, and state which of
 its two Policies renders.
 */ -}}

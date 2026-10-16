@@ -12,22 +12,47 @@ spec:
     preserveResourcesOnDeletion: false
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
+  # Each fleet file renders on exactly one hub: the hub it names, when that hub manages itself, or
+  # else that hub's parent, when it is imported into a Multicluster Global Hub in default mode
+  # (docs/global-hub.md). .name is the ManagedCluster the Policies are placed on.
   generators:
-    - git:
-        repoURL: '{{ .Values.gitRepo }}'
-        revision: HEAD
-        files:
-        - path: 'fleet/*.yaml'
-        # Argo CD's default globbing lets * cross /. This drops hubs/ and any other subdirectory,
-        # which nothing else reads.
-        - path: 'fleet/*/*.yaml'
-          exclude: true
-      selector:
-        matchExpressions:
-          - key: hub
-            operator: In
-            values:
-              - {{ required "hubName must be set (--set hubName=<name>)" .Values.hubName | quote }}
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchExpressions:
+                  - key: local-cluster
+                    operator: Exists
+          - git: &fleet
+              repoURL: '{{ .Values.gitRepo }}'
+              revision: HEAD
+              files:
+              - path: 'fleet/*.yaml'
+              # Argo CD's default globbing lets * cross /. This drops hubs/ and any other subdirectory,
+              # which nothing else reads.
+              - path: 'fleet/*/*.yaml'
+                exclude: true
+            selector:
+              matchExpressions:
+                - key: hub
+                  operator: In
+                  values:
+                    - {{ required "hubName must be set (--set hubName=<name>)" .Values.hubName | quote }}
+    # Argo CD templates a child generator's fields but not its post-selector, so the fleet files
+    # come first and the clusters generator matches the hub they name. A hub that is not a DNS
+    # label matches nothing: as a label value it would fail the whole ApplicationSet.
+    - matrix:
+        generators:
+          - git: *fleet
+            selector:
+              matchExpressions:
+                - key: hub
+                  operator: Exists
+          - clusters:
+              selector:
+                matchLabels:
+                  apps.open-cluster-management.io/cluster-name: '{{ "{{" }} if regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" (toString .hub) {{ "}}" }}{{ "{{" }} .hub {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
+                  global-hub.open-cluster-management.io/deploy-mode: default
   template:
     metadata:
       name: 'lifecycle-{{ "{{" }} trimSuffix ".yaml" .path.filename {{ "}}" }}'
@@ -64,3 +89,10 @@ spec:
             {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             install: {{ "{{" }} dig "install" dict . | toJson {{ "}}" }}
+            selector:
+              matchExpressions:
+                hub:
+                  key: name
+                  operator: In
+                  values:
+                    - {{ "{{" }} .name | quote {{ "}}" }}

@@ -1,0 +1,11 @@
+{{- /* Only the secrets the TLS hub templates read. The propagator watches each by name. */ -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Parameters.hubServiceAccount }}
+  namespace: {{ .Parameters.hubNamespace }}
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [sensor-tls, collector-tls, admission-control-tls]
+    verbs: [get, list, watch]

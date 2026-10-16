@@ -1,6 +1,3 @@
-// Package acmtemplates evaluates the ACM templates the lifecycle chart escapes past Helm, against
-// fake cluster objects, the way the config-policy-controller resolves object-templates-raw. helm
-// template and kubeconform see these templates only as strings.
 package acmtemplates
 
 import (
@@ -13,14 +10,9 @@ import (
 	"testing"
 
 	"github.com/stolostron/go-template-utils/v7/pkg/templates"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	fakedynamic "k8s.io/client-go/dynamic/fake"
-	clienttesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/yaml"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
@@ -29,20 +21,6 @@ import (
 )
 
 const repoRoot = "../../../.."
-
-// kinds the templates look up, served by the fake discovery client.
-var kinds = []struct {
-	gv, kind, plural string
-	namespaced       bool
-}{
-	{"v1", "Secret", "secrets", true},
-	{"cluster.open-cluster-management.io/v1", "ManagedCluster", "managedclusters", false},
-	{"hypershift.openshift.io/v1beta1", "HostedCluster", "hostedclusters", true},
-	{"hypershift.openshift.io/v1beta1", "NodePool", "nodepools", true},
-	{"hive.openshift.io/v1", "ClusterDeployment", "clusterdeployments", true},
-	{"hive.openshift.io/v1", "ClusterImageSet", "clusterimagesets", false},
-	{"siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", "clusterinstances", true},
-}
 
 // object is one resolved object-templates-raw entry.
 type object struct {
@@ -145,21 +123,7 @@ func tryResolve(t *testing.T, raw string, live ...string) ([]object, error) {
 		}
 		objs = append(objs, u)
 	}
-	lists := map[schema.GroupVersionResource]string{}
-	byGV := map[string]*metav1.APIResourceList{}
-	var resources []*metav1.APIResourceList
-	for _, k := range kinds {
-		gv, _ := schema.ParseGroupVersion(k.gv)
-		lists[gv.WithResource(k.plural)] = k.kind + "List"
-		if byGV[k.gv] == nil {
-			byGV[k.gv] = &metav1.APIResourceList{GroupVersion: k.gv}
-			resources = append(resources, byGV[k.gv])
-		}
-		byGV[k.gv].APIResources = append(byGV[k.gv].APIResources, metav1.APIResource{Name: k.plural, Kind: k.kind, Namespaced: k.namespaced, Verbs: []string{"get", "list"}})
-	}
-	dyn := fakedynamic.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), lists, objs...)
-	disc := &fakediscovery.FakeDiscovery{Fake: &clienttesting.Fake{Resources: resources}}
-	r, err := templates.NewResolverWithClients(dyn, disc, templates.Config{})
+	r, err := NewResolver(templates.Config{}, objs...)
 	if err != nil {
 		t.Fatal(err)
 	}

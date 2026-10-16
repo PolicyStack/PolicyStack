@@ -139,6 +139,10 @@ stack:
         disabled: false
         dependencies:
           - name: install
+        # @desc: The TLS hub templates read hubNamespace, outside the policy namespace. The central
+        # @desc: policy's hub-access creates this ServiceAccount; keep the two names in sync.
+        hubTemplateOptions:
+          serviceAccountName: acs-hub-templates
 
     operatorPolicies:
       acs:
@@ -180,6 +184,7 @@ stack:
         templateParameters: &acsParams
           namespace: stackrox
           hubNamespace: stackrox
+          hubServiceAccount: acs-hub-templates
           centralName: stackrox-central-services
           securedName: stackrox-secured-cluster-services
           declarativeConfigMap: acs-declarative-configs
@@ -246,6 +251,21 @@ stack:
         severity: medium
         templateNames:
           - name: acs-bundle-ready
+        enableTemplateParameters: true
+        templateParameters: *acsParams
+
+      # @description: Lets the secured policy's hub templates read the TLS secrets Central mints
+      - name: hub-access
+        enabled: true
+        description: "ServiceAccount and RBAC for the secured policy's hub templates"
+        policyRef: central
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        templateNames:
+          - name: acs-hub-sa
+          - name: acs-hub-role
+          - name: acs-hub-rolebinding
         enableTemplateParameters: true
         templateParameters: *acsParams
 

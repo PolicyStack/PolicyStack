@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-15 19:59:50*
 
 ## Component Configuration
 
@@ -157,6 +157,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -186,6 +187,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -224,6 +226,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -264,6 +267,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -293,6 +297,39 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
+| `centralName` | `stackrox-central-services` | Parameter value |
+| `securedName` | `stackrox-secured-cluster-services` | Parameter value |
+| `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
+| `dbClaimName` | `stackrox-db` | Parameter value |
+| `bootstrapName` | `create-cluster-init` | Parameter value |
+| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
+| `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
+
+###### ⚙️ Config: hub-access
+> ServiceAccount and RBAC for the secured policy's hub templates
+
+**Basic Configuration:**
+| Parameter | Value | Description |
+| --------- | ----- | ----------- |
+| Name | `central-hub-access` | Configuration policy identifier |
+| Compliance Type | `musthave` | Compliance requirement type |
+| Remediation | `enforce` | Remediation action |
+| Severity | `high` | Severity level |
+
+**Templates:**
+| Template File | Compliance Type | Description |
+| ------------- | --------------- | ----------- |
+| `converters/acs-hub-sa.yaml` | inherited | Template configuration |
+| `converters/acs-hub-role.yaml` | inherited | Template configuration |
+| `converters/acs-hub-rolebinding.yaml` | inherited | Template configuration |
+
+**Template Parameters:**
+| Parameter | Value | Description |
+| --------- | ----- | ----------- |
+| `namespace` | `stackrox` | Parameter value |
+| `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -322,6 +359,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -387,6 +425,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -425,6 +464,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -454,6 +494,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | --------- | ----- | ----------- |
 | `namespace` | `stackrox` | Parameter value |
 | `hubNamespace` | `stackrox` | Parameter value |
+| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
 | `centralName` | `stackrox-central-services` | Parameter value |
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
@@ -470,8 +511,8 @@ This policy stays `Pending` until every target below reports the listed complian
 | Resource Type | Count |
 | ------------- | ----- |
 | Policies | 3 |
-| Configuration Policies | 9 |
+| Configuration Policies | 10 |
 | Operator Policies | 1 |
 | Certificate Policies | 0 |
 | PolicySets | 0 |
-| **Total Resources** | **13** |
+| **Total Resources** | **14** |

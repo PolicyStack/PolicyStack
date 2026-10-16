@@ -14,11 +14,8 @@ For each fixture that sets `hub`, it also renders the `lifecycle/` chart as `lif
 with the fixture file appended to the cascade in place of the ApplicationSet's `valuesObject`
 ([Cluster lifecycle](lifecycle.md)).
 
-Neither Helm nor the checks evaluate the ACM templates the lifecycle chart escapes, such as the
-HostedCluster upgrade hold or the ClusterDeployment and ClusterImageSet release image read-backs. The Go tests in
-`tools/validator/internal/acmtemplates` render the fixtures and resolve those templates with
-go-template-utils, the library the config-policy-controller uses, against fake hub objects. A change
-to a lifecycle converter's ACM template needs a case there.
+Helm sees the ACM templates converters escape (`{{ "{{" }} ... {{ "}}" }}`) only as strings. POLICY081
+evaluates them, see [ACM templates](#acm-templates).
 
 It needs Go and Helm. Use the Helm major version that CI pins
 ([Policy Validate](workflows.md#policy-validate)). kubeconform is optional, without it on `PATH`,
@@ -30,11 +27,16 @@ From the repo root, the same commands CI runs, without `--github`:
 
 ```sh
 make -C tools/validator lint test build
-tools/validator/bin/policystack-validator --repo-root . --extra-values tools/validator/testdata/baseline.yaml --skip POLICY080
+tools/validator/bin/policystack-validator --repo-root . --extra-values tools/validator/testdata/baseline.yaml --skip POLICY080,POLICY081
+for p in tools/validator/testdata/profiles/*.yaml; do
+  tools/validator/bin/policystack-validator --repo-root . --only RENDER000,POLICY081 \
+    --extra-values "tools/validator/testdata/baseline.yaml,$p"
+done
 ```
 
-The first checks formatting, vets, tests and builds the validator. The second runs it.
-[Policy Validate](workflows.md#policy-validate) explains the POLICY080 skip.
+The first checks formatting, vets, tests and builds the validator. The second runs it on the
+fixtures, the loop evaluates every converter's ACM templates ([ACM templates](#acm-templates)).
+[Policy Validate](workflows.md#policy-validate) explains the skips.
 
 `baseline.yaml` supplies a stand-in `selector`. One `Exists` expression on the `name` label. The
 chart builds each Placement from `selector.matchExpressions`, and outside Argo CD nothing injects
@@ -80,6 +82,45 @@ warning POLICY021 [metallb] converters/metallb-cr.yaml is not referenced by any 
 | `--render-dir` | Writes each render to `<dir>/<fleet file path without .yaml>/<element>.yaml`, a failed one as `# RENDER000:` lines, nothing for an empty one. [Render Diff](workflows.md#render-diff) diffs two of these |
 
 `--help` lists the rest.
+
+## ACM templates
+
+POLICY081 resolves each rendered ConfigurationPolicy with go-template-utils, the library ACM uses,
+in two passes:
+
+1. `{{hub ... hub}}` as the policy propagator does. Lookups are limited to the policy namespace
+   unless the policy sets `hubTemplateOptions.serviceAccountName`.
+2. `{{ ... }}` as the config-policy-controller does: `object-templates-raw` whole, each
+   `object-templates` entry on its own with `skipObject`.
+
+Both run against an empty cluster. Parsing catches an undefined function in every branch, run or
+not. A missing object is not reported, because on a real cluster another policy or an operator
+creates it, and evaluation stops there. So a branch that only runs once objects exist is parsed
+but not executed.
+
+It fails on:
+
+- an undefined function or a failed call, such as `index` on a missing object
+- a hub lookup outside the policy namespace
+- a kind the fake cluster does not serve, which is how a misspelled kind or apiVersion shows. A
+  converter looking up a new kind adds it to `kinds` in `tools/validator/internal/acmtemplates`
+- output containing `<no value>`, or an object without `apiVersion` or `kind`
+
+Guard a lookup whose object may not exist yet: `dig` for nested keys, `skipObject` in
+`object-templates` to skip the object until it does:
+
+```yaml
+href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "ns" "name").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
+```
+
+The fixtures leave most elements off, so CI evaluates against
+`tools/validator/testdata/profiles`, which turn every element and toggle on. A new element or
+toggle goes in `all-on.yaml`, or in `variants.yaml` if it conflicts with one there.
+`TestProfileCoverage` fails until every converter with ACM templates renders under some profile.
+
+The Go tests in `tools/validator/internal/acmtemplates` also resolve the lifecycle chart's
+templates against fake hub objects and check the values they produce. A change to a lifecycle
+converter's ACM template needs a case there.
 
 ## Rules
 

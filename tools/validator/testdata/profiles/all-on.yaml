@@ -1,0 +1,160 @@
+# POLICY081 coverage: every element and toggle on, so CI evaluates every converter's ACM
+# templates. A new element or toggle goes here; TestProfileCoverage fails until it does.
+stack:
+  advancedClusterManagement:
+    enabled: true
+    toggles:
+      observability: true
+      search: true
+      addons: true
+  advancedClusterSecurity:
+    enabled: true
+    toggles:
+      central: true
+      secured: true
+      console: true
+  ansibleAutomationPlatform:
+    enabled: true
+    toggles:
+      storage: true
+      certs: true
+      link: true
+  certManager:
+    enabled: true
+    toggles:
+      ca: true
+      api-cert: true
+      ingress-cert: true
+  clusterObservability:
+    enabled: true
+  developerHub:
+    enabled: true
+  devSpaces:
+    enabled: true
+  externalSecretsOperator:
+    enabled: true
+  gitopsDev:
+    enabled: true
+  infraNodes:
+    enabled: true
+    toggles:
+      mcp: true
+      config: true
+      aws: true
+      vmware: true
+      ready: true
+      workloads: true
+      restore: false
+  kiali:
+    enabled: true
+  localStorage:
+    enabled: true
+  loki:
+    enabled: true
+    toggles:
+      forwarder: true
+      observability-ui: true
+  lvm:
+    enabled: true
+  machineHealthChecks:
+    enabled: true
+  manualRemediations:
+    enabled: true
+    toggles:
+      registries: true
+      remove-samples: true
+  masterNodes:
+    enabled: true
+  metallb:
+    enabled: true
+    toggles:
+      quota: true
+      addressing: true
+  mtv:
+    enabled: true
+  nmstate:
+    enabled: true
+    toggles:
+      nncp: true
+    config:
+      networking:
+        interfaces:
+          bond0: {type: bond, ports: [ens1f0, ens1f1], ipv4: dhcp}
+      hosts:
+        worker-0:
+          networking:
+            interfaces:
+              bond0: {mac: "aa:bb:cc:dd:ee:ff"}
+  nodeFeatureDiscovery:
+    enabled: true
+  nodeMaintenance:
+    enabled: true
+  openshiftComplianceOperator:
+    enabled: true
+    toggles:
+      remediate: true
+  openshiftDataFoundation:
+    enabled: true
+    toggles:
+      noobaa-pvpool: true
+      pdb-alert: true
+  openshiftDns:
+    enabled: true
+  openshiftGitops:
+    enabled: true
+    toggles:
+      instance: true
+      ca-bundle: true
+      link: true
+  openshiftImageRegistry:
+    enabled: true
+    toggles:
+      pvc: true
+      s3: true
+  openshiftLogging:
+    enabled: true
+  openshiftPipelines:
+    enabled: true
+  openshiftUpgrade:
+    enabled: true
+    toggles:
+      channel: true
+      upgrade: true
+  openshiftVirtualization:
+    enabled: true
+  opentelemetry:
+    enabled: true
+  quay:
+    enabled: true
+    toggles:
+      configure: true
+  servicemesh3Ambient:
+    enabled: true
+    toggles:
+      tracing: true
+  servicemesh3operator:
+    enabled: true
+  storageNodes:
+    enabled: true
+    toggles:
+      aws: true
+      vmware: true
+      baremetal: true
+      ready: true
+  tempo:
+    enabled: true
+  trustedArtifactSigner:
+    enabled: true
+  userWorkloadMonitoring:
+    enabled: true
+  workerNodes:
+    enabled: true
+    toggles:
+      config: true
+      machines: true
+      ready: true
+  workloadPartitioning:
+    enabled: true
+    config:
+      reservedCpus: 0-1
+      isolatedCpus: 2-31

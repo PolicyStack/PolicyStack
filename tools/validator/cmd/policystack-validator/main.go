@@ -30,7 +30,7 @@ func realMain() error {
 	var (
 		repoRoot      = flag.String("repo-root", ".", "path to repo root")
 		stackDir      = flag.String("stack-dir", "", "override stack/ (default <repo>/stack)")
-		sampleDir     = flag.String("sample-dir", "", "override sample-element/ (default <repo>/sample-element)")
+		sampleDir     = flag.String("sample-dir", "", "override sample-element/ (default <repo>/tools/sample-element)")
 		lifecycleDir  = flag.String("lifecycle-dir", "", "override lifecycle/, rendered for fleet files that set hub (default <repo>/lifecycle)")
 		valuesDir     = flag.String("values-dir", "", "override values/ (default <repo>/values)")
 		fixturesDir   = flag.String("fixtures-dir", "", "fleet files to render, hubs in its hubs/ (default <repo>/tools/validator/testdata/clusters)")
@@ -42,7 +42,7 @@ func realMain() error {
 		helmBin       = flag.String("helm-bin", "helm", "helm binary")
 		kcBin         = flag.String("kubeconform-bin", "kubeconform", "kubeconform binary; POLICY080 is skipped if not on PATH")
 		schemasDir    = flag.String("schemas-dir", "", "extra -schema-location for kubeconform")
-		includeSample = flag.Bool("include-sample-element", false, "validate sample-element/ alongside stack/")
+		includeSample = flag.Bool("include-sample-element", false, "validate tools/sample-element/ alongside stack/")
 		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
 		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
 		verbose       = flag.Bool("v", false, "verbose logging")
@@ -55,7 +55,7 @@ func realMain() error {
 	}
 	defaults := struct{ stack, sample, lifecycle, values, fixtures string }{
 		stack:     filepath.Join(root, "stack"),
-		sample:    filepath.Join(root, "sample-element"),
+		sample:    filepath.Join(root, "tools", "sample-element"),
 		lifecycle: filepath.Join(root, "lifecycle"),
 		values:    filepath.Join(root, "values"),
 		fixtures:  filepath.Join(root, "tools/validator/testdata/clusters"),

@@ -1,5 +1,5 @@
 {{- /*
-version and channel come from the fleet file (appset/templates/appset.yaml). Each policy renders only
+version and channel come from the fleet file (install/templates/appset.yaml). Each policy renders only
 when its input is set, so a cluster with neither gets nothing, not even a Placement.
 */ -}}
 {{- $u := .Values.stack.upgrade }}

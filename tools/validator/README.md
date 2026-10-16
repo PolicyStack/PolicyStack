@@ -3,11 +3,11 @@
 CI-friendly validator for PolicyStack ACM-policy charts.
 
 Renders every element under `stack/` for a set of fixture fleet files, walking
-the same values cascade that `appset/templates/appset.yaml` applies at runtime,
+the same values cascade that `install/templates/appset.yaml` applies at runtime,
 and runs structural checks against the result. `lifecycle/` (override with
 `--lifecycle-dir`) is checked like an element but rendered only for fleet files
 that set `hub`, with the fleet file appended to the cascade the way
-`appset/templates/lifecycle.yaml` passes it in `valuesObject`.
+`install/templates/lifecycle.yaml` passes it in `valuesObject`.
 
 ## Usage
 

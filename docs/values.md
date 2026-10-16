@@ -1,6 +1,6 @@
 # Values cascade
 
-Every Application renders its element chart with an ordered list of values files. The cluster's [fleet file](applicationset.md#fleet-files) chooses the files, and later files override earlier ones. The ApplicationSet builds the list in the `templatePatch` of [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/appset/templates/appset.yaml).
+Every Application renders its element chart with an ordered list of values files. The cluster's [fleet file](applicationset.md#fleet-files) chooses the files, and later files override earlier ones. The ApplicationSet builds the list in the `templatePatch` of [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
 
 ## Order
 
@@ -90,7 +90,7 @@ The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/v
 | `values/platforms/kubevirt.yaml` | `hcp-kubevirt`, `hcp-retired` | `install` only: platform `KubeVirt`, the credential and a `workers` NodePool of 2 |
 | `values/platforms/agent.yaml` | `hcp-agent` | `install` only: platform `Agent`, the Agent namespace and the credential. No default NodePool |
 | `values/tenants/payments.yaml` | No example | A custom layer: the GitOps operator without its instance, plus a payments team Argo CD |
-| `values/acm/acm-dc1.yaml` | `hubs/acm-dc1` | Reserved for the hub's own ACM and GitOps elements. Left commented out so PolicyStack does not reconcile its own delivery path |
+| `values/acm/acm-dc1.yaml` | `hubs/acm-dc1` | Reserved for the hub's own ACM and GitOps elements. Left commented out so PolicyStack does not reconcile its own delivery path ([Hand the operators to PolicyStack](install.md#hand-the-operators-to-policystack)) |
 | `values/clusters/acm-dc1.yaml` | The hub, `hubName: acm-dc1` | The hub's elements, and a commented list of the elements left off and why |
 | `values/clusters/prod-east-1.yaml` | ManagedCluster `prod-east-1` | Infra nodes, machine health checks and user workload monitoring. Its fleet file pins the update channel |
 | `values/clusters/hcp-agent.yaml` | `lifecycle-hcp-agent` and ManagedCluster `hcp-agent` | `install`: configure services. `stack`: the guest's MetalLB ingress pool |

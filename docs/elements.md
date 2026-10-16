@@ -25,7 +25,7 @@ From the repo root:
 ```
 
 It prompts for whatever is not given, then copies
-[`sample-element/`](https://github.com/PolicyStack/PolicyStack/tree/main/sample-element) to
+[`tools/sample-element/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/sample-element) to
 `stack/<name>/`, replacing `my-element` with the name and `myElement` with its camelCase form
 (`cert-manager` reads `stack.certManager`). It refuses a name that is not lowercase kebab-case or
 already exists. The result passes the validator as is.

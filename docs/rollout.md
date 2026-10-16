@@ -6,7 +6,7 @@ A cluster runs what Git holds at the revision its [fleet file](applicationset.md
 
 A cluster either already exists and is imported, or a hub builds it from its fleet file. To have a hub build it, add `hub`, `version` and `install` to the fleet file in step 2 and skip step 1: the hub creates the cluster, ACM imports it, and the steps below then apply as written ([Cluster lifecycle](lifecycle.md)).
 
-1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
+1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Install PolicyStack](install.md#install-policystack)).
 2. Open a pull request to the default branch that adds `fleet/<cluster>.yaml`, named exactly like the ManagedCluster ([Fleet files](applicationset.md#fleet-files)). The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).
 
     ```yaml
@@ -68,7 +68,7 @@ An Application is also deleted when:
 - The cluster's fleet file is deleted ([Offboarding a cluster](#offboarding-a-cluster)).
 - The cluster is detached. The GitOpsCluster deletes the cluster's Argo CD secret once its ManagedCluster is gone.
 - The cluster's Argo CD secret, or its `clusterID` label, disappears for any other reason ([Pausing removals](#pausing-removals)).
-- The ApplicationSet is deleted ([Install the ApplicationSet](install.md#install-the-applicationset)).
+- The ApplicationSet is deleted ([Teardown](install.md#teardown)).
 
 A fleet file that does not parse, or a revision that does not exist, deletes nothing. The ApplicationSet changes no Application until it is fixed ([Revision](applicationset.md#revision)).
 
@@ -132,6 +132,8 @@ Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Op
 An informing policy approves nothing, it reports an installed CSV missing from a non-empty `versions` as noncompliant.
 
 `versions` entries are exact CSV names, with no ranges or wildcards. An entry can hold several comma-separated names (ACM 2.14+) or a template (ACM 2.13+).
+
+The hub's own ACM and GitOps follow the same rules once their elements are enabled ([Hand the operators to PolicyStack](install.md#hand-the-operators-to-policystack)).
 
 Elements ship unpinned, with `upgradeApproval: Automatic` and `versions: []`. Pin in a layer. `operatorPolicies` is a map keyed by entry name, so the layer sets only the fields it changes ([Merge rules](values.md#merge-rules)). To pin metallb on every prod cluster:
 

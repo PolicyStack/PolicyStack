@@ -1,0 +1,34 @@
+# Creates an Argo CD cluster secret for every managed cluster. The ApplicationSet's clusters
+# generator reads these secrets.
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: global
+  namespace: openshift-gitops
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  clusterSets:
+    - global
+  tolerations:
+    - key: cluster.open-cluster-management.io/unreachable
+      operator: Exists
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
+---
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: argo-acm-importer-global
+  namespace: openshift-gitops
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  argoServer:
+    cluster: notused
+    argoNamespace: openshift-gitops
+  placementRef:
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    name: global
+    namespace: openshift-gitops

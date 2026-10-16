@@ -1,3 +1,0 @@
-gitRepo: https://github.com/PolicyStack/PolicyStack.git
-# Names this hub's fleet file, fleet/hubs/<hubName>.yaml. Unique per hub reading gitRepo.
-hubName: ""

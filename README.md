@@ -6,17 +6,21 @@ Documentation: https://policystack.github.io/PolicyStack/ (source in [`docs/`](d
 
 ## Quick start
 
-On the ACM hub, with the [prerequisites](https://policystack.github.io/PolicyStack/install/#prerequisites) in place:
+From the root of your fork, logged in to the hub as a cluster administrator ([Installation](https://policystack.github.io/PolicyStack/install/)):
 
-1. Import the managed clusters into Argo CD:
+1. Install ACM and OpenShift GitOps, unless the hub already runs them:
    ```sh
-   oc apply -f gitops-prereq/
+   until helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \
+         | oc apply -f - && oc get argocd/openshift-gitops -n openshift-gitops; do sleep 30; done
+   oc wait mch/multiclusterhub -n open-cluster-management --for=jsonpath='{.status.phase}'=Running --timeout=20m
    ```
-2. Set `hubName` and `gitRepo` in `appset/values.yaml`.
-3. Install the ApplicationSet:
+2. Install PolicyStack, naming the hub and your fork:
    ```sh
-   helm install appset ./appset -f ./appset/values.yaml -f values.yaml
+   helm install policystack ./install -n openshift-gitops \
+     --set hubName=<hub> --set gitRepo=https://github.com/<org>/<fork>.git \
+     --description "$(git rev-parse --short HEAD)"
    ```
+3. Commit the hub's fleet file, `fleet/hubs/<hub>.yaml`, with `revision: main`.
 4. Commit a fleet file for a managed cluster to the repo's default branch, `fleet/prod-east-1.yaml` for the ManagedCluster `prod-east-1` ([Fleet files](https://policystack.github.io/PolicyStack/applicationset/#fleet-files)):
    ```yaml
    revision: main

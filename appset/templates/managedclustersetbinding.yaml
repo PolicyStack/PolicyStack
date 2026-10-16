@@ -1,9 +1,0 @@
-apiVersion: cluster.open-cluster-management.io/v1beta2
-kind: ManagedClusterSetBinding
-metadata:
-  name: global
-  namespace: {{ .Values.policyNamespace }}
-  annotations:
-    "helm.sh/resource-policy": keep
-spec:
-  clusterSet: global

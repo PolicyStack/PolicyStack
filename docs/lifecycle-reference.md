@@ -87,7 +87,7 @@ The etcd key is generated once, while neither it nor the HostedCluster exists. A
 ## Day-2 handoff
 
 1. `hypershift`: once the HostedCluster is available, the hypershift-addon creates ManagedCluster `<cluster>`. `hive` and `siteconfig`: once installed, ACM imports the ManagedCluster the chart or SiteConfig created.
-2. The ManagedCluster joins `global`, the GitOpsCluster creates its Argo CD cluster secret, and ACM adds the `clusterID` label ([Import clusters into Argo CD](install.md#import-clusters-into-argo-cd)).
+2. The ManagedCluster joins `global`, the GitOpsCluster creates its Argo CD cluster secret, and ACM adds the `clusterID` label ([Install PolicyStack](install.md#install-policystack)).
 3. The Day-2 ApplicationSet pairs the secret with the same fleet file and creates the `<element>-<cluster>` Applications. It ignores `hub`, `state` and `install`.
 
 HyperShift auto-import is on by default. Setting `autoImportDisabled` in the `hypershift-addon-deploy-config` AddOnDeploymentConfig leaves a built cluster without Day-2 until it is imported by hand. Labels in `hostedCluster.metadata.labels` are copied to the ManagedCluster once, when it is created.

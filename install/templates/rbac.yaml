@@ -1,0 +1,33 @@
+# The objects Argo CD syncs: elements and lifecycle render only policy-library Policies, PolicySets,
+# Placements and PlacementBindings. Role from the ACM GitOps guide, "Policy definitions with GitOps".
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openshift-gitops-policy-admin
+  annotations:
+    "helm.sh/resource-policy": keep
+rules:
+  - apiGroups: [policy.open-cluster-management.io]
+    resources: [policies, configurationpolicies, certificatepolicies, operatorpolicies, policysets, placementbindings]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps.open-cluster-management.io]
+    resources: [placementrules]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cluster.open-cluster-management.io]
+    resources: [placements, placements/status, placementdecisions, placementdecisions/status]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openshift-gitops-policy-admin
+  annotations:
+    "helm.sh/resource-policy": keep
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: openshift-gitops-policy-admin
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops

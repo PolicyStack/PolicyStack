@@ -21,3 +21,5 @@
 .idea/
 *.tmproj
 .vscode/
+# First-install operators chart, rendered separately (docs/install.md).
+operators/

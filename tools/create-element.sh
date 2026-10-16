@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates stack/<name> from sample-element/, renaming my-element and myElement throughout.
+# Creates stack/<name> from tools/sample-element/, renaming my-element and myElement throughout.
 # Usage: tools/create-element.sh [name] [description]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,7 +15,7 @@ dest=stack/$name
 camel=$(awk -F- '{printf "%s", $1; for (i = 2; i <= NF; i++) printf "%s", toupper(substr($i, 1, 1)) substr($i, 2)}' <<< "$name")
 
 mkdir "$dest"
-cp -r sample-element/{.gitignore,Chart.yaml,values.yaml,templates,converters} "$dest"/
+cp -r tools/sample-element/{.gitignore,Chart.yaml,values.yaml,templates,converters} "$dest"/
 for f in "$dest"/converters/*my-element*; do mv "$f" "${f//my-element/$name}"; done
 find "$dest" -type f -exec sed -i -e "s/\bmy-element\b/$name/g" -e "s/\bmyElement\b/$camel/g" {} +
 

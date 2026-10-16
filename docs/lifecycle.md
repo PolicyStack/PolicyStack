@@ -462,7 +462,7 @@ Deleting the fleet file before the Policy is Compliant abandons the cluster at t
 
 ## Abandon
 
-Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>` and its Policies. The cluster keeps running, unmanaged. Deleting the ApplicationSets does the same for every cluster the hub built; `helm uninstall appset` keeps them ([Install the ApplicationSet](install.md#install-the-applicationset)).
+Deleting the fleet file, or removing its `hub` key, deletes the Application `lifecycle-<cluster>` and its Policies. The cluster keeps running, unmanaged. Deleting the ApplicationSets does the same for every cluster the hub built; `helm uninstall policystack` keeps them ([Install PolicyStack](install.md#install-policystack)).
 
 To re-adopt, restore the file or the key with the same `install` values.
 

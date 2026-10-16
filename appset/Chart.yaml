@@ -1,6 +1,0 @@
-apiVersion: v2
-name: appset
-description: Helm chart to deploy required ApplicationSets
-type: application
-version: 0.1.0
-appVersion: "1.16.0"

@@ -28,8 +28,10 @@ spec:
                     repoURL: '{{ .Values.gitRepo }}'
                     revision: HEAD
                     pathParamPrefix: fleet
+                    # A managed hub imported into a Global Hub in default mode has no local-cluster,
+                    # so its parent reads its hub file (docs/global-hub.md).
                     files:
-                    - path: 'fleet/{{ "{{" }}if index .metadata.labels "local-cluster"{{ "}}" }}hubs/{{ $hub }}{{ "{{" }}else{{ "}}" }}{{ "{{" }}.name{{ "}}" }}{{ "{{" }}end{{ "}}" }}.yaml'
+                    - path: 'fleet/{{ "{{" }}if index .metadata.labels "local-cluster"{{ "}}" }}hubs/{{ $hub }}{{ "{{" }}else if eq (index .metadata.labels "global-hub.open-cluster-management.io/deploy-mode") "default"{{ "}}" }}hubs/{{ "{{" }}.name{{ "}}" }}{{ "{{" }}else{{ "}}" }}{{ "{{" }}.name{{ "}}" }}{{ "{{" }}end{{ "}}" }}.yaml'
           - git:
               repoURL: '{{ .Values.gitRepo }}'
               revision: '{{ "{{" }}.revision{{ "}}" }}'

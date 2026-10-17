@@ -31,7 +31,7 @@ On every hub that builds clusters:
 
 - ACM 2.16 or later.
 - The hub manages itself: its ManagedCluster has the `local-cluster` label, the default. Or it is a default-mode Global Hub managed hub, and the global hub runs PolicyStack.
-- `fleet/hubs/<hubName>.yaml` exists for the hub, or `fleet/<hubName>.yaml` for a default-mode managed hub.
+- `fleet/hubs/<hubName>.yaml` exists for the hub.
 - For `hypershift`: the hypershift-addon on the hub, on by default. Check with `oc get managedclusteraddon hypershift-addon -n local-cluster`.
 - A credential Secret on the hub with `pullSecret` and `ssh-publickey`, plus the cloud keys for `hive`. Each example below shows the command. To show it under Infrastructure > Credentials in the console, add the labels `cluster.open-cluster-management.io/credentials=` and `cluster.open-cluster-management.io/type=<type>`.
 

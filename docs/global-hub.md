@@ -19,7 +19,7 @@ The label `global-hub.open-cluster-management.io/deploy-mode` on a managed hub's
 | Managed hub's klusterlet runs | On the managed hub | On the global hub |
 | Managed hub has `local-cluster` | No. Requires `disableHubSelfManagement: true` | Yes |
 | Global hub's Policies reach the managed hub | Yes | No. The webhook turns off the policy and application addons |
-| Who configures the managed hub | The global hub, through `fleet/<managed-hub>.yaml` | The managed hub, through `fleet/hubs/<managed-hub>.yaml` |
+| Who reads the managed hub's `fleet/hubs/<managed-hub>.yaml` | The global hub | The managed hub |
 | Who builds the managed hub's clusters | The global hub, on the managed hub ([Lifecycle](#lifecycle)) | The managed hub |
 | `hypershift` engine on the managed hub | No. Local hosting needs `local-cluster` | Yes |
 | When to set the label | Any time | Before the import. The webhook ignores clusters already imported |
@@ -33,8 +33,8 @@ Install PolicyStack on the global hub and on every managed hub, each with its ow
 ```text
 fleet/
   hubs/gh.yaml      # the global hub
-  hub-a.yaml        # default-mode managed hub, configured by gh
-  hubs/hub-b.yaml   # hosted-mode managed hub, configured by hub-b
+  hubs/hub-a.yaml   # default-mode managed hub, read by gh
+  hubs/hub-b.yaml   # hosted-mode managed hub, read by hub-b
   edge-1.yaml       # hub: hub-a, built by gh on hub-a
   edge-2.yaml       # hub: hub-b, built by hub-b
 ```
@@ -43,12 +43,12 @@ Default mode only:
 
 - Set `stack.acm.config.selfManaged: false` in the managed hub's values. Left at `true`, the `acm` element turns `local-cluster` back on and breaks the import.
 - Do not name a cluster after the hub that manages it. The global hub's Policies for `hub-a` land in namespace `hub-a` on `hub-a`, where a spoke named `hub-a` would collide.
+- Create `fleet/hubs/<hub>.yaml` before setting the label. The label is what points the global hub at that file. Without the label it reads `fleet/<hub>.yaml`, so removing the label deletes the hub's Day-2 Policies ([Removing an element](rollout.md#removing-an-element)).
+- A hub the global hub builds also has `fleet/<hub>.yaml`, which holds its lifecycle keys. After the import, its `version` and `channel` for upgrades go in `fleet/hubs/<hub>.yaml`.
 
-Hosted mode only: do not create `fleet/<managed-hub>.yaml`. The global hub would render Policies that never reach the hub.
+Hosted mode only: do not create `fleet/<managed-hub>.yaml` for Day-2. The global hub would render Policies that never reach the hub.
 
-Name each managed hub's ManagedCluster on the global hub after its `hubName`. This is required: `hub` in its clusters' fleet files must match both, `hubName` in hosted mode and the ManagedCluster name in default mode. Global Hub also uses the ManagedCluster name as the hub's identity in its dashboards.
-
-The validator cannot see the `deploy-mode` label. It accepts a `hub` that names any fleet file in `fleet/` or `fleet/hubs/`, so a `hub` pointing at a cluster that is not a default-mode managed hub passes and builds nothing.
+Name each managed hub's ManagedCluster on the global hub after its `hubName`. Hosted mode finds the hub file and the hub's clusters by `hubName`, and default mode by the ManagedCluster name, so with one name a mode change moves no file. Global Hub also uses the ManagedCluster name as the hub's identity in its dashboards.
 
 ## Lifecycle
 
@@ -61,7 +61,7 @@ A hosted-mode hub and the global hub build their own clusters with the first. A 
 
 `hypershift` is not supported on a default-mode hub. The HyperShift operator is not installed there, so `present-lifecycle-<cluster>` stays NonCompliant. Use `hive` or `siteconfig`, or hosted mode.
 
-Changing a managed hub's mode is a detach and re-import: detach it from the global hub, flip `selfManaged`, move its file between `fleet/<hub>.yaml` and `fleet/hubs/<hub>.yaml`, and re-import it with the new label. `hive` and `siteconfig` clusters survive and are adopted by the other hub, because no lifecycle Policy sets `pruneObjectBehavior` and `hub` stays the same ([Abandon](lifecycle.md#abandon)). `hypershift` clusters cannot change mode.
+Changing a managed hub's mode is a detach and re-import: detach it from the global hub, flip `selfManaged`, and re-import it with the new label. Its fleet file stays where it is. `hive` and `siteconfig` clusters survive and are adopted by the other hub, because no lifecycle Policy sets `pruneObjectBehavior` and `hub` stays the same ([Abandon](lifecycle.md#abandon)). `hypershift` clusters cannot change mode.
 
 ## Do not
 

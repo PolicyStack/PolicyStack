@@ -18,7 +18,7 @@ A fleet file declares one cluster. A managed cluster's file is `fleet/<cluster>.
 | `version` | No | OpenShift release, `x.y.z`, the cluster runs. Bumping it upgrades the cluster ([Upgrades](upgrades.md)). Required with `hub`. |
 | `channel` | No | Upgrade channel, such as `stable-4.20` ([Upgrades](upgrades.md)). |
 
-No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`, or a default-mode managed hub's `fleet/<hub>.yaml` ([Global Hub](global-hub.md#layout)). The Day-2 ApplicationSet ignores the three lifecycle keys. `version` and `channel` go only in the fleet file, never in a values layer, so the clusters an upgrade moves are the fleet files it changes. Argo CD reads fleet files as YAML 1.1, so `revision`, `version` and `channel` must be YAML strings. Quote one YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
+No other keys are allowed. A hub's own file cannot set `hub`, `state` or `install`, and `hub` must name a hub that has a file in `fleet/hubs/`. The Day-2 ApplicationSet ignores the three lifecycle keys. `version` and `channel` go only in the fleet file, never in a values layer, so the clusters an upgrade moves are the fleet files it changes. Argo CD reads fleet files as YAML 1.1, so `revision`, `version` and `channel` must be YAML strings. Quote one YAML reads as a number or a boolean: `"1.10"`, `"20261003"`, `"on"`. Unquoted, `revision: 1.10` pins `1.1`. The validator checks these rules and that every `valueFiles` entry is a file ([Validation](validation.md)).
 
 ```yaml
 # fleet/prod-east-1.yaml
@@ -37,13 +37,15 @@ The ApplicationSet reads fleet files only from the repo's default branch, as `HE
 
 Fleet changes reach Argo CD within about 6 minutes: the ApplicationSet controller re-runs its generators every 3 minutes, and Argo CD caches the commit a branch points to for 3 minutes. An [ApplicationSet webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Git/#webhook-configuration) makes changes immediate, except the fix for a failed generation, which still waits for the 3 minute retry.
 
-PolicyStack still reads three labels. ACM sets all of them, and nobody sets them by hand:
+PolicyStack still reads five labels. ACM sets the first four, and nobody sets them by hand:
 
 | Label | Set by | Effect |
 |---|---|---|
 | `clusterID` | ACM, on OpenShift clusters | Selects the cluster's Argo CD secret and becomes `selectedId`. A cluster without it gets no Applications. |
 | `local-cluster` | ACM, on the hub | Switches the cluster to the hub's fleet file and names it by `hubName` ([The hub](#the-hub)). |
 | `name` | ACM | The ManagedCluster name. The Placement selector matches on it ([Placement](policies.md#placement)). |
+| `apps.open-cluster-management.io/cluster-name` | ACM's GitOpsCluster, on the cluster secret | Matches a fleet file's `hub` to a default-mode managed hub ([Lifecycle generator](#lifecycle-generator)). |
+| `global-hub.open-cluster-management.io/deploy-mode` | You, when importing a managed hub into a Global Hub | `default` switches the managed hub to its hub file, `fleet/hubs/<cluster>.yaml`, and lets this hub build its clusters ([Global Hub](global-hub.md)). |
 
 ### Revision
 
@@ -66,7 +68,7 @@ The [Render Diff](workflows.md#render-diff) comment on a PR shows each cluster's
 
 ### The hub
 
-The hub's own ManagedCluster carries ACM's `local-cluster` label. Its fleet file is `fleet/hubs/<hubName>.yaml`, where `hubName` is an install chart value set once per hub, with no default ([The install chart](#the-install-chart)).
+The hub's own ManagedCluster carries ACM's `local-cluster` label. Its fleet file is `fleet/hubs/<hubName>.yaml`, where `hubName` is an install chart value set once per hub, with no default ([The install chart](#the-install-chart)). A Global Hub managed hub imported in default mode has no `local-cluster`, so the global hub reads its file for it ([Global Hub](global-hub.md#layout)).
 
 ```yaml
 # fleet/hubs/acm-dc1.yaml
@@ -92,7 +94,7 @@ Every hub reading the same repo, including a passive or disaster recovery hub, s
 
 ### Protection
 
-PolicyStack reads no labels people set by hand. Short of editing the three ACM labels above, which RBAC on ManagedClusters guards, `oc label` cannot change what a cluster runs. Whoever can merge to `fleet/` on the default branch decides it instead. The repo ships no CODEOWNERS file, because owners differ per fork. Add:
+PolicyStack reads no other labels. Short of editing the five labels above, which RBAC on ManagedClusters and on Secrets in `openshift-gitops` guards, `oc label` cannot change what a cluster runs. Whoever can merge to `fleet/` on the default branch decides it instead. The repo ships no CODEOWNERS file, because owners differ per fork. Add:
 
 - A `CODEOWNERS` entry for `/fleet/`.
 - A ruleset on the default branch that requires a pull request with code owner review, and blocks force pushes and deletion.
@@ -126,7 +128,7 @@ generators:
                   revision: HEAD
                   pathParamPrefix: fleet
                   files:
-                  - path: 'fleet/{{if index .metadata.labels "local-cluster"}}hubs/acm-dc1{{else}}{{.name}}{{end}}.yaml'
+                  - path: 'fleet/{{if index .metadata.labels "local-cluster"}}hubs/acm-dc1{{else if eq (index .metadata.labels "global-hub.open-cluster-management.io/deploy-mode") "default"}}hubs/{{.name}}{{else}}{{.name}}{{end}}.yaml'
         - git:
             repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
             revision: '{{.revision}}'
@@ -135,7 +137,7 @@ generators:
 ```
 
 1. A clusters generator. Every Argo CD cluster secret with a `clusterID` label.
-2. A git files generator. The cluster's fleet file at `HEAD`, `fleet/hubs/<hubName>.yaml` on a cluster labeled `local-cluster` and `fleet/<cluster>.yaml` otherwise. The file's keys become parameters. `pathParamPrefix: fleet` moves the file's path parameters under `fleet`, because a matrix keeps the first child's value when two children set the same parameter, and the file's `path` would otherwise replace the directory's.
+2. A git files generator. The cluster's fleet file at `HEAD`, `fleet/hubs/<hubName>.yaml` on a cluster labeled `local-cluster`, `fleet/hubs/<cluster>.yaml` on a managed hub labeled `deploy-mode=default`, and `fleet/<cluster>.yaml` otherwise. The file's keys become parameters. `pathParamPrefix: fleet` moves the file's path parameters under `fleet`, because a matrix keeps the first child's value when two children set the same parameter, and the file's `path` would otherwise replace the directory's.
 3. A git directories generator. Every directory under `stack/` in `gitRepo`, at the fleet file's `revision`.
 
 The inner matrix pairs each cluster with its fleet file. A cluster without one pairs with nothing. The outer matrix pairs each cluster with the directories, and each cluster and directory pair becomes one Application. The directory list comes from the cluster's own revision, so an element added on one branch reaches only clusters on a revision that contains it. Every directory gets an Application whether the element is enabled or not. A disabled element renders no objects.

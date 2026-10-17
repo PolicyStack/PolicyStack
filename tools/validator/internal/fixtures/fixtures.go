@@ -97,14 +97,13 @@ func LoadDir(dir string) ([]*Cluster, error) {
 		if c.Hub == "" {
 			continue
 		}
-		// A typo would leave the cluster with no hub to build or destroy it. A managed hub imported
-		// into a Global Hub in default mode has a spoke file instead (docs/global-hub.md).
-		named := func(h *Cluster) bool { return h.Name == c.Hub }
+		// A typo would leave the cluster with no hub to build or destroy it. A Global Hub managed hub
+		// can have both files (docs/global-hub.md), so hub naming the cluster itself is checked too.
 		switch {
 		case c.Hub == c.Name:
 			c.Issues = append(c.Issues, Issue{Line: c.hubLine, Message: "hub names the cluster itself: a cluster cannot build itself"})
-		case !slices.ContainsFunc(hubs, named) && !slices.ContainsFunc(spokes, named):
-			c.Issues = append(c.Issues, Issue{Line: c.hubLine, Message: fmt.Sprintf("hub %q has no hubs/%s.yaml or %s.yaml", c.Hub, c.Hub, c.Hub)})
+		case !slices.ContainsFunc(hubs, func(h *Cluster) bool { return h.Name == c.Hub }):
+			c.Issues = append(c.Issues, Issue{Line: c.hubLine, Message: fmt.Sprintf("hub %q has no hubs/%s.yaml", c.Hub, c.Hub)})
 		}
 		if !dnsLabel.MatchString(c.Name) {
 			c.Issues = append(c.Issues, Issue{Message: fmt.Sprintf("cluster name %q is not a DNS label: the hub names the HostedCluster after it", c.Name)})

@@ -74,8 +74,8 @@ func TestLoadDir(t *testing.T) {
 	}
 }
 
-// Checks that need the hub files: hub names one or a spoke, hub files cannot set hub, and a
-// cluster a hub builds needs a DNS label name.
+// Checks that need the hub files: hub names one, hub files cannot set hub, and a cluster a hub
+// builds needs a DNS label name.
 func TestLoadDir_hub(t *testing.T) {
 	const hubFile = "revision: main\n"
 	tests := []struct {
@@ -98,25 +98,27 @@ func TestLoadDir_hub(t *testing.T) {
 			name:   "hub with no hub file",
 			files:  map[string]string{"c1.yaml": "revision: main\nhub: acm-dc2\n", "hubs/acm-dc1.yaml": hubFile},
 			hubs:   map[string]string{"c1.yaml": "acm-dc2"},
-			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: `hub "acm-dc2" has no hubs/acm-dc2.yaml or acm-dc2.yaml`}}},
+			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: `hub "acm-dc2" has no hubs/acm-dc2.yaml`}}},
 		},
 		{
 			name:   "no hubs dir",
 			files:  map[string]string{"c1.yaml": "revision: main\nhub: acm-dc1\n"},
 			hubs:   map[string]string{"c1.yaml": "acm-dc1"},
-			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: `hub "acm-dc1" has no hubs/acm-dc1.yaml or acm-dc1.yaml`}}},
+			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: `hub "acm-dc1" has no hubs/acm-dc1.yaml`}}},
 		},
 		{
-			// A managed hub imported into a Global Hub in default mode has a spoke file.
-			name:  "hub names a spoke",
-			files: map[string]string{"c1.yaml": "revision: main\nhub: hub-a\n", "hub-a.yaml": "revision: main\nhub: acm-dc1\n", "hubs/acm-dc1.yaml": hubFile},
-			hubs:  map[string]string{"c1.yaml": "hub-a", "hub-a.yaml": "acm-dc1"},
+			// A spoke with the hub's name is not a hub file.
+			name:   "hub names a spoke",
+			files:  map[string]string{"c1.yaml": "revision: main\nhub: c2\n", "c2.yaml": hubFile},
+			hubs:   map[string]string{"c1.yaml": "c2"},
+			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: `hub "c2" has no hubs/c2.yaml`}}},
 		},
 		{
+			// A Global Hub managed hub built by its parent has both files.
 			name:   "hub names the cluster itself",
-			files:  map[string]string{"c1.yaml": "revision: main\nhub: c1\n"},
-			hubs:   map[string]string{"c1.yaml": "c1"},
-			issues: map[string][]Issue{"c1.yaml": {{Line: 2, Message: "a cluster cannot build itself"}}},
+			files:  map[string]string{"hub-a.yaml": "revision: main\nhub: hub-a\n", "hubs/hub-a.yaml": hubFile},
+			hubs:   map[string]string{"hub-a.yaml": "hub-a"},
+			issues: map[string][]Issue{"hub-a.yaml": {{Line: 2, Message: "hub names the cluster itself: a cluster cannot build itself"}}},
 		},
 		{
 			name: "hub file sets hub",

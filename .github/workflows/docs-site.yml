@@ -74,7 +74,10 @@ jobs:
           path: site/
 
       # Zensical drops dotfiles. Without .nojekyll, Pages runs the site through Jekyll.
-      - run: touch site/.nojekyll
+      # single-commit wipes the CNAME Pages settings write, so the custom domain ships with each build.
+      - run: |
+          touch site/.nojekyll
+          echo policystk.io > site/CNAME
 
       # single-commit: the branch holds one snapshot. Built HTML has no useful history, and Argo CD
       # repo-servers fetch every branch, gh-pages included.

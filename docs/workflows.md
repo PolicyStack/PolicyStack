@@ -125,9 +125,11 @@ zensical build --strict   # the CI check
     | Org Settings > GitHub Apps | No webhook, only **Contents: Read and write**, installed on this repository only |
     | Settings > Environments > `github-pages` | Deployment branches: `main` and `gh-pages` (the Pages build from `gh-pages` deploys to this environment too). Variable `DOCS_APP_CLIENT_ID`, secret `DOCS_APP_PRIVATE_KEY` |
     | Settings > Rules > Rulesets | On `gh-pages`: Restrict creations, updates, deletions, Block force pushes. Bypass: the App only, Always allow |
-    | Settings > Pages | Deploy from branch `gh-pages`, root |
+    | Settings > Pages | Deploy from branch `gh-pages`, root. Custom domain `policystk.io`, Enforce HTTPS |
+    | Org Settings > Pages | Verified domain `policystk.io` |
+    | Cloudflare DNS | `policystk.io` A and AAAA to GitHub's Pages IPs, `www` CNAME to `policystack.github.io`, DNS only. Proxied needs SSL mode Full (strict) |
 
-    Keep all four rules: every publish force-pushes.
+    Keep all four rules: every publish force-pushes. The domain lives in `site_url` and the `CNAME` the publish job writes; change both together.
 
 ## Dependencies
 

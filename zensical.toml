@@ -1,7 +1,7 @@
 [project]
 site_name = "PolicyStack"
-# Project Pages paths are case-sensitive; the canonical repo name is PolicyStack/PolicyStack.
-site_url = "https://policystack.github.io/PolicyStack/"
+# Must match the CNAME written by docs-site.yml.
+site_url = "https://policystk.io/"
 repo_url = "https://github.com/PolicyStack/PolicyStack"
 # Inferred wrongly from repo_url otherwise: repo_name as "GitHub", edit_uri as edit/master/docs.
 repo_name = "PolicyStack/PolicyStack"

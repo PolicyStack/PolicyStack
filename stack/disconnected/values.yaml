@@ -1,0 +1,112 @@
+stack:
+  # @description: Mirror registries, mirrored catalogs and CA trust for disconnected clusters. Pair it
+  # @description: with global.catalogSources so operators install from the mirrored catalogs. On a
+  # @description: hosted cluster the HostedCluster owns mirrors, image config and the proxy: keep only
+  # @description: CatalogSources in clusterResources and turn registry-ca and trusted-ca off.
+  disconnected:
+    # @desc: Master control to enable/disable all policies in this element
+    enabled: false
+
+    # @description: Each piece is switchable per cluster
+    toggles:
+      # @desc: Apply the objects in config.clusterResources
+      resources: true
+      # @desc: Trust the mirror registries' CAs for image pulls
+      registry-ca: true
+      # @desc: Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA)
+      trusted-ca: true
+      # @desc: Disable the default OperatorHub catalog sources, which cannot be reached
+      operatorhub: true
+
+    # @description: Site data, usually set once in a datacenter layer
+    config:
+      # @desc: Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps
+      clusterResources: []
+      # @desc: Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM.
+      registryCAs: {}
+      # @desc: PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed.
+      trustedCA: ""
+
+    # @description: Default policy metadata applied unless overridden per-policy
+    default:
+      categories:
+        - CM Configuration Management
+        - SC System and Communications Protection
+      controls:
+        - CM-2 Baseline Configuration
+        - SC-7 Boundary Protection
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      - name: resources
+        enabled: true
+        description: "Mirror sets and mirrored catalogs from oc-mirror"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+      - name: registry-ca
+        enabled: true
+        description: "Trust the mirror registries' CAs"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+      - name: trusted-ca
+        enabled: true
+        description: "Add a CA bundle to the cluster trust bundle"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+      - name: operatorhub
+        enabled: true
+        description: "Disable the default OperatorHub catalog sources"
+        remediationAction: enforce
+        severity: medium
+        disabled: false
+
+    configPolicies:
+      - name: objects
+        enabled: true
+        description: "oc-mirror cluster resources"
+        policyRef: resources
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: cluster-resources
+
+      - name: trust
+        enabled: true
+        description: "Registry CA ConfigMap and image config"
+        policyRef: registry-ca
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: registry-ca
+
+      - name: proxy
+        enabled: true
+        description: "trusted-cas ConfigMap and Proxy trustedCA"
+        policyRef: trusted-ca
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: trusted-ca
+
+      - name: sources
+        enabled: true
+        description: "OperatorHub default sources"
+        policyRef: operatorhub
+        complianceType: musthave
+        remediationAction: enforce
+        severity: medium
+        templateNames:
+          - name: operatorhub

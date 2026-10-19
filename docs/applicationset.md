@@ -226,6 +226,12 @@ The lifecycle Applications differ:
 
 `policystack-lifecycle` also sets `preserveResourcesOnDeletion: false`. Deleting a lifecycle Application deletes its Policies, and the cluster keeps running unmanaged ([Abandon](lifecycle.md#abandon)).
 
+### Render cache
+
+Every Application carries the [`argocd.argoproj.io/manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation) annotation. It lists what the render reads: the chart directory, the root `values.yaml`, each `valueFiles` entry and the cluster values file. When a cluster's revision moves to a new commit, Argo CD re-renders an Application only if one of those files changed since the commit it last rendered, and otherwise reuses the cached manifests. A fleet file change alters the Application spec, which always re-renders.
+
+Without a webhook this needs Argo CD 2.11 (OpenShift GitOps 1.13) or later. Older versions re-render every Application on every commit.
+
 ## Injected values
 
 Each Application passes these keys to Helm in `valuesObject`, built from the cluster's ACM labels and `hubName`. [Order](values.md#order) gives their precedence over the values files.

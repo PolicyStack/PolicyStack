@@ -8,5 +8,5 @@ appVersion: "1.16.0"
 dependencies:
   - name: policy-library
     alias: stack
-    version: "3.3.0"
+    version: "3.4.0"
     repository: "https://policystack.github.io/PolicyStack-chart"

@@ -57,6 +57,8 @@ type Context struct {
 	Rendered []byte // helm template stdout, only populated for PhaseCluster
 	// AllElements is set for PhaseRepo only.
 	AllElements []*chart.Element
+	// Layers is every values layer file, the root values.yaml first. Set for PhaseRepo only.
+	Layers []string
 	// AllRendered is not populated. Cross-element POLICY002 runs in run.Run.
 	AllRendered map[string][]byte
 	Logger      *slog.Logger
@@ -79,17 +81,21 @@ func All() []Check {
 		&DependencyCheck{},       // POLICY011
 		&MissingConverterCheck{}, // POLICY020
 		&UnusedConverterCheck{},  // POLICY021
+		&ConfigReadCheck{},       // POLICY022
 		&EnumCheck{},             // POLICY030
 		&DeadKeyCheck{},          // POLICY031
 		&LayerOperatorCheck{},    // POLICY032
 		&PruneCheck{},            // POLICY033
 		&LayerFleetKeyCheck{},    // POLICY034
+		&LayerKeyCheck{},         // POLICY035
+		&RemediationCheck{},      // POLICY036
 		&PolicySetCheck{},        // POLICY040
 		&LabelCheck{},            // POLICY050
 		&PinningCheck{},          // POLICY060
 		&LintCheck{},             // POLICY070 (Runner set by run.buildRegistry)
 		&KubeconformCheck{},      // POLICY080 (Bin, SchemasDir set by run.buildRegistry)
 		&ACMTemplateCheck{},      // POLICY081
+		&EmptyPolicyCheck{},      // POLICY082
 		&CamelCaseCheck{},        // POLICY090
 		&ElementNameCheck{},      // POLICY091
 		&RenderCheck{},           // RENDER000

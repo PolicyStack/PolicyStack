@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-19 17:44:57*
 
 ## Component Configuration
 
@@ -193,7 +193,7 @@ This policy stays `Pending` until every target below reports the listed complian
 ##### Configuration Policies
 
 ###### ⚙️ Config: bootstrap
-> Bootstrap Job, its RBAC, and the console link
+> Bootstrap Job, its RBAC and CA bundles, and the console link
 
 **Basic Configuration:**
 | Parameter | Value | Description |
@@ -209,6 +209,8 @@ This policy stays `Pending` until every target below reports the listed complian
 | `converters/quay-bootstrap-sa.yaml` | inherited | Template configuration |
 | `converters/quay-bootstrap-role.yaml` | inherited | Template configuration |
 | `converters/quay-bootstrap-rolebinding.yaml` | inherited | Template configuration |
+| `converters/quay-trusted-ca.yaml` | inherited | Template configuration |
+| `converters/quay-ingress-ca.yaml` | inherited | Template configuration |
 | `converters/quay-bootstrap-job.yaml` | inherited | Template configuration |
 | `converters/quay-host-configmap.yaml` | inherited | Template configuration |
 | `converters/quay-console-link.yaml` | inherited | Template configuration |
@@ -219,6 +221,8 @@ This policy stays `Pending` until every target below reports the listed complian
 | `namespace` | `quay-enterprise` | Parameter value |
 | `name` | `registry` | Parameter value |
 | `bootstrapName` | `create-admin-user` | Parameter value |
+| `trustedCaName` | `quay-trusted-ca` | Parameter value |
+| `ingressCaName` | `quay-ingress-ca` | Parameter value |
 | `routeName` | `registry-quay` | Parameter value |
 | `consoleText` | `Red Hat Quay Enterprise Registry` | Parameter value |
 | `consoleImageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |

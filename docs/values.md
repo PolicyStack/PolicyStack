@@ -52,13 +52,18 @@ stack:
 - at '/certManager': additional properties 'enabeld' not allowed
 ```
 
-Argo CD reports a failed render as a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so a typo under one element in a shared layer fails every Application that reads that layer. The schema does not check:
-
-- top-level keys, such as `policyNamespace` or `selector`;
-- element names under `stack`, so `stack.certManagr` is still ignored;
-- anything inside `config`, `templateParameters` or the selectors.
+Argo CD reports a failed render as a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so a typo under one element in a shared layer fails every Application that reads that layer. The schema does not check top-level keys, element names under `stack`, toggle names, or anything inside `config`. The validator does, for every file under `values/`: POLICY035 rejects an unknown top-level or `global` key, `stack.certManagr`, a toggle that names no entry, and a top-level `config` key the element's `values.yaml` lacks ([Validation](validation.md)). Keys nested deeper in `config` are not checked.
 
 Never set `skipSchemaValidation` on the ApplicationSet.
+
+## Global keys
+
+`global` sets fleet behaviour from any layer, so it can apply to one cluster, a site or an environment. The schema allows only these keys.
+
+| Key | Effect |
+|---|---|
+| `remediationAction` | `inform` is a dry run: every Policy, lifecycle included, reports instead of enforcing ([Dry run](rollout.md#dry-run)). `enforce` is rejected. |
+| `catalogSources` | Maps a CatalogSource name to the one every operator uses instead, such as `redhat-operators: cs-redhat-operator-index-v4-20` ([Disconnected clusters](disconnected.md)). |
 
 ## Layout
 

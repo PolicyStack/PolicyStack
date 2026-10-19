@@ -125,7 +125,7 @@ stack:
       - name: central
         enabled: true
         description: "Central, its declarative auth config and security policies"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gates below.
         severity: high
         disabled: false
         dependencies:
@@ -134,7 +134,7 @@ stack:
       - name: secured
         enabled: true
         description: "Secured-cluster agents and their TLS material"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gate below.
         severity: high
         disabled: false
         dependencies:

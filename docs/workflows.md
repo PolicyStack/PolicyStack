@@ -172,4 +172,6 @@ snippets. Keep the rules section of `tools/validator/README.md` free of relative
 Actions are pinned to commit SHAs, with the version in a trailing comment. Dependabot
 (`.github/dependabot.yml`) opens weekly PRs for the actions, the validator's Go modules and the
 Python pins in `tools/requirements.txt` and `tools/requirements-docs.txt` (the same `/tools` pip
-entry). The Helm version in `validate.yml` is not covered and is updated by hand.
+entry). The Helm version in `validate.yml` and the gitleaks version and hash in `secret-scan.yml` are
+not covered and are updated by hand. Keep `rev` in `.pre-commit-config.yaml` on the same gitleaks
+version.

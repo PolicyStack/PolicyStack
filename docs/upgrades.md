@@ -44,7 +44,7 @@ A version the cluster's update service does not offer stays held at the guard. D
 Watch it:
 
 ```sh
-oc get policy -n policy upgrade-upgrade-prod-east-1
+oc get policy -n pstack upgrade-upgrade-prod-east-1
 oc get clusterversion version -o jsonpath='{.status.history[0]}'   # on the cluster
 ```
 

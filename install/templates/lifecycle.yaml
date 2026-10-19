@@ -69,19 +69,24 @@ spec:
         automated:
           prune: true
           selfHeal: true
+  # manifest-generate-paths lists every file the render reads, as in appset.yaml.
   templatePatch: |
     {{ "{{" }}- $name := trimSuffix ".yaml" .path.filename {{ "}}" }}
+    {{ "{{" }}- $files := list "../values.yaml" {{ "}}" }}
+    {{ "{{" }}- range index . "valueFiles" {{ "}}" }}{{ "{{" }} $files = append $files (print "../values/" .) {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+    {{ "{{" }}- $files = append $files (print "../values/clusters/" $name ".yaml") {{ "}}" }}
+    metadata:
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (prepend $files ".") {{ "}}" }}'
     spec:
       source:
         helm:
           ignoreMissingValueFiles: true
           valueFiles:
           - values.yaml
-          - ../values.yaml
-          {{ "{{" }}- range index . "valueFiles" {{ "}}" }}
-          - ../values/{{ "{{" }} . {{ "}}" }}
+          {{ "{{" }}- range $files {{ "}}" }}
+          - {{ "{{" }} . {{ "}}" }}
           {{ "{{" }}- end {{ "}}" }}
-          - ../values/clusters/{{ "{{" }} $name {{ "}}" }}.yaml
           valuesObject:
             hub: {{ "{{" }} .hub | quote {{ "}}" }}
             state: {{ "{{" }} dig "state" "present" . | quote {{ "}}" }}

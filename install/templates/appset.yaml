@@ -56,25 +56,30 @@ spec:
           prune: true
           selfHeal: true
           allowEmpty: true
+  # manifest-generate-paths lists every file the render reads, so a commit re-renders only the
+  # Applications it touches. Fleet files are not listed: a fleet change alters the spec, which always
+  # re-renders.
   templatePatch: |
     {{ "{{" }}- $name := .name {{ "}}" }}
     {{ "{{" }}- if index .metadata.labels "local-cluster" {{ "}}" }}
       {{ "{{" }}- $name = {{ $hub | quote }} {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+    {{ "{{" }}- $files := list "../../values.yaml" {{ "}}" }}
+    {{ "{{" }}- range index . "valueFiles" {{ "}}" }}{{ "{{" }} $files = append $files (print "../../values/" .) {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+    {{ "{{" }}- $files = append $files (print "../../values/clusters/" $name ".yaml") {{ "}}" }}
     metadata:
       name: '{{ "{{" }}.path.basenameNormalized{{ "}}" }}-{{ "{{" }} $name {{ "}}" }}'
-    {{ "{{" }}- end {{ "}}" }}
-
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (prepend $files ".") {{ "}}" }}'
     spec:
       source:
         helm:
           ignoreMissingValueFiles: true
           valueFiles:
           - values.yaml
-          - ../../values.yaml
-          {{ "{{" }}- range index . "valueFiles" {{ "}}" }}
-          - ../../values/{{ "{{" }} . {{ "}}" }}
+          {{ "{{" }}- range $files {{ "}}" }}
+          - {{ "{{" }} . {{ "}}" }}
           {{ "{{" }}- end {{ "}}" }}
-          - ../../values/clusters/{{ "{{" }} $name {{ "}}" }}.yaml
           valuesObject:
             {{ "{{" }}- range $k := list "version" "channel" {{ "}}" }}{{ "{{" }} with dig $k "" $ {{ "}}" }}
             {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}

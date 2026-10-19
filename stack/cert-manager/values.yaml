@@ -86,7 +86,7 @@ stack:
       - name: api-cert
         enabled: true
         description: "cert-manager-managed API server serving certificate"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gate below.
         severity: medium
         disabled: false
         dependencies:
@@ -96,7 +96,7 @@ stack:
       - name: ingress-cert
         enabled: true
         description: "cert-manager-managed default Ingress wildcard certificate"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gate below.
         severity: medium
         disabled: false
         dependencies:

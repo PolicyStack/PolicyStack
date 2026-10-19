@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-16 02:34:20*
+*Generated: 2026-10-19 17:44:57*
 
 ## Component Configuration
 
@@ -93,7 +93,6 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | Namespace | `<namespace>` | Policy namespace |
 | Enabled | `True` | Whether this policy is templated |
 | Severity | `high` | Policy severity level |
-| Remediation | `enforce` | Action when policy is violated |
 
 #### Compliance Metadata
 | Type | Values | Description |

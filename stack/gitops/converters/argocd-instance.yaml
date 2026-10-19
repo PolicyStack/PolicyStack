@@ -46,6 +46,25 @@ spec:
     {{- end }}
   repo:
     resources: {{ toYaml $r.repo | nindent 6 }}
+    {{- /*
+    The injected bundle replaces the system trust store, so the repo server trusts the cluster's
+    CAs, such as an internal Git or Helm server's. Optional: the pod starts before injection, and a
+    directory mount picks up the bundle and its rotations.
+    */}}
+    {{- if index (.Values.stack.gitops.toggles | default dict) "ca-bundle" }}
+    volumes:
+      - name: cluster-ca-bundle
+        configMap:
+          name: {{ .Parameters.caBundleName }}
+          optional: true
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+    volumeMounts:
+      - name: cluster-ca-bundle
+        mountPath: /etc/pki/ca-trust/extracted/pem
+        readOnly: true
+    {{- end }}
   controller:
     resources: {{ toYaml $r.controller | nindent 6 }}
   applicationSet:

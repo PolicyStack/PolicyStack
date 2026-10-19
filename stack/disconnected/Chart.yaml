@@ -1,0 +1,10 @@
+apiVersion: v2
+name: disconnected
+description: "Mirror registries, mirrored catalogs and CA trust for disconnected clusters"
+type: application
+version: 0.1.0
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "3.4.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

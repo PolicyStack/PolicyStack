@@ -49,7 +49,8 @@ which ships its own `selector`.
 
 The validator runs `helm dependency update` on an element unless its `charts/` directory already holds
 `<name>-<version>.tgz` for every dependency in `Chart.yaml`, so a policy-library bump fetches the new
-archive and replaces the stale one.
+archive and replaces the stale one. If the fetch fails, for example because the pinned version is not
+published yet, the element is not rendered and RENDER000 reports it.
 
 ## Output
 
@@ -119,6 +120,8 @@ The fixtures leave most elements off, so CI evaluates against
 `tools/validator/testdata/profiles`, which turn every element and toggle on. A new element or
 toggle goes in `all-on.yaml`, or in `variants.yaml` if it conflicts with one there.
 `TestProfileCoverage` fails until every converter with ACM templates renders under some profile.
+The profiles turn toggles on without their input maps, so POLICY082 fires on them; CI runs only
+RENDER000 and POLICY081 there.
 
 The Go tests in `tools/validator/internal/acmtemplates` also resolve the lifecycle chart's
 templates against fake hub objects and check the values they produce. A change to a lifecycle

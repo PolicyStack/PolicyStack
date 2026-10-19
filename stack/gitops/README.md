@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-16 02:34:20*
+*Generated: 2026-10-19 14:52:50*
 
 ## Component Configuration
 
@@ -30,7 +30,7 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 | Toggle | Default | Description |
 | ------ | ------- | ----------- |
 | `instance` | `True` | Deploy the platform ArgoCD instance. Disable to install only the operator. |
-| `ca-bundle` | `True` | Give ArgoCD the cluster's trusted CA bundle |
+| `ca-bundle` | `True` | Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA |
 | `link` | `True` | Publish a console link to ArgoCD |
 
 ## Configuration

@@ -1,32 +1,103 @@
 # Values cascade
 
-Every Application renders its element chart with an ordered list of values files. The cluster's [fleet file](applicationset.md#fleet-files) chooses the files, and later files override earlier ones. The ApplicationSet builds the list in the `templatePatch` of [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
+Each Application renders its element chart with an ordered list of values files picked by the cluster's [fleet file](applicationset.md#fleet-files). Later files win. The list is built in [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
 
 ## Order
 
-Lowest precedence first. Paths are relative to `stack/<element>`, the Application's source path.
+=== "Managed cluster"
 
-1. `values.yaml`: the element defaults.
-2. `../../values.yaml`: the repo root, shared by every element. It sets `policyNamespace`.
-3. `../../values/<entry>`, one per entry in the `valueFiles` list of the cluster's fleet file, in list order. Nothing sorts the list, so a later entry overrides an earlier one.
-4. `../../values/clusters/<name>.yaml`, where `<name>` is the ManagedCluster name, or `hubName` on the hub ([The hub](applicationset.md#the-hub)).
-5. `valuesObject`, the keys the ApplicationSet [injects](applicationset.md#injected-values). Argo CD ranks it above every values file.
+    ```yaml
+    # fleet/prod-east-1.yaml
+    revision: main
+    channel: stable-4.20
+    valueFiles:
+      - environments/prod.yaml
+      - datacenters/dc1.yaml
+      - platforms/aws.yaml
+    ```
 
-A lifecycle Application reads the same files with paths relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. Its `valuesObject` holds the fleet file's `hub`, `state`, `version`, `channel` and `install` ([Values](lifecycle.md#values)). Elements ignore the top-level `install` key and only `lifecycle/` reads it, so one cluster file can hold both `install` and `stack`.
+    Application `infra-nodes-prod-east-1`, lowest precedence first:
+
+    ```yaml
+    valueFiles:
+      - values.yaml                             # (1)!
+      - ../../values.yaml                       # (2)!
+      - ../../values/environments/prod.yaml     # (3)!
+      - ../../values/datacenters/dc1.yaml
+      - ../../values/platforms/aws.yaml
+      - ../../values/clusters/prod-east-1.yaml  # (4)!
+    valuesObject:                               # (5)!
+      channel: "stable-4.20"
+      selectedName: prod-east-1
+      selectedId: <clusterID label>
+      selector:                                 # (6)!
+        matchExpressions:
+          name: {key: name, operator: In, values: ["prod-east-1"]}
+    ```
+
+    1.  Element defaults. Paths are relative to `stack/<element>`.
+    2.  Repo root, shared by every element. Sets `policyNamespace`.
+    3.  One per `valueFiles` entry, in list order. Nothing sorts them.
+    4.  Always last. Named after the ManagedCluster.
+    5.  [Injected values](applicationset.md#injected-values). Ranks above every file.
+    6.  Targets this one cluster. For the hub, `values` holds `local-cluster`, not `hubName`.
+
+=== "Hub"
+
+    The hub reads `fleet/hubs/<hubName>.yaml`, and `hubName` replaces `local-cluster` in the Application name and cluster values file ([The hub](applicationset.md#the-hub)).
+
+    ```yaml
+    # Application nfd-acm-dc1
+    valueFiles:
+      - values.yaml
+      - ../../values.yaml
+      - ../../values/environments/prod.yaml
+      - ../../values/datacenters/dc1.yaml
+      - ../../values/platforms/baremetal.yaml
+      - ../../values/acm/acm-dc1.yaml
+      - ../../values/clusters/acm-dc1.yaml   # never clusters/local-cluster.yaml
+    ```
+
+=== "Lifecycle"
+
+    Same files, relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. `valuesObject` holds the fleet file's `hub`, `state`, `version`, `channel` and `install` ([Values](lifecycle.md#values)). Elements ignore `install`, so one cluster values file holds both:
+
+    ```yaml
+    # values/clusters/hcp-agent.yaml
+    install: ...   # lifecycle/ builds the cluster
+    stack: ...     # elements configure it once imported
+    ```
+
+Merged `stack.infraNodes` for `prod-east-1`, trimmed:
+
+```yaml
+enabled: true                 # clusters/prod-east-1.yaml
+toggles:
+  aws: true                   # platforms/aws.yaml
+  workloads: false            # element default
+config:
+  replicas: 1                 # clusters/prod-east-1.yaml, default 3
+  zones:                      # clusters/prod-east-1.yaml, replaces default []
+    - us-east-1a
+    - us-east-1b
+    - us-east-1c
+  maxPods: 250                # element default
+```
 
 ## Missing files
 
-The ApplicationSet sets `ignoreMissingValueFiles: true`, so Argo CD skips any listed file that does not exist at the cluster's revision. A cluster needs a file in `values/clusters/` only where it changes something.
+`ignoreMissingValueFiles: true` skips any listed file absent at the cluster's revision. Add a `values/clusters/` file only for clusters that change something.
 
-The same setting hides mistakes. Each of these drops a layer without an error, and the Application syncs from the remaining files:
+!!! warning "A skipped file raises no error"
+    The Application syncs from the remaining layers. Elements default to off, so it looks like an element that never turns on.
 
-- A typo in a `valueFiles` entry.
-- A `valueFiles` entry added on the default branch for a file that the cluster's pinned revision does not have yet.
-- A cluster file whose name differs from the ManagedCluster name.
+    | Cause | Validator |
+    |---|---|
+    | Typo in a `valueFiles` entry | POLICY050 |
+    | Entry for a file the cluster's pinned `revision` lacks | not caught |
+    | Cluster values file name differs from the ManagedCluster name | not caught |
 
-The validator reports a `valueFiles` entry that is not a file under `values/` (POLICY050, [Validation](validation.md)). It checks the tree it runs on, not each cluster's revision, so it does not catch the other two.
-
-Elements default to off, so a dropped layer usually shows up as an element that never turns on. Compare the Application's value files with the repo at the cluster's revision:
+Compare the Application's files with the repo at the cluster's revision:
 
 ```sh
 oc get applications.argoproj.io infra-nodes-prod-east-1 -n openshift-gitops \
@@ -35,16 +106,45 @@ oc get applications.argoproj.io infra-nodes-prod-east-1 -n openshift-gitops \
 
 ## Merge rules
 
-Helm merges the files in order.
+Maps merge key by key. Lists replace.
 
-- **Maps merge** key by key. A later file sets only the keys it changes: [nonprod-west-1.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/clusters/nonprod-west-1.yaml) sets `retention` and `storage` under `stack.userMonitoring.config.prometheus`, and the element defaults supply the rest.
-- **Lists replace.** A later list overwrites the whole earlier list: [dc2.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/values/datacenters/dc2.yaml) restates the element's default registries next to its mirror.
+=== "Map: set only what changes"
 
-An element's `policies` and `configPolicies` are lists, so a layer cannot change one entry without restating them all. It flips an entry through the [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) map instead, and settings go in the `config` map that the element's converters read ([Conventions](elements.md#conventions)). `operatorPolicies` is a map keyed by entry name, so a layer sets one field of one entry, such as `stack.metallb.operatorPolicies.metallb.versions`. `versions` itself is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)).
+    ```yaml
+    # values/clusters/nonprod-west-1.yaml
+    stack:
+      userMonitoring:
+        config:
+          prometheus:
+            retention: 72h   # other prometheus keys keep their defaults
+            storage: 20Gi
+    ```
+
+=== "List: restate everything"
+
+    ```yaml
+    # values/datacenters/dc2.yaml
+    stack:
+      remediations:
+        config:
+          allowedRegistries:
+            - mirror.dc2.example.com:8443
+            - quay.io                    # the defaults, restated
+            - registry.redhat.io
+            - image-registry.openshift-image-registry.svc:5000
+    ```
+
+`policies` and `configPolicies` are lists. Change them through maps instead:
+
+| Change | Key |
+|---|---|
+| One policy on or off | [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles), e.g. `stack.remediations.toggles.registries` |
+| A converter setting | `config` ([Conventions](elements.md#conventions)) |
+| One operator field | `stack.metallb.operatorPolicies.metallb.versions`. `versions` is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)) |
 
 ## Schema
 
-Each element aliases its `policy-library` dependency as `stack`, so Helm checks the merged `stack` key against the library's [values.schema.json](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/values.schema.json). The check runs after every layer and `valuesObject` merge. An unknown key or a wrong type then fails the render instead of producing a different policy:
+Each element aliases `policy-library` as `stack` in its `Chart.yaml`, so Helm checks the merged `stack` key against the library's [values.schema.json](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/values.schema.json) after every layer:
 
 ```text
 Error: values don't meet the specifications of the schema(s) in the following chart(s):
@@ -52,128 +152,60 @@ stack:
 - at '/certManager': additional properties 'enabeld' not allowed
 ```
 
-Argo CD reports a failed render as a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so a typo under one element in a shared layer fails every Application that reads that layer. The schema does not check top-level keys, element names under `stack`, toggle names, or anything inside `config`. The validator does, for every file under `values/`: POLICY035 rejects an unknown top-level or `global` key, `stack.certManagr`, a toggle that names no entry, and a top-level `config` key the element's `values.yaml` lacks ([Validation](validation.md)). Keys nested deeper in `config` are not checked.
+Argo CD shows a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so one typo in a shared layer fails every Application reading it.
 
-Never set `skipSchemaValidation` on the ApplicationSet.
+The validator's POLICY035 checks every file under `values/` for what the schema misses ([Validation](validation.md)):
+
+| Mistake | Caught by |
+|---|---|
+| Unknown key or wrong type in an element (`enabeld`) | schema |
+| Unknown top-level or `global` key | POLICY035 |
+| Unknown element (`stack.certManagr`) | POLICY035 |
+| Toggle that names no entry | POLICY035 |
+| Top-level `config` key absent from the element's `values.yaml` | POLICY035 |
+| Deeper `config` keys | nothing |
+
+!!! warning
+    Never set `skipSchemaValidation` on the ApplicationSet.
 
 ## Global keys
 
-`global` sets fleet behaviour from any layer, so it can apply to one cluster, a site or an environment. The schema allows only these keys.
+`global` applies from any layer: one cluster, a site or an environment.
 
 | Key | Effect |
 |---|---|
-| `remediationAction` | `inform` is a dry run: every Policy, lifecycle included, reports instead of enforcing ([Dry run](rollout.md#dry-run)). `enforce` is rejected. |
-| `catalogSources` | Maps a CatalogSource name to the one every operator uses instead, such as `redhat-operators: cs-redhat-operator-index-v4-20` ([Disconnected clusters](disconnected.md)). |
+| `remediationAction` | `inform` makes every Policy, lifecycle included, report instead of enforce ([Dry run](rollout.md#dry-run)). `enforce` is rejected. |
+| `catalogSources` | Maps a CatalogSource name to its replacement for every operator ([Disconnected clusters](disconnected.md)) |
 
-## Layout
-
-```text
-stack/<element>/values.yaml    element defaults
-values.yaml                    shared by every element: policyNamespace
-values/
-├── environments/   nonprod.yaml  prod.yaml
-├── datacenters/    dc1.yaml  dc2.yaml
-├── platforms/      agent.yaml  aws.yaml  baremetal.yaml  kubevirt.yaml  vmware.yaml
-├── tenants/        payments.yaml
-├── acm/            acm-dc1.yaml
-└── clusters/       acm-dc1.yaml  aws-prod.yaml  hcp-agent.yaml  nonprod-west-1.yaml  prod-east-1.yaml
+```yaml
+global:
+  remediationAction: inform
+  catalogSources:
+    redhat-operators: cs-redhat-operator-index-v4-20
 ```
 
 ## Example files
 
-The files under [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configure the example clusters. They are a starting point, not a complete configuration. Every element but `upgrade` ships with `enabled: false`, and the layer that should run an element turns it on. `upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)). The Read by column names the example fleet files that list the file, or the cluster whose name matches it.
+[values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configures the example clusters. Any file under `values/` can be listed. Every element but `upgrade` ships `enabled: false`, so the layer that should run an element turns it on. `upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)).
 
-| File | Read by | Holds |
-|---|---|---|
-| `values/environments/prod.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | The security and compliance baseline for every prod cluster: cert-manager, External Secrets, the Compliance Operator, manual remediations and cluster DNS |
-| `values/environments/nonprod.yaml` | `nonprod-west-1`, `hcp-kubevirt`, `hcp-retired`, `hive-aws`, `hive-retired` | Placeholder, sets nothing |
-| `values/datacenters/dc1.yaml` | `prod-east-1`, `hubs/acm-dc1`, `hcp-agent`, `sno-edge`, `sno-retired` | `install.baseDomain` for clusters built in dc1. Turns no element on |
-| `values/datacenters/dc2.yaml` | `nonprod-west-1` | Site facts only: the registry allowlist through the dc2 mirror. Turns no element on |
-| `values/platforms/aws.yaml` | `prod-east-1`, `hive-aws`, `hive-retired` | Toggles for the node elements: clone the worker MachineSet. `install`: engine `hive`, the credential and the install-config machine pools |
-| `values/platforms/vmware.yaml` | No example | Toggles for the node elements: clone each worker MachineSet, one per vSphere failure domain |
-| `values/platforms/baremetal.yaml` | `hubs/acm-dc1`, `sno-edge`, `sno-retired` | Toggles for the node elements: no infra MachineSets, and storage nodes are existing nodes labeled in place. `install`: engine `siteconfig`, the credentials and `networkType` |
-| `values/platforms/kubevirt.yaml` | `hcp-kubevirt`, `hcp-retired` | `install` only: platform `KubeVirt`, the credential and a `workers` NodePool of 2 |
-| `values/platforms/agent.yaml` | `hcp-agent` | `install` only: platform `Agent`, the Agent namespace and the credential. No default NodePool |
-| `values/tenants/payments.yaml` | No example | A custom layer: the GitOps operator without its instance, plus a payments team Argo CD |
-| `values/acm/acm-dc1.yaml` | `hubs/acm-dc1` | Reserved for the hub's own ACM and GitOps elements. Left commented out so PolicyStack does not reconcile its own delivery path ([Hand the operators to PolicyStack](install.md#hand-the-operators-to-policystack)) |
-| `values/clusters/acm-dc1.yaml` | The hub, `hubName: acm-dc1` | The hub's elements, and a commented list of the elements left off and why |
-| `values/clusters/prod-east-1.yaml` | ManagedCluster `prod-east-1` | Infra nodes, machine health checks and user workload monitoring. Its fleet file pins the update channel |
-| `values/clusters/hcp-agent.yaml` | `lifecycle-hcp-agent` and ManagedCluster `hcp-agent` | `install`: configure services. `stack`: the guest's MetalLB ingress pool |
-| `values/clusters/nonprod-west-1.yaml` | ManagedCluster `nonprod-west-1` | Enforces the dc2 registry allowlist, the cluster's own MetalLB address pool, and user workload monitoring |
-| `values/clusters/aws-prod.yaml` | ManagedCluster `aws-prod` | Values for an AWS test cluster: the OpenShift Data Foundation to Loki storage chain and additional operator installs. Rename it to the target ManagedCluster name before use, its header lists the fleet file it expects |
+??? info "What each example file holds"
+    | File | Holds |
+    |---|---|
+    | `environments/prod.yaml` | Prod baseline: cert-manager, External Secrets, Compliance Operator, remediations, DNS |
+    | `environments/nonprod.yaml` | Nothing |
+    | `datacenters/dc1.yaml` | `install.baseDomain` |
+    | `datacenters/dc2.yaml` | Registry allowlist through the dc2 mirror |
+    | `platforms/aws.yaml` | Node toggles: clone the worker MachineSet. `install`: Hive |
+    | `platforms/vmware.yaml` | Node toggles: clone each MachineSet per failure domain |
+    | `platforms/baremetal.yaml` | Node toggles: no MachineSets, label nodes. `install`: SiteConfig |
+    | `platforms/kubevirt.yaml` | `install` only: `KubeVirt`, 2-node `workers` pool |
+    | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
+    | `tenants/payments.yaml` | GitOps operator plus a payments team Argo CD |
+    | `acm/acm-dc1.yaml` | Hub ACM and GitOps, commented out ([why](install.md#hand-the-operators-to-policystack)) |
+    | `clusters/acm-dc1.yaml` | Hub elements, and which are off and why |
+    | `clusters/prod-east-1.yaml` | Infra nodes, machine health, user monitoring |
+    | `clusters/hcp-agent.yaml` | `install`: hosted control plane service publishing. `stack`: guest MetalLB pool |
+    | `clusters/nonprod-west-1.yaml` | Registry enforcement, MetalLB pool, user monitoring |
+    | `clusters/aws-prod.yaml` | ODF to Loki chain. Rename to the real ManagedCluster name first |
 
-CI renders every element with the files the example fleet files in `tools/validator/testdata/clusters/` list ([Validation](validation.md)). None of them lists `vmware.yaml` or `payments.yaml`, and no example cluster is named `aws-prod`, so CI reads those files only when a fleet file in `fleet/` uses them.
-
-## Worked example
-
-`fleet/prod-east-1.yaml` lists the files for `prod-east-1`:
-
-```yaml
-revision: main
-valueFiles:
-  - environments/prod.yaml
-  - datacenters/dc1.yaml
-  - platforms/aws.yaml
-```
-
-For the `infra-nodes` element, the ApplicationSet creates the Application `infra-nodes-prod-east-1` with these files:
-
-```yaml
-valueFiles:
-  - values.yaml
-  - ../../values.yaml
-  - ../../values/environments/prod.yaml
-  - ../../values/datacenters/dc1.yaml
-  - ../../values/platforms/aws.yaml
-  - ../../values/clusters/prod-east-1.yaml
-```
-
-The environment and datacenter files set nothing for this element. The merged `stack.infraNodes`, trimmed:
-
-```yaml
-enabled: true                 # clusters/prod-east-1.yaml
-toggles:
-  mcp: true                   # element default
-  config: true                # element default
-  aws: true                   # platforms/aws.yaml
-  vmware: false               # platforms/aws.yaml
-  ready: true                 # element default
-  workloads: false            # element default
-  restore: false              # element default
-config:
-  replicas: 1                 # clusters/prod-east-1.yaml
-  zones:                      # clusters/prod-east-1.yaml, replaces the default []
-    - us-east-1a
-    - us-east-1b
-    - us-east-1c
-  instanceType: m6i.2xlarge   # clusters/prod-east-1.yaml
-  # every other config key keeps its element default
-```
-
-`valuesObject` then adds the one-cluster `selector`, `selectedName` and `selectedId`.
-
-The dc1 hub carries ACM's `local-cluster` label, so it reads `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)). With `hubName: acm-dc1`, `fleet/hubs/acm-dc1.yaml`:
-
-```yaml
-revision: main
-valueFiles:
-  - environments/prod.yaml
-  - datacenters/dc1.yaml
-  - platforms/baremetal.yaml
-  - acm/acm-dc1.yaml
-```
-
-For `nfd`, the Application is `nfd-acm-dc1`:
-
-```yaml
-valueFiles:
-  - values.yaml
-  - ../../values.yaml
-  - ../../values/environments/prod.yaml
-  - ../../values/datacenters/dc1.yaml
-  - ../../values/platforms/baremetal.yaml
-  - ../../values/acm/acm-dc1.yaml
-  - ../../values/clusters/acm-dc1.yaml
-```
-
-`values/clusters/acm-dc1.yaml` turns the element on. On the hub, `hubName` takes the place of the ManagedCluster name, `local-cluster`, in the Application name and the cluster file, so `values/clusters/local-cluster.yaml` is never read.
+    CI renders with the fleet files in `tools/validator/testdata/clusters/`. None lists `vmware.yaml` or `payments.yaml` and no cluster is named `aws-prod`, so CI reads those only when a file in `fleet/` uses them.

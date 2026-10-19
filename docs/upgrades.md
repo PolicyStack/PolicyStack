@@ -1,6 +1,6 @@
 # Upgrades
 
-Every cluster upgrades the same way: change `version`, and `channel` on a minor bump, in its fleet file and merge.
+Set `version` in the cluster's fleet file and merge. On a minor bump, change `channel` too.
 
 ```diff
  # fleet/prod-east-1.yaml
@@ -12,55 +12,111 @@ Every cluster upgrades the same way: change `version`, and `channel` on a minor 
 
 | Key | Effect |
 |---|---|
-| `version` | The OpenShift release, `x.y.z`, the cluster runs. Unset, nothing upgrades the cluster. Required on a cluster a hub builds. |
-| `channel` | The update channel. Unset, the cluster's channel is left alone. |
+| `version` | OpenShift release `x.y.z` the cluster runs. Unset, nothing upgrades it. Required on a cluster a hub builds. |
+| `channel` | Update channel. Unset, the cluster's channel is left alone. |
 
-Both go only in the fleet file. The validator rejects them in a values layer, so the clusters a merge upgrades are the fleet files it changes, and the [render diff](workflows.md#render-diff) shows each one. A wave is one commit that bumps several fleet files. Quote a value YAML reads as a number: unquoted, `version: 4.20` is read as `4.2`, and the validator rejects it.
+Both keys live only in the fleet file (`fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for a hub). The validator rejects them in a values layer (POLICY034), so the clusters a merge upgrades are exactly the fleet files it changes, and the [Render Diff](workflows.md#render-diff) lists each one.
+
+!!! note
+    `version` must be a full `x.y.z`. Unquoted, `version: 4.20` is the number `4.2`; the validator rejects any value YAML reads as a number (POLICY050).
+
+A wave is one commit that bumps several fleet files:
+
+```diff
+ # fleet/nonprod-west-1.yaml
+-version: 4.20.8
++version: 4.21.2
+-channel: stable-4.20
++channel: stable-4.21
+ # fleet/prod-east-1.yaml
+-version: 4.20.8
++version: 4.21.2
+-channel: stable-4.20
++channel: stable-4.21
+```
 
 ## Who upgrades what
 
-| Cluster | Upgraded by | Written |
-|---|---|---|
-| Built by a hub with the `hypershift` engine | `lifecycle-<cluster>` on the hub | HostedCluster `spec.release` and `spec.channel`, then each NodePool's `release` ([Cluster lifecycle](lifecycle.md#upgrades)) |
-| Any other cluster, the hubs included | The `upgrade` element on the cluster | ClusterVersion `spec.channel`, `spec.desiredUpdate` and `spec.upstream` |
+Each field has one writer.
 
-Each field has one writer. `upgrade` does nothing on a hosted control plane guest, one whose Infrastructure reports `controlPlaneTopology: External`, since HyperShift owns its ClusterVersion.
+=== "Built by a hub with the hypershift engine"
 
-## upgrade
+    `lifecycle-<cluster>` on the hub writes HostedCluster `spec.release` and `spec.channel`, then each NodePool's `release` once the control plane completes. See [Cluster lifecycle](lifecycle.md#upgrades).
 
-The element is enabled by default and renders nothing until the fleet file sets `version` or `channel`. It renders two Policies, `channel-upgrade-<cluster>` when `channel` is set and `upgrade-upgrade-<cluster>` when `version` is set:
+    The `upgrade` element is inert on the guest (Infrastructure `controlPlaneTopology: External`), since HyperShift owns its ClusterVersion.
 
-| Template | Mode | Does |
-|---|---|---|
-| `channel-pin` | enforce | Sets the ClusterVersion channel. |
-| `upgrade-guard` | inform | NonCompliant unless `version` is in `availableUpdates`, is the desired version, or is at or below the current version. |
-| `upgrade-trigger` | enforce | Sets `desiredUpdate.version` once the guard is Compliant, only while `version` is newer than the current version and no update is progressing. Never `image` or `force`. |
-| `upgrade-progress` | inform | NonCompliant until the cluster has completed `version`. |
+=== "Any other cluster, hubs included"
 
-A version the cluster's update service does not offer stays held at the guard. Downgrades are never attempted. `upgrade-trigger` also sets `spec.upstream` to `stack.upgrade.config.upstream`, `api.openshift.com` by default: a cluster on a local OpenShift Update Service sets it in a values layer.
+    The `upgrade` element on the cluster writes ClusterVersion `spec.channel`, `spec.desiredUpdate` and `spec.upstream`.
 
-`config.targetVersion` and `config.channel` are gone: the render fails while a layer sets them. Move them to the fleet file's `version` and `channel` in the commit that bumps `revision`.
+    An imported hosted cluster is the exception: the element is inert on any HyperShift guest, so PolicyStack does not upgrade it.
+
+## upgrade element
+
+Enabled by default. Renders nothing until the fleet file sets `version` or `channel`.
+
+| Template | Policy (renders when) | Mode | Does |
+|---|---|---|---|
+| `channel-pin` | `channel-upgrade-<cluster>` (`channel` set) | enforce | Sets ClusterVersion `spec.channel`. |
+| `upgrade-guard` | `upgrade-upgrade-<cluster>` (`version` set) | inform | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the current version. |
+| `upgrade-trigger` | same | enforce | After the guard is Compliant, sets `desiredUpdate.version`, only while `version` is newer than current and no update is progressing. Never sets `image` or `force`. |
+| `upgrade-progress` | same | inform | NonCompliant until the cluster has completed `version`. |
+
+- A version the update service does not offer is held at the guard.
+- Downgrades are never attempted.
+
+`upgrade-trigger` also sets `spec.upstream` from `stack.upgrade.config.upstream` (default `https://api.openshift.com/api/upgrades_info/v1/graph`). On a local OpenShift Update Service, override it in a values layer:
+
+```yaml
+# values/datacenters/dc1.yaml
+stack:
+  upgrade:
+    config:
+      upstream: https://osus.example.internal/api/upgrades_info/v1/graph
+```
 
 Watch it:
 
 ```sh
-oc get policy -n pstack upgrade-upgrade-prod-east-1
-oc get clusterversion version -o jsonpath='{.status.history[0]}'   # on the cluster
+oc get policy -n pstack upgrade-upgrade-prod-east-1                 # on the hub
+oc get clusterversion version -o jsonpath='{.status.history[0]}'    # on the cluster
 ```
+
+??? info "Migrating from `config.targetVersion` / `config.channel`"
+    Both keys are gone; the render fails while any layer sets them. In the commit that bumps `revision`, delete them from the values layer and set `version` and `channel` in the fleet file:
+
+    ```diff
+     # values/clusters/prod-east-1.yaml
+     stack:
+       upgrade:
+    -    config:
+    -      targetVersion: 4.20.12
+    -      channel: stable-4.20
+    ```
+
+    ```diff
+     # fleet/prod-east-1.yaml
+    +version: 4.20.12
+    +channel: stable-4.20
+    ```
 
 ## Pausing
 
-Set the toggle in any layer that the cluster reads, such as `values/clusters/<cluster>.yaml`:
+Turn a toggle off in any layer the cluster reads:
 
 ```yaml
+# values/clusters/prod-east-1.yaml
 stack:
   upgrade:
     toggles:
-      upgrade: false
+      upgrade: false # (1)!
+      channel: false # (2)!
 ```
 
-This deletes `upgrade-upgrade-<cluster>`, and an update already started continues on the cluster. `channel: false` stops managing the channel. A hosted cluster is paused by leaving `version` where it is.
+1.  Deletes `upgrade-upgrade-<cluster>`. An update already started on the cluster keeps running.
+2.  Stops managing the channel.
 
-## Why not ClusterCurator or TALM
+A hosted cluster is paused by leaving `version` where it is.
 
-ClusterCurator runs an upgrade as a one-shot Job: a failure is not retried, and a Policy that owns the ClusterCurator cannot tell a finished upgrade from a new one. TALM's ClusterGroupUpgrade is one-shot too and needs its own inform policies. ClusterVersion is declarative, so a Policy can keep enforcing it.
+??? question "Why not ClusterCurator or TALM?"
+    ClusterCurator runs an upgrade as a one-shot Job: a failure is not retried, and a Policy owning the ClusterCurator cannot tell a finished upgrade from a new one. TALM's ClusterGroupUpgrade is also one-shot and needs its own inform policies. ClusterVersion is declarative, so a Policy can keep enforcing it.

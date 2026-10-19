@@ -31,7 +31,10 @@ nav = [
 ]
 
 [project.theme]
-features = ["content.action.edit", "content.code.copy", "navigation.sections"]
+features = [
+  "content.action.edit", "content.code.annotate", "content.code.copy", "content.tabs.link",
+  "navigation.sections",
+]
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
@@ -49,6 +52,11 @@ toggle.name = "Switch to light mode"
 # validation.md uses to include the rules table from tools/validator/README.md. highlight values are
 # Zensical's defaults. Run zensical from the repo root: snippet paths resolve against the cwd.
 [project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+pymdownx.details = {}
+pymdownx.tabbed.alternate_style = true
 toc.permalink = true
 pymdownx.highlight.anchor_linenums = true
 pymdownx.highlight.line_spans = "__span"

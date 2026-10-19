@@ -8,7 +8,7 @@ stack:
     toggles:
       # @desc: Deploy the platform ArgoCD instance. Disable to install only the operator.
       instance: true
-      # @desc: Give ArgoCD the cluster's trusted CA bundle
+      # @desc: Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA
       ca-bundle: true
       # @desc: Publish a console link to ArgoCD
       link: true

@@ -158,3 +158,23 @@ stack:
     config:
       reservedCpus: 0-1
       isolatedCpus: 2-31
+  disconnected:
+    enabled: true
+    toggles:
+      resources: true
+      registry-ca: true
+      trusted-ca: true
+      operatorhub: true
+    config:
+      clusterResources:
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata: {name: cs-redhat-operator-index-v4-20, namespace: openshift-marketplace}
+          spec: {image: "mirror.example.com:8443/redhat/redhat-operator-index:v4.20", sourceType: grpc}
+      registryCAs:
+        mirror.example.com..8443: |
+          -----BEGIN CERTIFICATE-----
+          -----END CERTIFICATE-----
+      trustedCA: |
+        -----BEGIN CERTIFICATE-----
+        -----END CERTIFICATE-----

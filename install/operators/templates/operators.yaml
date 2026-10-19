@@ -1,7 +1,8 @@
 {{- /*
 Renders the objects the acm and gitops elements adopt, with the same names and spec: the
 OperatorPolicy looks up the Subscription by namespace and package name, and an OperatorGroup of
-another name is NonCompliant. Pass stack/acm/values.yaml and stack/gitops/values.yaml with -f.
+another name is NonCompliant. Pass stack/acm/values.yaml and stack/gitops/values.yaml with -f, and
+the layer that sets global.catalogSources on a disconnected hub.
 */ -}}
 {{- range $el := list "gitops" "acm" }}
 {{- with index $.Values.stack $el "operatorPolicies" $el }}
@@ -34,7 +35,7 @@ metadata:
 spec:
   name: {{ .subscription.name }}
   channel: {{ .subscription.channel }}
-  source: {{ .subscription.source }}
+  source: {{ index (($.Values.global).catalogSources | default dict) .subscription.source | default .subscription.source }}
   sourceNamespace: {{ .subscription.sourceNamespace }}
   installPlanApproval: Automatic
   {{- with .subscription.config }}

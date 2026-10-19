@@ -45,6 +45,12 @@ Every Application for the cluster switches to the new revision. Application name
 
 An element that exists at the new revision but not the old one gets a new Application. An element missing at the new revision loses its Application and its Policies ([Removing an element](#removing-an-element)).
 
+## Dry run
+
+Set `global.remediationAction: inform` in a layer ([Global keys](values.md#global-keys)). Every Policy rendered for the clusters that read it, lifecycle included, reports what it would change and changes nothing. To preview a revision on one cluster, set it in `values/clusters/<cluster>.yaml` in the same pull request, then remove it once the Policies report what you expect.
+
+Switching to inform undoes nothing already applied. A Policy that depends on another stays Pending until that one is compliant, so a dry run on a new cluster reports only the start of each dependency chain.
+
 ## Disabling an element
 
 Set `enabled: false` under the element's key in a layer that outranks every layer enabling it ([Order](values.md#order)). `values/environments/prod.yaml` enables `dns`, to turn it off on `prod-east-1` only, add this to `values/clusters/prod-east-1.yaml`:
@@ -161,3 +167,5 @@ When a newer CSV is available, the OperatorPolicy status names it in a message t
 Dropping the old CSV in the same change makes each cluster noncompliant until its upgrade finishes.
 
 To unpin, set `versions: []` in a layer that outranks the pin, or delete the pin. To turn an operator off on some clusters, set `enabled: false` on its key or `toggles.<key>: false` ([Disabling an element](#disabling-an-element)). Never set the key to `null`. Disable the entries that name it in `waitForOperator` in the same layer, or the render fails. This stops managing the operator but does not uninstall it.
+
+To uninstall an operator, set `complianceType: mustnothave` on its key. The OperatorPolicy deletes the Subscription and the CSV, and the OperatorGroup if nothing else uses it. It keeps CRDs and the namespace, so other operators in a shared namespace are untouched; `removalBehavior` on the key changes this ([Removing an operator](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#removing-an-operator)). Turn off the policies that configure the operator's resources in the same layer: their `waitForOperator` fails the render.

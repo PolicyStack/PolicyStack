@@ -1,0 +1,7 @@
+{{- /* The default catalog sources point at registry.redhat.io, which a disconnected cluster cannot reach. */ -}}
+apiVersion: config.openshift.io/v1
+kind: OperatorHub
+metadata:
+  name: cluster
+spec:
+  disableAllDefaultSources: true

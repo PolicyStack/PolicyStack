@@ -1,0 +1,24 @@
+{{- /*
+Trusts each mirror registry's CA for image pulls. Renders nothing when config.registryCAs is
+empty, so the policy is compliant without touching the image config.
+*/ -}}
+{{- with .Values.stack.disconnected.config.registryCAs }}
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: registry-cas
+      namespace: openshift-config
+    data: {{- toYaml . | nindent 6 }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: Image
+    metadata:
+      name: cluster
+    spec:
+      additionalTrustedCA:
+        name: registry-cas
+{{- end }}

@@ -1,0 +1,10 @@
+{{- /*
+Applies oc-mirror's cluster-resources as they are. oc-mirror names the CatalogSources
+(cs-redhat-operator-index-v4-20), which global.catalogSources maps the operators onto.
+
+Object count follows the list length, hence rawTemplate.
+*/ -}}
+{{- range $o := .Values.stack.disconnected.config.clusterResources }}
+- complianceType: musthave
+  objectDefinition: {{- toYaml $o | nindent 4 }}
+{{- end }}

@@ -22,7 +22,7 @@ oc wait argocd/openshift-gitops -n openshift-gitops --for=jsonpath='{.status.pha
 
 The `install/operators` chart renders the Namespace, OperatorGroup and Subscription for each operator, plus the MultiClusterHub, from the `acm` and `gitops` element values. They are the objects those elements enforce, so [handing the operators over](#hand-the-operators-to-policystack) later adopts them in place. The chart installs the channel head and fails on a `versions` or `upgradeApproval` pin; pin after handover ([Operator upgrades](rollout.md#operator-upgrades)). The loop re-applies until ACM installs the MultiClusterHub CRD and the GitOps operator creates its default Argo CD instance. The MultiClusterHub takes about 10 minutes. A loop that never finishes is a real error, such as an unreachable catalog: stop it and read the `oc` output.
 
-To override a value, such as `stack.acm.config.availabilityConfig: Basic` on a single node hub, add `-f values/acm/<hub>.yaml`.
+To override a value, such as `stack.acm.config.availabilityConfig: Basic` on a single node hub, add `-f values/acm/<hub>.yaml`. On a disconnected hub, also add the layer that sets `global.catalogSources` ([Disconnected clusters](disconnected.md)).
 
 ### Existing hubs
 
@@ -124,7 +124,7 @@ Reusing the stored values keeps `hubName` exact; a different one renames and rec
 Then drop the cluster-admin binding the old install step created. Skip this if the `openshift-gitops` instance also syncs Applications outside PolicyStack, since they may rely on it. Check the new role first, then remove only the cluster-admin binding:
 
 ```sh
-oc auth can-i create policies.policy.open-cluster-management.io -n policy \
+oc auth can-i create policies.policy.open-cluster-management.io -n pstack \
   --as=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller   # yes
 oc get clusterrolebinding -o wide | grep 'ClusterRole/cluster-admin' | grep openshift-gitops-argocd-application-controller
 oc adm policy remove-cluster-role-from-user cluster-admin -z openshift-gitops-argocd-application-controller \

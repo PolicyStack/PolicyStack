@@ -1,0 +1,25 @@
+{{- /*
+Adds config.trustedCA to the cluster trust bundle. The network operator then injects it into every
+ConfigMap labelled config.openshift.io/inject-trusted-cabundle, the gitops element's included.
+Renders nothing when config.trustedCA is empty.
+*/ -}}
+{{- with .Values.stack.disconnected.config.trustedCA }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: user-ca-bundle
+      namespace: openshift-config
+    data:
+      ca-bundle.crt: | {{- . | trim | nindent 8 }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: config.openshift.io/v1
+    kind: Proxy
+    metadata:
+      name: cluster
+    spec:
+      trustedCA:
+        name: user-ca-bundle
+{{- end }}

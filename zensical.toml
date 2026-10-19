@@ -20,6 +20,7 @@ nav = [
     { "Cluster lifecycle" = "lifecycle.md" },
     { "Lifecycle reference" = "lifecycle-reference.md" },
     { "Global Hub" = "global-hub.md" },
+    { "Disconnected clusters" = "disconnected.md" },
     { "Upgrades" = "upgrades.md" },
   ] },
   { "Development" = [

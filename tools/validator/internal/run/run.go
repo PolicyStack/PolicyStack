@@ -232,7 +232,11 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	// Phase 3: repo-wide checks.
-	repoCtx := checks.Context{AllElements: all, Logger: opts.Logger}
+	layers, err := valueLayers(rootValues, opts.ValuesDir)
+	if err != nil {
+		return Result{}, fmt.Errorf("list values layers: %w", err)
+	}
+	repoCtx := checks.Context{AllElements: all, Layers: layers, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue
@@ -249,6 +253,24 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// valueLayers returns the root values.yaml, when present, then every .yaml file under valuesDir.
+func valueLayers(rootValues, valuesDir string) ([]string, error) {
+	var out []string
+	if _, err := os.Stat(rootValues); err == nil {
+		out = append(out, rootValues)
+	}
+	err := filepath.WalkDir(valuesDir, func(path string, d fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) {
+			return fs.SkipAll
+		}
+		if err == nil && d.Type().IsRegular() && filepath.Ext(path) == ".yaml" {
+			out = append(out, path)
+		}
+		return err
+	})
+	return out, err
 }
 
 // dedupe drops repeated findings, such as POLICY032 on a values layer that several clusters share.

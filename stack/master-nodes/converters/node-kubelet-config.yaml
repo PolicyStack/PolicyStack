@@ -33,5 +33,11 @@ uses an escaped ACM template.
         kubeReserved:
           memory: {{ $cfg.kubeReservedMemory }}
           cpu: {{ $cfg.kubeReservedCpu }}
+        # The kubelet does not merge defaults into a partial evictionHard; unset signals drop to zero.
+        # OpenShift requires all five signals; the others are the upstream kubelet Linux defaults.
         evictionHard:
           memory.available: {{ $cfg.evictionMemory }}
+          nodefs.available: 10%
+          nodefs.inodesFree: 5%
+          imagefs.available: 15%
+          imagefs.inodesFree: 5%

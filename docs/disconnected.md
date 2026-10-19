@@ -69,10 +69,12 @@ If `remediations` is enabled, add the mirror registry to its `allowedRegistries`
 |---|---|
 | `resources` | Each object in `config.clusterResources`, as it is |
 | `registry-ca` | ConfigMap `registry-cas` in `openshift-config` from `config.registryCAs`, and `image.config.openshift.io/cluster` `additionalTrustedCA`. A key is the registry host, with `..` before a port. |
-| `trusted-ca` | ConfigMap `user-ca-bundle` in `openshift-config` from `config.trustedCA`, and the cluster Proxy's `trustedCA`. The network operator adds it to every injected trust bundle, including the one the `gitops` element mounts into the Argo CD repo server. |
+| `trusted-ca` | ConfigMap `trusted-cas` in `openshift-config`, and the cluster Proxy's `trustedCA` pointing at it. The network operator adds it to every injected trust bundle, including the one the `gitops` element mounts into the Argo CD repo server. |
 | `operatorhub` | `OperatorHub` `disableAllDefaultSources: true` |
 
 `registry-ca` and `trusted-ca` render nothing while their input is empty.
+
+`trusted-cas` is the cluster's `user-ca-bundle` (the installer's `additionalTrustBundle`) followed by `config.trustedCA`. `user-ca-bundle` is read on the cluster and never written, so a CA removed from `config.trustedCA` leaves the bundle on the next evaluation, and edits to `user-ca-bundle` carry over. A Proxy that already points at a ConfigMap other than `user-ca-bundle` is repointed, and that ConfigMap's CAs drop out of the trust bundle: add them to `config.trustedCA` first. Turning `trusted-ca` off or emptying `config.trustedCA` leaves the Proxy on a stale `trusted-cas`, so its CAs stay trusted: first set the Proxy's `trustedCA.name` back to `user-ca-bundle` (`""` if that ConfigMap does not exist), then delete `trusted-cas`.
 
 ## Hosted clusters
 

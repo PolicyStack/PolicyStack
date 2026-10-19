@@ -166,6 +166,10 @@ end up in length-limited object names ([Naming limits](policies.md#naming-limits
   reports collisions as POLICY003.
 - **Start in `inform`.** Ship a new policy with `remediationAction: inform`, roll it out to a
   nonprod revision, read its compliance, then switch to `enforce`.
+- **Leave the Policy-level `remediationAction` unset on a policy with inform gates.** ACM applies it
+  to every template in the Policy, so an `enforce` there enforces a readiness check or a
+  `mustnothave` signal. Set the action on each config and operator policy instead, as upgrade, acs
+  and cert-manager do. `global.remediationAction: inform` still overrides all of them.
 - **Set `pruneObjectBehavior` only on templates without dependencies, in its own commit.** It
   decides whether removing a policy deletes what it created, and it must reach the cluster before
   the removal. The validator rejects it on a template with dependencies as POLICY033

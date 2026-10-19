@@ -4,6 +4,10 @@ resulting credentials as secrets. The identities it creates come from values.
 
 The script has no literal Go-template braces, so it needs no escaping for Helm's tpl pass; only the
 namespace, registry name and identity values are templated.
+
+curl verifies the route against the default ingress certificate plus the cluster trust bundle. Both
+volume items are required keys, so the kubelet holds the pod until the network operator has
+injected the trust bundle.
 */ -}}
 {{- $cfg := .Values.stack.quay.config }}
 apiVersion: batch/v1
@@ -18,10 +22,28 @@ spec:
       dnsPolicy: ClusterFirst
       terminationGracePeriodSeconds: 30
       serviceAccountName: {{ .Parameters.bootstrapName }}
+      volumes:
+        - name: ca
+          projected:
+            sources:
+              - configMap:
+                  name: {{ .Parameters.trustedCaName }}
+                  items:
+                    - key: ca-bundle.crt
+                      path: trusted.crt
+              - configMap:
+                  name: {{ .Parameters.ingressCaName }}
+                  items:
+                    - key: ca-bundle.crt
+                      path: ingress.crt
       containers:
         - name: {{ .Parameters.bootstrapName }}
           image: {{ $cfg.bootstrapImage }}
           imagePullPolicy: Always
+          volumeMounts:
+            - name: ca
+              mountPath: /etc/quay-ca
+              readOnly: true
           command:
             - /bin/bash
             - -c
@@ -58,7 +80,8 @@ spec:
               done
               echo "done"
 
-              CURL_OPTS="-fsk"
+              cat /etc/quay-ca/*.crt > /tmp/ca.crt
+              CURL_OPTS="-fs --cacert /tmp/ca.crt"
               QUAY_ADMIN={{ $cfg.adminUser }}
               QUAY_USER={{ $cfg.initialUser }}
               QUAY_USER_EMAIL={{ $cfg.initialUserEmail }}
@@ -80,7 +103,7 @@ spec:
 
               ADMINPASS=`head -c 8 /dev/urandom | base64 | sed 's/=//'`
               BASE64AUTH=`echo -n $QUAY_ADMIN:$ADMINPASS | base64 -w0`
-              RESULT=$(curl -X POST -k -s https://$QUAY_HOST/api/v1/user/initialize --header 'Content-Type: application/json' --data "{ \"username\": \"${QUAY_ADMIN}\", \"password\":\"${ADMINPASS}\", \"email\": \"${QUAY_ADMIN}@example.com\", \"access_token\": true}")
+              RESULT=$(curl -X POST -sS --cacert /tmp/ca.crt https://$QUAY_HOST/api/v1/user/initialize --header 'Content-Type: application/json' --data "{ \"username\": \"${QUAY_ADMIN}\", \"password\":\"${ADMINPASS}\", \"email\": \"${QUAY_ADMIN}@example.com\", \"access_token\": true}") || exit 1
               echo "$RESULT" | grep -q "non-empty database"
               if [ $? -eq 0 ]; then
                 echo "Quay user configuration failed, the database has been initialized."

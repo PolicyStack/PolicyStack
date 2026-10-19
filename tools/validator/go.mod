@@ -3,6 +3,7 @@ module github.com/PolicyStack/PolicyStack/tools/validator
 go 1.26.0
 
 require (
+	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/stolostron/go-template-utils/v7 v7.3.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.37.1
@@ -15,7 +16,6 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
-	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

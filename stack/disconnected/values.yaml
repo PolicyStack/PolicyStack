@@ -13,7 +13,7 @@ stack:
       resources: true
       # @desc: Trust the mirror registries' CAs for image pulls
       registry-ca: true
-      # @desc: Add config.trustedCA to the cluster trust bundle (Proxy trustedCA)
+      # @desc: Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA)
       trusted-ca: true
       # @desc: Disable the default OperatorHub catalog sources, which cannot be reached
       operatorhub: true
@@ -24,7 +24,7 @@ stack:
       clusterResources: []
       # @desc: Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM.
       registryCAs: {}
-      # @desc: PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server
+      # @desc: PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed.
       trustedCA: ""
 
     # @description: Default policy metadata applied unless overridden per-policy
@@ -92,7 +92,7 @@ stack:
 
       - name: proxy
         enabled: true
-        description: "user-ca-bundle ConfigMap and Proxy trustedCA"
+        description: "trusted-cas ConfigMap and Proxy trustedCA"
         policyRef: trusted-ca
         complianceType: musthave
         remediationAction: enforce

@@ -1,18 +1,22 @@
 {{- /*
 Adds config.trustedCA to the cluster trust bundle. The network operator then injects it into every
 ConfigMap labelled config.openshift.io/inject-trusted-cabundle, the gitops element's included.
-Renders nothing when config.trustedCA is empty.
+user-ca-bundle holds the installer's additionalTrustBundle, so it is left alone: trusted-cas is
+user-ca-bundle's ca-bundle.crt, read on the managed cluster, followed by config.trustedCA, and the
+Proxy points at it. Renders nothing when config.trustedCA is empty.
 */ -}}
 {{- with .Values.stack.disconnected.config.trustedCA }}
-- complianceType: musthave
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
   objectDefinition:
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: user-ca-bundle
+      name: trusted-cas
       namespace: openshift-config
     data:
-      ca-bundle.crt: | {{- . | trim | nindent 8 }}
+      ca-bundle.crt: | {{ "{{" }}- with dig "data" "ca-bundle.crt" "" (lookup "v1" "ConfigMap" "openshift-config" "user-ca-bundle") | trim {{ "}}" }}{{ "{{" }} . | nindent 8 {{ "}}" }}{{ "{{" }} end {{ "}}" }}
+        {{- . | trim | nindent 8 }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: config.openshift.io/v1
@@ -21,5 +25,5 @@ Renders nothing when config.trustedCA is empty.
       name: cluster
     spec:
       trustedCA:
-        name: user-ca-bundle
+        name: trusted-cas
 {{- end }}

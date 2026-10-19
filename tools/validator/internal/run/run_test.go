@@ -3,10 +3,12 @@ package run
 import (
 	"cmp"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
@@ -260,5 +262,92 @@ func TestDedupe(t *testing.T) {
 	got := dedupe([]checks.Finding{layer, perCluster, layer, other, perCluster, layer})
 	if want := []checks.Finding{layer, perCluster, other}; !slices.Equal(got, want) {
 		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestDependencyFailure(t *testing.T) {
+	const chartYAML = "apiVersion: v2\nname: a\nversion: 0.1.0\ndependencies:\n  - name: policy-library\n    version: 3.4.0\n    repository: https://example.invalid\n"
+	tests := []struct {
+		name     string
+		archive  string // in stack/a/charts
+		only     string
+		want     []string // findings, "<rule> <element> <file>"
+		rendered bool     // stack/a is rendered
+	}{
+		{
+			name:    "stale archive is not rendered",
+			archive: "policy-library-3.3.0.tgz",
+			only:    "RENDER000",
+			want:    []string{"RENDER000 a stack/a/Chart.yaml"},
+		},
+		{name: "no archive", only: "RENDER000", want: []string{"RENDER000 a stack/a/Chart.yaml"}},
+		{name: "RENDER000 not run", archive: "policy-library-3.3.0.tgz", only: "POLICY081"},
+		{name: "pinned archive needs no fetch", archive: "policy-library-3.4.0.tgz", only: "RENDER000", rendered: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			log := filepath.Join(root, "helm.log")
+			write := func(rel, body string, mode os.FileMode) {
+				p := filepath.Join(root, rel)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(body), mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// A helm whose dependency update fails, as for an unpublished policy-library.
+			write("helm", "#!/bin/sh\necho \"$*\" >> "+log+"\n[ \"$1\" = dependency ] && { echo 'Error: chart not found' >&2; exit 1; }\nexit 0\n", 0o755)
+			write("stack/a/Chart.yaml", chartYAML, 0o644)
+			write("stack/a/values.yaml", "stack:\n  a:\n    enabled: true\n", 0o644)
+			write("stack/b/Chart.yaml", "apiVersion: v2\nname: b\nversion: 0.1.0\n", 0o644)
+			write("stack/b/values.yaml", "stack:\n  b:\n    enabled: true\n", 0o644)
+			write("values.yaml", "policyNamespace: policies\n", 0o644)
+			write("fleet/c.yaml", "revision: main\n", 0o644)
+			if tt.archive != "" {
+				write("stack/a/charts/"+tt.archive, "", 0o644)
+			}
+			res, err := Run(t.Context(), Options{
+				RepoRoot:     root,
+				StackDir:     filepath.Join(root, "stack"),
+				LifecycleDir: filepath.Join(root, "lifecycle"),
+				ValuesDir:    filepath.Join(root, "values"),
+				FixturesDir:  filepath.Join(root, "fleet"),
+				HelmBin:      filepath.Join(root, "helm"),
+				RenderDir:    filepath.Join(root, "rd"),
+				Only:         []string{tt.only},
+				Logger:       slog.New(slog.DiscardHandler),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// A failed fetch is written into the render, so a render diff shows a failure, not a deletion.
+			out, _ := os.ReadFile(filepath.Join(root, "rd/c/a.yaml"))
+			if failed := strings.HasPrefix(string(out), "# RENDER000: dependencies not fetched"); failed == tt.rendered {
+				t.Errorf("render of a = %q, want RENDER000 comment = %v", out, !tt.rendered)
+			}
+			var got []string
+			for _, f := range res.Findings {
+				rel, _ := filepath.Rel(root, f.File)
+				got = append(got, f.RuleID+" "+f.Element+" "+rel)
+				if !strings.Contains(f.Message, "Error: chart not found") {
+					t.Errorf("message %q does not carry helm's error", f.Message)
+				}
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("findings %q, want %q", got, tt.want)
+			}
+			calls, err := os.ReadFile(log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(calls), "template b-c "+filepath.Join(root, "stack/b")) {
+				t.Errorf("b not rendered:\n%s", calls)
+			}
+			if got := strings.Contains(string(calls), "template a-c "); got != tt.rendered {
+				t.Errorf("a rendered = %v, want %v:\n%s", got, tt.rendered, calls)
+			}
+		})
 	}
 }

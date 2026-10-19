@@ -42,10 +42,6 @@ func rawTemplate(t *testing.T, cluster, name string, setString ...string) string
 // rawTemplates is rawTemplate for every ConfigurationPolicy with object-templates-raw, by name.
 func rawTemplates(t *testing.T, cluster string, setString ...string) map[string]string {
 	t.Helper()
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
 	clusters, err := fixtures.LoadDir(filepath.Join(repoRoot, "tools/validator/testdata/clusters"))
 	if err != nil {
 		t.Fatal(err)
@@ -61,16 +57,39 @@ func rawTemplates(t *testing.T, cluster string, setString ...string) map[string]
 	}
 	dir := filepath.Join(repoRoot, "lifecycle")
 	res := cascade.Resolve(cl, dir, "lifecycle", repoRoot, filepath.Join(repoRoot, "values"))
+	return renderRaw(t, dir, res.ReleaseName, append(res.ValueFiles, cl.SourceFile), setString...)
+}
+
+// allOn is the value files that turn every element and toggle on.
+var allOn = []string{
+	filepath.Join(repoRoot, "tools/validator/testdata/baseline.yaml"),
+	filepath.Join(repoRoot, "tools/validator/testdata/profiles/all-on.yaml"),
+}
+
+// helmTemplate runs helm template on the chart in dir and returns its output.
+func helmTemplate(t *testing.T, dir, release string, valueFiles []string, setString ...string) []byte {
+	t.Helper()
+	helm, err := exec.LookPath("helm")
+	if err != nil {
+		t.Skip("helm not on PATH")
+	}
 	runner := render.New(helm)
 	if err := runner.EnsureDeps(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
-	tr := runner.Template(context.Background(), dir, res.ReleaseName, append(res.ValueFiles, cl.SourceFile), setString)
+	tr := runner.Template(context.Background(), dir, release, valueFiles, setString)
 	if tr.Err != nil {
 		t.Fatalf("helm template: %v: %s", tr.Err, tr.Stderr)
 	}
+	return tr.Stdout
+}
+
+// renderRaw runs helm template on the chart in dir and returns the object-templates-raw of every
+// ConfigurationPolicy, by name.
+func renderRaw(t *testing.T, dir, release string, valueFiles []string, setString ...string) map[string]string {
+	t.Helper()
 	out := map[string]string{}
-	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(tr.Stdout), 4096)
+	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(helmTemplate(t, dir, release, valueFiles, setString...)), 4096)
 	for {
 		var doc struct {
 			Kind string `json:"kind"`

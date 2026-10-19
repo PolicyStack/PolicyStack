@@ -39,7 +39,7 @@ stack:
       - name: upgrade
         enabled: true
         description: "Drive the cluster to the target version and report on progress"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gates below.
         severity: high
         disabled: false
 

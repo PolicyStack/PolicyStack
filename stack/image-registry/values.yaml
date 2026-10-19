@@ -57,7 +57,7 @@ stack:
       - name: s3
         enabled: true
         description: "S3-backed registry storage from ODF"
-        remediationAction: enforce
+        # No Policy-level remediationAction: it would override the inform gate below.
         severity: medium
         disabled: false
         dependencies:

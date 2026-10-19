@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-19 14:52:50*
+*Generated: 2026-10-19 17:44:57*
 
 ## Component Configuration
 
@@ -31,7 +31,7 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 | ------ | ------- | ----------- |
 | `resources` | `True` | Apply the objects in config.clusterResources |
 | `registry-ca` | `True` | Trust the mirror registries' CAs for image pulls |
-| `trusted-ca` | `True` | Add config.trustedCA to the cluster trust bundle (Proxy trustedCA) |
+| `trusted-ca` | `True` | Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA) |
 | `operatorhub` | `True` | Disable the default OperatorHub catalog sources, which cannot be reached |
 
 ## Configuration
@@ -42,7 +42,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | --- | ------- | ----------- |
 | `clusterResources` | `(list)` | Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps |
 | `registryCAs` | `(dict)` | Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM. |
-| `trustedCA` | `` | PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server |
+| `trustedCA` | `` | PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed. |
 
 ## Policies
 
@@ -153,7 +153,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 ##### Configuration Policies
 
 ###### ⚙️ Config: proxy
-> user-ca-bundle ConfigMap and Proxy trustedCA
+> trusted-cas ConfigMap and Proxy trustedCA
 
 **Basic Configuration:**
 | Parameter | Value | Description |

@@ -5,7 +5,8 @@ stack:
     enabled: false
 
     # @description: The bootstrap Job is opinionated (it creates an initial user, org and repo), so
-    # @description: it is opt-in separately from the registry deployment.
+    # @description: it is opt-in separately from the registry deployment. The Job verifies Quay's route
+    # @description: against the default ingress certificate and the cluster trust bundle.
     toggles:
       # @desc: Run the one-shot bootstrap Job and publish the console link
       configure: false
@@ -130,7 +131,7 @@ stack:
 
       - name: bootstrap
         enabled: true
-        description: "Bootstrap Job, its RBAC, and the console link"
+        description: "Bootstrap Job, its RBAC and CA bundles, and the console link"
         policyRef: configure
         complianceType: musthave
         remediationAction: enforce
@@ -139,6 +140,8 @@ stack:
           - name: quay-bootstrap-sa
           - name: quay-bootstrap-role
           - name: quay-bootstrap-rolebinding
+          - name: quay-trusted-ca
+          - name: quay-ingress-ca
           - name: quay-bootstrap-job
           - name: quay-host-configmap
           - name: quay-console-link
@@ -147,6 +150,8 @@ stack:
           namespace: quay-enterprise
           name: registry
           bootstrapName: create-admin-user
+          trustedCaName: quay-trusted-ca
+          ingressCaName: quay-ingress-ca
           routeName: registry-quay
           consoleText: Red Hat Quay Enterprise Registry
           consoleImageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg

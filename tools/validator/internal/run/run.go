@@ -121,10 +121,12 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	// Fetch dependencies up front so helm lint in the chart phase does not
-	// fail on a missing charts/policy-library-*.tgz.
+	// fail on a missing charts/policy-library-*.tgz. A failed fetch is a RENDER000, once per chart,
+	// and the chart is not rendered: Helm renders any archive in charts/ with the dependency's name,
+	// whatever its version.
 	for _, el := range all {
-		if err := runner.EnsureDeps(ctx, el.Dir); err != nil {
-			opts.Logger.Warn("dependency update failed", "element", el.ChartName, "err", err)
+		if err := runner.EnsureDeps(ctx, el.Dir); err != nil && !skipped("RENDER000", opts) {
+			addFindings([]checks.Finding{*depsFinding(el, err)})
 		}
 	}
 
@@ -327,8 +329,9 @@ func perCluster(ctx context.Context, opts Options, runner *render.Runner, p pair
 		Cluster: &res,
 		Logger:  opts.Logger,
 	}
+	// Also reported before the chart phase; dedupe drops the repeat.
 	if err := runner.EnsureDeps(ctx, el.Dir); err != nil {
-		opts.Logger.Warn("dependency update failed", "element", el.ChartName, "err", err)
+		return c, depsFinding(el, err)
 	}
 	tr := runner.Template(ctx, el.Dir, res.ReleaseName, res.ValueFiles, setString(p))
 	if tr.Err != nil && !errors.Is(tr.Err, context.Canceled) {
@@ -414,6 +417,18 @@ func writeRender(opts Options, p pair, out []byte, failed *checks.Finding) error
 		return err
 	}
 	return os.WriteFile(path, out, 0o644)
+}
+
+// depsFinding is the RENDER000 for a chart whose dependencies were not fetched. It has no
+// Cluster, so it is reported once per chart.
+func depsFinding(el *chart.Element, err error) *checks.Finding {
+	return &checks.Finding{
+		RuleID:   "RENDER000",
+		Severity: checks.SevError,
+		Element:  el.ChartName,
+		Message:  "dependencies not fetched, so the chart is not rendered: " + err.Error(),
+		File:     filepath.Join(el.Dir, "Chart.yaml"),
+	}
 }
 
 // renderErrorFinding turns a TemplateResult error into a RENDER000 finding.

@@ -1,0 +1,10 @@
+{{- /*
+Copy of default-ingress-cert, which the ingress operator publishes for the certificate the router
+serves on Quay's edge route. It only exists on the managed cluster, so the copy is ACM templating.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Parameters.ingressCaName }}
+  namespace: {{ .Parameters.namespace }}
+data: '{{ "{{" }} copyConfigMapData "openshift-config-managed" "default-ingress-cert" {{ "}}" }}'

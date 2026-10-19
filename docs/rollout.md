@@ -1,171 +1,207 @@
 # Rolling out changes
 
-A cluster runs what Git holds at the revision its [fleet file](applicationset.md#fleet-files) pins: the element charts, their policy-library pins and every values file. To roll out a change, commit it and point fleet files at a revision that contains it.
+A cluster runs what Git holds at the `revision` its [fleet file](applicationset.md#fleet-files) pins. To ship a change, commit it and point fleet files at a revision that has it.
 
 ## Onboarding a cluster
 
-A cluster either already exists and is imported, or a hub builds it from its fleet file. To have a hub build it, add `hub`, `version` and `install` to the fleet file in step 2 and skip step 1: the hub creates the cluster, ACM imports it, and the steps below then apply as written ([Cluster lifecycle](lifecycle.md)).
-
-1. Import the cluster into ACM. The GitOpsCluster then imports it into Argo CD ([Install PolicyStack](install.md#install-policystack)).
-2. Open a pull request to the default branch that adds `fleet/<cluster>.yaml`, named exactly like the ManagedCluster ([Fleet files](applicationset.md#fleet-files)). The hub's file is `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).
+1. Import the cluster into ACM. The GitOpsCluster adds it to Argo CD ([Install PolicyStack](install.md#install-policystack)).
+2. Add `values/clusters/<cluster>.yaml` with the elements this cluster runs beyond its other layers.
+3. PR `fleet/<cluster>.yaml` to the default branch:
 
     ```yaml
     # fleet/prod-east-1.yaml
-    revision: main
-    valueFiles:
+    revision: main # (1)!
+    valueFiles: # (2)!
       - environments/prod.yaml
       - datacenters/dc1.yaml
       - platforms/aws.yaml
     ```
 
-3. Add `values/clusters/<cluster>.yaml`, named exactly like the ManagedCluster, at the revision the fleet file pins. When that is the default branch, add it in the same pull request. It enables the elements this cluster runs beyond what its other layers enable. A misnamed file is skipped without an error ([Missing files](values.md#missing-files)). The hub's file is `values/clusters/<hubName>.yaml` ([Order](values.md#order)).
+    1.  Branch, tag or SHA.
+    2.  Under `values/`, lowest precedence first. `values/clusters/prod-east-1.yaml` is added last ([Order](values.md#order)).
 
-Import and the pull request can come in either order. Land step 3 before or with step 2: Applications rendered before the cluster's values file exists leave that layer out, which can briefly enable an element the file turns off. Once the cluster is imported and its fleet file is on the default branch, the ApplicationSet creates one Application per element, named `<element>-prod-east-1`, in `openshift-gitops`, within about 6 minutes. An element no layer enables syncs with no resources.
+Within about 6 minutes there is one Application per element, named `<element>-<cluster>`. An element no layer enables still gets an Application, with no resources.
 
 ```sh
 oc get applications.argoproj.io -n openshift-gitops | grep prod-east-1
 ```
 
+!!! warning "Name both files exactly like the ManagedCluster"
+    A misnamed values file is skipped silently ([Missing files](values.md#missing-files)). Commit it at the revision the fleet file pins (with the fleet file PR when that is the default branch), or the first render leaves it out and can briefly enable an element it turns off.
+
+For a cluster the hub builds, skip step 1 and add `hub`, `version` and `install` to the fleet file ([Cluster lifecycle](lifecycle.md)). The hub itself uses `fleet/hubs/<hubName>.yaml` and `values/clusters/<hubName>.yaml` ([The hub](applicationset.md#the-hub)).
+
 ## Promoting and rolling back
 
-A cluster pinned to a branch picks up every commit pushed to it. A cluster pinned to a tag or SHA changes only when its fleet file's `revision` changes. Promote with a pull request that edits `revision`:
+A branch `revision` picks up every push. A tag or SHA changes only when `revision` does. Promote with a PR; its [Render Diff](workflows.md#render-diff) comment shows the Policy changes.
 
 ```diff
  # fleet/prod-east-1.yaml
 -revision: v1.4.0
 +revision: v1.5.0
- valueFiles:
 ```
 
-The PR's [Render Diff](workflows.md#render-diff) comment shows what the new revision changes in the cluster's Policies.
+Roll back with `git revert`, or a PR that sets the old revision. Both need the usual `fleet/` review ([Protection](applicationset.md#protection)).
 
-Roll back with `git revert` of that commit, or with a pull request that sets the previous revision. Both go through the same review as any change to `fleet/` ([Protection](applicationset.md#protection)).
-
-Every Application for the cluster switches to the new revision. Application names do not include the revision, so Argo CD updates the same Policies in place. The [Placement](policies.md#placement) selector matches only the cluster's `name` label, so the policies stay bound to the cluster while Argo CD syncs.
-
-An element that exists at the new revision but not the old one gets a new Application. An element missing at the new revision loses its Application and its Policies ([Removing an element](#removing-an-element)).
+- Application names don't include the revision, so Argo CD updates the same Policies in place.
+- The [Placement](policies.md#placement) matches only the cluster's `name` label, so policies stay bound during the sync.
+- An element added at the new revision gets an Application. One missing loses it and its Policies ([Removing an element](#removing-an-element)).
 
 ## Dry run
 
-Set `global.remediationAction: inform` in a layer ([Global keys](values.md#global-keys)). Every Policy rendered for the clusters that read it, lifecycle included, reports what it would change and changes nothing. To preview a revision on one cluster, set it in `values/clusters/<cluster>.yaml` in the same pull request, then remove it once the Policies report what you expect.
+Set `global.remediationAction: inform` in any layer ([Global keys](values.md#global-keys)). Every Policy for clusters reading that layer, lifecycle included, reports instead of enforcing. To preview a revision on one cluster, add this in the same PR and remove it once the Policies look right:
 
-Switching to inform undoes nothing already applied. A Policy that depends on another stays Pending until that one is compliant, so a dry run on a new cluster reports only the start of each dependency chain.
+```yaml
+# values/clusters/prod-east-1.yaml
+global:
+  remediationAction: inform # (1)!
+```
+
+1.  `enforce` is rejected. Remove the key to go back to each template's own setting.
+
+!!! note
+    Inform undoes nothing already applied. A Policy waiting on another stays Pending, so on a new cluster only the start of each dependency chain reports.
 
 ## Disabling an element
 
-Set `enabled: false` under the element's key in a layer that outranks every layer enabling it ([Order](values.md#order)). `values/environments/prod.yaml` enables `dns`, to turn it off on `prod-east-1` only, add this to `values/clusters/prod-east-1.yaml`:
+Set `enabled: false` in a layer that outranks every layer enabling it ([Order](values.md#order)). `environments/prod.yaml` enables `dns`; to turn it off on one cluster:
 
 ```yaml
+# values/clusters/prod-east-1.yaml
 stack:
   dns:
     enabled: false
+  remediations:
+    toggles:
+      samples: false # (1)!
 ```
 
-To turn off one part of an element instead, set its [toggle](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles).
+1.  A [toggle](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) turns off one entry of an element.
 
-Once the change reaches the cluster's revision, the element renders nothing and automated sync prunes its objects from `policy`, since the ApplicationSet sets `allowEmpty`. ACM then removes its policies from the managed cluster ([What happens on the managed cluster](#what-happens-on-the-managed-cluster)). A failed render prunes nothing: the Application reports a `ComparisonError` with sync status `Unknown`, and its Policies stay as they were.
+The element renders nothing, sync prunes it from the hub (`allowEmpty` is set), and ACM removes its policies from the cluster ([What happens on the managed cluster](#what-happens-on-the-managed-cluster)). A failed render prunes nothing: the Application shows `ComparisonError` / `Unknown` and the Policies stay.
 
 ## Removing an element
 
-Delete `stack/<element>`. The Applications carry the resources finalizer, so when a cluster's revision no longer has the directory, the ApplicationSet deletes the element's Application, Argo CD deletes its Policies, PolicySets, Placement and PlacementBinding from `policy`, and ACM removes the policies from the managed cluster. Clusters pinned to older revisions keep the element until their pin moves.
+Delete `stack/<element>`. When a cluster's revision no longer has it, the ApplicationSet deletes the Application and the resources finalizer deletes its Policies, PolicySets, Placement and PlacementBinding. Clusters pinned to older revisions keep it until their pin moves.
 
-An Application is also deleted when:
+Applications are also deleted when:
 
-- The cluster's fleet file is deleted ([Offboarding a cluster](#offboarding-a-cluster)).
-- The cluster is detached. The GitOpsCluster deletes the cluster's Argo CD secret once its ManagedCluster is gone.
-- The cluster's Argo CD secret, or its `clusterID` label, disappears for any other reason ([Pausing removals](#pausing-removals)).
-- The ApplicationSet is deleted ([Teardown](install.md#teardown)).
+| Trigger | See |
+|---|---|
+| Fleet file deleted | [Offboarding a cluster](#offboarding-a-cluster) |
+| Cluster detached (GitOpsCluster deletes its Argo CD secret) | |
+| Argo CD secret or its `clusterID` label disappears | [Pausing removals](#pausing-removals) |
+| ApplicationSet deleted | [Teardown](install.md#teardown) |
 
-A fleet file that does not parse, or a revision that does not exist, deletes nothing. The ApplicationSet changes no Application until it is fixed ([Revision](applicationset.md#revision)).
+A fleet file that doesn't parse, or a missing revision, deletes nothing ([Revision](applicationset.md#revision)).
 
 ## Offboarding a cluster
 
-Delete the cluster's fleet file in a pull request. The ApplicationSet deletes all of its Applications, and with them its Policies ([Removing an element](#removing-an-element)).
+Delete the fleet file in a PR. Its Applications and Policies go with it. If the file sets `hub`, choose what happens to the cluster:
 
-For a cluster whose fleet file sets `hub`, the file also decides whether the cluster survives:
+=== "Destroy"
 
-- **Destroy.** Set `state: absent`, wait for the Policy `absent-lifecycle-<cluster>` to be Compliant, then delete the file ([Destroy](lifecycle.md#destroy)). Detaching deletes the Day-2 Applications and their Policies. The governance add-on is already gone, so nothing is pruned on the cluster.
-- **Abandon.** Delete the file, or remove `hub`. The hub deletes the lifecycle Policies and the cluster keeps running, unmanaged ([Abandon](lifecycle.md#abandon)). Deleting the file also deletes the Day-2 Policies, and templates that set `pruneObjectBehavior` prune on the still attached cluster.
+    Set `state: absent`, wait for Policy `absent-lifecycle-<cluster>` to be Compliant, then delete the file ([Destroy](lifecycle.md#destroy)). Nothing is pruned on the cluster: its governance add-on is already gone.
 
-Do not reuse the cluster's name while its fleet file exists. A cluster imported under that name gets the old file's configuration.
+=== "Abandon"
+
+    Delete the file, or remove `hub`. The hub deletes the lifecycle Policies and the cluster keeps running, unmanaged ([Abandon](lifecycle.md#abandon)). Deleting the file also deletes the Day-2 Policies, and templates with `pruneObjectBehavior` prune on the still-attached cluster.
+
+!!! warning
+    Don't reuse a cluster name while its fleet file exists. The new cluster gets the old configuration.
 
 ## What happens on the managed cluster
 
-Removing a policy from the hub removes it from the managed cluster. What it created there stays unless a ConfigurationPolicy template sets `pruneObjectBehavior`, which acts only when the template is `enforce` and the setting reached the managed cluster before the removal:
+The policy goes away; what it created stays unless the template sets `pruneObjectBehavior`, is `enforce`, and that setting reached the cluster before the removal.
 
 | Case | Effect |
 |---|---|
-| `pruneObjectBehavior: None` (default) | Every object stays. Patched fields keep their values, nothing is reverted. |
-| `inform` | Nothing is deleted. |
-| `DeleteIfCreated` | Deletes only the objects this ConfigurationPolicy instance created. A recreated policy, or one on a re-imported cluster, adopts the existing objects and does not delete them. |
-| `DeleteAll` | Deletes every object the template manages, including ones that existed before the policy. |
-| OperatorPolicy | The operator, Subscription, CSV, CRDs and CRs stay. A Subscription the policy set to manual approval, because `versions` is pinned or `upgradeApproval` is `None`, stays manual, so upgrades stop. An unpinned `Automatic` one keeps upgrading, unmanaged. |
-| Gatekeeper constraints and constraint templates | Deleted. |
-| Cluster detached, or governance add-on removed | Nothing is pruned. |
-| Cluster disconnected | Pruning runs when it reconnects. |
+| `None` (default) or `inform` | Everything stays, patched fields included. |
+| `DeleteIfCreated` | Deletes objects this policy instance created. A recreated policy, or a re-imported cluster, adopts them and won't. |
+| `DeleteAll` | Deletes every object the template manages, pre-existing ones too. |
+| OperatorPolicy | Operator, CSV, CRDs and CRs stay. A pinned or `None` Subscription stays on manual approval, so upgrades stop. An unpinned one keeps upgrading. |
+| Gatekeeper constraints and templates | Deleted. |
+| Cluster detached, or governance add-on removed | Nothing pruned. |
+| Cluster disconnected | Prunes on reconnect. |
 
-- Set `pruneObjectBehavior` in its own commit, and remove the policy only after that commit reached the managed cluster.
-- Renaming an element, a policy, a template or `hubName` deletes the old objects and creates new ones. With prune set, that deletes the objects on the managed cluster and creates them again.
-- The validator rejects prune on a template with any dependency: `waitForOperator`, `extraDependencies`, the policy's `dependencies`, or a place after another template or policy under `orderManifests` or `orderPolicies` (POLICY033, [Validation](validation.md)). ACM deletes a template whenever its dependency is unmet, for example during an operator upgrade, and prune then deletes its objects.
-- Keep the Placement's default tolerations. With `placement.tolerations: []`, a disconnected cluster drops out of the Placement and loses its policies.
+!!! danger "Prune deletes live objects"
+    Set `pruneObjectBehavior` in its own commit and remove the policy only after it reached the cluster. Renaming an element, policy, template or `hubName` deletes and recreates objects, which with prune set happens on the managed cluster too.
+
+- POLICY033 rejects prune on a template with any dependency (`waitForOperator`, `extraDependencies`, the policy's `dependencies`, or a place after another template/policy under `orderManifests`/`orderPolicies`). ACM deletes a template while a dependency is unmet, such as during an operator upgrade, and prune would delete its objects ([Validation](validation.md)).
+- Keep the Placement's default tolerations. With `placement.tolerations: []`, a disconnected cluster drops out and loses its policies.
 
 ## Pausing removals
 
-Before an ACM upgrade or work on the Argo CD cluster secrets, stop the ApplicationSet from deleting Applications. The upgrade to ACM 2.17 can replace a cluster's secret with a renamed one and briefly drop the cluster's Applications, and with them its Policies.
+Do this before an ACM upgrade or work on Argo CD cluster secrets. The ACM 2.17 upgrade can swap a cluster's secret for a renamed one and briefly drop its Applications and Policies.
 
 ```sh
+# pause deletes; creates and updates continue
 oc patch applicationset policystack -n openshift-gitops --type merge \
   -p '{"spec":{"syncPolicy":{"applicationsSync":"create-update"}}}'
-```
 
-The ApplicationSet still creates and updates Applications, but deletes none. The OpenShift GitOps operator starts the ApplicationSet controller without `--policy`, so the per-ApplicationSet setting applies. `helm upgrade` leaves the field in place. Remove it when done:
-
-```sh
+# resume (helm upgrade does not remove it)
 oc patch applicationset policystack -n openshift-gitops --type json \
   -p '[{"op":"remove","path":"/spec/syncPolicy/applicationsSync"}]'
 ```
 
 ## Operator upgrades
 
-Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Operator Policy Options](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operator-policy-options), [Version pinning](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#version-pinning)). `upgradeApproval` is `None` or `Automatic`. ACM rejects `Manual` and `subscription.installPlanApproval`. `upgradeApproval` and `versions` decide upgrades:
+Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Operator Policy Options](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operator-policy-options)).
 
-| `upgradeApproval` | `versions` | Effect when enforced |
+| `upgradeApproval` | `versions` | When enforced |
 |---|---|---|
-| `Automatic` | empty | The Subscription is set to automatic approval. OLM installs every upgrade the channel offers. |
-| `Automatic` | listed | The Subscription is set to manual approval. The policy approves an InstallPlan only when the CSV it installs is in `versions` or equals `subscription.startingCSV`. |
-| `None` | either | The policy approves the initial install only, filtered by `versions` and `subscription.startingCSV`. It never approves an upgrade, even to a CSV in `versions`. |
+| `Automatic` | empty | OLM installs every upgrade the channel offers. |
+| `Automatic` | listed | Approves an InstallPlan only for a CSV in `versions` or `subscription.startingCSV`. |
+| `None` | either | Approves the first install only, never an upgrade. |
 
-An informing policy approves nothing, it reports an installed CSV missing from a non-empty `versions` as noncompliant.
+- ACM rejects `Manual` and `subscription.installPlanApproval`.
+- Inform approves nothing; it flags an installed CSV missing from a non-empty `versions`.
+- `versions` holds exact CSV names, no wildcards. Comma-separated names need ACM 2.14+, templates 2.13+.
+- The hub's ACM and GitOps follow the same rules once their elements are on ([Hand the operators to PolicyStack](install.md#hand-the-operators-to-policystack)).
 
-`versions` entries are exact CSV names, with no ranges or wildcards. An entry can hold several comma-separated names (ACM 2.14+) or a template (ACM 2.13+).
-
-The hub's own ACM and GitOps follow the same rules once their elements are enabled ([Hand the operators to PolicyStack](install.md#hand-the-operators-to-policystack)).
-
-Elements ship unpinned, with `upgradeApproval: Automatic` and `versions: []`. Pin in a layer. `operatorPolicies` is a map keyed by entry name, so the layer sets only the fields it changes ([Merge rules](values.md#merge-rules)). To pin metallb on every prod cluster:
+Elements ship unpinned. `operatorPolicies` is a map, so a layer sets only what it changes ([Merge rules](values.md#merge-rules)):
 
 ```yaml
 # values/environments/prod.yaml
 stack:
   metallb:
     operatorPolicies:
-      metallb:
+      metallb: # (1)!
         versions:
-          - <installed CSV>
+          - <installed CSV> # (2)!
         subscription:
-          startingCSV: <installed CSV>
+          startingCSV: <installed CSV> # (3)!
 ```
 
-`oc get csv -n metallb-system` on the managed cluster shows the installed CSV. On a cluster that does not have the operator yet, OLM resolves the Subscription to the channel's latest CSV, and the policy does not approve it unless it is listed. `startingCSV` installs the pinned CSV there instead. Leave it out when the pin is the channel head.
+1.  Must be a key the element defines. A new key fails POLICY032 ([Validation](validation.md)) and the render.
+2.  `oc get csv -n metallb-system` on the managed cluster.
+3.  Without it, a fresh cluster resolves the channel head, which the pin blocks. Omit it when the pin is the head.
 
-A layer can only override keys the element defines. The validator rejects a new key as POLICY032 ([Validation](validation.md)), and the render fails if the key has no `policyRef`.
+To bump, watch the OperatorPolicy status for `an InstallPlan to update to [<csv>]`. OLM picks that CSV from the upgrade graph; the policy only approves or holds it.
 
-When a newer CSV is available, the OperatorPolicy status names it in a message that starts `an InstallPlan to update to [<csv>]`. OLM picks that CSV from the channel's upgrade graph, the policy only approves or holds it, so a CSV in `versions` installs only once OLM offers it. Bump in two steps:
+1. Add the new CSV next to the old one. Promote cluster by cluster ([Promoting and rolling back](#promoting-and-rolling-back)).
+2. Once all clusters run it, drop the old CSV, move `startingCSV`, and promote again.
 
-1. Add the new CSV to `versions` next to the old one. Promote the revision that has it one cluster at a time, by editing each cluster's fleet file ([Promoting and rolling back](#promoting-and-rolling-back)).
-2. Once every cluster runs the new CSV, remove the old one, move `startingCSV` to the new one, and promote again.
+Swapping old for new in one change makes every cluster NonCompliant until it upgrades.
 
-Dropping the old CSV in the same change makes each cluster noncompliant until its upgrade finishes.
+| Goal | Set on the key | Result |
+|---|---|---|
+| Unpin | `versions: []` in a higher layer, or delete the pin | Follows the channel |
+| Stop managing | `enabled: false` or `toggles.<key>: false` (never `null`) | Stays installed |
+| Uninstall | `complianceType: mustnothave` | Deletes Subscription, CSV, and an unused OperatorGroup. Keeps CRDs and namespace ([Removing an operator](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#removing-an-operator)) |
 
-To unpin, set `versions: []` in a layer that outranks the pin, or delete the pin. To turn an operator off on some clusters, set `enabled: false` on its key or `toggles.<key>: false` ([Disabling an element](#disabling-an-element)). Never set the key to `null`. Disable the entries that name it in `waitForOperator` in the same layer, or the render fails. This stops managing the operator but does not uninstall it.
+Stop managing and Uninstall both fail the render unless entries naming the key in `waitForOperator` are turned off in the same layer.
 
-To uninstall an operator, set `complianceType: mustnothave` on its key. The OperatorPolicy deletes the Subscription and the CSV, and the OperatorGroup if nothing else uses it. It keeps CRDs and the namespace, so other operators in a shared namespace are untouched; `removalBehavior` on the key changes this ([Removing an operator](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#removing-an-operator)). Turn off the policies that configure the operator's resources in the same layer: their `waitForOperator` fails the render.
+```yaml
+# values/clusters/prod-east-1.yaml: uninstall metallb
+stack:
+  metallb:
+    toggles:
+      metallb-instance: false # (1)!
+    operatorPolicies:
+      metallb:
+        complianceType: mustnothave # (2)!
+```
+
+1.  The instance waits on `metallb`, so it goes off in the same layer.
+2.  `removalBehavior` changes what is deleted.

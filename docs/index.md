@@ -1,67 +1,78 @@
 # PolicyStack
 
-PolicyStack manages OpenShift cluster configuration as Red Hat Advanced Cluster Management (ACM) policies kept in Git. Each directory under `stack/` is an element, a Helm chart that renders policies through the [policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md) chart. On the ACM hub, an Argo CD ApplicationSet creates one Application per element for every managed cluster that has a [fleet file](applicationset.md#fleet-files), which pins the cluster to a Git revision. Argo CD renders each Application at that revision and syncs it to the hub only. ACM delivers each policy to the single cluster it targets, where the governance add-on enforces it or reports compliance.
-
-A fleet file that names a hub in `hub` also makes that hub build the cluster, with HyperShift, Hive or SiteConfig, and destroy it on `state: absent` ([Cluster lifecycle](lifecycle.md)).
+PolicyStack keeps OpenShift cluster configuration in Git as Red Hat Advanced Cluster Management (ACM) policies. Each directory under `stack/` is an element: a Helm chart that renders policies through the [policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md) chart. On the hub, an Argo CD ApplicationSet creates one Application per element for each cluster that has a fleet file. Argo CD syncs the policies to the hub only, and ACM delivers each one to the single cluster it targets.
 
 ```mermaid
 flowchart LR
-  subgraph repo["Git"]
-    fl["fleet/<br>default branch"]
-    el["stack/#lt;element#gt;/<br>element chart"]
-    vf["values.yaml<br>values/**"]
-    lc["lifecycle/<br>lifecycle chart"]
+  subgraph git["Git"]
+    fleet["fleet/#lt;cluster#gt;.yaml<br>default branch"]
+    stack["stack/#lt;element#gt;/"]
+    vals["values.yaml<br>values/**"]
   end
   subgraph hub["ACM hub"]
-    mc["ManagedClusters"]
-    goc["GitOpsCluster"]
-    sec["Argo CD cluster secrets"]
-    appset["ApplicationSet"]
-    app["Application #lt;element#gt;-#lt;cluster#gt;<br>syncs to the hub only"]
-    pol["namespace policy<br>Policy, PolicySet,<br>Placement, PlacementBinding"]
-    rep["namespace #lt;cluster#gt;<br>replicated Policy"]
-    lcset["ApplicationSet<br>policystack-lifecycle"]
-    lcapp["Application lifecycle-#lt;cluster#gt;"]
-    hc["HostedCluster, NodePools<br>built by the hub's own<br>governance add-on"]
+    appset["ApplicationSet<br>policystack"]
+    app["Application<br>#lt;element#gt;-#lt;cluster#gt;"]
+    pol["Policies in pstack"]
   end
-  subgraph spoke["Managed cluster"]
-    gov["governance add-on<br>enforces or reports"]
-  end
-  mc -->|"Placement global"| goc
-  goc -->|"creates one per cluster"| sec
-  sec -->|"imported clusters"| appset
-  fl -->|"revision and valueFiles, at HEAD"| appset
-  el -->|"directories stack/*"| appset
+  spoke["Managed cluster<br>governance add-on"]
+  fleet -->|"revision, valueFiles"| appset
+  stack --> appset
   appset -->|"one per element × cluster"| app
-  el -->|"chart"| app
-  vf -->|"valueFiles"| app
-  app -->|"Helm render and sync"| pol
-  pol -->|"Placement selects one cluster"| rep
-  rep -->|"synced to the cluster"| gov
-  gov -.->|"compliance status"| rep
-  fl -->|"files with hub: #lt;hubName#gt;"| lcset
-  lcset -->|"one per fleet file"| lcapp
-  lc -->|"chart"| lcapp
-  vf -->|"valueFiles"| lcapp
-  lcapp -->|"Policies placed on the hub"| pol
-  pol -->|"present or absent"| hc
-  hc -->|"auto-import"| mc
+  vals --> app
+  app -->|"Helm render, sync"| pol
+  pol -->|"Placement: one cluster"| spoke
+  spoke -.->|"compliance"| pol
 ```
+
+A fleet file pins a cluster to a Git revision and lists its values layers:
+
+```yaml
+# fleet/prod-east-1.yaml
+revision: main # (1)!
+valueFiles: # (2)!
+  - environments/prod.yaml
+  - datacenters/dc1.yaml
+  - platforms/aws.yaml
+```
+
+1.  Branch, tag or SHA. Every Application for this cluster renders from it.
+2.  Files under `values/`, lowest precedence first. `values/clusters/prod-east-1.yaml` is always added last.
+
+!!! tip
+    Add `hub: <hubName>` and the hub also builds the cluster with HyperShift, Hive or SiteConfig, and destroys it on `state: absent`. See [Cluster lifecycle](lifecycle.md).
 
 ## How a change reaches a cluster
 
-1. Change an element, the root `values.yaml` or a file under `values/` on the branch or tag that the cluster's fleet file pins. Clusters pinned to other revisions are unaffected. A change to the fleet file itself counts only on the default branch.
-2. Argo CD renders the element chart with the cluster's [values cascade](values.md#order) and syncs the Policy, PolicySet, Placement and PlacementBinding objects into the `policy` namespace on the hub.
-3. The [Placement](policies.md#placement) selects only that cluster. ACM replicates each Policy into the cluster's namespace on the hub, and the governance add-on on the managed cluster applies it. `enforce` changes the cluster, `inform` only reports. Compliance status returns to the replicated Policy on the hub.
+1. **Commit** to the revision the cluster pins. Here, turning on `gitops` for one cluster:
+
+    ```diff
+    # values/clusters/prod-east-1.yaml
+     stack:
+    +  gitops:
+    +    enabled: true
+    ```
+
+    Clusters pinned to other revisions are unaffected. Fleet file edits count only on the default branch.
+
+2. **Argo CD renders** the element with the cluster's [values cascade](values.md#order) and syncs Policy, PolicySet, Placement and PlacementBinding into `pstack` on the hub.
+3. **ACM delivers.** The [Placement](policies.md#placement) selects only that cluster, and its governance add-on applies the policy: `enforce` changes the cluster, `inform` only reports. Compliance shows on the replicated Policy in the cluster's namespace on the hub.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
-| [Element](elements.md) | A directory under `stack/` holding a Helm chart that depends on the policy-library chart. Its values define the policies it renders. |
-| [Fleet file](applicationset.md#fleet-files) | A file on the repo's default branch that declares one cluster: `fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for a hub. It sets the cluster's revision and the values files it reads, and optionally the hub that builds the cluster. |
-| [Hub](install.md#prerequisites) | The cluster that runs ACM and OpenShift GitOps. It runs the ApplicationSets and holds the Applications and Policies, and the control planes of the clusters it builds. By default ACM also manages the hub as `local-cluster`, so it can have a fleet file like any other managed cluster, at `fleet/hubs/<hubName>.yaml` ([The hub](applicationset.md#the-hub)). |
-| [Managed cluster](rollout.md#onboarding-a-cluster) | A cluster that ACM manages and the GitOpsCluster imports into Argo CD, either imported by hand or built by a hub ([Cluster lifecycle](lifecycle.md)). It gets one Application per element once it has a fleet file. |
-| [Release](applicationset.md#applications) | The Application name, which Argo CD also uses as the Helm release name. `<element>-<cluster>`, or `<element>-<hubName>` on the hub. Policy, PolicySet, Placement and PlacementBinding names are built from it. |
-| [Revision](applicationset.md#revision) | The Git branch, tag or SHA in a cluster's fleet file. All of that cluster's Applications render from it. |
-| [Values cascade](values.md#order) | The values files Argo CD passes to Helm for one Application, most of them listed in `valueFiles` in the cluster's fleet file. Later files override earlier ones. |
+| [Element](elements.md) | A `stack/<element>/` Helm chart that depends on policy-library. Its values define the policies it renders. |
+| [Fleet file](applicationset.md#fleet-files) | `fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for the hub, on the default branch. Sets the revision, the values files and optionally the hub that builds the cluster. |
+| [Hub](applicationset.md#the-hub) | The cluster running ACM and OpenShift GitOps. Holds the ApplicationSets, Applications, Policies and the control planes it builds. ACM manages it as `local-cluster`, so you give it a fleet file too, at `fleet/hubs/<hubName>.yaml`. |
+| [Managed cluster](rollout.md#onboarding-a-cluster) | A cluster ACM manages, imported by hand or built by a hub. The GitOpsCluster imports it into Argo CD; it gets one Application per element once it also has a fleet file. |
+| [Release](applicationset.md#applications) | The Application name, also the Helm release name: `<element>-<cluster>`, or `<element>-<hubName>` on the hub. Policy and Placement names derive from it. |
+| [Revision](applicationset.md#revision) | The branch, tag or SHA in a fleet file. All of the cluster's Applications render from it. |
+| [Values cascade](values.md#order) | The ordered values files Helm gets for one Application. Later files override earlier ones. |
+
+## Where to go next
+
+- [Installation](install.md): install the operators and PolicyStack on a hub.
+- [Rolling out changes](rollout.md): onboard a cluster, promote, roll back, remove an element.
+- [Values cascade](values.md): how values layers merge.
+- [Writing an element](elements.md): add your own configuration.
+- [Cluster lifecycle](lifecycle.md): build and destroy clusters from Git.

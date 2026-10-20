@@ -109,7 +109,7 @@ func TestHiveReleaseImageFrozen(t *testing.T) {
 	raw := rawTemplate(t, "hive-aws", "present-cluster-hive-aws", "version=4.20.9")
 	live := `apiVersion: hive.openshift.io/v1
 kind: ClusterDeployment
-metadata: {name: hive-aws, namespace: hive-aws}
+metadata: {name: hive-aws, namespace: hive-aws, annotations: {lifecycle.policystk.io/hub: acm-dc1}}
 spec:
   installed: true
   provisioning: {releaseImage: "quay.io/openshift-release-dev/ocp-release:4.20.8-multi"}
@@ -130,83 +130,16 @@ spec:
 			if nested(cd, "spec", "installed") != nil {
 				t.Error("spec.installed is Hive's to set")
 			}
-			mc := find(t, objs, "ManagedCluster", "hive-aws")
-			if mc.ObjectDefinition.GetAnnotations()["lifecycle.policystk.io/hub"] != "acm-dc1" {
-				t.Errorf("ManagedCluster annotations %v", mc.ObjectDefinition.GetAnnotations())
+			for _, o := range []object{cd, find(t, objs, "ManagedCluster", "hive-aws")} {
+				if o.ObjectDefinition.GetAnnotations()["lifecycle.policystk.io/hub"] != "acm-dc1" {
+					t.Errorf("%s annotations %v", o.ObjectDefinition.GetKind(), o.ObjectDefinition.GetAnnotations())
+				}
 			}
 			find(t, objs, "KlusterletAddonConfig", "hive-aws")
 		})
 	}
 }
 
-// managedCluster is a live ManagedCluster with annotations.
-func managedCluster(name string, annotations map[string]string) string {
-	a, _ := yaml.Marshal(annotations)
-	return fmt.Sprintf("apiVersion: cluster.open-cluster-management.io/v1\nkind: ManagedCluster\nmetadata:\n  name: %s\n  annotations:\n%s", name, indent(string(a), "    "))
-}
-
 func indent(s, prefix string) string {
 	return prefix + strings.ReplaceAll(strings.TrimSuffix(s, "\n"), "\n", "\n"+prefix) + "\n"
-}
-
-// TestOwnership: each engine's guard passes and detach deletes only a ManagedCluster carrying that
-// engine's owner annotations. The hub's own ManagedCluster is local-cluster in the fake hub.
-func TestOwnership(t *testing.T) {
-	hcpOwner := map[string]string{"open-cluster-management/created-via": "hypershift", "import.open-cluster-management.io/hosting-cluster-name": "local-cluster"}
-	hiveOwner := map[string]string{"lifecycle.policystk.io/hub": "acm-dc1"}
-	imported := map[string]string{"open-cluster-management/created-via": "other"}
-	otherHub := map[string]string{"lifecycle.policystk.io/hub": "acm-dc2"}
-	for _, tt := range []struct {
-		cluster string
-		owner   map[string]string
-		foreign []map[string]string
-		detach  bool // SiteConfig deletes the ManagedCluster itself, so its absent chain has none
-	}{
-		{"hcp-retired", hcpOwner, []map[string]string{imported, hiveOwner}, true},
-		{"hive-retired", hiveOwner, []map[string]string{imported, hcpOwner, otherHub}, true},
-		{"sno-retired", hiveOwner, []map[string]string{imported, hcpOwner, otherHub}, false},
-	} {
-		t.Run(tt.cluster, func(t *testing.T) {
-			raws := rawTemplates(t, tt.cluster)
-			guard := hubResolved(t, raws["absent-guard-"+tt.cluster])
-			detach, ok := raws["absent-detach-"+tt.cluster]
-			if ok != tt.detach {
-				t.Fatalf("absent-detach rendered: %v, want %v", ok, tt.detach)
-			}
-			detach = hubResolved(t, detach)
-			// No ManagedCluster: the guard renders nothing (Compliant), detach has nothing to delete.
-			if objs := resolve(t, guard); len(objs) != 0 {
-				t.Errorf("guard without a ManagedCluster: %+v", objs)
-			}
-			own := managedCluster(tt.cluster, tt.owner)
-			if objs := resolve(t, guard, own); len(objs) != 1 || !maps.Equal(objs[0].ObjectDefinition.GetAnnotations(), tt.owner) {
-				t.Errorf("guard of an owned ManagedCluster: %+v", objs)
-			}
-			if tt.detach {
-				if objs := resolve(t, detach, own); len(objs) != 1 || objs[0].ComplianceType != "mustnothave" {
-					t.Errorf("detach of an owned ManagedCluster: %+v", objs)
-				}
-			}
-			for _, f := range tt.foreign {
-				mc := managedCluster(tt.cluster, f)
-				if tt.detach {
-					if objs := resolve(t, detach, mc); len(objs) != 0 {
-						t.Errorf("detach deletes a ManagedCluster annotated %v", f)
-					}
-				}
-				// The guard asserts the owner annotations, so a foreign ManagedCluster is NonCompliant.
-				objs := resolve(t, guard, mc)
-				if len(objs) != 1 || objs[0].ComplianceType != "musthave" || !maps.Equal(objs[0].ObjectDefinition.GetAnnotations(), tt.owner) {
-					t.Errorf("guard for %v: %+v", f, objs)
-				}
-			}
-		})
-	}
-}
-
-// hubResolved replaces the {{hub ... hub}} templates the governance propagator resolves before
-// the policy reaches the hub's own ManagedCluster, local-cluster.
-func hubResolved(t *testing.T, raw string) string {
-	t.Helper()
-	return strings.ReplaceAll(raw, "{{hub .ManagedClusterName hub}}", "local-cluster")
 }

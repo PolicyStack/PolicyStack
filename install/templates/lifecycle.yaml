@@ -3,6 +3,10 @@ kind: ApplicationSet
 metadata:
   name: policystack-lifecycle
   namespace: openshift-gitops
+  # ACM backup restores argoproj.io objects. Restored on a passive hub, this ApplicationSet and its
+  # Applications would rebuild the old hub's clusters there (docs/lifecycle.md).
+  labels:
+    velero.io/exclude-from-backup: "true"
   annotations:
     helm.sh/resource-policy: keep
 spec:
@@ -55,6 +59,8 @@ spec:
                   global-hub.open-cluster-management.io/deploy-mode: default
   template:
     metadata:
+      labels:
+        velero.io/exclude-from-backup: "true"
       name: 'lifecycle-{{ "{{" }} trimSuffix ".yaml" .path.filename {{ "}}" }}'
     spec:
       project: default

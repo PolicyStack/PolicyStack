@@ -120,6 +120,38 @@ func renderRaw(t *testing.T, dir, release string, valueFiles []string, setString
 	return out
 }
 
+// customMessages runs helm template on the chart in dir and returns the noncompliant customMessage
+// of every ConfigurationPolicy that sets one, by name.
+func customMessages(t *testing.T, dir, release string, valueFiles []string, setString ...string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(helmTemplate(t, dir, release, valueFiles, setString...)), 4096)
+	for {
+		var p policy
+		if err := dec.Decode(&p); err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		for _, pt := range p.Spec.PolicyTemplates {
+			var cp struct {
+				Metadata struct {
+					Name string `json:"name"`
+				} `json:"metadata"`
+				Spec struct {
+					CustomMessage struct {
+						NonCompliant string `json:"noncompliant"`
+					} `json:"customMessage"`
+				} `json:"spec"`
+			}
+			if json.Unmarshal(pt.ObjectDefinition, &cp) == nil && cp.Spec.CustomMessage.NonCompliant != "" {
+				out[cp.Metadata.Name] = cp.Spec.CustomMessage.NonCompliant
+			}
+		}
+	}
+	return out
+}
+
 // resolve evaluates raw with live objects (YAML documents) in the fake cluster. A nil result is
 // what ACM reports Compliant for a raw template that renders nothing.
 func resolve(t *testing.T, raw string, live ...string) []object {

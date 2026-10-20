@@ -7,21 +7,46 @@ the Helm release name.
 {{- end -}}
 
 {{/*
-Annotations that mark a ManagedCluster as built by this hub. A ManagedCluster without them was not
-built here, so lifecycle never builds over it or detaches it.
-- hypershift: set by the hypershift-addon when it auto-imports a HostedCluster hosted on this hub.
-  The hub template resolves to the hub's own ManagedCluster name.
-- hive: set by the hive engine on the ManagedCluster it creates.
-- siteconfig: set by SiteConfig on the ManagedCluster it renders, from the ClusterInstance's
-  extraAnnotations.
+The marker on the engine's root object, written in the musthave that creates it, and on the
+ManagedCluster hive and siteconfig create. Ownership is the key's presence; the value records the
+hub that last reconciled it, so a restored or migrated object stays owned.
 */}}
-{{- define "lifecycle.ownerAnnotations" -}}
-{{- if eq .Values.install.engine "hypershift" -}}
-open-cluster-management/created-via: hypershift
-import.open-cluster-management.io/hosting-cluster-name: '{{ "{{hub" }} .ManagedClusterName {{ "hub}}" }}'
-{{- else -}}
+{{- define "lifecycle.marker" -}}
 lifecycle.policystk.io/hub: {{ .Values.hub | quote }}
 {{- end -}}
+
+{{/*
+The engine's root object by identity alone, from converters/<engine>/root.yaml: the object
+lifecycle creates first and deletes to destroy the cluster.
+*/}}
+{{- define "lifecycle.root" -}}
+{{- tpl (.Files.Get (printf "converters/%s/root.yaml" .Values.install.engine)) . -}}
+{{- end -}}
+
+{{/*
+ACM template text setting $foreign to the object named <cluster> lifecycle did not build, else to
+an empty map: the first that exists of the root object, the ManagedCluster (an imported cluster)
+and, for siteconfig, the ClusterDeployment SiteConfig would adopt, unless it carries the marker.
+*/}}
+{{- define "lifecycle.foreign" -}}
+{{- $c := include "lifecycle.cluster" . | quote }}
+{{- $r := include "lifecycle.root" . | fromYaml }}
+{{ "{{-" }} $foreign := lookup {{ $r.apiVersion | quote }} {{ $r.kind | quote }} {{ $r.metadata.namespace | quote }} {{ $c }} {{ "}}" }}
+{{ "{{-" }} if not $foreign {{ "}}" }}{{ "{{-" }} $foreign = lookup "cluster.open-cluster-management.io/v1" "ManagedCluster" "" {{ $c }} {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{- if eq .Values.install.engine "siteconfig" }}
+{{ "{{-" }} if not $foreign {{ "}}" }}{{ "{{-" }} $foreign = lookup "hive.openshift.io/v1" "ClusterDeployment" {{ $c }} {{ $c }} {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{- end }}
+{{ "{{-" }} if hasKey (dig "metadata" "annotations" dict $foreign) "lifecycle.policystk.io/hub" {{ "}}" }}{{ "{{-" }} $foreign = dict {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{- end -}}
+
+{{/*
+Fails the template while lifecycle.foreign finds something, so a step that writes or deletes never
+acts on an object it did not build, and the chain stops NonCompliant. Every enforced step but
+manifests starts with it: the check runs in the same evaluation as the write.
+*/}}
+{{- define "lifecycle.refuse" -}}
+{{ include "lifecycle.foreign" . }}
+{{ "{{-" }} with $foreign {{ "}}" }}{{ "{{" }} fail (printf "%s %s was not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing" .kind .metadata.name) {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
 {{- end -}}
 
 {{/*

@@ -202,7 +202,7 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 
 | Template | Mode | `hypershift` | `hive` | `siteconfig` |
 |---|---|---|---|---|
-| `guard` | inform | NonCompliant if a ManagedCluster of this name lacks the [owner annotations](#ownership). Stops the chain. | same | same |
+| `guard` | inform | NonCompliant while something named `<cluster>` lacks the [marker](#ownership). Stops the chain. | same | same |
 | `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config` | Namespace `<cluster>`, `-pull-secret`, `-bmc` |
 | `manifests` | enforce | `install.manifests` | same | same |
 | `cluster` | enforce | HostedCluster, NodePools | ClusterDeployment, ManagedCluster, KlusterletAddonConfig | ClusterImageSet, ClusterInstance, KlusterletAddonConfig |
@@ -222,6 +222,7 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 - An enforced delete is Compliant once the API accepts it, so every destroy step has an inform wait after it.
 - Create templates are `musthave`: operator-filled fields are not compared, so the Policy never fights HyperShift, Hive or SiteConfig.
 - The credential is never deleted.
+- Every enforced step but `manifests` repeats the ownership check in the same evaluation and fails on a foreign object, so a stale guard result never lets it write or delete.
 
 !!! note
     No lifecycle template sets `pruneObjectBehavior`. Deleting the present Policy deletes nothing; only `state: absent` destroys.
@@ -239,15 +240,18 @@ Labels in `hostedCluster.metadata.labels` are copied to the ManagedCluster once,
 
 ## Ownership
 
-Guard and detach act only on a ManagedCluster carrying its engine's owner annotations:
+Lifecycle acts only on what it built: objects carrying the annotation `lifecycle.policystk.io/hub: <hubName>`, written by `present-cluster-<cluster>` in the create itself. Only the key counts; the value records the last hub, so a restored or migrated object stays owned.
 
-| Engine | Annotations | Set by |
+| Engine | Root object | Also marked |
 |---|---|---|
-| `hypershift` | `open-cluster-management/created-via: hypershift`, `import.open-cluster-management.io/hosting-cluster-name: <hub ManagedCluster>` | hypershift-addon |
-| `hive` | `lifecycle.policystk.io/hub: <hubName>` | `present-cluster-<cluster>` |
-| `siteconfig` | `lifecycle.policystk.io/hub: <hubName>` | SiteConfig, from ClusterInstance `extraAnnotations` |
+| `hypershift` | HostedCluster `<namespace>/<cluster>` | |
+| `hive` | ClusterDeployment `<cluster>/<cluster>` | ManagedCluster |
+| `siteconfig` | ClusterInstance `<cluster>/<cluster>` | ManagedCluster, through `extraAnnotations` |
 
-A hand-made ManagedCluster needs these, or the guard stops both chains.
+Foreign is the first of these that exists without the marker: the root object, else ManagedCluster `<cluster>`, else for `siteconfig` ClusterDeployment `<cluster>/<cluster>`, which SiteConfig would adopt. A marked ManagedCluster without a root, as after a failed ClusterDeployment create, is owned.
+
+!!! note
+    Namespace `<cluster>` and the `hypershift` secrets are not marked. A same-named Namespace or secret created after a destroy, with no root object left, is deleted by a still-present `absent` Policy. Only `install.namespace` is checked for a HostedCluster, so keep HostedCluster names unique on the hub.
 
 ## Immutable fields
 
@@ -304,13 +308,13 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Guard: "A ManagedCluster with this name was not built by this hub" | Cluster was imported or runs on another hub. Usually `hub` was added to an imported cluster's fleet file. | Remove `hub`, `state`, `install` from the fleet file. |
+| Guard or any step: "`<Kind> <cluster>` ... not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing" | Imported, built by hand or the console, or built before the marker. Usually `hub` was added to an imported cluster's fleet file. | Remove `hub`, `state`, `install` from the fleet file. If lifecycle built it, [annotate the root object](lifecycle.md#abandon). |
 | `present-credentials` NonCompliant, template error | Credential Secret missing | Create it. Without `pullSecret` the API rejects the pull secret. |
 | Cluster has no SSH key, no error | `ssh-publickey` missing from the credential | Add it. |
 | `hive`/`siteconfig`: `present-credentials-<cluster>` NonCompliant: `because it is being terminated` | Namespace `<cluster>` from the last destroy is still terminating | Wait until `oc get ns <cluster>` returns NotFound. |
 
 !!! warning "Switching engines"
-    The guard cannot catch an engine switch before the cluster is imported. Destroy before changing `engine`.
+    The guard looks for the new engine's root object, not the old one's, so it can miss an engine switch. Destroy before changing `engine`.
 
 ??? failure "Hive: install failed"
     `present-ready` stays NonCompliant, ClusterDeployment shows `ProvisionStopped`. Read the installer log, fix the values, destroy and build again.
@@ -368,9 +372,9 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
 An engine `<e>` is a component of `lifecycle/`. `templates/policy.yaml` renders whichever component `install.engine` names, so the ApplicationSet and fleet keys do not change.
 
-1. Add `converters/<e>/`: objects to create, the root object by identity alone (for destroy), and its credentials. `lookup` back every field the engine rejects changes to. End the cleanup converter with `include "lifecycle.cleanupManifests"`.
+1. Add `converters/<e>/`: objects to create, `root.yaml` (the root object by identity alone, for destroy and ownership), and its credentials. `lookup` back every field the engine rejects changes to. End the cleanup converter with `include "lifecycle.cleanupManifests"`.
 2. Add `stack.<e>` to `values.yaml` with `present` and `absent` Policies following the [chains](#policy-chains). No Policy-level `remediationAction` or `pruneObjectBehavior`: the first overrides the inform gates, the second lets a Policy delete a cluster.
 3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and `stack` keys differ ([Rules](validation.md#rules)).
-4. Add an owner case to `lifecycle.ownerAnnotations`, a present and an absent fleet file to `tools/validator/testdata/clusters/`, and an example to [Cluster lifecycle](lifecycle.md).
+4. Merge `lifecycle.marker` into the root object's annotations in the cluster converter, and start every enforced converter but `manifests` with `include "lifecycle.refuse"`. Add the engine to `TestOwnership`, a present and an absent fleet file to `tools/validator/testdata/clusters/`, and an example to [Cluster lifecycle](lifecycle.md).
 
 An engine that upgrades from the hub maps `version` onto its objects, like `hypershift`. One that only installs uses `version` at create and leaves upgrades to `upgrade` ([Upgrades](upgrades.md)).

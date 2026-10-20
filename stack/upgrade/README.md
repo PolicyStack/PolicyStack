@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-19 17:44:57*
+*Generated: 2026-10-20 16:52:23*
 
 ## Component Configuration
 
@@ -29,7 +29,7 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 
 | Toggle | Default | Description |
 | ------ | ------- | ----------- |
-| `channel` | `True` | Pin the ClusterVersion channel to the fleet file's channel |
+| `channel` | `True` | Pin the ClusterVersion channel and upstream; off pauses both |
 | `upgrade` | `True` | Drive the cluster to the fleet file's version, and report on progress |
 
 ## Configuration
@@ -38,7 +38,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 
 | Key | Default | Description |
 | --- | ------- | ----------- |
-| `upstream` | `https://api.openshift.com/api/upgrades_info/v1/graph` | Upgrade graph service |
+| `upstream` | `` | Update service graph URL, e.g. a local OSUS. Empty leaves the cluster's value alone |
 
 ## Policies
 

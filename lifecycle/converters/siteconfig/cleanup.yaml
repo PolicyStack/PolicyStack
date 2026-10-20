@@ -3,6 +3,7 @@ Runs once the ClusterInstance is gone. Deleting Namespace <cluster> deletes the 
 ACM usually deletes it first. Leaves the credentials alone.
 */ -}}
 {{- $c := include "lifecycle.cluster" . }}
+{{ include "lifecycle.refuse" . }}
 - complianceType: mustnothave
   objectDefinition:
     apiVersion: v1

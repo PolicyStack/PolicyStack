@@ -8,7 +8,7 @@ Run [oc-mirror v2](https://docs.redhat.com/en/documentation/openshift_container_
 !!! note "Not covered"
     - **Image mirroring.** oc-mirror's job.
     - **The chart repo.** Argo CD on the hub pulls `policy-library` from `policystack.github.io`, directly or through a proxy. Or mirror the chart and repoint every `Chart.yaml`.
-    - **Update Service.** The `upgrade` element waits for the target in `availableUpdates`. Set `stack.upgrade.config.upstream` to your own OSUS.
+    - **Update Service.** Run OSUS yourself; PolicyStack only points clusters at it ([Update Service](#update-service)).
 
 ## Site layer
 
@@ -54,6 +54,9 @@ stack:
         - quay.io
         - registry.redhat.io
         - image-registry.openshift-image-registry.svc:5000
+  upgrade:
+    config:
+      upstream: https://osus.dc2.example.com/api/upgrades_info/v1/graph # (6)!
 ```
 
 1.  A `subscription.source` the elements use, mapped to a CatalogSource in `clusterResources`.
@@ -61,6 +64,7 @@ stack:
 3.  Registry host, with `..` before a port.
 4.  CAs of internal Git and Helm servers.
 5.  Only with `remediations` enabled. Lists replace, so restate the defaults.
+6.  Your OSUS graph. `channel-pin` writes it before the upgrade guard needs `availableUpdates`.
 
 Enable it per cluster ([Values cascade](values.md)):
 
@@ -102,6 +106,13 @@ All toggles default to `true`. Empty input renders nothing.
 
     1.  Use `"name":""` if `user-ca-bundle` does not exist.
 
+## Update Service
+
+The `upgrade` element holds a `version` until it shows in `availableUpdates`, so a disconnected cluster needs `stack.upgrade.config.upstream` ([Site layer](#site-layer)).
+
+- Put the OSUS CA in `config.trustedCA`, not `registryCAs`. The CVO trusts only `trusted-ca-bundle`, which the Proxy's `trustedCA` feeds.
+- Hub-built clusters run `-multi` payloads and the CVO asks for the multi graph. Mirror the `multi` release architecture, or `availableUpdates` stays empty.
+
 ## Hosted clusters
 
 The HostedCluster owns mirrors, image config and proxy. Set them in the fleet file; the element keeps only the catalog.
@@ -118,10 +129,12 @@ The HostedCluster owns mirrors, image config and proxy. Set them in the fleet fi
               mirrors: [mirror.dc2.example.com:8443/redhat]
           additionalTrustBundle:
             name: mirror-ca # (2)!
+          updateService: https://osus.dc2.example.com/api/upgrades_info/v1/graph # (3)!
     ```
 
     1.  `configuration` (image, proxy) goes here too ([Cluster lifecycle](lifecycle.md)).
     2.  Hub ConfigMap with key `ca-bundle.crt` in the HostedCluster's namespace. Create it with `install.manifests` ([Install keys](lifecycle-reference.md#install-keys)).
+    3.  The hosted CVO runs on the hub; use the OSUS Route URL. Without it, a `version` bump with `channel` set is held forever.
 
 === "Cluster values"
 

@@ -111,7 +111,7 @@ stack:
     configPolicies:
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
         remediationAction: inform
         severity: high
@@ -119,7 +119,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
       - name: credentials
         enabled: true
@@ -166,7 +166,7 @@ stack:
 
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
         remediationAction: inform
         severity: high
@@ -174,7 +174,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to detach it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
 
       # Detach first, so the hosted klusterlet cleans up while the control plane is still up
       - name: detach
@@ -205,10 +205,10 @@ stack:
         description: "Delete the HostedCluster"
         policyRef: absent
         remediationAction: enforce
-        complianceType: mustnothave
         severity: high
+        rawTemplate: true
         templateNames:
-          - name: hypershift/hostedcluster-ref
+          - name: destroy
 
       - name: destroyed
         enabled: true
@@ -218,7 +218,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hypershift/hostedcluster-ref
+          - name: hypershift/root
         customMessage:
           noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
 
@@ -265,7 +265,7 @@ stack:
     configPolicies:
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
         remediationAction: inform
         severity: high
@@ -273,7 +273,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
       - name: credentials
         enabled: true
@@ -319,7 +319,7 @@ stack:
 
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
         remediationAction: inform
         severity: high
@@ -327,7 +327,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to detach it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
 
       # Detach first, so the klusterlet cleans up while the cluster is still up
       - name: detach
@@ -358,10 +358,10 @@ stack:
         description: "Delete the ClusterDeployment"
         policyRef: absent
         remediationAction: enforce
-        complianceType: mustnothave
         severity: high
+        rawTemplate: true
         templateNames:
-          - name: hive/clusterdeployment-ref
+          - name: destroy
 
       - name: destroyed
         enabled: true
@@ -371,7 +371,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: hive/clusterdeployment-ref
+          - name: hive/root
         customMessage:
           noncompliant: "Waiting for Hive to deprovision the cluster"
 
@@ -418,7 +418,7 @@ stack:
     configPolicies:
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
         remediationAction: inform
         severity: high
@@ -426,7 +426,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to build it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
       - name: credentials
         enabled: true
@@ -473,7 +473,7 @@ stack:
 
       - name: guard
         enabled: true
-        description: "Refuse a ManagedCluster this hub did not build"
+        description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
         remediationAction: inform
         severity: high
@@ -481,7 +481,7 @@ stack:
         templateNames:
           - name: guard
         customMessage:
-          noncompliant: "A ManagedCluster with this name was not built by this hub; refusing to destroy it"
+          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to destroy it"
 
       # No detach: the ClusterInstance renders and owns the ManagedCluster, and deletes it after the
       # BareMetalHosts. SiteConfig would re-create a ManagedCluster deleted on its own.
@@ -490,10 +490,10 @@ stack:
         description: "Delete the ClusterInstance"
         policyRef: absent
         remediationAction: enforce
-        complianceType: mustnothave
         severity: high
+        rawTemplate: true
         templateNames:
-          - name: siteconfig/clusterinstance-ref
+          - name: destroy
 
       - name: destroyed
         enabled: true
@@ -503,7 +503,7 @@ stack:
         complianceType: mustnothave
         severity: high
         templateNames:
-          - name: siteconfig/clusterinstance-ref
+          - name: siteconfig/root
         customMessage:
           noncompliant: "Waiting for SiteConfig to delete the BareMetalHosts, ManagedCluster and install objects"
 

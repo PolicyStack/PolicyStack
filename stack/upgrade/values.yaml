@@ -7,15 +7,15 @@ stack:
     # @description: The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each
     # @description: policy renders only when its input is set; turning a toggle off pauses it.
     toggles:
-      # @desc: Pin the ClusterVersion channel to the fleet file's channel
+      # @desc: Pin the ClusterVersion channel and upstream; off pauses both
       channel: true
       # @desc: Drive the cluster to the fleet file's version, and report on progress
       upgrade: true
 
     # @description: Upgrade graph
     config:
-      # @desc: Upgrade graph service
-      upstream: https://api.openshift.com/api/upgrades_info/v1/graph
+      # @desc: Update service graph URL, e.g. a local OSUS. Empty leaves the cluster's value alone
+      upstream: ""
 
     # @description: Default policy metadata applied unless overridden per-policy
     default:
@@ -66,6 +66,9 @@ stack:
         rawTemplate: true
         templateNames:
           - name: upgrade-allowed
+        # Appends the ClusterVersion conditions that explain a hold
+        customMessage: &cvoReason
+          noncompliant: '{{ .DefaultMessage }}{{ range .Policy.status.relatedObjects }}{{ range (dig "object" "status" "conditions" list .) }}{{ if or (eq .type "Progressing") (and (eq .type "Failing" "Invalid") (eq .status "True")) (and (eq .type "ReleaseAccepted" "RetrievedUpdates") (eq .status "False")) }}; {{ .type }}: {{ .message }}{{ end }}{{ end }}{{ end }}'
 
       # @description: Upgrade trigger, held until the guard reports the target is reachable
       - name: trigger
@@ -94,6 +97,7 @@ stack:
         rawTemplate: true
         templateNames:
           - name: upgrade-status
+        customMessage: *cvoReason
         extraDependencies:
           - name: trigger
         ignorePending: true

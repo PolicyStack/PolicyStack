@@ -10,7 +10,7 @@ PolicyStack runs on the ACM hub. You install it once per hub with Helm, from [`i
 
 | Placeholder | Meaning | Example |
 |---|---|---|
-| `<hub>` | The hub's name in PolicyStack (`hubName`). Picks `fleet/hubs/<hub>.yaml`. Unique per hub reading the repo, including a DR hub. | `acm-dc1` |
+| `<hub>` | The hub's name in PolicyStack (`hubName`). Picks `fleet/hubs/<hub>.yaml`. Unique per active hub reading the repo. A DR hub takes over the `hubName` of the hub it replaces ([Hub disaster recovery](lifecycle.md#abandon)). | `acm-dc1` |
 | `<org>/<fork>` | Your GitHub org and fork of PolicyStack | `acme/policystack` |
 
 ## Prerequisites
@@ -126,6 +126,9 @@ oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster
 | Placement | `global` | `openshift-gitops` | Every cluster, tolerating `unreachable` and `unavailable` |
 | GitOpsCluster | `argo-acm-importer-global` | `openshift-gitops` | Creates an Argo CD cluster secret per selected cluster |
 | ClusterRole, ClusterRoleBinding | `openshift-gitops-policy-admin` | | Lets the Argo CD application controller manage Policies, PolicySets, Placements and PlacementBindings, the only objects elements render |
+
+!!! note "Not in ACM backup"
+    The ApplicationSets, their Applications, the Placement and the GitOpsCluster carry `velero.io/exclude-from-backup: "true"`. A restored `policystack-lifecycle` on a passive hub would build the old hub's clusters there.
 
 !!! warning "Objects outlive the release"
     Every object carries `helm.sh/resource-policy: keep`. `helm uninstall policystack` leaves PolicyStack running. To remove it, see [Teardown](#teardown).

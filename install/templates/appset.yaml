@@ -5,6 +5,9 @@ kind: ApplicationSet
 metadata:
   name: policystack
   namespace: openshift-gitops
+  # Left out of ACM backup, as in lifecycle.yaml.
+  labels:
+    velero.io/exclude-from-backup: "true"
   annotations:
     helm.sh/resource-policy: keep
 spec:
@@ -39,6 +42,8 @@ spec:
               - path: 'stack/*'
   template:
     metadata:
+      labels:
+        velero.io/exclude-from-backup: "true"
       name: '{{ "{{" }}.path.basenameNormalized{{ "}}" }}-{{ "{{"}}.name{{ "}}" }}'
     spec:
       project: default

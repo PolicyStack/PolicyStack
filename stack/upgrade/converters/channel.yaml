@@ -1,4 +1,8 @@
-{{- /* Pin the ClusterVersion upgrade channel to the fleet file's channel. */ -}}
+{{- /*
+Pin the ClusterVersion update graph: the fleet file's channel and config.upstream. Ungated, so a
+disconnected cluster reaches its OSUS before the upgrade guard needs availableUpdates. An unset
+field is left as the cluster has it.
+*/ -}}
 {{ "{{" }}- if {{ include "upgrade.standalone" . }} {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
@@ -7,5 +11,10 @@
     metadata:
       name: version
     spec:
-      channel: {{ .Values.channel | quote }}
+      {{- with .Values.channel }}
+      channel: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.stack.upgrade.config.upstream }}
+      upstream: {{ . | quote }}
+      {{- end }}
 {{ "{{" }}- end {{ "}}" }}

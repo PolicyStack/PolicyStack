@@ -8,7 +8,7 @@ bump or a rotated credential key reaches neither, and the cluster upgrades throu
 instead. The image set carries no channel label, which would let MCE's cluster-image-set-controller
 delete it.
 
-The owner annotation reaches the ManagedCluster through extraAnnotations, since SiteConfig renders
+The marker reaches the ManagedCluster through extraAnnotations, since SiteConfig renders
 and owns it. The stock ai KlusterletAddonConfig turns application-manager off, without which ACM
 never creates the cluster's Argo CD secret, so it is suppressed and rendered here with every add-on
 on, as the hive engine does.
@@ -21,9 +21,10 @@ on, as the hive engine does.
 {{- range $host, $node := required "install.siteconfig.nodes is required" $s.nodes }}
 {{- $nodes = append $nodes (mergeOverwrite (deepCopy $node) (dict "hostName" $host "bmcCredentialsName" (dict "name" (printf "%s-bmc" $c)) "templateRefs" (list (dict "name" (printf "%s-node-templates-v1" $t) "namespace" $ns)))) }}
 {{- end }}
-{{- $spec := dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.ownerAnnotations" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "nodes" $nodes }}
+{{- $spec := dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.marker" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "nodes" $nodes }}
 {{- $spec = mergeOverwrite (deepCopy ($s.clusterInstance | default dict)) $spec }}
 {{- $_ := unset $spec "sshPublicKey" }}
+{{ include "lifecycle.refuse" . }}
 {{ "{{-" }} $releaseImage := dig "spec" "releaseImage" {{ include "lifecycle.releaseImage" . | quote }} (lookup "hive.openshift.io/v1" "ClusterImageSet" "" "lifecycle-{{ $c }}") {{ "}}" }}
 {{ "{{-" }} $ssh := dig "spec" "sshPublicKey" (fromSecret {{ include "lifecycle.credential" . }} "ssh-publickey" | base64dec) (lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }}) {{ "}}" }}
 - complianceType: musthave
@@ -41,6 +42,7 @@ on, as the hive engine does.
     metadata:
       name: {{ $c }}
       namespace: {{ $c }}
+      annotations: {{- include "lifecycle.marker" . | nindent 8 }}
     spec: {{- $spec | toYaml | nindent 6 }}
       sshPublicKey: {{ "{{" }} printf "%q" $ssh {{ "}}" }}
 - complianceType: musthave

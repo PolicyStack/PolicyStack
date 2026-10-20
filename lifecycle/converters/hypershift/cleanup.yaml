@@ -2,6 +2,7 @@
 Runs once the HostedCluster is gone. Leaves the shared namespace and the credential alone.
 */ -}}
 {{- $c := include "lifecycle.cluster" . }}
+{{ include "lifecycle.refuse" . }}
 {{- range list "pull-secret" "ssh-key" "etcd-encryption-key" }}
 - complianceType: mustnothave
   objectDefinition:

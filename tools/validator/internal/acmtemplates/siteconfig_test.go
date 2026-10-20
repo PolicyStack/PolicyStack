@@ -51,7 +51,7 @@ spec: {releaseImage: "quay.io/openshift-release-dev/ocp-release:4.20.8-multi"}
 `,
 	}
 	liveCI, err := yaml.Marshal(map[string]any{"apiVersion": "siteconfig.open-cluster-management.io/v1alpha1", "kind": "ClusterInstance",
-		"metadata": map[string]any{"name": "sno-edge", "namespace": "sno-edge"}, "spec": nested(ci, "spec")})
+		"metadata": map[string]any{"name": "sno-edge", "namespace": "sno-edge", "annotations": map[string]any{"lifecycle.policystk.io/hub": "acm-dc1"}}, "spec": nested(ci, "spec")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,11 @@ spec: {releaseImage: "quay.io/openshift-release-dev/ocp-release:4.20.8-multi"}
 			t.Errorf("spec.%s %q, want %q", path, got, want)
 		}
 	}
+	if got := field(ci, "metadata", "annotations", "lifecycle.policystk.io/hub"); got != "acm-dc1" {
+		t.Errorf("marker %q", got)
+	}
 	if got := field(ci, "spec", "extraAnnotations", "ManagedCluster", "lifecycle.policystk.io/hub"); got != "acm-dc1" {
-		t.Errorf("owner annotation %q", got)
+		t.Errorf("ManagedCluster marker %q", got)
 	}
 	// The stock ai KlusterletAddonConfig turns application-manager off, which stops Day-2.
 	if got := nested(ci, "spec", "suppressedManifests"); !reflect.DeepEqual(got, []any{"KlusterletAddonConfig"}) {

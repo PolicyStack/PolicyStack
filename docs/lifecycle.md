@@ -431,7 +431,7 @@ Bump `version`, and `channel` on a minor bump ([Upgrades](upgrades.md)):
 | Engine | How |
 |---|---|
 | `hive`, `siteconfig` | On the cluster by `upgrade`, like imported clusters. The hub keeps the install release image; Hive and SiteConfig reject changes to it. |
-| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. NodePools follow once the control plane reports Completed. `KubeVirt` pools replace VMs; others upgrade in place. |
+| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. NodePools follow once the control plane reports Completed. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Disconnected](disconnected.md)). |
 
 During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. Clusters install from the `-multi` payload, so they are multi-architecture.
 
@@ -478,4 +478,20 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 Delete the fleet file or its `hub` key: Application `lifecycle-<cluster>` and its Policies go, the cluster keeps running unmanaged. Deleting the ApplicationSets does this for every cluster the hub built; `helm uninstall policystack` keeps them ([Install PolicyStack](install.md#install-policystack)). Restore the file or key with the same `install` to re-adopt.
 
 !!! warning "Changing `hub`"
-    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub and builds a second, same-named cluster on the new one. Destroy it on the old hub first.
+    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub, and the new hub builds a second, same-named cluster unless the root object is already there with its [marker](lifecycle-reference.md#ownership). Destroy it on the old hub first.
+
+!!! warning "Clusters built before the ownership marker"
+    Lifecycle acts only on a root object carrying `lifecycle.policystk.io/hub` ([Ownership](lifecycle-reference.md#ownership)). A cluster built before the marker existed fails the guard and runs unmanaged, nothing deleted, until annotated once:
+
+    ```sh
+    oc annotate hostedcluster <cluster> -n <install.namespace> lifecycle.policystk.io/hub=<hubName>    # hypershift
+    oc annotate clusterdeployment <cluster> -n <cluster> lifecycle.policystk.io/hub=<hubName>         # hive
+    oc annotate clusterinstance <cluster> -n <cluster> lifecycle.policystk.io/hub=<hubName>           # siteconfig
+    ```
+
+??? info "Hub disaster recovery"
+    ACM backup leaves out PolicyStack's ApplicationSets and their Applications (`velero.io/exclude-from-backup`), so a passive hub builds nothing. Do not install PolicyStack on it before takeover. To take over:
+
+    1. Run the ACM activation restore (`veleroManagedClustersBackupName: latest`). ClusterDeployments, ClusterInstances and ManagedClusters come back with their annotations.
+    2. `hypershift`: restore the HostedClusters with the HCP OADP procedure. ACM backup does not include them, and without them the hub builds new, empty control planes.
+    3. [Install PolicyStack](install.md#install-policystack) with the old hub's `hubName`. No fleet edits: the restored root objects carry the marker, so the new hub owns them.

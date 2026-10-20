@@ -11,7 +11,7 @@ const image = "quay.io/openshift-release-dev/ocp-release:%s-multi"
 func hostedCluster(name, desired, history, available string) string {
 	return fmt.Sprintf(`apiVersion: hypershift.openshift.io/v1beta1
 kind: HostedCluster
-metadata: {name: %s, namespace: clusters}
+metadata: {name: %s, namespace: clusters, annotations: {lifecycle.policystk.io/hub: acm-dc1}}
 spec:
   release: {image: "%s"}
 status:

@@ -33,9 +33,11 @@ target image. HostedCluster and NodePool release are always managed here.
 {{- end }}
 {{- $hostedCluster := mergeOverwrite (dict "metadata" (dict "name" $c "namespace" $i.namespace) "spec" $spec) (deepCopy $i.hostedCluster) }}
 {{- $_ := unset $hostedCluster.spec "release" }}
+{{- $_ = set $hostedCluster.metadata "annotations" (merge (include "lifecycle.marker" . | fromYaml) ($hostedCluster.metadata.annotations | default dict)) }}
 {{- with .Values.channel }}
 {{- $_ := set $hostedCluster.spec "channel" . }}
 {{- end }}
+{{ include "lifecycle.refuse" . }}
 {{ "{{-" }} $hc := lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }} {{ "}}" }}
 {{ "{{-" }} $upgraded := false {{ "}}" }}
 {{ "{{-" }} range (dig "status" "version" "history" list $hc) {{ "}}" }}

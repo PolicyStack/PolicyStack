@@ -1,10 +1,12 @@
 # Creates an Argo CD cluster secret for every managed cluster. The ApplicationSet's clusters
-# generator reads these secrets.
+# generator reads these secrets. Both are left out of ACM backup, as in lifecycle.yaml.
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
   name: global
   namespace: openshift-gitops
+  labels:
+    velero.io/exclude-from-backup: "true"
   annotations:
     "helm.sh/resource-policy": keep
 spec:
@@ -21,6 +23,8 @@ kind: GitOpsCluster
 metadata:
   name: argo-acm-importer-global
   namespace: openshift-gitops
+  labels:
+    velero.io/exclude-from-backup: "true"
   annotations:
     "helm.sh/resource-policy": keep
 spec:

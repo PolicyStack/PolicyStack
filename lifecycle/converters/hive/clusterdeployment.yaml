@@ -17,6 +17,8 @@ stops Hive from retrying a failed install, and its cloud resources, forever.
 {{- $spec := dict "baseDomain" .Values.install.baseDomain "clusterName" $c "installAttemptsLimit" 1 "platform" (dict $p $platform) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "provisioning" (dict "installConfigSecretRef" (dict "name" (printf "%s-install-config" $c))) }}
 {{- $clusterDeployment := mergeOverwrite (dict "metadata" (dict "name" $c "namespace" $c) "spec" $spec) (deepCopy ($h.clusterDeployment | default dict)) }}
 {{- $_ = set $clusterDeployment.spec.provisioning "releaseImage" "{{ $releaseImage }}" }}
+{{- $_ = set $clusterDeployment.metadata "annotations" (merge (include "lifecycle.marker" . | fromYaml) ($clusterDeployment.metadata.annotations | default dict)) }}
+{{ include "lifecycle.refuse" . }}
 {{ "{{-" }} $releaseImage := dig "spec" "provisioning" "releaseImage" {{ $image | quote }} (lookup "hive.openshift.io/v1" "ClusterDeployment" {{ $c | quote }} {{ $c | quote }}) {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
@@ -29,7 +31,7 @@ stops Hive from retrying a failed install, and its cloud resources, forever.
     kind: ManagedCluster
     metadata:
       name: {{ $c }}
-      annotations: {{- include "lifecycle.ownerAnnotations" . | nindent 8 }}
+      annotations: {{- include "lifecycle.marker" . | nindent 8 }}
     spec:
       hubAcceptsClient: true
 - complianceType: musthave

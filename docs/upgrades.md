@@ -53,19 +53,22 @@ Each field has one writer.
 
 ## upgrade element
 
-Enabled by default. Renders nothing until the fleet file sets `version` or `channel`.
+Enabled by default. Renders nothing until the fleet file sets `version` or `channel`, or a layer sets `config.upstream`.
 
 | Template | Policy (renders when) | Mode | Does |
 |---|---|---|---|
-| `channel-pin` | `channel-upgrade-<cluster>` (`channel` set) | enforce | Sets ClusterVersion `spec.channel`. |
-| `upgrade-guard` | `upgrade-upgrade-<cluster>` (`version` set) | inform | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the current version. |
-| `upgrade-trigger` | same | enforce | After the guard is Compliant, sets `desiredUpdate.version`, only while `version` is newer than current and no update is progressing. Never sets `image` or `force`. |
-| `upgrade-progress` | same | inform | NonCompliant until the cluster has completed `version`. |
+| `channel-pin` | `channel-upgrade-<cluster>` (`channel` or `config.upstream` set) | enforce | Sets ClusterVersion `spec.channel` and `spec.upstream`, each only when set. Not held by the guard. |
+| `upgrade-guard` | `upgrade-upgrade-<cluster>` (`version` set) | inform | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the current version. The message lists the ClusterVersion conditions holding it. |
+| `upgrade-trigger` | same | enforce | After the guard is Compliant, sets `desiredUpdate.version`, only while `version` is newer than current and no update is progressing. Clears `image` and `force` left by `oc`/console; leaves `architecture`. |
+| `upgrade-progress` | same | inform | NonCompliant until the cluster has completed `version`. The message lists the ClusterVersion conditions. |
 
 - A version the update service does not offer is held at the guard.
 - Downgrades are never attempted.
 
-`upgrade-trigger` also sets `spec.upstream` from `stack.upgrade.config.upstream` (default `https://api.openshift.com/api/upgrades_info/v1/graph`). On a local OpenShift Update Service, override it in a values layer:
+!!! note "Brownfield clusters"
+    The CVO ignores `desiredUpdate.version` while `image` is set, and `oc adm upgrade` and the console leave the running image there. The trigger therefore clears `image` and `force`: a pending `oc`/console request that has not started is replaced while the fleet `version` is newer, and a hand-set `force` does not survive.
+
+`channel-pin` sets `spec.upstream` from `stack.upgrade.config.upstream`. Empty (the default) leaves the cluster's value alone; a cluster with none uses the public graph. On a local OpenShift Update Service, set it in a values layer:
 
 ```yaml
 # values/datacenters/dc1.yaml
@@ -75,10 +78,15 @@ stack:
       upstream: https://osus.example.internal/api/upgrades_info/v1/graph
 ```
 
+!!! warning
+    Removing the key leaves the last URL on the cluster. To go back to the public graph, set `upstream: https://api.openshift.com/api/upgrades_info/v1/graph`. `toggles.channel` gates `upstream` too.
+
 Watch it:
 
 ```sh
-oc get policy -n pstack upgrade-upgrade-prod-east-1                 # on the hub
+# on the hub: each template's latest message
+oc get policy -n prod-east-1 pstack.upgrade-upgrade-prod-east-1 \
+  -o jsonpath='{range .status.details[*]}{.templateMeta.name}{": "}{.history[0].message}{"\n"}{end}'
 oc get clusterversion version -o jsonpath='{.status.history[0]}'    # on the cluster
 ```
 
@@ -114,7 +122,7 @@ stack:
 ```
 
 1.  Deletes `upgrade-upgrade-<cluster>`. An update already started on the cluster keeps running.
-2.  Stops managing the channel.
+2.  Stops managing the channel and upstream.
 
 A hosted cluster is paused by leaving `version` where it is.
 

@@ -1,0 +1,7 @@
+{{- /*
+Deletes the engine's root object. lifecycle.refuse runs in the same evaluation, so an object of
+that name built by anyone else is never deleted.
+*/ -}}
+{{ include "lifecycle.refuse" . }}
+- complianceType: mustnothave
+  objectDefinition: {{- include "lifecycle.root" . | nindent 4 }}

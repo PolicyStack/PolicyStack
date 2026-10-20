@@ -1,15 +1,18 @@
 {{- /*
-Trigger the upgrade to the fleet file's version. The target and upstream graph are values; the
-current version and whether an upgrade is already in progress are only readable on the managed
-cluster, so they stay ACM templating.
+Trigger the upgrade to the fleet file's version. The target is a value; the current version and
+whether an upgrade is already in progress are only readable on the managed cluster, so they stay
+ACM templating.
+
+The CVO follows desiredUpdate.image whenever it is set and never reads version, and oc and the
+console leave the running image there. musthave keeps unlisted keys, so image and force are cleared
+or the new version is silently ignored and a leftover force skips signature checks. architecture is
+left alone; it is valid next to an empty image.
 
 Only scalar spec fields are asserted. Completion is reported by the separate status policy because
 ACM does not match status lists reliably.
 */ -}}
-{{- $cfg := .Values.stack.upgrade.config }}
 {{ "{{" }}- if {{ include "upgrade.standalone" . }} {{ "}}" }}
 {{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
-{{ "{{" }}- $upstream := "{{ $cfg.upstream }}" {{ "}}" }}
 {{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
 {{ "{{" }}- $current := "" {{ "}}" }}
 {{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
@@ -19,7 +22,7 @@ ACM does not match status lists reliably.
 {{ "{{" }}- range $c := (index $status "conditions" | default list) {{ "}}" }}
 {{ "{{" }}-   if and (eq (index $c "type") "Progressing") (eq (index $c "status") "True") {{ "}}" }}{{ "{{" }}- $progressing = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}
-{{ "{{" }}- if or (eq $current "") (semverCompare (printf "> %s" $current) $target) {{ "}}" }}
+{{ "{{" }}- if and (not $progressing) (or (eq $current "") (semverCompare (printf "> %s" $current) $target)) {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: config.openshift.io/v1
@@ -27,10 +30,9 @@ ACM does not match status lists reliably.
     metadata:
       name: version
     spec:
-      upstream: '{{ "{{" }} $upstream {{ "}}" }}'
-      {{ "{{" }}- if not $progressing {{ "}}" }}
       desiredUpdate:
         version: '{{ "{{" }} $target {{ "}}" }}'
-      {{ "{{" }}- end {{ "}}" }}
+        image: ''
+        force: false
 {{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}

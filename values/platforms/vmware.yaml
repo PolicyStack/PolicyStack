@@ -1,6 +1,26 @@
 # Listed as platforms/vmware.yaml in a fleet file's valueFiles.
 # vSphere has one worker MachineSet per failure domain; each is cloned so the new nodes land in the
 # same domains as the workers.
+#
+# install is read only by lifecycle/, for a cluster a hub builds with Hive (docs/lifecycle.md). The
+# fleet file sets baseDomain, install.hive.platform.vsphere and networking.machineNetwork. Nodes are
+# the installer default size; the RHCOS OVA is x86_64 only.
+install:
+  engine: hive
+  credential:
+    namespace: hive-credentials
+    name: vsphere
+  hive:
+    installConfig:
+      controlPlane:
+        name: master
+        architecture: amd64
+        replicas: 3
+      compute:
+        - name: worker
+          architecture: amd64
+          replicas: 3
+
 stack:
   infraNodes:
     toggles:

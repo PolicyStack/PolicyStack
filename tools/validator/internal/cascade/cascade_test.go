@@ -197,6 +197,9 @@ func TestResolve_testdata(t *testing.T) {
 		"foo-hive-retired": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/aws.yaml",
 		},
+		"foo-hive-vsphere": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml", "values/platforms/vmware.yaml",
+		},
 		"foo-name-budget-30-characters-long": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml",
 		},

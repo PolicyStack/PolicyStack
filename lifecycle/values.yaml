@@ -23,7 +23,7 @@ install:
   # credential. hive and siteconfig use namespace <cluster>.
   namespace: clusters
   # ACM console credential (Infrastructure > Credentials) holding pullSecret and ssh-publickey, and
-  # for hive the cloud credentials
+  # for hive the cloud credentials (vSphere: username, password, cacertificate)
   credential:
     namespace: ""
     name: ""
@@ -49,8 +49,10 @@ install:
   # Extra hub objects, created before the cluster and deleted after it is gone
   manifests: []
   # Only with engine hive, which reads:
-  #   platform:          exactly one of aws, gcp or azure. The install-config platform; region,
+  #   platform:          exactly one of aws, gcp, azure or vsphere. The install-config platform; region,
   #                      baseDomainResourceGroupName and cloudName also go to the ClusterDeployment.
+  #                      vsphere goes whole, as its infrastructure. Every vcenters entry gets the
+  #                      credential's login in the install-config only.
   #   installConfig:     merged under the generated install-config: controlPlane, compute,
   #                      networking. The chart sets apiVersion, metadata.name, baseDomain, platform.
   #                      sshKey defaults to the credential's ssh-publickey.

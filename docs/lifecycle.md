@@ -13,7 +13,7 @@ The cluster is built when `present-lifecycle-<cluster>` is Compliant. Only ACM a
 
 | You want | `install.engine` | `install.platform` | Upgraded by |
 |---|---|---|---|
-| OpenShift on AWS, GCP or Azure | `hive` | | `upgrade` on the cluster |
+| OpenShift on AWS, GCP, Azure or vSphere | `hive` | | `upgrade` on the cluster |
 | OpenShift on bare metal with a BMC | `siteconfig` | | `upgrade` on the cluster |
 | Hosted control plane, workers as VMs on the hub | `hypershift` (default) | `KubeVirt` | The hub |
 | Hosted control plane, bare-metal workers | `hypershift` | `Agent` | The hub |
@@ -29,7 +29,7 @@ On every hub that builds clusters:
 - The hub manages itself (`local-cluster` label, the default), or is a default-mode Global Hub managed hub with PolicyStack on the global hub.
 - `fleet/hubs/<hubName>.yaml` exists.
 - `hypershift`: the hypershift-addon, on by default (`oc get managedclusteraddon hypershift-addon -n local-cluster`).
-- A credential Secret with `pullSecret`, `ssh-publickey` and, for `hive`, cloud keys. Labels `cluster.open-cluster-management.io/credentials=` and `cluster.open-cluster-management.io/type=<type>` show it in the console.
+- A credential Secret with `pullSecret`, `ssh-publickey` and, for `hive`, cloud keys (vSphere: `username`, `password`, `cacertificate`). Labels `cluster.open-cluster-management.io/credentials=` and `cluster.open-cluster-management.io/type=<type>` show it in the console.
 
 ## Examples
 
@@ -175,6 +175,97 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
                 azure:
                   type: Standard_D4s_v5
     ```
+
+=== "vSphere"
+
+    Needs vCenter and ESXi 7.0.2+, vCenter on port 443, DNS for `api.<cluster>.<baseDomain>` and `*.apps.<cluster>.<baseDomain>` pointing at the VIPs, and DHCP on the network unless `hosts` sets static IPs. Inventory paths are absolute. More than one failure domain needs the `openshift-region` and `openshift-zone` tag categories attached to the datacenters and clusters. The hub downloads the RHCOS OVA unless `topology.template` names one.
+
+    `cacertificate` is the vCenter CA in PEM, from `https://<vcenter>/certs/download.zip` (`certs/lin/*.0`). It is required even for a publicly trusted vCenter. Use `--from-literal`: a trailing newline in the login fails the install.
+
+    ```sh
+    oc create secret generic vsphere -n hive-credentials \
+      --from-literal=username=<user> --from-literal=password=<password> \
+      --from-file=cacertificate=vcenter-ca.pem \
+      --from-file=pullSecret=pull-secret.json --from-file=ssh-publickey=id_ed25519.pub
+    ```
+
+    ```yaml
+    # fleet/ocp-vsphere.yaml
+    revision: main
+    hub: acm-dc1
+    version: 4.20.8
+    channel: stable-4.20
+    install:
+      engine: hive
+      credential:
+        namespace: hive-credentials
+        name: vsphere
+      baseDomain: vsphere.example.com
+      hive:
+        platform:
+          vsphere: # (1)!
+            apiVIPs: [10.0.10.5]
+            ingressVIPs: [10.0.10.6]
+            vcenters:
+              - server: vcenter.example.com # (2)!
+                datacenters: [dc1]
+            failureDomains:
+              - name: dc1-cl1
+                region: dc1
+                zone: cl1
+                server: vcenter.example.com
+                topology:
+                  datacenter: dc1
+                  computeCluster: /dc1/host/cl1
+                  datastore: /dc1/datastore/ds1
+                  networks: [ocp-vlan10]
+        installConfig:
+          controlPlane:
+            name: master
+            architecture: amd64
+            replicas: 3
+          compute:
+            - name: worker
+              architecture: amd64
+              replicas: 3
+          networking:
+            machineNetwork:
+              - cidr: 10.0.10.0/24 # (3)!
+    ```
+
+    1. The installer's `platform.vsphere`, also the ClusterDeployment's `infrastructure`. Fixed at create.
+    2. Every vCenter logs in with the credential. `user` and `password` here are refused.
+    3. Holds the node IPs and both VIPs.
+
+    ??? example "Static IPs, two failure domains"
+        `hosts` lists exactly one `bootstrap`, then one entry per control-plane and compute replica.
+
+        ```yaml
+        vsphere:
+          apiVIPs: [10.0.10.5]
+          ingressVIPs: [10.0.10.6]
+          vcenters:
+            - {server: vcenter.example.com, datacenters: [dc1]}
+          failureDomains:
+            - {name: dc1-cl1, region: dc1, zone: cl1, server: vcenter.example.com,
+               topology: {datacenter: dc1, computeCluster: /dc1/host/cl1, datastore: /dc1/datastore/ds1, networks: [ocp-vlan10]}}
+            - {name: dc1-cl2, region: dc1, zone: cl2, server: vcenter.example.com,
+               topology: {datacenter: dc1, computeCluster: /dc1/host/cl2, datastore: /dc1/datastore/ds2, networks: [ocp-vlan10]}}
+          hosts:
+            - {role: bootstrap, networkDevice: {ipAddrs: [10.0.10.10/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: control-plane, failureDomain: dc1-cl1, networkDevice: {ipAddrs: [10.0.10.11/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: control-plane, failureDomain: dc1-cl2, networkDevice: {ipAddrs: [10.0.10.12/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: control-plane, failureDomain: dc1-cl1, networkDevice: {ipAddrs: [10.0.10.13/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: compute, failureDomain: dc1-cl1, networkDevice: {ipAddrs: [10.0.10.21/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: compute, failureDomain: dc1-cl2, networkDevice: {ipAddrs: [10.0.10.22/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+            - {role: compute, failureDomain: dc1-cl1, networkDevice: {ipAddrs: [10.0.10.23/24], gateway: 10.0.10.1, nameservers: [10.0.0.53]}}
+        ```
+
+    !!! warning "Static IPs and Day-2 nodes"
+        With `hosts`, the installer creates the workers as standalone Machines and leaves the worker MachineSets at 0, drawing addresses from an IPPool. Nothing installs an IPAM controller for it, so Machines from scaling, `infra-nodes` or `storage-nodes` wait for an address.
+
+    !!! note
+        Hive cannot hibernate vSphere clusters: leave `powerState` unset. After rotating the vCenter password, update the credential and the cluster's `kube-system/vsphere-creds`.
 
 === "Bare metal"
 
@@ -373,6 +464,7 @@ Shipped layers:
 | Layer | Sets |
 |---|---|
 | `values/platforms/aws.yaml` | `engine: hive`, credential `hive-credentials/aws`, 3+3 `m6i.xlarge`, `networking` |
+| `values/platforms/vmware.yaml` | `engine: hive`, credential `hive-credentials/vsphere`, 3+3 amd64 at installer default size |
 | `values/platforms/baremetal.yaml` | `engine: siteconfig`, credentials `bm-credentials/hostinventory` and `bm-credentials/bmc`, `networkType` |
 | `values/platforms/kubevirt.yaml` | `platform: KubeVirt`, credential `open-cluster-management/kubevirt-secret`, 2 workers |
 | `values/platforms/agent.yaml` | `platform: Agent`, credential `hcp-credentials/hostinventory`, `agentNamespace: hardware-inventory` |
@@ -468,7 +560,7 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 
 | Engine | Left behind |
 |---|---|
-| `hive` | Nothing. Hive deprovisions the cloud resources, usually within 20 minutes. |
+| `hive` | Nothing. Hive deprovisions the cloud resources or VMs, usually within 20 minutes. vSphere: the DNS records you created. |
 | `siteconfig` | Hosts still running, disks not wiped. Power off or reuse. |
 | `hypershift` Agent | Agents return to the InfraEnv for the next cluster. |
 | `hypershift` None | Your workers and their DNS. Delete them. |

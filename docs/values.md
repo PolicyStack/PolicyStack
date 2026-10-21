@@ -196,7 +196,7 @@ global:
     | `datacenters/dc1.yaml` | `install.baseDomain` |
     | `datacenters/dc2.yaml` | Registry allowlist through the dc2 mirror |
     | `platforms/aws.yaml` | Node toggles: clone the worker MachineSet. `install`: Hive |
-    | `platforms/vmware.yaml` | Node toggles: clone each MachineSet per failure domain |
+    | `platforms/vmware.yaml` | Node toggles: clone each MachineSet per failure domain. `install`: Hive |
     | `platforms/baremetal.yaml` | Node toggles: no MachineSets, label nodes. `install`: SiteConfig |
     | `platforms/kubevirt.yaml` | `install` only: `KubeVirt`, 2-node `workers` pool |
     | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
@@ -208,4 +208,4 @@ global:
     | `clusters/nonprod-west-1.yaml` | Registry enforcement, MetalLB pool, user monitoring |
     | `clusters/aws-prod.yaml` | ODF to Loki chain. Rename to the real ManagedCluster name first |
 
-    CI renders with the fleet files in `tools/validator/testdata/clusters/`. None lists `vmware.yaml` or `payments.yaml` and no cluster is named `aws-prod`, so CI reads those only when a file in `fleet/` uses them.
+    CI renders with the fleet files in `tools/validator/testdata/clusters/`. None lists `payments.yaml` and no cluster is named `aws-prod`, so CI reads those only when a file in `fleet/` uses them.

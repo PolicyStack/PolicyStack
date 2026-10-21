@@ -40,6 +40,11 @@ func TestHiveCredentials(t *testing.T) {
 			if keys := slices.Sorted(maps.Keys(creds)); !slices.Equal(keys, []string{"aws_access_key_id", "aws_secret_access_key"}) {
 				t.Errorf("creds keys %v", keys)
 			}
+			for _, o := range objs {
+				if o.ObjectDefinition.GetName() == "hive-aws-certs" {
+					t.Error("hive-aws-certs rendered off vSphere")
+				}
+			}
 			enc := field(find(t, objs, "Secret", "hive-aws-install-config"), "data", "install-config.yaml")
 			dec, err := base64.StdEncoding.DecodeString(enc)
 			if err != nil {
@@ -100,6 +105,75 @@ func TestHiveUserSSHKey(t *testing.T) {
 	}
 	if ic.SSHKey != "ssh-ed25519 USER" || strings.Count(string(dec), "sshKey:") != 1 {
 		t.Errorf("sshKey %q, want the user's, once:\n%s", ic.SSHKey, dec)
+	}
+}
+
+// vsphereCredential is the console vSphere credential platforms/vmware.yaml names.
+func vsphereCredential(password string) string {
+	b := func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
+	return fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata: {name: vsphere, namespace: hive-credentials}
+data:
+  vCenter: %s
+  username: %s
+  password: %s
+  cacertificate: %s
+  pullSecret: %s
+  ssh-publickey: %s
+`, b("vcenter.example.com"), b("administrator@vsphere.local"), b(password), b("CA"), b(`{"auths":{}}`), b("ssh-ed25519 AAAA ops"))
+}
+
+// TestHiveVSphere: the vCenter login reaches only the install-config, the CA its own Secret, and
+// the ClusterDeployment gets the same platform as infrastructure with a blank login.
+func TestHiveVSphere(t *testing.T) {
+	const password = `p@ss: "w'rd #1` // YAML-significant characters
+	objs := resolve(t, rawTemplate(t, "hive-vsphere", "present-credentials-hive-vsphere"), vsphereCredential(password))
+	creds, _ := nested(find(t, objs, "Secret", "hive-vsphere-creds"), "data").(map[string]any)
+	if keys := slices.Sorted(maps.Keys(creds)); !slices.Equal(keys, []string{"password", "username"}) {
+		t.Errorf("creds keys %v", keys)
+	}
+	if got := field(find(t, objs, "Secret", "hive-vsphere-certs"), "data", ".cacert"); got != base64.StdEncoding.EncodeToString([]byte("CA")) {
+		t.Errorf("certs .cacert %q", got)
+	}
+	dec, err := base64.StdEncoding.DecodeString(field(find(t, objs, "Secret", "hive-vsphere-install-config"), "data", "install-config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ic struct {
+		Metadata struct{ Name string } `json:"metadata"`
+		Platform struct {
+			VSphere struct {
+				VCenters       []struct{ Server, User, Password string } `json:"vcenters"`
+				FailureDomains []any                                     `json:"failureDomains"`
+			} `json:"vsphere"`
+		} `json:"platform"`
+		SSHKey string `json:"sshKey"`
+	}
+	if err := yaml.Unmarshal(dec, &ic); err != nil {
+		t.Fatalf("install-config: %v\n%s", err, dec)
+	}
+	vs := ic.Platform.VSphere
+	if ic.Metadata.Name != "hive-vsphere" || len(vs.FailureDomains) != 1 || ic.SSHKey != "ssh-ed25519 AAAA ops" {
+		t.Errorf("install-config %+v", ic)
+	}
+	if len(vs.VCenters) != 1 || vs.VCenters[0].Server != "vcenter.example.com" || vs.VCenters[0].User != "administrator@vsphere.local" || vs.VCenters[0].Password != password {
+		t.Errorf("install-config vcenters %+v", vs.VCenters)
+	}
+
+	cd := find(t, resolve(t, rawTemplate(t, "hive-vsphere", "present-cluster-hive-vsphere")), "ClusterDeployment", "hive-vsphere")
+	if c, k := field(cd, "spec", "platform", "vsphere", "credentialsSecretRef", "name"), field(cd, "spec", "platform", "vsphere", "certificatesSecretRef", "name"); c != "hive-vsphere-creds" || k != "hive-vsphere-certs" {
+		t.Errorf("secret refs %q %q", c, k)
+	}
+	vcs, _ := nested(cd, "spec", "platform", "vsphere", "infrastructure", "vcenters").([]any)
+	if len(vcs) != 1 {
+		t.Fatalf("infrastructure vcenters %v", vcs)
+	}
+	if v, _ := vcs[0].(map[string]any); v["user"] != "" || v["password"] != "" || v["server"] != "vcenter.example.com" {
+		t.Errorf("infrastructure vcenter %v, want a blank login", v)
+	}
+	if fds, _ := nested(cd, "spec", "platform", "vsphere", "infrastructure", "failureDomains").([]any); len(fds) != 1 {
+		t.Errorf("infrastructure failureDomains %v", fds)
 	}
 }
 

@@ -54,6 +54,7 @@ file name is the cluster name: `hubs/acm-dc1.yaml` renders as `acm-dc1` and read
     | `hubs/acm-dc1` | The hub the lifecycle fixtures name |
     | `hcp-kubevirt`, `hcp-agent` | HyperShift |
     | `hive-aws` | Hive on AWS |
+    | `hive-vsphere` | Hive on vSphere, one failure domain, DHCP |
     | `sno-edge` | SiteConfig single-node |
     | `hcp-retired`, `hive-retired`, `sno-retired` | `state: absent` |
     | `name-budget-30-characters-long` | The 30-character name every element must fit ([Naming limits](policies.md#naming-limits)) |

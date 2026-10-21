@@ -38,7 +38,7 @@ func TestOwnership(t *testing.T) {
 		apiVersion, kind, namespace string // the root; namespace "" is <cluster>
 	}{
 		{[]string{"hcp-agent", "hcp-retired"}, "hypershift.openshift.io/v1beta1", "HostedCluster", "clusters"},
-		{[]string{"hive-aws", "hive-retired"}, "hive.openshift.io/v1", "ClusterDeployment", ""},
+		{[]string{"hive-aws", "hive-retired", "hive-vsphere"}, "hive.openshift.io/v1", "ClusterDeployment", ""},
 		{[]string{"sno-edge", "sno-retired"}, "siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", ""},
 	} {
 		for _, c := range tt.clusters {

@@ -95,10 +95,10 @@ Deletes install.manifests. Each engine's cleanup converter ends with it, once th
 {{- end -}}
 
 {{/*
-The single key of install.hive.platform: aws, gcp or azure.
+The single key of install.hive.platform: aws, gcp, azure or vsphere.
 */}}
 {{- define "lifecycle.hivePlatform" -}}
 {{- $keys := keys (.Values.install.hive.platform | default dict) -}}
-{{- if ne (len $keys) 1 }}{{ fail "install.hive.platform must set exactly one of aws, gcp or azure" }}{{ end -}}
+{{- if ne (len $keys) 1 }}{{ fail "install.hive.platform must set exactly one of aws, gcp, azure or vsphere" }}{{ end -}}
 {{- first $keys -}}
 {{- end -}}

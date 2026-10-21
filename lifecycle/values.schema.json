@@ -50,7 +50,21 @@
               "properties": {
                 "aws": {"type": "object", "required": ["region"]},
                 "gcp": {"type": "object", "required": ["region", "projectID"]},
-                "azure": {"type": "object", "required": ["region", "baseDomainResourceGroupName"]}
+                "azure": {"type": "object", "required": ["region", "baseDomainResourceGroupName"]},
+                "vsphere": {
+                  "type": "object",
+                  "required": ["vcenters", "failureDomains"],
+                  "propertyNames": {"not": {"enum": ["username", "password"]}},
+                  "properties": {
+                    "vcenters": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 3,
+                      "items": {"type": "object", "required": ["server"], "propertyNames": {"not": {"enum": ["user", "password"]}}}
+                    },
+                    "failureDomains": {"type": "array", "minItems": 1}
+                  }
+                }
               }
             },
             "installConfig": {"type": "object"},

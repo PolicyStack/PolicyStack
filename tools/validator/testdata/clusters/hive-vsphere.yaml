@@ -1,0 +1,35 @@
+revision: main
+hub: acm-dc1
+version: 4.20.8
+channel: stable-4.20
+valueFiles:
+  - environments/nonprod.yaml
+  - platforms/vmware.yaml
+install:
+  baseDomain: vsphere.example.com
+  hive:
+    platform:
+      vsphere:
+        apiVIPs:
+          - 10.0.10.5
+        ingressVIPs:
+          - 10.0.10.6
+        vcenters:
+          - server: vcenter.example.com
+            datacenters:
+              - dc1
+        failureDomains:
+          - name: dc1-cl1
+            region: dc1
+            zone: cl1
+            server: vcenter.example.com
+            topology:
+              datacenter: dc1
+              computeCluster: /dc1/host/cl1
+              datastore: /dc1/datastore/ds1
+              networks:
+                - ocp-vlan10
+    installConfig:
+      networking:
+        machineNetwork:
+          - cidr: 10.0.10.0/24

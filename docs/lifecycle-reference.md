@@ -9,7 +9,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
 | Key | Default | Notes |
 |---|---|---|
 | `engine` | `hypershift` | `hypershift`, `hive` or `siteconfig`. Fixed at create. |
-| `credential.namespace`, `.name` | required | Hub Secret with `pullSecret`, `ssh-publickey`, and for `hive` the cloud keys. Any namespace. |
+| `credential.namespace`, `.name` | required | Hub Secret with `pullSecret`, `ssh-publickey`, and for `hive` the cloud keys (vSphere: `username`, `password`, `cacertificate`). Any namespace. |
 | `baseDomain` | `""` | Required except on `KubeVirt`, which uses the hub's ingress domain. Fixed at create. |
 | `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | Image is `<releaseRepository>:<version>-multi`. Point at a mirror when disconnected. |
 | `manifests` | `[]` | Extra hub objects with `apiVersion`, `kind`, `metadata`. Created before the cluster, deleted after it. |
@@ -76,7 +76,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
 
     | Key | Default | Notes |
     |---|---|---|
-    | `hive.platform` | required | Exactly one of `aws`, `gcp`, `azure`. Needs `region`; GCP adds `projectID`, Azure `baseDomainResourceGroupName`. Fixed at create. |
+    | `hive.platform` | required | Exactly one of `aws`, `gcp`, `azure`, `vsphere`. Needs `region`; GCP adds `projectID`, Azure `baseDomainResourceGroupName`. vSphere is the installer's `platform.vsphere`: needs `vcenters` and `failureDomains`, refuses `user`/`password`. Fixed at create. |
     | `hive.installConfig` | `{}` | Merged under the generated install-config. Hive drops fields its installer does not know. |
     | `hive.clusterDeployment` | `{}` | `metadata` and `spec` merged over the generated ClusterDeployment. `spec.provisioning.releaseImage` is ignored. |
 
@@ -168,8 +168,9 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
 
     | Object | Content |
     |---|---|
-    | ClusterDeployment `<cluster>/<cluster>` | `baseDomain`, `clusterName`, platform with `credentialsSecretRef` `<cluster>-creds`, `pullSecretRef`, `installConfigSecretRef` `<cluster>-install-config`, release image, `installAttemptsLimit: 1` (a failed install is not retried). |
-    | Secret `<cluster>-creds` | Only the keys Hive reads: `aws_access_key_id` + `aws_secret_access_key`, `osServiceAccount.json`, or `osServicePrincipal.json`. |
+    | ClusterDeployment `<cluster>/<cluster>` | `baseDomain`, `clusterName`, platform with `credentialsSecretRef` `<cluster>-creds`, `pullSecretRef`, `installConfigSecretRef` `<cluster>-install-config`, release image, `installAttemptsLimit: 1` (a failed install is not retried). vSphere: `infrastructure` is `hive.platform.vsphere` with a blank login, plus `certificatesSecretRef` `<cluster>-certs`. |
+    | Secret `<cluster>-creds` | Only the keys Hive reads: `aws_access_key_id` + `aws_secret_access_key`, `osServiceAccount.json`, `osServicePrincipal.json`, or `username` + `password`. |
+    | Secret `<cluster>-certs` | vSphere: `.cacert` from `cacertificate`. The login goes only into `<cluster>-install-config`. |
     | ManagedCluster `<cluster>`, KlusterletAddonConfig | Every add-on on. |
 
 === "siteconfig"
@@ -203,7 +204,7 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 | Template | Mode | `hypershift` | `hive` | `siteconfig` |
 |---|---|---|---|---|
 | `guard` | inform | NonCompliant while something named `<cluster>` lacks the [marker](#ownership). Stops the chain. | same | same |
-| `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config` | Namespace `<cluster>`, `-pull-secret`, `-bmc` |
+| `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config`, `-certs` on vSphere | Namespace `<cluster>`, `-pull-secret`, `-bmc` |
 | `manifests` | enforce | `install.manifests` | same | same |
 | `cluster` | enforce | HostedCluster, NodePools | ClusterDeployment, ManagedCluster, KlusterletAddonConfig | ClusterImageSet, ClusterInstance, KlusterletAddonConfig |
 | `ready` | inform | `version` Completed in history and on every NodePool | `spec.installed: true` | `Provisioned` True |
@@ -215,7 +216,7 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 | `guard` | inform | Same check | same | same |
 | `detach` | enforce `mustnothave` | Deletes the ManagedCluster while the cluster is up, so the klusterlet cleans up | same | none: SiteConfig would re-create it |
 | `detached` | inform `mustnothave` | Waits for the ManagedCluster to go | same | none |
-| `destroy` | enforce `mustnothave` | Deletes the HostedCluster | Deletes the ClusterDeployment; Hive deprovisions with `<cluster>-creds` | Deletes the ClusterInstance and what it rendered |
+| `destroy` | enforce `mustnothave` | Deletes the HostedCluster | Deletes the ClusterDeployment; Hive deprovisions with `<cluster>-creds` (and `-certs` on vSphere) | Deletes the ClusterInstance and what it rendered |
 | `destroyed` | inform `mustnothave` | Waits for the HostedCluster to go | Waits for deprovision | Waits for the ClusterInstance to go |
 | `cleanup` | enforce | Copied secrets, etcd key, `install.manifests` | Namespace `<cluster>`, `install.manifests` | Namespace `<cluster>`, ClusterImageSet, `install.manifests` |
 
@@ -261,7 +262,7 @@ The operators reject changes to these, among others:
 |---|---|
 | HostedCluster | `services`, `platform`, `networking`, `etcd`, `issuerURL`, `controllerAvailabilityPolicy`, `fips`, `dns.baseDomain` once set. `secretEncryption` cannot be removed. |
 | NodePool | `clusterName`, `platform.type`, `arch`, `management.upgradeType` |
-| ClusterDeployment | Everything but `installAttemptsLimit`, `powerState`, `preserveOnDelete` and a few others. `hive.installConfig` changes reach the Secret, not the cluster. |
+| ClusterDeployment | Everything but `installAttemptsLimit`, `powerState`, `preserveOnDelete` and a few others. `hive.installConfig` changes reach the Secret, not the cluster. On vSphere all of `hive.platform.vsphere`. |
 | ClusterInstance | Everything until install completes. After: only `extraAnnotations`, `extraLabels`, `suppressedManifests`, `pruneManifests`, and adding a node. |
 
 Changing one does not change the cluster: `present-cluster-<cluster>` goes NonCompliant with the API server's message. Revert the value.
@@ -323,8 +324,15 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
     A cloud key missing from the credential is copied as an empty value and fails the install.
 
+??? failure "Hive: vSphere credentials rejected"
+    ClusterDeployment `AuthenticationFailure` True: the hub could not log in to vCenter with `<cluster>-creds` and `<cluster>-certs`. Check for a wrong login, a trailing newline, a `cacertificate` that is not PEM, vCenter on a port other than 443, or no route from the hub. Right after create it can be brief while the trust bundle fills.
+
+    `RequirementsMet` False, "install config does not contain username/password": the credential is missing `username` or `password`.
+
+    `cluster` NonCompliant with `must specify vSphere vCenter`: the hub's Hive predates zonal vSphere support. Upgrade MCE.
+
 ??? failure "Hive: deprovision stuck"
-    `absent-destroyed` stays NonCompliant; ClusterDeployment shows `DeprovisionLaunchError`, or the ClusterDeprovision `AuthenticationFailure`. Fix the keys in `<cluster>-creds` directly: the absent Policy no longer copies the credential.
+    `absent-destroyed` stays NonCompliant; ClusterDeployment shows `DeprovisionLaunchError`, or the ClusterDeprovision `AuthenticationFailure`. Fix the keys in `<cluster>-creds` (or `<cluster>-certs` on vSphere) directly: the absent Policy no longer copies the credential.
 
     With HiveConfig `deleteProtection: enabled`:
 

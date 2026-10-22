@@ -1,6 +1,12 @@
 package checks
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"encoding/json"
+	"errors"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -91,6 +97,37 @@ stack:
 			lines: []int{1, 3, 5, 9, 11, 14},
 		},
 		{
+			name: "every component key is accepted",
+			layer: `stack:
+  myElement:
+    enabled: true
+    default: {categories: [CM]}
+    toggles: {}
+    config: {}
+    policies: []
+    configPolicies: []
+    operatorPolicies: {}
+    certificatePolicies: []
+    policySets: []
+    orderPolicies: true
+    orderManifests: true
+    suffixTemplateNames: true
+    usePolicySetsPlacements: false
+    disablePlacements: false
+`,
+		},
+		{
+			name: "an unknown component key is reported at the layer",
+			layer: `stack:
+  bare:
+    enabled: true
+  myElement:
+    enabeld: true
+`,
+			want:  []string{`stack.myElement.enabeld is not a policy-library component key`},
+			lines: []int{5},
+		},
+		{
 			name: "a toggle may name an entry the layer itself declares",
 			layer: `stack:
   myElement:
@@ -128,5 +165,70 @@ stack:
 				t.Errorf("lines: got %v, want %v", lines, tt.lines)
 			}
 		})
+	}
+}
+
+// TestComponentKeys compares componentKeys with definitions.component in each vendored
+// policy-library archive. The archives are gitignored, so it skips when none is fetched.
+func TestComponentKeys(t *testing.T) {
+	archives, _ := filepath.Glob("../../../../stack/*/charts/policy-library-*.tgz")
+	if len(archives) == 0 {
+		t.Skip("no policy-library archive under stack/*/charts")
+	}
+	seen := map[string]bool{}
+	for _, a := range archives {
+		if seen[filepath.Base(a)] {
+			continue
+		}
+		seen[filepath.Base(a)] = true
+		var schema struct {
+			Definitions struct {
+				Component struct {
+					Properties           map[string]any `json:"properties"`
+					AdditionalProperties *bool          `json:"additionalProperties"`
+				} `json:"component"`
+			} `json:"definitions"`
+		}
+		if err := json.Unmarshal(archiveFile(t, a, "policy-library/values.schema.json"), &schema); err != nil {
+			t.Fatalf("%s: %v", a, err)
+		}
+		c := schema.Definitions.Component
+		if c.AdditionalProperties == nil || *c.AdditionalProperties {
+			t.Errorf("%s: definitions.component allows additional properties", filepath.Base(a))
+		}
+		if got, want := slices.Sorted(maps.Keys(c.Properties)), slices.Sorted(slices.Values(componentKeys)); !slices.Equal(got, want) {
+			t.Errorf("%s: definitions.component properties\n got %q\nwant %q (componentKeys)", filepath.Base(a), got, want)
+		}
+	}
+}
+
+// archiveFile returns name from the gzipped tar at path.
+func archiveFile(t *testing.T, path, name string) []byte {
+	t.Helper()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := tar.NewReader(gz)
+	for {
+		h, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			t.Fatalf("%s: no %s", path, name)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if h.Name == name {
+			data, err := io.ReadAll(tr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return data
+		}
 	}
 }

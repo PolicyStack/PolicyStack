@@ -523,9 +523,9 @@ Bump `version`, and `channel` on a minor bump ([Upgrades](upgrades.md)):
 | Engine | How |
 |---|---|
 | `hive`, `siteconfig` | On the cluster by `upgrade`, like imported clusters. The hub keeps the install release image; Hive and SiteConfig reject changes to it. |
-| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. NodePools follow once the control plane reports Completed. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Disconnected](disconnected.md)). |
+| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. A `version` below the control plane's desired version is never applied. NodePools follow once the control plane's newest Completed version is `version`. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Disconnected](disconnected.md)). |
 
-During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. Clusters install from the `-multi` payload, so they are multi-architecture.
+During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. A held downgrade, such as a reverted bump after the control plane moved, keeps it NonCompliant until the fleet file catches up. Clusters install from the `-multi` payload, so they are multi-architecture.
 
 ??? info "Minor upgrade blocked by `ClusterVersionUpgradeable=False`"
     Force it with the release image:

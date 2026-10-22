@@ -35,6 +35,7 @@ func TestPolicy036_RemediationOverride(t *testing.T) {
 			[]string{`configPolicies[0] "x": remediationAction inform is overridden by policies[0].remediationAction enforce: ACM applies the Policy's action to every template, so this one runs as enforce`}},
 		{"template enforce under inform", "    policies:\n" + policy("b", "") + policy("a", "inform") + "    configPolicies:\n" + entry("x", "a", "enforce"),
 			[]string{`configPolicies[0] "x": remediationAction enforce is overridden by policies[1].remediationAction inform`}},
+		{"InformOnly under enforce", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "InformOnly") + entry("y", "a", "informonly"), nil},
 		{"same action", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},
 		{"case-insensitive", "    policies:\n" + policy("a", "Enforce") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},
 		{"policy unset", "    policies:\n" + policy("a", "") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},

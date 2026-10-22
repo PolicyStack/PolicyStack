@@ -49,7 +49,7 @@ Roll back with `git revert`, or a PR that sets the old revision. Both need the u
 
 ## Dry run
 
-Set `global.remediationAction: inform` in any layer ([Global keys](values.md#global-keys)). Every Policy for clusters reading that layer, lifecycle included, reports instead of enforcing. To preview a revision on one cluster, add this in the same PR and remove it once the Policies look right:
+Set `global.remediationAction: inform` in any layer ([Global keys](values.md#global-keys)). Every Policy for clusters reading that layer, lifecycle included, reports instead of enforcing. To preview a revision on one cluster, add this to its file at the revision it reads and remove it once the Policies look right:
 
 ```yaml
 # values/clusters/prod-east-1.yaml
@@ -57,10 +57,19 @@ global:
   remediationAction: inform # (1)!
 ```
 
-1.  `enforce` is rejected. Remove the key to go back to each template's own setting.
+1.  `enforce` is rejected. Remove the key to go back to each template's own setting. `InformOnly` gates stay inform either way.
+
+On a branch pin, add the key in the PR with the change. A tag or SHA pin reads the cluster file at the pin, so a key added at HEAD never reaches the cluster. To promote `v1.4.0` to `v1.5.0`:
+
+1.  Commit the key on a branch from `v1.5.0` and push it.
+2.  Pin that commit's SHA and check the Policies.
+3.  Pin `v1.5.0`. It lacks the key, so enforcement resumes.
 
 !!! note
     Inform undoes nothing already applied. A Policy waiting on another stays Pending, so on a new cluster only the start of each dependency chain reports.
+
+!!! warning "Dry run stops enforcement, not removal"
+    Argo CD still prunes and self-heals, and the resources finalizer still deletes the Policies of an element the revision drops ([Removing an element](#removing-an-element)). A dropped or renamed Policy whose template sets `pruneObjectBehavior` is deleted with its last `enforce` spec, so its objects go too ([What happens on the managed cluster](#what-happens-on-the-managed-cluster)). Check the "removed" counts in the PR's [Render Diff](workflows.md#render-diff) first.
 
 ## Disabling an element
 

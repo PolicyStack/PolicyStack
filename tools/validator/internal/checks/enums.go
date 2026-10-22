@@ -13,6 +13,9 @@ var (
 	allowedRemed      = []string{"inform", "enforce"}
 	allowedCompliance = []string{"musthave", "mustnothave", "mustonlyhave"}
 	allowedUpgrade    = []string{"None", "Automatic"}
+
+	// A template may also be InformOnly; the Policy CRD rejects it.
+	allowedTemplateRemed = []string{"inform", "enforce", "InformOnly"}
 )
 
 // EnumCheck (POLICY030) validates the enum fields ACM rejects when invalid:
@@ -57,7 +60,9 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 	}
 	for i, p := range comp.ConfigPolicies {
 		emit("configPolicies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "configPolicies", strconv.Itoa(i), "severity")
-		emit("configPolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedRemed, "configPolicies", strconv.Itoa(i), "remediationAction")
+		if !informOnly(p.RemediationAction) {
+			emit("configPolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedTemplateRemed, "configPolicies", strconv.Itoa(i), "remediationAction")
+		}
 		emit("configPolicies["+strconv.Itoa(i)+"].complianceType", p.ComplianceType, allowedCompliance, "configPolicies", strconv.Itoa(i), "complianceType")
 	}
 	for k, p := range comp.OperatorPolicies.Sorted() {

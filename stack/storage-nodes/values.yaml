@@ -124,7 +124,7 @@ stack:
         description: "Storage MachineSet readiness"
         policyRef: ready
         complianceType: musthave
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: medium
         rawTemplate: true
         templateNames:
@@ -140,7 +140,7 @@ stack:
         description: "config.replicas nodes are designated for storage"
         policyRef: ready
         complianceType: musthave
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: medium
         rawTemplate: true
         templateNames:

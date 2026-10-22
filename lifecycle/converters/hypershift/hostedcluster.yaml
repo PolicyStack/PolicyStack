@@ -2,10 +2,11 @@
 musthave only: fields the operator fills in (networking, etcd, and on KubeVirt dns, platform and
 secretEncryption) are left out, so the policy never fights it.
 
-A version bump reaches the HostedCluster at once. With channel set, it waits until HyperShift lists
-the version in availableUpdates, so a version off the channel's graph is held instead of forced.
-Each existing NodePool keeps its current image until the control plane reports that version
-Completed, since HyperShift does not hold a NodePool back itself. A new NodePool starts on the
+A version bump reaches the HostedCluster at once; a version below the control plane's desired one
+is never applied. With channel set, it waits until HyperShift lists the version in
+availableUpdates, so a version off the channel's graph is held instead of forced. Each existing
+NodePool keeps its current image until the control plane's newest Completed version is the
+target, since HyperShift does not hold a NodePool back itself. A new NodePool starts on the
 target image. HostedCluster and NodePool release are always managed here.
 */ -}}
 {{- $i := .Values.install }}
@@ -39,15 +40,19 @@ target image. HostedCluster and NodePool release are always managed here.
 {{- end }}
 {{ include "lifecycle.refuse" . }}
 {{ "{{-" }} $hc := lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }} {{ "}}" }}
-{{ "{{-" }} $upgraded := false {{ "}}" }}
+{{ "{{-" }} $desired := dig "status" "version" "desired" "version" "" $hc {{ "}}" }}
+{{ "{{-" }} $current := "" {{ "}}" }}
 {{ "{{-" }} range (dig "status" "version" "history" list $hc) {{ "}}" }}
-{{ "{{-" }} if and (eq .version {{ $v | quote }}) (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $upgraded = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if and (eq $current "") (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $current = .version {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
 {{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $upgraded := eq $current {{ $v | quote }} {{ "}}" }}
+{{ "{{-" }} $move := or (eq $desired "") (not (semverCompare {{ printf "> %s" $v | quote }} $desired)) {{ "}}" }}
 {{- if .Values.channel }}
-{{ "{{-" }} $known := or (not $hc) (eq (dig "status" "version" "desired" "version" "" $hc) {{ $v | quote }}) {{ "}}" }}
+{{ "{{-" }} $known := or (not $hc) (eq $desired {{ $v | quote }}) {{ "}}" }}
 {{ "{{-" }} range (dig "status" "version" "availableUpdates" list $hc) {{ "}}" }}
 {{ "{{-" }} if eq .version {{ $v | quote }} {{ "}}" }}{{ "{{-" }} $known = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
 {{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $move = and $move $known {{ "}}" }}
 {{- end }}
 - complianceType: musthave
   objectDefinition:
@@ -56,7 +61,7 @@ target image. HostedCluster and NodePool release are always managed here.
     {{- $hostedCluster | toYaml | nindent 4 }}
       {{- /* spec is the last key toYaml writes, so release lands in it */}}
       release:
-        image: '{{ if .Values.channel }}{{ "{{" }} if $known {{ "}}" }}{{ $image }}{{ "{{" }} else {{ "}}" }}{{ "{{" }} dig "spec" "release" "image" {{ $image | quote }} $hc {{ "}}" }}{{ "{{" }} end {{ "}}" }}{{ else }}{{ $image }}{{ end }}'
+        image: '{{ "{{" }} if $move {{ "}}" }}{{ $image }}{{ "{{" }} else {{ "}}" }}{{ "{{" }} dig "spec" "release" "image" {{ $image | quote }} $hc {{ "}}" }}{{ "{{" }} end {{ "}}" }}'
 {{- range $pool, $override := $i.nodePools }}
 {{- $np := dict "clusterName" $c "platform" (dict "type" $p) "management" (dict "upgradeType" (ternary "Replace" "InPlace" (eq $p "KubeVirt"))) }}
 {{- if eq $p "KubeVirt" }}

@@ -203,21 +203,21 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 
 | Template | Mode | `hypershift` | `hive` | `siteconfig` |
 |---|---|---|---|---|
-| `guard` | inform | NonCompliant while something named `<cluster>` lacks the [marker](#ownership). Stops the chain. | same | same |
+| `guard` | InformOnly | NonCompliant while something named `<cluster>` lacks the [marker](#ownership). Stops the chain. | same | same |
 | `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config`, `-certs` on vSphere | Namespace `<cluster>`, `-pull-secret`, `-bmc` |
 | `manifests` | enforce | `install.manifests` | same | same |
 | `cluster` | enforce | HostedCluster, NodePools | ClusterDeployment, ManagedCluster, KlusterletAddonConfig | ClusterImageSet, ClusterInstance, KlusterletAddonConfig |
-| `ready` | inform | `version` Completed in history and on every NodePool | `spec.installed: true` | `Provisioned` True |
+| `ready` | InformOnly | `version` is the desired and newest Completed version, and on every NodePool | `spec.installed: true` | `Provisioned` True |
 
 `absent-lifecycle-<cluster>`:
 
 | Template | Mode | `hypershift` | `hive` | `siteconfig` |
 |---|---|---|---|---|
-| `guard` | inform | Same check | same | same |
+| `guard` | InformOnly | Same check | same | same |
 | `detach` | enforce `mustnothave` | Deletes the ManagedCluster while the cluster is up, so the klusterlet cleans up | same | none: SiteConfig would re-create it |
-| `detached` | inform `mustnothave` | Waits for the ManagedCluster to go | same | none |
+| `detached` | InformOnly `mustnothave` | Waits for the ManagedCluster to go | same | none |
 | `destroy` | enforce `mustnothave` | Deletes the HostedCluster | Deletes the ClusterDeployment; Hive deprovisions with `<cluster>-creds` (and `-certs` on vSphere) | Deletes the ClusterInstance and what it rendered |
-| `destroyed` | inform `mustnothave` | Waits for the HostedCluster to go | Waits for deprovision | Waits for the ClusterInstance to go |
+| `destroyed` | InformOnly `mustnothave` | Waits for the HostedCluster to go | Waits for deprovision | Waits for the ClusterInstance to go |
 | `cleanup` | enforce | Copied secrets, etcd key, `install.manifests` | Namespace `<cluster>`, `install.manifests` | Namespace `<cluster>`, ClusterImageSet, `install.manifests` |
 
 - An enforced delete is Compliant once the API accepts it, so every destroy step has an inform wait after it.
@@ -381,7 +381,7 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 An engine `<e>` is a component of `lifecycle/`. `templates/policy.yaml` renders whichever component `install.engine` names, so the ApplicationSet and fleet keys do not change.
 
 1. Add `converters/<e>/`: objects to create, `root.yaml` (the root object by identity alone, for destroy and ownership), and its credentials. `lookup` back every field the engine rejects changes to. End the cleanup converter with `include "lifecycle.cleanupManifests"`.
-2. Add `stack.<e>` to `values.yaml` with `present` and `absent` Policies following the [chains](#policy-chains). No Policy-level `remediationAction` or `pruneObjectBehavior`: the first overrides the inform gates, the second lets a Policy delete a cluster.
+2. Add `stack.<e>` to `values.yaml` with `present` and `absent` Policies following the [chains](#policy-chains). Set every gate to `InformOnly`, which ACM keeps inform under a Policy-level `enforce`. No `pruneObjectBehavior`: it lets a Policy delete a cluster.
 3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and `stack` keys differ ([Rules](validation.md#rules)).
 4. Merge `lifecycle.marker` into the root object's annotations in the cluster converter, and start every enforced converter but `manifests` with `include "lifecycle.refuse"`. Add the engine to `TestOwnership`, a present and an absent fleet file to `tools/validator/testdata/clusters/`, and an example to [Cluster lifecycle](lifecycle.md).
 

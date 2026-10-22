@@ -351,3 +351,52 @@ func TestDependencyFailure(t *testing.T) {
 		})
 	}
 }
+
+// TestFleetIssueReportedOnce checks that a fleet file issue is one POLICY050, not one per element
+// and lifecycle pair.
+func TestFleetIssueReportedOnce(t *testing.T) {
+	for _, hub := range []string{"", "hub: acm-dc1\n"} {
+		t.Run("hub="+strings.TrimSpace(hub), func(t *testing.T) {
+			root := t.TempDir()
+			write := func(rel, body string, mode os.FileMode) {
+				p := filepath.Join(root, rel)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(body), mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			write("helm", "#!/bin/sh\nexit 0\n", 0o755)
+			for _, el := range []string{"stack/a", "stack/b", "lifecycle"} {
+				name := filepath.Base(el)
+				write(el+"/Chart.yaml", "apiVersion: v2\nname: "+name+"\nversion: 0.1.0\n", 0o644)
+				write(el+"/values.yaml", "stack:\n  "+name+":\n    enabled: true\n", 0o644)
+			}
+			write("values.yaml", "policyNamespace: policies\n", 0o644)
+			write("fleet/c.yaml", "revision: main\n"+hub+"valueFiles: [environments/prd.yaml]\n", 0o644)
+			write("fleet/hubs/acm-dc1.yaml", "revision: main\n", 0o644)
+			res, err := Run(t.Context(), Options{
+				RepoRoot:     root,
+				StackDir:     filepath.Join(root, "stack"),
+				LifecycleDir: filepath.Join(root, "lifecycle"),
+				ValuesDir:    filepath.Join(root, "values"),
+				FixturesDir:  filepath.Join(root, "fleet"),
+				HelmBin:      filepath.Join(root, "helm"),
+				Only:         []string{"POLICY050"},
+				Logger:       slog.New(slog.DiscardHandler),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []checks.Finding{{
+				RuleID: "POLICY050", Severity: checks.SevError, Cluster: "c",
+				Message: `invalid fleet file: valueFiles "environments/prd.yaml": not a file under values/`,
+				File:    filepath.Join(root, "fleet/c.yaml"),
+			}}
+			if !slices.Equal(res.Findings, want) {
+				t.Errorf("got %+v, want %+v", res.Findings, want)
+			}
+		})
+	}
+}

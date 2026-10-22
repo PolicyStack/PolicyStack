@@ -12,16 +12,25 @@ import (
 )
 
 // layerRootKeys are the top-level keys a values layer may set: what the elements and lifecycle read.
-// version and channel are allowed here because POLICY034 reports them.
+// version and channel are allowed here because POLICY034 reports them. componentKeys are the keys
+// policy-library's schema allows under stack.<element> (definitions.component); TestComponentKeys
+// compares them with the vendored archive.
 var (
 	layerRootKeys   = []string{"policyNamespace", "stack", "global", "placement", "install", "version", "channel"}
 	layerGlobalKeys = []string{"remediationAction", "catalogSources"}
+	componentKeys   = []string{
+		"enabled", "default", "toggles", "config", "policies", "configPolicies", "operatorPolicies",
+		"certificatePolicies", "policySets", "orderPolicies", "orderManifests", "suffixTemplateNames",
+		"usePolicySetsPlacements", "disablePlacements",
+	}
 )
 
 // LayerKeyCheck (POLICY035) reports keys in a values layer that nothing reads: an unknown top-level
-// or global key, a stack key that names no element, a toggle that names no entry of its element, and
-// a config key the element's values.yaml does not define. Helm merges them without complaint and the
-// setting silently has no effect. It runs on every layer file, used by a fleet file or not.
+// or global key, a stack key that names no element, an element key policy-library does not accept, a
+// toggle that names no entry of its element, and a config key the element's values.yaml does not
+// define. Helm merges them without complaint and the setting silently has no effect. An unknown
+// element key fails the schema instead, but RENDER000 reports it once per element at the element's
+// values.yaml, not at the layer. It runs on every layer file, used by a fleet file or not.
 type LayerKeyCheck struct{}
 
 func (LayerKeyCheck) ID() string   { return "POLICY035" }
@@ -80,6 +89,9 @@ func (c *LayerKeyCheck) Run(ctx Context) []Finding {
 				add(key, "", fmt.Sprintf("stack.%s names no element", key.Value))
 				continue
 			}
+			unknown([]string{"stack", key.Value}, componentKeys, func(k string) string {
+				return fmt.Sprintf("stack.%s.%s is not a policy-library component key", key.Value, k)
+			}, el.ChartName)
 			unknown([]string{"stack", key.Value, "toggles"}, entryNames(el, comp), func(k string) string {
 				return fmt.Sprintf("stack.%s.toggles.%s names no entry of the element", key.Value, k)
 			}, el.ChartName)

@@ -12,9 +12,10 @@ import (
 // RemediationCheck (POLICY036) reports a configPolicies or operatorPolicies entry whose
 // remediationAction differs from its parent's policies[].remediationAction. ACM applies the
 // Policy-level action to every template, so the template's own is silently overridden: an inform
-// mustnothave gate becomes an enforced delete. Entries governed by a toggle count as enabled, since
-// a cluster layer may turn them on. An unset configPolicies action is the chart's default, inform; an
-// unset operatorPolicies action inherits the parent's.
+// mustnothave gate becomes an enforced delete. InformOnly is the exception and is skipped. Entries
+// governed by a toggle count as enabled, since a cluster layer may turn them on. An unset
+// configPolicies action is the chart's default, inform; an unset operatorPolicies action inherits
+// the parent's.
 type RemediationCheck struct{}
 
 func (RemediationCheck) ID() string   { return "POLICY036" }
@@ -42,7 +43,7 @@ func (c *RemediationCheck) Run(ctx Context) []Finding {
 	var out []Finding
 	check := func(name, ref, action string, enabled bool, where string, path ...string) {
 		par := parents[ref]
-		if action == "" || par.action == "" || strings.EqualFold(action, par.action) || !comp.CouldBeEnabled(name, enabled) {
+		if action == "" || par.action == "" || informOnly(action) || strings.EqualFold(action, par.action) || !comp.CouldBeEnabled(name, enabled) {
 			return
 		}
 		loc := sourceloc.Find(el.ValuesDoc, append([]string{"stack", el.StackKey}, path...)...)
@@ -68,3 +69,7 @@ func (c *RemediationCheck) Run(ctx Context) []Finding {
 	}
 	return out
 }
+
+// informOnly reports a template action ACM keeps as inform under any Policy-level action. ACM
+// matches it case-insensitively.
+func informOnly(action string) bool { return strings.EqualFold(action, "informonly") }

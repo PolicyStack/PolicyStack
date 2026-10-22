@@ -95,7 +95,7 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # No Policy-level remediationAction: it would override the inform gates below.
+    # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
       - name: present
@@ -115,7 +115,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -158,7 +158,7 @@ stack:
         enabled: true
         description: "Wait for the control plane and every NodePool to reach version"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: medium
         rawTemplate: true
         templateNames:
@@ -170,7 +170,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -194,7 +194,7 @@ stack:
         enabled: true
         description: "Wait for the ManagedCluster to be gone"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         complianceType: mustnothave
         severity: high
         templateNames:
@@ -216,7 +216,7 @@ stack:
         enabled: true
         description: "Wait for the HostedCluster to be gone"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         complianceType: mustnothave
         severity: high
         templateNames:
@@ -249,7 +249,7 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # No Policy-level remediationAction: it would override the inform gates below.
+    # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
       - name: present
@@ -269,7 +269,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -312,7 +312,7 @@ stack:
         enabled: true
         description: "Wait for Hive to install the cluster"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: medium
         templateNames:
           - name: hive/installed
@@ -323,7 +323,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -347,7 +347,7 @@ stack:
         enabled: true
         description: "Wait for the ManagedCluster to be gone"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         complianceType: mustnothave
         severity: high
         templateNames:
@@ -369,7 +369,7 @@ stack:
         enabled: true
         description: "Wait for Hive to deprovision the cluster"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         complianceType: mustnothave
         severity: high
         templateNames:
@@ -402,7 +402,7 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # No Policy-level remediationAction: it would override the inform gates below.
+    # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
       - name: present
@@ -422,7 +422,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -465,7 +465,7 @@ stack:
         enabled: true
         description: "Wait for SiteConfig to install the cluster"
         policyRef: present
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: medium
         rawTemplate: true
         templateNames:
@@ -477,7 +477,7 @@ stack:
         enabled: true
         description: "Refuse a same-named object lifecycle did not build"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         severity: high
         rawTemplate: true
         templateNames:
@@ -501,7 +501,7 @@ stack:
         enabled: true
         description: "Wait for SiteConfig to delete what it rendered"
         policyRef: absent
-        remediationAction: inform
+        remediationAction: InformOnly
         complianceType: mustnothave
         severity: high
         templateNames:

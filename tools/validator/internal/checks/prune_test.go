@@ -49,6 +49,9 @@ func TestPolicy033_Prune(t *testing.T) {
 		{"policy inform overrides template enforce", "    policies:\n" + policy("a", "        remediationAction: inform\n") +
 			"    configPolicies:\n" + entry("x", "a", enforce+prune),
 			[]want{{SevError, "pruneObjectBehavior with policies[0].remediationAction inform"}}},
+		{"policy enforce keeps template InformOnly", "    policies:\n" + policy("a", enforce) +
+			"    configPolicies:\n" + entry("x", "a", "        remediationAction: InformOnly\n"+prune),
+			[]want{{SevError, "pruneObjectBehavior with remediationAction InformOnly: ACM prunes only under enforce"}}},
 		{"policy enforce overrides template inform", "    policies:\n" + policy("a", enforce) +
 			"    configPolicies:\n" + entry("x", "a", "        remediationAction: inform\n"+prune), nil},
 

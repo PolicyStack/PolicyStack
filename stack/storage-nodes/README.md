@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-02 19:50:01*
+*Generated: 2026-10-22 01:00:44*
 
 ## Component Configuration
 
@@ -228,7 +228,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | --------- | ----- | ----------- |
 | Name | `ready-storage-replicas` | Configuration policy identifier |
 | Compliance Type | `musthave` | Compliance requirement type |
-| Remediation | `inform` | Remediation action |
+| Remediation | `InformOnly` | Remediation action |
 | Severity | `medium` | Severity level |
 | Raw Template | Enabled | Emitted under object-templates-raw |
 
@@ -252,7 +252,7 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | --------- | ----- | ----------- |
 | Name | `ready-labeled-nodes` | Configuration policy identifier |
 | Compliance Type | `musthave` | Compliance requirement type |
-| Remediation | `inform` | Remediation action |
+| Remediation | `InformOnly` | Remediation action |
 | Severity | `medium` | Severity level |
 | Raw Template | Enabled | Emitted under object-templates-raw |
 

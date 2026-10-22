@@ -30,7 +30,7 @@ make -C tools/validator test                                                    
 4.  Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exist. Renders the PR's tree, not each file's `revision` ([Render Diff](#render-diff) does that).
 5.  Last, so a failing test does not hide the annotations.
 
-**Fleet pin check.** Each `revision` must be a tag, branch or commit SHA (5 to 40 hex characters) whose commit contains what the file uses. A pin to the PR's base branch is checked against the merge commit.
+**Fleet pin check.** Each `revision` must be a tag, branch or commit SHA (5 to 40 hex characters) whose commit contains what the file uses, including every `valueFiles` entry. A pin to the PR's base branch is checked against the merge commit. A `values/clusters/<name>.yaml` with no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` is a warning, since a tag-pinned cluster's file lands first ([Onboarding](rollout.md#onboarding-a-cluster)).
 
 ```yaml title="fleet/prod-east-1.yaml"
 revision: v1.4.0  # (1)!
@@ -38,7 +38,7 @@ hub: acm-dc1      # (2)!
 version: 4.20.8   # (3)!
 ```
 
-1.  `v1.4.0` must contain `stack/`. A typo or a branch like `gh-pages` fails.
+1.  `v1.4.0` must contain `stack/` and each `valueFiles` entry. A typo or a branch like `gh-pages` fails.
 2.  Also needs `lifecycle/converters/hypershift/`.
 3.  `version` or `channel` also needs an `upgrade` element that reads them.
 

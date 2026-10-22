@@ -260,6 +260,32 @@ stack:
 	}
 }
 
+// TestPolicy030_InformOnly: a template may be InformOnly in any case; a Policy may not.
+func TestPolicy030_InformOnly(t *testing.T) {
+	el := loadElement(t, `
+stack:
+  myElement:
+    enable: true
+    policies:
+      - name: p
+        enabled: true
+        remediationAction: InformOnly
+    configPolicies:
+      - name: a
+        enabled: true
+        policyRef: p
+        remediationAction: InformOnly
+      - name: b
+        enabled: true
+        policyRef: p
+        remediationAction: informonly
+`, "", nil)
+	got := (&EnumCheck{}).Run(Context{Element: el})
+	if len(got) != 1 || !strings.HasPrefix(got[0].Message, `policies[0].remediationAction = "InformOnly"`) {
+		t.Errorf("got %+v, want one policies[0] finding", got)
+	}
+}
+
 func TestPolicy040_PolicySetMissingMember(t *testing.T) {
 	el := loadElement(t, `
 stack:

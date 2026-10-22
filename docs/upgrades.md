@@ -41,7 +41,7 @@ Each field has one writer.
 
 === "Built by a hub with the hypershift engine"
 
-    `lifecycle-<cluster>` on the hub writes HostedCluster `spec.release` and `spec.channel`, then each NodePool's `release` once the control plane completes. See [Cluster lifecycle](lifecycle.md#upgrades).
+    `lifecycle-<cluster>` on the hub writes HostedCluster `spec.release` and `spec.channel`, then each NodePool's `release` once the control plane completes. Downgrades are never attempted. See [Cluster lifecycle](lifecycle.md#upgrades).
 
     The `upgrade` element is inert on the guest (Infrastructure `controlPlaneTopology: External`), since HyperShift owns its ClusterVersion.
 
@@ -58,9 +58,9 @@ Enabled by default. Renders nothing until the fleet file sets `version` or `chan
 | Template | Policy (renders when) | Mode | Does |
 |---|---|---|---|
 | `channel-pin` | `channel-upgrade-<cluster>` (`channel` or `config.upstream` set) | enforce | Sets ClusterVersion `spec.channel` and `spec.upstream`, each only when set. Not held by the guard. |
-| `upgrade-guard` | `upgrade-upgrade-<cluster>` (`version` set) | inform | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the current version. The message lists the ClusterVersion conditions holding it. |
+| `upgrade-guard` | `upgrade-upgrade-<cluster>` (`version` set) | InformOnly | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the current version. The message lists the ClusterVersion conditions holding it. |
 | `upgrade-trigger` | same | enforce | After the guard is Compliant, sets `desiredUpdate.version`, only while `version` is newer than current and no update is progressing. Clears `image` and `force` left by `oc`/console; leaves `architecture`. |
-| `upgrade-progress` | same | inform | NonCompliant until the cluster has completed `version`. The message lists the ClusterVersion conditions. |
+| `upgrade-progress` | same | InformOnly | NonCompliant until the cluster has completed `version`. The message lists the ClusterVersion conditions. |
 
 - A version the update service does not offer is held at the guard.
 - Downgrades are never attempted.

@@ -91,9 +91,9 @@ func (c *PruneCheck) Run(ctx Context) []Finding {
 			add(SevWarning, "pruneObjectBehavior DeleteAll also deletes objects that existed before the policy, such as shared namespaces; prefer DeleteIfCreated")
 		}
 
-		// A Policy-level remediationAction overrides every template's; policy-library defaults templates to inform.
+		// A Policy-level remediationAction overrides every template's but InformOnly; policy-library defaults templates to inform.
 		action, from := cmp.Or(sp.RemediationAction, "inform"), "remediationAction"
-		if par.policy.RemediationAction != "" {
+		if par.policy.RemediationAction != "" && !informOnly(sp.RemediationAction) {
 			action, from = par.policy.RemediationAction, fmt.Sprintf("policies[%d].remediationAction", par.idx)
 		}
 		if !strings.EqualFold(action, "enforce") {

@@ -17,10 +17,10 @@ func (c *LabelCheck) Run(ctx Context) []Finding {
 			RuleID:   c.ID(),
 			Severity: SevError,
 			Cluster:  ctx.Cluster.ClusterName,
-			Element:  elementName(ctx),
 			Message:  "invalid fleet file: " + is.Message,
 			Line:     is.Line,
-			// run.Run sets File to the fleet file path.
+			// run.Run sets File to the fleet file path. No Element, so dedupe reports an issue once,
+			// not once per element.
 		})
 	}
 	return out

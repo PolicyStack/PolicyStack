@@ -252,9 +252,10 @@ The `rawTemplate` converter that reads it, `converters/metallb-ipaddresspools.ya
   with a pull request to the default branch ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)).
 
 !!! warning "Policy-level `remediationAction` overrides inform gates"
-    ACM applies it to every template in the Policy, so `enforce` there enforces readiness checks
-    and `mustnothave` signals. On a policy with inform gates, leave it unset and set the action on
-    each config and operator policy, as upgrade, acs and cert-manager do.
+    ACM applies it to every template in the Policy but `InformOnly` ones, so `enforce` there
+    enforces readiness checks and `mustnothave` signals. Set gates to `InformOnly` (config policies
+    only), as lifecycle, upgrade and storage-nodes do, or leave the Policy's action unset and set it
+    on each config and operator policy, as acs and cert-manager do.
     `global.remediationAction: inform` still overrides all of them.
 
 !!! warning "`pruneObjectBehavior` decides whether removal deletes objects"

@@ -1,16 +1,18 @@
 {{- /*
-Compliant once the control plane reports version Completed and every NodePool reports it, so the
-Policy, and the Application with it, stays NonCompliant until an install or upgrade is done. While
+Compliant once the control plane's desired and newest Completed versions are version and every
+NodePool reports it, so the Policy, and the Application with it, stays NonCompliant until an
+install or upgrade is done, or while a held downgrade waits for the fleet file to catch up. While
 not done, a mustnothave on the existing HostedCluster forces NonCompliant.
 */ -}}
 {{- $i := .Values.install }}
 {{- $c := include "lifecycle.cluster" . }}
 {{- $v := .Values.version | quote }}
 {{ "{{-" }} $hc := lookup "hypershift.openshift.io/v1beta1" "HostedCluster" {{ $i.namespace | quote }} {{ $c | quote }} {{ "}}" }}
-{{ "{{-" }} $ready := false {{ "}}" }}
+{{ "{{-" }} $current := "" {{ "}}" }}
 {{ "{{-" }} range (dig "status" "version" "history" list $hc) {{ "}}" }}
-{{ "{{-" }} if and (eq .version {{ $v }}) (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $ready = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if and (eq $current "") (eq .state "Completed") {{ "}}" }}{{ "{{-" }} $current = .version {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
 {{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $ready := and (eq $current {{ $v }}) (eq (dig "status" "version" "desired" "version" "" $hc) {{ $v }}) {{ "}}" }}
 {{- range $pool, $_ := $i.nodePools }}
 {{ "{{-" }} $ready = and $ready (eq (dig "status" "version" "" (lookup "hypershift.openshift.io/v1beta1" "NodePool" {{ $i.namespace | quote }} "{{ $c }}-{{ $pool }}")) {{ $v }}) {{ "}}" }}
 {{- end }}

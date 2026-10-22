@@ -127,6 +127,36 @@ func TestEnforceIsRaw(t *testing.T) {
 	}
 }
 
+// TestGatesInformOnly: every lifecycle, upgrade and storage-nodes template that is not enforced is
+// InformOnly, so a Policy-level enforce cannot turn a gate into a write or delete.
+func TestGatesInformOnly(t *testing.T) {
+	for _, f := range []string{"lifecycle/values.yaml", "stack/upgrade/values.yaml", "stack/storage-nodes/values.yaml"} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var v struct {
+			Stack map[string]struct {
+				ConfigPolicies []struct {
+					Name              string `json:"name"`
+					PolicyRef         string `json:"policyRef"`
+					RemediationAction string `json:"remediationAction"`
+				} `json:"configPolicies"`
+			} `json:"stack"`
+		}
+		if err := yaml.Unmarshal(b, &v); err != nil {
+			t.Fatal(err)
+		}
+		for key, s := range v.Stack {
+			for _, cp := range s.ConfigPolicies {
+				if cp.RemediationAction != "enforce" && cp.RemediationAction != "InformOnly" {
+					t.Errorf("%s %s %s-%s: remediationAction %q, want enforce or InformOnly", f, key, cp.PolicyRef, cp.Name, cp.RemediationAction)
+				}
+			}
+		}
+	}
+}
+
 // TestMarkerWins: the marker on the root survives install.*.metadata.annotations.
 func TestMarkerWins(t *testing.T) {
 	for _, tt := range []struct{ cluster, kind, set string }{

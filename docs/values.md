@@ -94,8 +94,8 @@ config:
     | Cause | Validator |
     |---|---|
     | Typo in a `valueFiles` entry | POLICY050 |
-    | Entry for a file the cluster's pinned `revision` lacks | not caught |
-    | Cluster values file name differs from the ManagedCluster name | not caught |
+    | Entry for a file the cluster's pinned `revision` lacks | [Fleet pin check](workflows.md#policy-validate) |
+    | Cluster values file name differs from the ManagedCluster name | [Fleet pin check](workflows.md#policy-validate) (warning) |
 
 Compare the Application's files with the repo at the cluster's revision:
 
@@ -158,7 +158,8 @@ The validator's POLICY035 checks every file under `values/` for what the schema 
 
 | Mistake | Caught by |
 |---|---|
-| Unknown key or wrong type in an element (`enabeld`) | schema |
+| Unknown key in an element (`enabeld`) | schema, POLICY035 |
+| Wrong type in an element | schema |
 | Unknown top-level or `global` key | POLICY035 |
 | Unknown element (`stack.certManagr`) | POLICY035 |
 | Toggle that names no entry | POLICY035 |

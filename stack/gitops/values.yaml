@@ -1,40 +1,36 @@
 stack:
-  # @description: OpenShift GitOps operator and the platform ArgoCD instance
   gitops:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Optional pieces
     toggles:
-      # @desc: Deploy the platform ArgoCD instance. Disable to install only the operator.
+      # Deploy the platform ArgoCD instance. Disable to install only the operator.
       instance: true
-      # @desc: Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA
+      # Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA
       ca-bundle: true
-      # @desc: Publish a console link to ArgoCD
+      # Publish a console link to ArgoCD
       link: true
 
-    # @description: ArgoCD configuration
     config:
-      # @desc: Namespace the platform ArgoCD instance runs in
+      # Namespace the platform ArgoCD instance runs in
       namespace: openshift-gitops
-      # @desc: Disable the built-in admin account and rely on OpenShift OAuth
+      # Disable the built-in admin account and rely on OpenShift OAuth
       disableAdmin: false
-      # @desc: Expose ArgoCD metrics to the monitoring stack
+      # Expose ArgoCD metrics to the monitoring stack
       monitoring: false
-      # @desc: Kustomize flags. Enables Helm. PolicyStack does not use the PolicyGenerator plugin.
+      # Kustomize flags. Enables Helm. PolicyStack does not use the PolicyGenerator plugin.
       kustomizeBuildOptions: --enable-helm --helm-command /usr/local/bin/helm
-      # @desc: ArgoCD RBAC, one CSV line per entry
+      # ArgoCD RBAC, one CSV line per entry
       rbacPolicies:
         - "g, cluster-admins, role:admin"
         - "g, system:cluster-admins, role:admin"
       ha:
-        # @desc: Run Redis in HA mode. Needs at least three nodes.
+        # Run Redis in HA mode. Needs at least three nodes.
         enabled: false
       serverAutoscale:
         enabled: false
         maxReplicas: 10
         targetCPUUtilizationPercentage: 50
-      # @description: Per-component resource requests and limits
+      # Per-component resource requests and limits
       resources:
         server:
           requests: {cpu: 125m, memory: 128Mi}
@@ -58,7 +54,6 @@ stack:
           requests: {cpu: 250m, memory: 128Mi}
           limits: {cpu: 500m, memory: 256Mi}
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -111,7 +106,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:

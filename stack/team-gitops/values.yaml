@@ -1,25 +1,23 @@
 stack:
-  # @description: Per-team ArgoCD instances for application delivery
   teamGitops:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Team ArgoCD instances
     config:
-      # @desc: Namespace prefix; each team gets <prefix>-<team>
+      # Namespace prefix; each team gets <prefix>-<team>
       namespacePrefix: openshift-gitops
-      # @desc: Name of the ArgoCD resource inside each team namespace
+      # Name of the ArgoCD resource inside each team namespace
       argoName: argocd-dev
-      # @desc: Teams to create, keyed by name. Values override `defaults` below, e.g.
-      # @desc:   dev:  {rbacPolicies: ["g, dev-leads, role:admin"]}
-      # @desc:   test: {ha: true, resources: {server: {limits: {cpu: "1"}}}}
-      # @desc: Which clusters get which teams is decided by where you set this in the cascade.
+      # Teams to create, keyed by name. Values override `defaults` below, e.g.
+      # `dev: {rbacPolicies: ["g, dev-leads, role:admin"]}` or
+      # `test: {ha: true, resources: {server: {limits: {cpu: "1"}}}}`.
+      # Which clusters get which teams is decided by where you set this in the cascade.
       teams: {}
-      # @description: Applied to every team unless the team overrides them
+      # Applied to every team unless the team overrides them
       defaults:
-        # @desc: RBAC every team instance gets, before its own entries
+        # RBAC every team instance gets, before its own entries
         rbacPolicies:
           - "g, system:cluster-admins, role:admin"
+        # Requests and limits per ArgoCD component
         resources:
           server:
             requests: {cpu: 125m, memory: 128Mi}
@@ -37,7 +35,6 @@ stack:
             requests: {cpu: 125m, memory: 128Mi}
             limits: {cpu: 500m, memory: 256Mi}
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -47,7 +44,7 @@ stack:
         - NIST SP 800-53
 
     policies:
-      # @description: Requires the ArgoCD CRD from the gitops element on the same cluster.
+      # Requires the ArgoCD CRD from the gitops element on the same cluster.
       - name: teams
         enabled: true
         description: "Per-team ArgoCD instances"
@@ -66,7 +63,7 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: medium
-        # @desc: Two objects per team in config.teams
+        # Two objects per team in config.teams
         rawTemplate: true
         templateNames:
           - name: team-argocd

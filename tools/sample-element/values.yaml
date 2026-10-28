@@ -1,20 +1,16 @@
 stack:
-  # @description: Example element. tools/create-element.sh copies it to stack/<name>.
   myElement:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Optional pieces, switchable per cluster
     toggles:
-      # @desc: Apply the ConfigMap configured below
+      # Apply the ConfigMap configured below
       config: true
 
-    # @description: Settings the converters read. Maps merge across the values cascade.
+    # Settings the converters read.
     config:
-      # @desc: ConfigMap data, e.g. {logLevel: info}
+      # ConfigMap data, e.g. {logLevel: info}
       data: {}
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -37,7 +33,7 @@ stack:
         remediationAction: inform
         severity: medium
         disabled: false
-        # @desc: ACM holds this policy Pending until install is compliant
+        # ACM holds this policy Pending until install is compliant
         dependencies:
           - name: install
 
@@ -59,7 +55,7 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers
+        # Allowed CSV names; empty allows whatever the channel offers
         versions: []
 
     configPolicies:
@@ -70,7 +66,7 @@ stack:
         complianceType: musthave
         remediationAction: inform
         severity: medium
-        # @desc: Wait for the operator's CSV, and stay compliant while waiting
+        # Wait for the operator's CSV, and stay compliant while waiting
         waitForOperator: my-element
         ignorePending: true
         templateNames:

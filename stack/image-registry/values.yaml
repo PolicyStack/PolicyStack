@@ -1,41 +1,37 @@
 stack:
-  # @description: Internal image registry storage and configuration
   imageRegistry:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Enable only one storage backend. `pvc` needs an RWX StorageClass; `s3` needs
-    # @description: ODF's NooBaa gateway on the same cluster.
+    # Enable only one storage backend. `pvc` needs an RWX StorageClass; `s3` needs
+    # ODF's NooBaa gateway on the same cluster.
     toggles:
-      # @desc: Back the registry with an RWX PersistentVolumeClaim
+      # Back the registry with an RWX PersistentVolumeClaim
       pvc: false
-      # @desc: Back the registry with a NooBaa bucket from ODF
+      # Back the registry with a NooBaa bucket from ODF
       s3: false
 
-    # @description: Registry configuration
     config:
-      # @desc: Must match the toggle you enabled above: pvc or s3
+      # Must match the toggle you enabled above: pvc or s3
       storageType: s3
-      # @desc: Managed, Unmanaged or Removed
+      # Managed, Unmanaged or Removed
       managementState: Managed
-      # @desc: Registry replicas. Use at least 2 with RWX or S3 storage.
+      # Registry replicas. Use at least 2 with RWX or S3 storage.
       replicas: 2
-      # @desc: RollingUpdate is only safe with RWX or S3; use Recreate with RWO
+      # RollingUpdate is only safe with RWX or S3; use Recreate with RWO
       rolloutStrategy: RollingUpdate
-      # @description: Used when storageType is pvc
+      # Used when storageType is pvc
       pvc:
         accessMode: ReadWriteMany
         volumeMode: Filesystem
         storageClass: ocs-storagecluster-cephfs
         size: 100Gi
-      # @description: Used when storageType is s3
+      # Used when storageType is s3
       s3:
-        # @desc: Region string sent to the S3 API. NooBaa ignores it but it must be set.
+        # Region string sent to the S3 API. NooBaa ignores it but it must be set.
         region: us-east-1
-        # @desc: StorageClass that provisions the bucket
+        # StorageClass that provisions the bucket
         bucketStorageClass: openshift-storage.noobaa.io
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -52,8 +48,8 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: S3-backed storage comes from ODF's NooBaa gateway, so it waits for the
-      # @description: storage cluster to be usable.
+      # S3-backed storage comes from ODF's NooBaa gateway, so it waits for the
+      # storage cluster to be usable.
       - name: s3
         enabled: true
         description: "S3-backed registry storage from ODF"
@@ -119,7 +115,7 @@ stack:
         remediationAction: enforce
         severity: medium
         rawTemplate: true
-        # @desc: The credentials only exist once the bucket has been provisioned
+        # The credentials only exist once the bucket has been provisioned
         extraDependencies:
           - name: bucket-ready
         ignorePending: true

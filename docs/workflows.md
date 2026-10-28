@@ -85,7 +85,7 @@ python -m unittest tools/test_doc_generator.py
 python tools/doc-generator.py --check  # (1)!
 ```
 
-1.  Regenerates each `stack/<element>/README.md` in memory and compares, ignoring the `Generated:` timestamp.
+1.  Regenerates each `stack/<element>/README.md` in memory and compares.
 
 When `Verify Documentation` fails, fix it either way:
 

@@ -23,6 +23,5 @@ find "$dest" -type f -exec sed -i -e "s/\bmy-element\b/$name/g" -e "s/\bmyElemen
 set_line() { L=$3 awk -v p="$2" 'index($0, p) == 1 {$0 = ENVIRON["L"]} 1' "$1" > "$1.tmp" && mv "$1.tmp" "$1"; }
 d=${desc//\\/\\\\} d=${d//\"/\\\"}
 set_line "$dest/Chart.yaml" "description: " "description: \"$d\""
-set_line "$dest/values.yaml" "  # @description: Example element" "  # @description: $desc"
 
 echo "Created $dest, values key stack.$camel. Finish it as in docs/elements.md#creating-an-element."

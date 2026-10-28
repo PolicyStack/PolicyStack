@@ -1,10 +1,7 @@
 stack:
-  # @description: OpenShift Pipelines (Tekton) Operator
   pipelines:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -13,7 +10,7 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # @description: Parent policy grouping the Pipelines Operator install resources
+    # Parent policy grouping the Pipelines Operator install resources
     policies:
       - name: install
         enabled: true
@@ -23,7 +20,7 @@ stack:
         severity: medium
         disabled: false
 
-    # @description: OperatorPolicy installing Pipelines cluster-wide in openshift-operators
+    # OperatorPolicy installing Pipelines cluster-wide in openshift-operators
     operatorPolicies:
       openshift-pipelines:
         enabled: true
@@ -42,5 +39,4 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []

@@ -1,33 +1,26 @@
 stack:
-  # @description: Mirror registries, mirrored catalogs and CA trust for disconnected clusters. Pair it
-  # @description: with global.catalogSources so operators install from the mirrored catalogs. On a
-  # @description: hosted cluster the HostedCluster owns mirrors, image config and the proxy: keep only
-  # @description: CatalogSources in clusterResources and turn registry-ca and trusted-ca off.
   disconnected:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Each piece is switchable per cluster
     toggles:
-      # @desc: Apply the objects in config.clusterResources
+      # Apply the objects in config.clusterResources
       resources: true
-      # @desc: Trust the mirror registries' CAs for image pulls
+      # Trust the mirror registries' CAs for image pulls
       registry-ca: true
-      # @desc: Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA)
+      # Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA)
       trusted-ca: true
-      # @desc: Disable the default OperatorHub catalog sources, which cannot be reached
+      # Disable the default OperatorHub catalog sources, which cannot be reached
       operatorhub: true
 
-    # @description: Site data, usually set once in a datacenter layer
+    # Site data, usually set once in a datacenter layer
     config:
-      # @desc: Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps
+      # Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps
       clusterResources: []
-      # @desc: Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM.
+      # Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM.
       registryCAs: {}
-      # @desc: PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed.
+      # PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed.
       trustedCA: ""
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management

@@ -7,11 +7,6 @@ This directory contains automation utilities for PolicyStack development and doc
 - [Overview](#overview)
 - [create-element.sh](#create-elementsh)
 - [doc-generator.py](#doc-generatorpy)
-  - [Purpose](#purpose)
-  - [Architecture](#architecture)
-  - [Usage](#usage)
-  - [Comment Annotation System](#comment-annotation-system)
-  - [Output Format](#output-format)
 - [CI/CD Integration](#cicd-integration)
 - [Best Practices](#best-practices)
 
@@ -19,7 +14,7 @@ This directory contains automation utilities for PolicyStack development and doc
 
 The PolicyStack tools provide:
 - **Element Creation**: Automated scaffolding of new policy elements with proper structure
-- **Documentation Generation**: Automatic extraction and formatting of inline documentation from YAML configurations
+- **Documentation Generation**: Element READMEs generated from `Chart.yaml` and `values.yaml`
 - **CI/CD Support**: GitHub Actions workflows for documentation validation and auto-generation
 
 ## create-element.sh
@@ -35,141 +30,23 @@ See [Creating an element](../docs/elements.md#creating-an-element).
 
 ## doc-generator.py
 
-### Purpose
-
-The documentation generator creates comprehensive markdown documentation from PolicyStack values.yaml files by:
-- Parsing YAML with comment preservation at any nesting level
-- Extracting `@description` and `@desc` annotations
-- Generating structured documentation for all policy types
-- Identifying configuration issues (orphaned policies)
-
-### Architecture
-
-```
-DocumentationGenerator
-├── YAMLLoader                   # Comment-aware YAML parser
-│   ├── _parse_with_comments()   # Extracts comments at all levels
-│   ├── load()                   # Returns data + comment structure
-│   └── get_description()        # Retrieves descriptions by path
-│
-├── Element Processing
-│   ├── generate_element_docs()  # Main doc generation per element
-│   ├── _generate_policy_section()
-│   ├── _generate_config_policy_section()
-│   ├── _generate_operator_policy_section()
-│   └── _generate_certificate_policy_section()
-│
-└── Utilities
-    ├── to_camel_case()          # Name conversion
-    ├── _find_sub_policies()     # Relationship mapping
-    ├── _find_orphaned_policies()# Validation
-    └── _calculate_statistics()  # Summary generation
-```
-
-### Usage
-
 ```bash
-# Install the pinned dependencies
 pip install -r tools/requirements.txt
-
-# Generate documentation for all elements
-python tools/doc-generator.py
-
-# Custom stack directory
-python tools/doc-generator.py --stack-dir ./custom-stack
-
-# Single element documentation
-python tools/doc-generator.py --element security-baseline
+python tools/doc-generator.py                  # all elements
+python tools/doc-generator.py --element acs    # one element
+python tools/doc-generator.py --check          # exit 1 when a README is missing or stale
+python -m unittest tools/test_doc_generator.py
 ```
 
-### Comment Annotation System
+Writes `stack/<element>/README.md` from `Chart.yaml` and `values.yaml`: the values key, toggles,
+settings, operators, and each Policy with its templates, actions, dependencies and converters.
 
-The generator supports hierarchical comment annotations using `@description:` or `@desc:` prefixes:
+The comment lines directly above a key under `toggles:` or `config:`, or above those two keys, are
+its description. A blank line ends the block, so a maintainer note separated by one is not
+rendered. Other comments are never rendered. See
+[Element reference](../docs/elements.md#element-reference).
 
-#### Basic Annotations
-
-```yaml
-# @description: Main policy for security compliance
-security-policy:
-  # @desc: Enable or disable this policy
-  enabled: true
-```
-
-#### Nested Field Documentation
-
-```yaml
-configPolicies:
-  - name: network-policy
-    # @desc: Enforcement action when violations detected
-    remediationAction: enforce
-    
-    # @description: Template configurations
-    templateNames:
-      # @desc: Ingress control template
-      - name: ingress-rules
-        complianceType: musthave
-```
-
-#### Array Item Documentation
-
-```yaml
-# @description: CSVs the OperatorPolicy may install
-versions:
-  # @desc: Currently installed
-  - example-operator.v1.0.0
-  # @desc: Next bump, remove v1.0.0 once every cluster runs it
-  - example-operator.v1.0.1
-```
-
-#### Multi-line Annotations
-
-Consecutive annotation lines are joined into one description. A blank line or plain comment ends the run.
-
-```yaml
-# @desc: Allow OSDs to be unevenly distributed. Set true on bare metal when the storage node
-# @desc: count is not a multiple of three.
-flexibleScaling: null
-```
-
-Parser tests: `python -m unittest tools/test_doc_generator.py`
-
-### Output Format
-
-The generator produces:
-
-#### Individual Element Documentation (`stack/<element-name>/README.md`)
-
-```markdown
-# element-name - Policy Library Documentation
-
-> Element description from Chart.yaml
-
-Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
-
-*Generated: 2025-09-05 14:30:00*
-
-## Component Configuration
-| Parameter | Value | Description |
-| --------- | ----- | ----------- |
-| Component | `elementName` | Main component configuration |
-| Enabled | `true` | Whether this component is enabled |
-
-## Policies
-### 📋 Policy: policy-name
-> Policy description
-
-[Detailed policy configuration tables...]
-
-## PolicySets
-[PolicySet configurations...]
-
-## 📊 Summary
-| Resource Type | Count |
-| ------------- | ----- |
-| Policies | 5 |
-| Configuration Policies | 12 |
-| **Total Resources** | **17** |
-```
+It fails on a toggle that matches no entry and on a `policyRef` that names no policy.
 
 ## CI/CD Integration
 
@@ -181,11 +58,10 @@ regenerates and commits `stack/*/README.md` to the PR branch. See [docs/workflow
 
 ### For doc-generator.py
 
-1. **Comment Placement**: Place `@desc` comments immediately before the field they describe
+1. **Comment Placement**: Put a description directly above the toggle or setting it describes
 2. **Description Quality**: Write descriptions that explain "why" not just "what"
 3. **Consistency**: Use consistent terminology across descriptions
 4. **Validation**: Run the generator locally before committing values changes
-5. **Array Documentation**: Document array items when they have distinct purposes
 
 ### General
 

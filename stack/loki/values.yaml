@@ -1,42 +1,38 @@
 stack:
-  # @description: Loki log storage, the log forwarder and the console logging UI
   loki:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Optional components. Each depends on a different element, so each has its own
-    # @description: toggle.
+    # Optional components. Each depends on a different element, so each has its own
+    # toggle.
     toggles:
-      # @desc: Forward cluster logs into Loki. Requires the logging element.
+      # Forward cluster logs into Loki. Requires the logging element.
       forwarder: false
-      # @desc: Add the Logging view to the console. Requires the coo element.
+      # Add the Logging view to the console. Requires the coo element.
       observability-ui: false
 
-    # @description: Loki sizing and ingestion limits
     config:
-      # @desc: 1x.demo, 1x.pico, 1x.extra-small, 1x.small or 1x.medium
+      # 1x.demo, 1x.pico, 1x.extra-small, 1x.small or 1x.medium
       size: 1x.extra-small
-      # @desc: StorageClass for Loki's own PVCs (indexes and caches, not the object store)
+      # StorageClass for Loki's own PVCs (indexes and caches, not the object store)
       storageClass: gp3-csi
-      # @desc: Sustained ingestion in MB/s per tenant
+      # Sustained ingestion in MB/s per tenant
       ingestionRate: 8
-      # @desc: Burst allowance in MB
+      # Burst allowance in MB
       ingestionBurstSize: 16
-      # @desc: How long a query may run before it is cut off
+      # How long a query may run before it is cut off
       queryTimeout: 3m
-      # @desc: Schema start date. Only change this when migrating schema versions.
+      # Schema start date. Only change this when migrating schema versions.
       schemaEffectiveDate: '2024-09-22'
-      # @desc: Log types forwarded into Loki: application, infrastructure and/or audit
+      # Log types forwarded into Loki: application, infrastructure and/or audit
       forwardedLogTypes:
         - infrastructure
         - application
-      # @desc: ClusterRoles the collector needs to read those log types
+      # ClusterRoles the collector needs to read those log types
       collectorRoles:
         - collect-application-logs
         - collect-infrastructure-logs
         - collect-audit-logs
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - AU Audit and Accountability
@@ -54,8 +50,8 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: Loki stores its chunks in a NooBaa bucket, so it waits for ODF storage to be
-      # @description: usable before the bucket is claimed.
+      # Loki stores its chunks in a NooBaa bucket, so it waits for ODF storage to be
+      # usable before the bucket is claimed.
       - name: stack
         enabled: true
         description: "Deploy the LokiStack and its object storage"
@@ -67,8 +63,8 @@ stack:
           - name: ready
             element: odf
 
-      # @description: The forwarder needs the logging operator's CRDs, which live in a different
-      # @description: element on the same cluster.
+      # The forwarder needs the logging operator's CRDs, which live in a different
+      # element on the same cluster.
       - name: forwarder
         enabled: true
         description: "Forward cluster logs into Loki"
@@ -80,7 +76,7 @@ stack:
           - name: install
             element: logging
 
-      # @description: The console plugin is served by the Cluster Observability operator.
+      # The console plugin is served by the Cluster Observability operator.
       - name: observability-ui
         enabled: true
         description: "Logging view in the OpenShift console"
@@ -110,7 +106,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:
@@ -142,7 +137,7 @@ stack:
         remediationAction: enforce
         severity: medium
         waitForOperator: loki
-        # @desc: The bucket secret must exist before LokiStack starts
+        # The bucket secret must exist before LokiStack starts
         extraDependencies:
           - name: bucket
         ignorePending: true
@@ -170,7 +165,7 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: medium
-        # @desc: One binding per configured collector role
+        # One binding per configured collector role
         rawTemplate: true
         templateNames:
           - name: collector-rbac

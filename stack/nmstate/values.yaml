@@ -1,37 +1,34 @@
 stack:
-  # @description: Kubernetes NMState operator and declarative node network configuration
   nmstate:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: NNCP generation is opt-in: the operator and its CR are useful on their own,
-    # @description: and node network topology is highly cluster-specific.
+    # NNCP generation is opt-in: the operator and its CR are useful on their own,
+    # and node network topology is highly cluster-specific.
     toggles:
-      # @desc: Generate NodeNetworkConfigurationPolicies from config.networking below
+      # Generate NodeNetworkConfigurationPolicies from config.networking below
       nncp: false
 
-    # @description: Node network topology. All NNCP generator input lives here so the topology is
-    # @description: reviewable in git.
+    # Node network topology. All NNCP generator input lives here so the topology is
+    # reviewable in git.
     config:
       networking:
-        # @desc: Nodes the shared NNCPs apply to. Empty means all nodes.
+        # Nodes the shared NNCPs apply to. Empty means all nodes.
         nodeSelector: {}
-        # @desc: Cluster-wide interfaces keyed by id, e.g.
-        # @desc: bond0: {type: bond, mode: 802.3ad, ports: [ens1f0, ens1f1], ipv4: dhcp}
+        # Cluster-wide interfaces keyed by id, e.g.
+        # bond0: {type: bond, mode: 802.3ad, ports: [ens1f0, ens1f1], ipv4: dhcp}
         interfaces: {}
-        # @desc: OVS bridges keyed by id, e.g. br-ex: {ports: [bond0], stp: false}
+        # OVS bridges keyed by id, e.g. br-ex: {ports: [bond0], stp: false}
         ovsBridges: {}
-        # @desc: Static routes keyed by id, e.g. r1: {destination: 0.0.0.0/0, gateway: ..., interface: bond0}
+        # Static routes keyed by id, e.g. r1: {destination: 0.0.0.0/0, gateway: ..., interface: bond0}
         routes: {}
-        # @desc: Resolver settings, e.g. {servers: [10.0.0.10], search: [example.com]}
+        # Resolver settings, e.g. {servers: [10.0.0.10], search: [example.com]}
         dns: {}
-        # @desc: OVN localnet-to-bridge mappings, e.g. m1: {localnet: physnet, bridge: br-ex}
+        # OVN localnet-to-bridge mappings, e.g. m1: {localnet: physnet, bridge: br-ex}
         ovnMappings: {}
-      # @desc: Per-host overrides keyed by hostname. An interface declared here is rendered only
-      # @desc: for that host, not cluster-wide. Use it for static addressing and per-host MACs.
+      # Per-host overrides keyed by hostname. An interface declared here is rendered only
+      # for that host, not cluster-wide. Use it for static addressing and per-host MACs.
       hosts: {}
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -60,7 +57,7 @@ stack:
       - name: ready
         enabled: true
         description: "Reports NonCompliant until the nmstate webhook is Available"
-        # @desc: A status can only be observed, so this policy never enforces
+        # A status can only be observed, so this policy never enforces
         remediationAction: inform
         severity: medium
         disabled: false
@@ -73,7 +70,7 @@ stack:
         remediationAction: enforce
         severity: medium
         disabled: false
-        # @desc: NNCPs are rejected by admission until the webhook is up
+        # NNCPs are rejected by admission until the webhook is up
         dependencies:
           - name: ready
 
@@ -97,7 +94,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:
@@ -136,7 +132,7 @@ stack:
         complianceType: mustonlyhave
         remediationAction: enforce
         severity: medium
-        # @desc: The number of NNCPs depends on how many interfaces/hosts are configured
+        # The number of NNCPs depends on how many interfaces/hosts are configured
         rawTemplate: true
         templateNames:
           - name: nncp

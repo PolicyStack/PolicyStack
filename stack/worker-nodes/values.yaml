@@ -1,39 +1,40 @@
 stack:
-  # @description: Worker node sizing and kubelet tuning
   workerNodes:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Kubelet tuning is safe; resizing MachineSets is not, so it is opt-in.
+    # Kubelet tuning is safe; resizing MachineSets is not, so it is opt-in.
     toggles:
-      # @desc: Apply the kubelet configuration below to the worker pool
+      # Apply the kubelet configuration below to the worker pool
       config: true
-      # @desc: Scale and resize the existing worker MachineSets
+      # Scale and resize the existing worker MachineSets
       machines: false
-      # @desc: Report NonCompliant until the workers report the requested replica count
+      # Report NonCompliant until the workers report the requested replica count
       ready: false
 
-    # @description: Worker sizing and kubelet reservations
     config:
-      # @desc: Replicas per worker MachineSet. Empty keeps the installer's value.
+      # Replicas per worker MachineSet. Empty keeps the installer's value.
       replicas: ""
-      # @desc: AWS instance type. Empty keeps the installer's value.
+      # AWS instance type. Empty keeps the installer's value.
       instanceType: ""
-      # @desc: vSphere vCPUs. Empty keeps the installer's value.
+      # vSphere vCPUs. Empty keeps the installer's value.
       numCPUs: ""
-      # @desc: vSphere cores per socket
+      # vSphere cores per socket
       numCoresPerSocket: ""
-      # @desc: vSphere memory in MiB
+      # vSphere memory in MiB
       memoryMiB: ""
-      # @desc: Maximum pods per node
+      # Maximum pods per node
       maxPods: 250
+      # Memory reserved for system daemons
       systemReservedMemory: 1Gi
+      # CPU reserved for system daemons
       systemReservedCpu: 250m
+      # Memory reserved for the kubelet and container runtime
       kubeReservedMemory: 512Mi
+      # CPU reserved for the kubelet and container runtime
       kubeReservedCpu: 250m
+      # Hard eviction threshold for available memory
       evictionMemory: 500Mi
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management

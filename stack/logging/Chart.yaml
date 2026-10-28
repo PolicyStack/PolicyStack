@@ -1,6 +1,6 @@
 apiVersion: v2
 name: logging
-description: Element for the OpenShift Logging. This installs and configures OpenShift Logging.
+description: "OpenShift Logging operator. The loki element adds log storage, the forwarder and the console UI."
 type: application
 version: 0.1.0
 appVersion: "1.16.0"

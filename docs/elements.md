@@ -34,7 +34,7 @@ The result passes the validator as is. Then:
 1. Set the operator's `namespace`, `operatorGroup` and `subscription` in `values.yaml`.
 2. Replace `converters/<name>-configmap.yaml` with one file per `templateNames` entry. A missing
    converter fails (POLICY020), an unused one warns (POLICY021).
-3. Describe each setting with `# @desc:` and [generate the README](#element-reference).
+3. Describe each toggle and setting with a comment above it and [generate the README](#element-reference).
 4. Run the [validator](validation.md).
 5. Turn it on for one nonprod cluster in `values/clusters/<cluster>.yaml`.
 
@@ -65,22 +65,18 @@ policy, a `config` policy that depends on it, a toggle, and one converter.
 
     ```yaml
     stack:
-      # @description: Example element. tools/create-element.sh copies it to stack/<name>.
       myElement: # (1)!
-        # @desc: Master control to enable/disable all policies in this element
         enabled: false # (2)!
 
-        # @description: Optional pieces, switchable per cluster
         toggles:
-          # @desc: Apply the ConfigMap configured below
+          # Apply the ConfigMap configured below
           config: true # (3)!
 
-        # @description: Settings the converters read. Maps merge across the values cascade.
+        # Settings the converters read.
         config:
-          # @desc: ConfigMap data, e.g. {logLevel: info}
+          # ConfigMap data, e.g. {logLevel: info}
           data: {} # (4)!
 
-        # @description: Default policy metadata applied unless overridden per-policy
         default:
           categories:
             - CM Configuration Management
@@ -103,7 +99,7 @@ policy, a `config` policy that depends on it, a toggle, and one converter.
             remediationAction: inform
             severity: medium
             disabled: false
-            # @desc: ACM holds this policy Pending until install is compliant
+            # ACM holds this policy Pending until install is compliant
             dependencies:
               - name: install
 
@@ -125,7 +121,7 @@ policy, a `config` policy that depends on it, a toggle, and one converter.
               source: redhat-operators
               sourceNamespace: openshift-marketplace
             upgradeApproval: Automatic
-            # @desc: Allowed CSV names; empty allows whatever the channel offers
+            # Allowed CSV names; empty allows whatever the channel offers
             versions: [] # (7)!
 
         configPolicies:
@@ -136,7 +132,7 @@ policy, a `config` policy that depends on it, a toggle, and one converter.
             complianceType: musthave
             remediationAction: inform
             severity: medium
-            # @desc: Wait for the operator's CSV, and stay compliant while waiting
+            # Wait for the operator's CSV, and stay compliant while waiting
             waitForOperator: my-element
             ignorePending: true
             templateNames:
@@ -295,8 +291,7 @@ The validator evaluates escaped templates as POLICY081 ([ACM templates](validati
 
 ## Element reference
 
-`stack/<element>/README.md` is generated from `values.yaml` and its `@description` / `@desc`
-comments. Do not edit it by hand.
+`stack/<element>/README.md` is generated from `Chart.yaml` and `values.yaml`. Do not edit it by hand.
 
 ```sh
 pip install -r tools/requirements.txt
@@ -304,7 +299,30 @@ python tools/doc-generator.py          # regenerate all READMEs
 python tools/doc-generator.py --check  # report stale ones, write nothing
 ```
 
+It shows the values key, toggles, settings (`config`), operators, and each Policy with its templates as
+they appear in the ACM console. Descriptions come from:
+
+| Source | Shown as |
+| ------ | -------- |
+| `Chart.yaml` `description` | Lead paragraph |
+| `Chart.yaml` `home` | Guide link, for elements with a page under `docs/` |
+| Comment above `toggles:` or `config:` | Section intro |
+| Comment above a key under `toggles` or `config` | That row's description |
+| `description:` of a policy, config or operator policy | Policy line or template row |
+
+```yaml
+config:
+  # Ceph CSI tolerations are not managed: see the converter. # (1)!
+
+  # Device sets per replica
+  count: 2
+```
+
+1.  A blank line separates a maintainer note from the key. Comments anywhere else are never rendered.
+
+A map under `config` is listed key by key when its values are all scalars or any of its keys has a
+comment; otherwise it is one row, with long defaults folded below the table.
+
 Commit the README with the `values.yaml` change. CI runs the check on pull requests, and the
 `update-docs` label regenerates READMEs on the PR branch
-([Documentation Check](workflows.md#documentation-check)). Flags and comment syntax:
-[tools/README.md](https://github.com/PolicyStack/PolicyStack/blob/main/tools/README.md#doc-generatorpy).
+([Documentation Check](workflows.md#documentation-check)).

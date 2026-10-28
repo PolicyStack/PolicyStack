@@ -1,34 +1,30 @@
 stack:
-  # @description: "Advanced Cluster Management hub: MultiClusterHub, observability and search"
   acm:
-    # @desc: Master control to enable/disable all policies in this element. Hub-only; enable it
-    # @desc: in values/acm/*.yaml.
     enabled: false
 
-    # @description: Optional hub capabilities
+    # Optional hub capabilities. The element is hub-only: enable it in values/acm/*.yaml.
     toggles:
-      # @desc: Long-term metric storage via Thanos. Requires ODF on the same cluster.
+      # Long-term metric storage via Thanos. Requires ODF on the same cluster.
       observability: false
-      # @desc: Persistent storage for ACM Search
+      # Persistent storage for ACM Search
       search: false
-      # @desc: Tune the policy addons pushed to managed clusters
+      # Tune the policy addons pushed to managed clusters
       addons: false
 
-    # @description: Hub configuration
     config:
-      # @desc: High or Basic. Basic runs single replicas and suits lab hubs.
+      # High or Basic. Basic runs single replicas and suits lab hubs.
       availabilityConfig: High
-      # @desc: Whether the hub also manages itself as `local-cluster`
+      # Whether the hub also manages itself as `local-cluster`
       selfManaged: true
-      # @desc: Enable the SiteConfig component, needed by the lifecycle siteconfig engine
+      # Enable the SiteConfig component, needed by the lifecycle siteconfig engine
       siteConfig: false
-      # @description: ACM Search database storage
+      # ACM Search database storage
       search:
         size: 100Gi
-        # @desc: Empty uses the cluster default. The field is then omitted, since an empty string
-        # @desc: disables provisioning.
+        # Empty uses the cluster default. The field is then omitted, since an empty string
+        # disables provisioning.
         storageClass: ""
-      # @description: Observability sizing
+      # Observability sizing
       observability:
         enableMetrics: true
         interval: 300
@@ -39,8 +35,8 @@ stack:
         receiveStorageSize: 100Gi
         ruleStorageSize: 1Gi
         storeStorageSize: 10Gi
-      # @description: Policy addon tuning, keyed by addon name. The shipped defaults raise the
-      # @description: stock concurrency and rate limits, which are the usual bottleneck at scale.
+      # Policy addon tuning, keyed by addon name. The shipped defaults raise the
+      # stock concurrency and rate limits, which are the usual bottleneck at scale.
       addons:
         config-policy-controller:
           evaluationConcurrency: 5
@@ -55,7 +51,6 @@ stack:
           requests: {cpu: 100m, memory: 128Mi}
           limits: {memory: 512Mi}
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -81,7 +76,7 @@ stack:
         dependencies:
           - name: install
 
-      # @description: Thanos stores long-term metrics in a NooBaa bucket, so this waits for ODF.
+      # Thanos stores long-term metrics in a NooBaa bucket, so this waits for ODF.
       - name: observability
         enabled: true
         description: "Long-term metric storage"
@@ -131,7 +126,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:
@@ -174,7 +168,7 @@ stack:
         remediationAction: enforce
         severity: medium
         rawTemplate: true
-        # @desc: The bucket credentials only exist once the bucket is provisioned
+        # The bucket credentials only exist once the bucket is provisioned
         extraDependencies:
           - name: bucket
         ignorePending: true
@@ -202,7 +196,7 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: medium
-        # @desc: Two objects per configured addon
+        # Two objects per configured addon
         rawTemplate: true
         templateNames:
           - name: acm-addon-tuning

@@ -1,6 +1,7 @@
 apiVersion: v2
 name: disconnected
 description: "Mirror registries, mirrored catalogs and CA trust for disconnected clusters"
+home: https://policystk.io/disconnected/
 type: application
 version: 0.1.0
 dependencies:

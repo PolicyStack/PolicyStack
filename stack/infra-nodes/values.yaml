@@ -1,55 +1,58 @@
 stack:
-  # @description: Dedicated infra nodes and the platform workloads placed on them
   infraNodes:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Enable only one platform toggle (aws or vmware). Set it in
-    # @description: values/platforms/<platform>.yaml, selected by a
-    # @description: platform.<N> config entry in the cluster's fleet file.
+    # Enable only one platform toggle (aws or vmware). Set it in
+    # values/platforms/<platform>.yaml, selected by a
+    # platform.<N> config entry in the cluster's fleet file.
     toggles:
-      # @desc: MachineConfigPool for the infra role
+      # MachineConfigPool for the infra role
       mcp: true
-      # @desc: Kubelet configuration for the infra pool
+      # Kubelet configuration for the infra pool
       config: true
-      # @desc: Create infra MachineSets by cloning the worker MachineSet (AWS)
+      # Create infra MachineSets by cloning the worker MachineSet (AWS)
       aws: false
-      # @desc: Clone each worker MachineSet per vSphere failure domain
+      # Clone each worker MachineSet per vSphere failure domain
       vmware: false
-      # @desc: Report NonCompliant until the infra nodes are ready
+      # Report NonCompliant until the infra nodes are ready
       ready: true
-      # @desc: Move gitops, ingress, image registry and monitoring onto infra nodes
+      # Move gitops, ingress, image registry and monitoring onto infra nodes
       workloads: false
-      # @desc: Move the `workloads` components back off infra nodes. Disabling `workloads` stops
-      # @desc: enforcement but does not revert placement. Enable this to revert, then disable it
-      # @desc: once the components have moved.
+      # Move the `workloads` components back off infra nodes. Disabling `workloads` stops
+      # enforcement but does not revert placement. Enable this to revert, then disable it
+      # once the components have moved.
       restore: false
 
-    # @description: Infra node sizing
     config:
-      # @desc: Infra nodes per zone
+      # Infra nodes per zone
       replicas: 3
-      # @desc: AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
+      # AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
       zones: []
-      # @desc: AWS instance type. Empty inherits from the worker MachineSet.
+      # AWS instance type. Empty inherits from the worker MachineSet.
       instanceType: ""
-      # @desc: Root volume size in GiB. Empty inherits from the worker MachineSet.
+      # Root volume size in GiB. Empty inherits from the worker MachineSet.
       volumeSize: ""
-      # @desc: vSphere sizing. Empty inherits from the worker MachineSet.
+      # vSphere vCPUs. Empty inherits from the worker MachineSet.
       numCPUs: ""
+      # vSphere cores per socket. Empty inherits from the worker MachineSet.
       numCoresPerSocket: ""
+      # vSphere memory in MiB. Empty inherits from the worker MachineSet.
       memoryMiB: ""
-      # @desc: Namespace the GitopsService lives in
+      # Namespace the GitopsService lives in
       gitopsNamespace: openshift-gitops
-      # @desc: Kubelet max pods and resource reservations for infra nodes
+      # Maximum pods per infra node
       maxPods: 250
+      # Memory reserved for system daemons
       systemReservedMemory: 2Gi
+      # CPU reserved for system daemons
       systemReservedCpu: 500m
+      # Memory reserved for the kubelet and container runtime
       kubeReservedMemory: 1Gi
+      # CPU reserved for the kubelet and container runtime
       kubeReservedCpu: 500m
+      # Hard eviction threshold for available memory
       evictionMemory: 500Mi
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -106,7 +109,7 @@ stack:
         remediationAction: enforce
         severity: medium
         disabled: false
-        # @desc: Move workloads only after the infra nodes are ready
+        # Move workloads only after the infra nodes are ready
         dependencies:
           - name: ready
 
@@ -210,14 +213,14 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: medium
-        # @desc: Merges placement keys into the existing cluster-monitoring-config
+        # Merges placement keys into the existing cluster-monitoring-config
         rawTemplate: true
         templateNames:
           - name: infra-monitoring
         enableTemplateParameters: true
         templateParameters:
           role: infra
-          # @desc: Monitoring components to pin. Alertmanager and Prometheus use the most resources.
+          # Monitoring components to pin. Alertmanager and Prometheus use the most resources.
           components:
             - alertmanagerMain
             - prometheusK8s

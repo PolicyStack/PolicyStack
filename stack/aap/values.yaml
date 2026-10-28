@@ -1,47 +1,46 @@
 stack:
-  # @description: "Ansible Automation Platform: controller, hub, EDA and Lightspeed"
   aap:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Optional add-ons, switchable per cluster
     toggles:
-      # @desc: Request a NooBaa bucket from ODF and wire it up as hub content storage.
-      # @desc: Requires odf on the same cluster.
+      # Request a NooBaa bucket from ODF and wire it up as hub content storage.
+      # Requires odf on the same cluster.
       storage: false
-      # @desc: Give AAP the cluster service CA and trusted CA bundle
+      # Give AAP the cluster service CA and trusted CA bundle
       certs: false
-      # @desc: Publish an OpenShift console link to AAP
+      # Publish an OpenShift console link to AAP
       link: true
 
-    # @description: Platform configuration
     config:
-      # @desc: Redis topology: standalone or cluster
+      # Redis topology: standalone or cluster
       redisMode: standalone
+      # Automation Controller is the core component; disabling it leaves little behind
       controller:
-        # @desc: Automation Controller is the core component; disabling it leaves little behind
+        # true skips this component
         disabled: false
+      # Event-Driven Ansible
       eda:
-        # @desc: Event-Driven Ansible
+        # true skips this component
         disabled: true
+      # Ansible Lightspeed
       lightspeed:
-        # @desc: Ansible Lightspeed
+        # true skips this component
         disabled: true
+      # Automation Hub (private content repository)
       hub:
-        # @desc: Automation Hub (private content repository)
+        # true skips this component
         disabled: false
-        # @description: Hub content storage
+        # Hub content storage
         storage:
-          # @desc: none, file (RWX PVC), or s3 (NooBaa bucket via the storage toggle)
+          # none, file (RWX PVC), or s3 (NooBaa bucket via the storage toggle)
           type: none
-          # @desc: PVC size when type is file
+          # PVC size when type is file
           size: 10Gi
-          # @desc: RWX StorageClass when type is file
+          # RWX StorageClass when type is file
           storageClass: ocs-storagecluster-cephfs
-      # @desc: Give AAP the cluster CA bundle even when not using S3 storage
+      # Give AAP the cluster CA bundle even when not using S3 storage
       customCaBundle: false
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -67,8 +66,8 @@ stack:
         dependencies:
           - name: install
 
-      # @description: NooBaa-backed object storage for Automation Hub content. The bucket comes
-      # @description: from ODF, so this waits for the storage cluster to be usable.
+      # NooBaa-backed object storage for Automation Hub content. The bucket comes
+      # from ODF, so this waits for the storage cluster to be usable.
       - name: storage
         enabled: true
         description: "Object storage for Automation Hub content"
@@ -118,7 +117,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:

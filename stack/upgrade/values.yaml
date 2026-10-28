@@ -1,23 +1,20 @@
 stack:
-  # @description: Drive and observe OpenShift cluster version upgrades
   upgrade:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: true
 
-    # @description: The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each
-    # @description: policy renders only when its input is set; turning a toggle off pauses it.
+    # The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each
+    # policy renders only when its input is set; turning a toggle off pauses it.
     toggles:
-      # @desc: Pin the ClusterVersion channel and upstream; off pauses both
+      # Pin the ClusterVersion channel and upstream; off pauses both
       channel: true
-      # @desc: Drive the cluster to the fleet file's version, and report on progress
+      # Drive the cluster to the fleet file's version, and report on progress
       upgrade: true
 
-    # @description: Upgrade graph
+    # Upgrade graph
     config:
-      # @desc: Update service graph URL, e.g. a local OSUS. Empty leaves the cluster's value alone
+      # Update service graph URL, e.g. a local OSUS. Empty leaves the cluster's value alone
       upstream: ""
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -34,8 +31,8 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: The whole upgrade flow (guard, trigger, completion) sits behind one switch, so
-      # @description: none of it reports NonCompliant when no upgrade is targeted.
+      # The whole upgrade flow (guard, trigger, completion) sits behind one switch, so
+      # none of it reports NonCompliant when no upgrade is targeted.
       - name: upgrade
         enabled: true
         description: "Drive the cluster to the target version and report on progress"
@@ -55,7 +52,7 @@ stack:
         templateNames:
           - name: channel
 
-      # @description: Inform-only reachability guard
+      # Inform-only reachability guard
       - name: guard
         enabled: true
         description: "Target version reachability"
@@ -70,7 +67,7 @@ stack:
         customMessage: &cvoReason
           noncompliant: '{{ .DefaultMessage }}{{ range .Policy.status.relatedObjects }}{{ range (dig "object" "status" "conditions" list .) }}{{ if or (eq .type "Progressing") (and (eq .type "Failing" "Invalid") (eq .status "True")) (and (eq .type "ReleaseAccepted" "RetrievedUpdates") (eq .status "False")) }}; {{ .type }}: {{ .message }}{{ end }}{{ end }}{{ end }}'
 
-      # @description: Upgrade trigger, held until the guard reports the target is reachable
+      # Upgrade trigger, held until the guard reports the target is reachable
       - name: trigger
         enabled: true
         description: "ClusterVersion desiredUpdate"
@@ -81,12 +78,12 @@ stack:
         rawTemplate: true
         templateNames:
           - name: clusterversion
-        # @desc: Never start an upgrade the guard says is invalid
+        # Never start an upgrade the guard says is invalid
         extraDependencies:
           - name: guard
         ignorePending: true
 
-      # @description: Completion signal, only meaningful once the trigger has been applied
+      # Completion signal, only meaningful once the trigger has been applied
       - name: progress
         enabled: true
         description: "Upgrade completion"

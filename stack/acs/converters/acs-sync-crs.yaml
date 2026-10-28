@@ -1,0 +1,13 @@
+{{- /*
+The CRS generated on the hub (docs/acs.md), copied to every other secured cluster. The hub's own
+SecuredCluster reads the original, so the copy skips it rather than writing the source onto itself.
+copySecretData copies the data map (one key, crs) and encrypts it in transit. Never delete or prune
+the copy: the operator reads it on every reconcile, expired or not.
+*/ -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: '{{ "{{" }}hub if eq (index .ManagedClusterLabels "local-cluster") "true" hub{{ "}}" }}{{ "{{" }} skipObject {{ "}}" }}{{ "{{" }}hub end hub{{ "}}" }}cluster-registration-secret'
+  namespace: {{ .Parameters.namespace }}
+type: Opaque
+data: '{{ "{{" }}hub copySecretData "{{ .Parameters.hubNamespace }}" "cluster-registration-secret" hub{{ "}}" }}'

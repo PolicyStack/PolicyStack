@@ -558,6 +558,9 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 !!! warning
     Deleting the fleet file before `absent-lifecycle-<cluster>` is Compliant abandons the cluster mid-destroy.
 
+!!! warning "ACS"
+    Before re-creating a cluster under the same name, delete it in ACS ([Re-register a cluster](acs.md#re-register-a-cluster), step 1).
+
 | Engine | Left behind |
 |---|---|
 | `hive` | Nothing. Hive deprovisions the cloud resources or VMs, usually within 20 minutes. vSphere: the DNS records you created. |
@@ -570,7 +573,7 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 Delete the fleet file or its `hub` key: Application `lifecycle-<cluster>` and its Policies go, the cluster keeps running unmanaged. Deleting the ApplicationSets does this for every cluster the hub built; `helm uninstall policystack` keeps them ([Install PolicyStack](install.md#install-policystack)). Restore the file or key with the same `install` to re-adopt.
 
 !!! warning "Changing `hub`"
-    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub, and the new hub builds a second, same-named cluster unless the root object is already there with its [marker](lifecycle-reference.md#ownership). Destroy it on the old hub first.
+    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub, and the new hub builds a second, same-named cluster unless the root object is already there with its [marker](lifecycle-reference.md#ownership). Destroy it on the old hub first. ACS: run steps 2-3 of [Re-register a cluster](acs.md#re-register-a-cluster) after the move.
 
 !!! warning "Clusters built before the ownership marker"
     Lifecycle acts only on a root object carrying `lifecycle.policystk.io/hub` ([Ownership](lifecycle-reference.md#ownership)). A cluster built before the marker existed fails the guard and runs unmanaged, nothing deleted, until annotated once:

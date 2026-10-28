@@ -1,0 +1,11 @@
+{{- /*
+Inform-only: the hub holds the CRS and it has over 90 days left. Renders the expires-at annotation
+roxctl writes when that holds, else "renew", which never matches.
+*/ -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-registration-secret
+  namespace: {{ .Parameters.namespace }}
+  annotations:
+    crs.platform.stackrox.io/expires-at: '{{ "{{" }} $e := "" {{ "}}" }}{{ "{{" }} with .Object {{ "}}" }}{{ "{{" }} with .metadata.annotations {{ "}}" }}{{ "{{" }} $e = index . "crs.platform.stackrox.io/expires-at" {{ "}}" }}{{ "{{" }} end {{ "}}" }}{{ "{{" }} end {{ "}}" }}{{ "{{" }} if and $e (gt ((toDate "2006-01-02T15:04:05Z07:00" $e).Sub now).Hours 2160.0) {{ "}}" }}{{ "{{" }} $e {{ "}}" }}{{ "{{" }} else {{ "}}" }}renew{{ "{{" }} end {{ "}}" }}'

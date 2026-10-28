@@ -1,6 +1,6 @@
 {{- /*
 Resolves the secured policy's hub templates. Without it the propagator limits hub lookups to the
-policy namespace, and the TLS secrets live in hubNamespace.
+policy namespace, and the CRS and Central's Route live in hubNamespace.
 */ -}}
 apiVersion: v1
 kind: ServiceAccount

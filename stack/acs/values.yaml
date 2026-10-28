@@ -7,10 +7,13 @@ stack:
     # @description: Which ACS role this cluster plays, set by the values cascade. Turn `central`
     # @description: on in values/acm/*.yaml and `secured` on wherever ACS agents should run.
     toggles:
-      # @desc: Run Central here (the ACS hub). Exactly one cluster should have this. Also brings
-      # @desc: the declarative auth config, security policies and the init-bundle Job.
+      # @desc: Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings
+      # @desc: the declarative auth config, security policies and a check that the hub holds a
+      # @desc: cluster registration secret (CRS) with over 90 days left; you generate it once, see
+      # @desc: docs/acs.md.
       central: false
-      # @desc: Run the secured-cluster agents here. Usually every cluster, including the hub.
+      # @desc: Run the secured-cluster agents here. Usually every cluster, including the hub. A
+      # @desc: rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md.
       secured: false
       # @desc: Publish a console link to Central. Only meaningful where Central runs.
       console: true
@@ -40,18 +43,17 @@ stack:
         adminGroup: cluster-admins
       # @description: Admission control behaviour on secured clusters
       admissionControl:
-        # @desc: Enforce on create/update. Off by default: it sits in the admission path.
+        # @desc: Enforce deploy-time policies (SecuredCluster admissionControl.enforcement). Off by
+        # @desc: default: it sits in the admission path. The operator itself defaults it on.
         enabled: false
-        # @desc: ScanIfMissing, ScanInline or DoNotScanInline
+        # @desc: ScanIfMissing or DoNotScanInline. Ignored by ACS 4.9+.
         contactImageScanners: ScanIfMissing
         # @desc: What happens if the admission webhook is unreachable: Ignore or Fail
         failurePolicy: Ignore
       # @description: Node collector
       collector:
-        # @desc: CORE_BPF, EBPF or NO_COLLECTION
+        # @desc: CORE_BPF or NoCollection
         collection: CORE_BPF
-      # @desc: Image used by the init-bundle Job
-      bootstrapImage: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
       # @description: SecurityPolicy objects keyed by name; edit, extend or replace per cluster.
       securityPolicies:
         no-privilege-escalation:
@@ -80,9 +82,10 @@ stack:
           policySections:
           - sectionName: Rule 1
             policyGroups:
-            - fieldName: Run As User
+            - fieldName: Image User
               values:
               - value: '0'
+              - value: root
           enforcementActions: []
         no-shell-spawning:
           policyName: No Shell Spawning at Runtime
@@ -139,7 +142,7 @@ stack:
         disabled: false
         dependencies:
           - name: install
-        # @desc: The TLS hub templates read hubNamespace, outside the policy namespace. The central
+        # @desc: The hub templates read hubNamespace, outside the policy namespace. The central
         # @desc: policy's hub-access creates this ServiceAccount; keep the two names in sync.
         hubTemplateOptions:
           serviceAccountName: acs-hub-templates
@@ -189,8 +192,6 @@ stack:
           securedName: stackrox-secured-cluster-services
           declarativeConfigMap: acs-declarative-configs
           dbClaimName: stackrox-db
-          bootstrapName: create-cluster-init
-          jobName: create-cluster-init-bundle-v2
           imageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg
 
       - name: central-ready
@@ -222,66 +223,48 @@ stack:
         enableTemplateParameters: true
         templateParameters: *acsParams
 
-      # @description: RBAC and the Job that mints the cluster-init bundle
-      - name: bootstrap
+      - name: crs-ready
         enabled: true
-        description: "Init-bundle RBAC and Job"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        # @desc: The Job talks to Central's API, so it cannot run before Central is up
-        extraDependencies:
-          - name: central-ready
-        ignorePending: true
-        templateNames:
-          - name: acs-bootstrap-sa
-          - name: acs-bootstrap-role
-          - name: acs-bootstrap-rolebinding
-          - name: acs-init-bundle-job
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: bundle-ready
-        enabled: true
-        description: "Init-bundle Job completion"
+        description: "The hub holds a CRS with over 90 days left"
         policyRef: central
         complianceType: musthave
         remediationAction: inform
         severity: medium
+        # @desc: Polls instead of watching: the expiry check compares against now
+        evaluationInterval:
+          compliant: 24h
+          noncompliant: 10m
         templateNames:
-          - name: acs-bundle-ready
+          - name: acs-crs-ready
         enableTemplateParameters: true
         templateParameters: *acsParams
 
-      # @description: Lets the secured policy's hub templates read the TLS secrets Central mints
+      # @description: Lets the secured policy's hub templates read the CRS and Central's Route
       - name: hub-access
         enabled: true
         description: "ServiceAccount and RBAC for the secured policy's hub templates"
         policyRef: central
-        complianceType: musthave
         remediationAction: enforce
         severity: high
         templateNames:
           - name: acs-hub-sa
           - name: acs-hub-role
+            complianceType: mustonlyhave
           - name: acs-hub-rolebinding
         enableTemplateParameters: true
         templateParameters: *acsParams
 
-      # @description: TLS material copied down from the hub, then the SecuredCluster itself
+      # @description: The CRS copied down from the hub, then the SecuredCluster itself
       - name: tls
         enabled: true
-        description: "Sensor, collector and admission-control TLS from the hub"
+        description: "Cluster registration secret from the hub"
         policyRef: secured
         complianceType: musthave
         remediationAction: enforce
         severity: high
         templateNames:
           - name: acs-namespace
-          - name: acs-sync-sensor
-          - name: acs-sync-collector
-          - name: acs-sync-admission-control
+          - name: acs-sync-crs
         enableTemplateParameters: true
         templateParameters: *acsParams
 
@@ -293,7 +276,7 @@ stack:
         remediationAction: enforce
         severity: high
         waitForOperator: acs
-        # @desc: The TLS secrets must exist before the agents can reach Central
+        # @desc: The CRS must exist before sensor can register
         extraDependencies:
           - name: tls
         ignorePending: true
@@ -311,6 +294,7 @@ stack:
         severity: medium
         templateNames:
           - name: acs-secured-ready
+          - name: acs-sensor-ready
         enableTemplateParameters: true
         templateParameters: *acsParams
 

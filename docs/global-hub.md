@@ -138,4 +138,4 @@ ACM delivers the Policies to the managed hub, where every lookup and `fromSecret
 - Label a PolicyStack hub `global-hub.open-cluster-management.io/hub-role`. Hub HA copies its ApplicationSets, Applications, Policies and `ArgoCD` CR to the standby.
 - Enable the ACM gitops-addon or Argo CD Agent on a managed hub. They replace `openshift-gitops`, which runs that hub's PolicyStack.
 - Reuse a cluster name across hubs. `fleet/` is shared and migration needs unique names.
-- Migrate a lifecycle-built cluster with `ManagedClusterMigration`. It moves the ManagedCluster, not its Policies or Applications, and `hypershift` clusters cannot migrate. Imported clusters migrate cleanly: the target hub picks up the same `fleet/<cluster>.yaml`.
+- Migrate a lifecycle-built cluster with `ManagedClusterMigration`. It moves the ManagedCluster, not its Policies or Applications, and `hypershift` clusters cannot migrate. Imported clusters migrate cleanly: the target hub picks up the same `fleet/<cluster>.yaml`. Then re-register them with ACS ([steps 2-3](acs.md#re-register-a-cluster)).

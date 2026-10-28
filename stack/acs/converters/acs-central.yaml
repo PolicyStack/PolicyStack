@@ -37,7 +37,8 @@ spec:
   scannerV4:
     scannerComponent: {{ $cfg.scannerV4 }}
   {{- with $cfg.networkPolicies }}
-  networkPolicies: {{ . }}
+  network:
+    policies: {{ . }}
   {{- end }}
   {{- if not (kindIs "invalid" $cfg.monitoring) }}
   monitoring:

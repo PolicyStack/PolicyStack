@@ -19,6 +19,7 @@ import (
 	"github.com/stolostron/go-template-utils/v7/pkg/templates"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -64,6 +65,15 @@ var kinds = []struct {
 	{"route.openshift.io/v1", "Route", "routes", true},
 	{"siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", "clusterinstances", true},
 	{"storage.k8s.io/v1", "StorageClass", "storageclasses", false},
+}
+
+// hubObjects are operator-owned hub objects that hub templates index into, failing loudly when absent.
+var hubObjects = []runtime.Object{
+	&unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "route.openshift.io/v1", "kind": "Route",
+		"metadata": map[string]any{"name": "central", "namespace": "stackrox"},
+		"spec":     map[string]any{"host": "central-stackrox.apps.hub.example"},
+	}},
 }
 
 // NewResolver returns a resolver over a fake cluster holding objs.
@@ -148,10 +158,11 @@ const disableTemplates = "policy.open-cluster-management.io/disable-templates"
 var hubTemplate = regexp.MustCompile(`(?s)\{\{hub.*?hub\}\}`)
 
 // Evaluate resolves every templated ConfigurationPolicy in rendered, the Policies Helm rendered for
-// cluster, against an empty fake cluster. A missing object is not a failure: lookups of objects that
-// other policies or operators create are normal on a real cluster, so evaluation stops there.
+// cluster, against an empty fake cluster plus hubObjects on the hub. A missing object is not a
+// failure: lookups of objects that other policies or operators create are normal on a real
+// cluster, so evaluation stops there.
 func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
-	hub, err := NewResolver(templates.Config{AdditionalIndentation: 8, DisabledFunctions: []string{}, StartDelim: "{{hub", StopDelim: "hub}}"})
+	hub, err := NewResolver(templates.Config{AdditionalIndentation: 8, DisabledFunctions: []string{}, StartDelim: "{{hub", StopDelim: "hub}}"}, hubObjects...)
 	if err != nil {
 		return nil, err
 	}

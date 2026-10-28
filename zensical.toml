@@ -22,6 +22,7 @@ nav = [
     { "Global Hub" = "global-hub.md" },
     { "Disconnected clusters" = "disconnected.md" },
     { "Upgrades" = "upgrades.md" },
+    { "Advanced Cluster Security" = "acs.md" },
   ] },
   { "Development" = [
     { "Writing an element" = "elements.md" },

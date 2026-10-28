@@ -1,0 +1,12 @@
+{{- /*
+Inform-only: sensor is ready. A refused or expired registration crash-loops its crs init container,
+which SecuredCluster conditions do not show. A cluster still holding certificates from another
+Central (moved, Central wiped) reports ready while disconnected; see docs/acs.md.
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor
+  namespace: {{ .Parameters.namespace }}
+status:
+  readyReplicas: 1

@@ -92,7 +92,9 @@ A clean run prints `ok: no findings`. Findings on rendered output also name the 
 ## ACM templates
 
 Helm treats escaped ACM templates (`{{ "{{" }} ... {{ "}}" }}`) as strings. POLICY081 resolves them
-against an empty cluster with go-template-utils, the library ACM uses:
+with go-template-utils, the library ACM uses, against an empty cluster. The hub pass also holds the
+operator-owned objects hub templates `index` into (`hubObjects` in `acmtemplates.go`), so their
+absence is not reported:
 
 1. `{{hub ... hub}}` as the policy propagator does. Lookups stay in the policy namespace unless the
    policy sets `hubTemplateOptions.serviceAccountName`.

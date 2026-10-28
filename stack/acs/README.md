@@ -4,7 +4,7 @@
 
 Field reference: [policy-library](https://github.com/PolicyStack/PolicyStack-chart/tree/main/charts/policy-library)
 
-*Generated: 2026-10-19 17:44:57*
+*Generated: 2026-10-28 14:07:39*
 
 ## Component Configuration
 
@@ -29,8 +29,8 @@ Override an entry's `enabled` by name. Being a map, these merge cleanly through 
 
 | Toggle | Default | Description |
 | ------ | ------- | ----------- |
-| `central` | `False` | Run Central here (the ACS hub). Exactly one cluster should have this. Also brings the declarative auth config, security policies and the init-bundle Job. |
-| `secured` | `False` | Run the secured-cluster agents here. Usually every cluster, including the hub. |
+| `central` | `False` | Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings the declarative auth config, security policies and a check that the hub holds a cluster registration secret (CRS) with over 90 days left; you generate it once, see docs/acs.md. |
+| `secured` | `False` | Run the secured-cluster agents here. Usually every cluster, including the hub. A rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md. |
 | `console` | `True` | Publish a console link to Central. Only meaningful where Central runs. |
 
 ## Configuration
@@ -47,7 +47,6 @@ Values intended to be overridden per environment, datacenter, or cluster.
 | `auth` | `(dict)` | Authentication wired in declaratively at Central startup |
 | `admissionControl` | `(dict)` | Admission control behaviour on secured clusters |
 | `collector` | `(dict)` | Node collector |
-| `bootstrapImage` | `image-registry.openshift-image-registry.svc:5000/openshift/cli:latest` | Image used by the init-bundle Job |
 | `securityPolicies` | `(dict)` | SecurityPolicy objects keyed by name; edit, extend or replace per cluster. |
 
 ## Policies
@@ -161,8 +160,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: central-ready
@@ -191,8 +188,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: policies
@@ -230,58 +225,15 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
-###### ⚙️ Config: bootstrap
-> Init-bundle RBAC and Job
+###### ⚙️ Config: crs-ready
+> The hub holds a CRS with over 90 days left
 
 **Basic Configuration:**
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| Name | `central-bootstrap` | Configuration policy identifier |
-| Compliance Type | `musthave` | Compliance requirement type |
-| Remediation | `enforce` | Remediation action |
-| Severity | `high` | Severity level |
-
-**Gating:**
-
-- Reports compliant while waiting (`ignorePending`)
-
-| Resolves To | Kind | Awaited State |
-| ----------- | ---- | ------------- |
-| `central-central-ready` | `ConfigurationPolicy` | `Compliant` |
-
-**Templates:**
-| Template File | Compliance Type | Description |
-| ------------- | --------------- | ----------- |
-| `converters/acs-bootstrap-sa.yaml` | inherited | Template configuration |
-| `converters/acs-bootstrap-role.yaml` | inherited | Template configuration |
-| `converters/acs-bootstrap-rolebinding.yaml` | inherited | Template configuration |
-| `converters/acs-init-bundle-job.yaml` | inherited | Template configuration |
-
-**Template Parameters:**
-| Parameter | Value | Description |
-| --------- | ----- | ----------- |
-| `namespace` | `stackrox` | Parameter value |
-| `hubNamespace` | `stackrox` | Parameter value |
-| `hubServiceAccount` | `acs-hub-templates` | Parameter value |
-| `centralName` | `stackrox-central-services` | Parameter value |
-| `securedName` | `stackrox-secured-cluster-services` | Parameter value |
-| `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
-| `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
-| `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
-
-###### ⚙️ Config: bundle-ready
-> Init-bundle Job completion
-
-**Basic Configuration:**
-| Parameter | Value | Description |
-| --------- | ----- | ----------- |
-| Name | `central-bundle-ready` | Configuration policy identifier |
+| Name | `central-crs-ready` | Configuration policy identifier |
 | Compliance Type | `musthave` | Compliance requirement type |
 | Remediation | `inform` | Remediation action |
 | Severity | `medium` | Severity level |
@@ -289,7 +241,7 @@ This policy stays `Pending` until every target below reports the listed complian
 **Templates:**
 | Template File | Compliance Type | Description |
 | ------------- | --------------- | ----------- |
-| `converters/acs-bundle-ready.yaml` | inherited | Template configuration |
+| `converters/acs-crs-ready.yaml` | inherited | Template configuration |
 
 **Template Parameters:**
 | Parameter | Value | Description |
@@ -301,8 +253,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: hub-access
@@ -320,7 +270,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Template File | Compliance Type | Description |
 | ------------- | --------------- | ----------- |
 | `converters/acs-hub-sa.yaml` | inherited | Template configuration |
-| `converters/acs-hub-role.yaml` | inherited | Template configuration |
+| `converters/acs-hub-role.yaml` | mustonlyhave | Template configuration |
 | `converters/acs-hub-rolebinding.yaml` | inherited | Template configuration |
 
 **Template Parameters:**
@@ -333,8 +283,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: console
@@ -363,8 +311,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 
@@ -400,7 +346,7 @@ This policy stays `Pending` until every target below reports the listed complian
 ##### Configuration Policies
 
 ###### ⚙️ Config: tls
-> Sensor, collector and admission-control TLS from the hub
+> Cluster registration secret from the hub
 
 **Basic Configuration:**
 | Parameter | Value | Description |
@@ -414,9 +360,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Template File | Compliance Type | Description |
 | ------------- | --------------- | ----------- |
 | `converters/acs-namespace.yaml` | inherited | Template configuration |
-| `converters/acs-sync-sensor.yaml` | inherited | Template configuration |
-| `converters/acs-sync-collector.yaml` | inherited | Template configuration |
-| `converters/acs-sync-admission-control.yaml` | inherited | Template configuration |
+| `converters/acs-sync-crs.yaml` | inherited | Template configuration |
 
 **Template Parameters:**
 | Parameter | Value | Description |
@@ -428,8 +372,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: agents
@@ -467,8 +409,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 ###### ⚙️ Config: agents-ready
@@ -486,6 +426,7 @@ This policy stays `Pending` until every target below reports the listed complian
 | Template File | Compliance Type | Description |
 | ------------- | --------------- | ----------- |
 | `converters/acs-secured-ready.yaml` | inherited | Template configuration |
+| `converters/acs-sensor-ready.yaml` | inherited | Template configuration |
 
 **Template Parameters:**
 | Parameter | Value | Description |
@@ -497,8 +438,6 @@ This policy stays `Pending` until every target below reports the listed complian
 | `securedName` | `stackrox-secured-cluster-services` | Parameter value |
 | `declarativeConfigMap` | `acs-declarative-configs` | Parameter value |
 | `dbClaimName` | `stackrox-db` | Parameter value |
-| `bootstrapName` | `create-cluster-init` | Parameter value |
-| `jobName` | `create-cluster-init-bundle-v2` | Parameter value |
 | `imageUrl` | `https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg` | Parameter value |
 
 
@@ -509,8 +448,8 @@ This policy stays `Pending` until every target below reports the listed complian
 | Resource Type | Count |
 | ------------- | ----- |
 | Policies | 3 |
-| Configuration Policies | 10 |
+| Configuration Policies | 9 |
 | Operator Policies | 1 |
 | Certificate Policies | 0 |
 | PolicySets | 0 |
-| **Total Resources** | **14** |
+| **Total Resources** | **13** |

@@ -271,12 +271,13 @@ The `rawTemplate` converter that reads it, `converters/metallb-ipaddresspools.ya
 
 Values live in Git. Read runtime secrets on the hub with an ACM hub template, escaped so Helm
 passes it through. From
-[`stack/acs/converters/acs-sync-collector.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/converters/acs-sync-collector.yaml):
+[`stack/acs/converters/acs-sync-crs.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/converters/acs-sync-crs.yaml):
 
 ```yaml
-data:
-  ca.pem: '{{ "{{" }}hub fromSecret "{{ .Parameters.hubNamespace }}" "collector-tls" "ca.pem" hub{{ "}}" }}'
+data: '{{ "{{" }}hub copySecretData "{{ .Parameters.hubNamespace }}" "cluster-registration-secret" hub{{ "}}" }}'
 ```
+
+`copySecretData` copies every key of `data`, not the type, labels or annotations. `fromSecret` reads one key and returns `''` when it is missing.
 
 Hub lookups are limited to the policy namespace. To read another, point the policy at a
 ServiceAccount in the policy namespace that can read it, as acs does:

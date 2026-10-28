@@ -1,4 +1,7 @@
-{{- /* Only the secrets the TLS hub templates read. The propagator watches each by name. */ -}}
+{{- /*
+Only what the secured policy's hub templates read; the propagator watches each by name. Enforced
+mustonlyhave, so the old init-bundle grants are removed, not kept.
+*/ -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -7,5 +10,9 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: [secrets]
-    resourceNames: [sensor-tls, collector-tls, admission-control-tls]
+    resourceNames: [cluster-registration-secret]
+    verbs: [get, list, watch]
+  - apiGroups: [route.openshift.io]
+    resources: [routes]
+    resourceNames: [central]
     verbs: [get, list, watch]

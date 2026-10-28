@@ -1,6 +1,7 @@
 apiVersion: v2
 name: upgrade
 description: "Drive and observe OpenShift cluster version upgrades"
+home: https://policystk.io/upgrades/
 type: application
 version: 0.1.0
 appVersion: "1.16.0"

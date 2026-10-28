@@ -1,27 +1,24 @@
 stack:
-  # @description: Local Storage operator exposing node-local disks as PVs
   localStorage:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Which disks to claim, and what to call the resulting StorageClass
+    # Which disks to claim, and what to call the resulting StorageClass
     config:
-      # @desc: StorageClass created from the claimed disks. Point ODF's deviceSet at this.
+      # StorageClass created from the claimed disks. Point ODF's deviceSet at this.
       storageClassName: nvme-storageclass
-      # @desc: Block for ODF OSDs; Filesystem for general local PVs
+      # Block for ODF OSDs; Filesystem for general local PVs
       volumeMode: Block
-      # @desc: Device classes to claim
+      # Device classes to claim
       deviceTypes:
         - disk
-      # @desc: Ignore devices smaller than this; keeps boot and OS disks out
+      # Ignore devices smaller than this; keeps boot and OS disks out
       minSize: 200G
-      # @desc: Optional upper bound
+      # Optional upper bound
       maxSize: ""
-      # @desc: Node label marking the nodes whose disks are claimed. Matches the label the
-      # @desc: storage-nodes element applies.
+      # Node label marking the nodes whose disks are claimed. Matches the label the
+      # storage-nodes element applies.
       nodeSelectorKey: cluster.ocs.openshift.io/openshift-storage
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CP Contingency Planning
@@ -38,8 +35,8 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: Claiming disks only makes sense once the storage nodes exist, so this waits
-      # @description: on the storage-nodes element on the same cluster.
+      # Claiming disks only makes sense once the storage nodes exist, so this waits
+      # on the storage-nodes element on the same cluster.
       - name: volumes
         enabled: true
         description: "Claim local disks on the storage nodes"
@@ -71,7 +68,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:

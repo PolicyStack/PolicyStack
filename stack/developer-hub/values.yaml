@@ -1,10 +1,7 @@
 stack:
-  # @description: Red Hat Developer Hub (Backstage) internal developer portal
   developerHub:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -13,7 +10,6 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # @description: Parent policy grouping the operator install
     policies:
       - name: install
         enabled: true
@@ -22,12 +18,11 @@ stack:
         severity: medium
         disabled: false
 
-    # @description: OperatorPolicy installing the subscription
     operatorPolicies:
       rhdh:
         enabled: true
         description: "Red Hat Developer Hub (Backstage) internal developer portal"
-        # @desc: Must match the CSV displayName so the generated status check can find it
+        # Must match the CSV displayName so the generated status check can find it
         displayName: "Red Hat Developer Hub Operator"
         policyRef: install
         severity: medium
@@ -39,14 +34,11 @@ stack:
           name: rhdh
           source: redhat-operators
           sourceNamespace: openshift-marketplace
-        # @desc: Automatic approves upgrades allowed by versions; None approves the initial install only, never upgrades
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
-    # @description: Configuration policies
     configPolicies:
-      # @description: Adds the cluster-monitoring label so the operator's metrics are scraped
+      # Adds the cluster-monitoring label so the operator's metrics are scraped
       - name: developer-hub-ns-monitoring
         enabled: true
         description: "Adds openshift.io/cluster-monitoring label to the operator namespace"

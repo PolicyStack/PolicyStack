@@ -1,30 +1,26 @@
 stack:
-  # @description: Compliance Operator running STIG scans and applying remediations
   compliance:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Applying remediations reboots nodes, so it is opt-in per cluster
+    # Applying remediations reboots nodes, so it is opt-in per cluster
     toggles:
-      # @desc: Apply the ComplianceRemediations listed in config.autoRemediate
+      # Apply the ComplianceRemediations listed in config.autoRemediate
       remediate: false
 
-    # @description: Scan configuration
     config:
-      # @desc: Profiles bound to the scan
+      # Profiles bound to the scan
       profiles:
         - ocp4-stig
         - ocp4-stig-node
         - rhcos4-stig
-      # @desc: Where raw scan results are persisted
+      # Where raw scan results are persisted
       rawResultStorage:
         enabled: true
-        # @desc: StorageClass for raw results. Omit to use the cluster default.
+        # StorageClass for raw results. Omit to use the cluster default.
         storageClass: ""
-      # @desc: ComplianceRemediation names applied when the remediate toggle is on; reviewable in git.
+      # ComplianceRemediation names applied when the remediate toggle is on; reviewable in git.
       autoRemediate: []
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CA Security Assessment and Authorization
@@ -55,7 +51,7 @@ stack:
       - name: ready
         enabled: true
         description: "Reports NonCompliant until the scan suite has finished"
-        # @desc: A status can only be observed, so this policy never enforces
+        # A status can only be observed, so this policy never enforces
         remediationAction: inform
         severity: medium
         disabled: false
@@ -68,7 +64,7 @@ stack:
         remediationAction: enforce
         severity: high
         disabled: false
-        # @desc: Remediations can only be applied once the scan has produced them
+        # Remediations can only be applied once the scan has produced them
         dependencies:
           - name: ready
 
@@ -92,7 +88,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:
@@ -137,7 +132,7 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: high
-        # @desc: One object per entry in config.autoRemediate
+        # One object per entry in config.autoRemediate
         rawTemplate: true
         templateNames:
           - name: auto-remediate

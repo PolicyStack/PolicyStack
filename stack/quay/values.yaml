@@ -1,20 +1,17 @@
 stack:
-  # @description: Red Hat Quay container registry
   quay:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: The bootstrap Job is opinionated (it creates an initial user, org and repo), so
-    # @description: it is opt-in separately from the registry deployment. The Job verifies Quay's route
-    # @description: against the default ingress certificate and the cluster trust bundle.
+    # The bootstrap Job is opinionated (it creates an initial user, org and repo), so
+    # it is opt-in separately from the registry deployment. The Job verifies Quay's route
+    # against the default ingress certificate and the cluster trust bundle.
     toggles:
-      # @desc: Run the one-shot bootstrap Job and publish the console link
+      # Run the one-shot bootstrap Job and publish the console link
       configure: false
 
-    # @description: Registry configuration
     config:
-      # @desc: Quay components the operator manages. Set a component to false to supply it
-      # @desc: externally, e.g. Postgres or object storage.
+      # Quay components the operator manages. Set a component to false to supply it
+      # externally, e.g. Postgres or object storage.
       components:
         quay: true
         clair: true
@@ -27,32 +24,31 @@ stack:
         mirror: true
         monitoring: true
         tls: true
-      # @desc: Allow the first user to be created through the initialize API
+      # Allow the first user to be created through the initialize API
       featureUserInitialize: true
-      # @desc: Restrict browser API calls to XHR
+      # Restrict browser API calls to XHR
       browserApiCallsXhrOnly: false
-      # @desc: Allow self-service user creation
+      # Allow self-service user creation
       featureUserCreation: false
-      # @desc: Quay superusers
+      # Quay superusers
       superUsers:
         - quayadmin
-      # @desc: Superuser the bootstrap Job initialises. Must also be listed in superUsers.
+      # Superuser the bootstrap Job initialises. Must also be listed in superUsers.
       adminUser: quayadmin
-      # @desc: First non-admin user the bootstrap Job creates
+      # First non-admin user the bootstrap Job creates
       initialUser: quaydevel
-      # @desc: Email for that user
+      # Email for that user
       initialUserEmail: quaydevel@myorg.com
-      # @desc: Organization the bootstrap Job creates
+      # Organization the bootstrap Job creates
       initialOrg: devel
-      # @desc: Contact address for that organization. Quay emails are unique across users and
-      # @desc: organizations, so it must differ from every user's email.
+      # Contact address for that organization. Quay emails are unique across users and
+      # organizations, so it must differ from every user's email.
       initialOrgEmail: devel@myorg.com
-      # @desc: Repository the bootstrap Job creates in that organization
+      # Repository the bootstrap Job creates in that organization
       initialRepo: example
-      # @desc: Image used to run the bootstrap Job
+      # Image used to run the bootstrap Job
       bootstrapImage: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -98,7 +94,7 @@ stack:
         complianceType: musthave
         namespace: openshift-operators
         operatorGroup:
-          # @desc: Reuse the namespace's existing cluster-scoped OperatorGroup
+          # Reuse the namespace's existing cluster-scoped OperatorGroup
           name: global-operators
         subscription:
           channel: stable-3.17
@@ -106,7 +102,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:

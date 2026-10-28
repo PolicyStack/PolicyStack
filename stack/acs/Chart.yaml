@@ -1,6 +1,7 @@
 apiVersion: v2
 name: acs
 description: "Red Hat Advanced Cluster Security: Central, secured clusters and security policies"
+home: https://policystk.io/acs/
 type: application
 version: 0.1.0
 appVersion: "1.16.0"

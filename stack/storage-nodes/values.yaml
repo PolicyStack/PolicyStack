@@ -1,40 +1,38 @@
 stack:
-  # @description: Dedicated storage nodes for OpenShift Data Foundation
   storageNodes:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Exactly one platform toggle should be on. Set these in values/platforms/<p>.yaml
-    # @description: and select the file with a platform.<N> config entry in the fleet file.
+    # Exactly one platform toggle should be on. Set these in values/platforms/<p>.yaml
+    # and select the file with a platform.<N> config entry in the fleet file.
     toggles:
-      # @desc: Create storage MachineSets by cloning the worker MachineSet (AWS)
+      # Create storage MachineSets by cloning the worker MachineSet (AWS)
       aws: false
-      # @desc: Clone each worker MachineSet per vSphere failure domain
+      # Clone each worker MachineSet per vSphere failure domain
       vmware: false
-      # @desc: Label existing nodes as storage nodes (no MachineSets on bare metal)
+      # Label existing nodes as storage nodes (no MachineSets on bare metal)
       baremetal: false
-      # @desc: Report NonCompliant until the storage nodes are ready
+      # Report NonCompliant until the storage nodes are ready
       ready: true
 
-    # @description: Storage node sizing
     config:
-      # @desc: Storage nodes per zone. ODF expects three for a supported topology.
+      # Storage nodes per zone. ODF expects three for a supported topology.
       replicas: 3
-      # @desc: AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
+      # AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
       zones: []
-      # @desc: AWS instance type. Empty inherits from the worker MachineSet.
+      # AWS instance type. Empty inherits from the worker MachineSet.
       instanceType: ""
-      # @desc: Root volume size in GiB. Empty inherits from the worker MachineSet.
+      # Root volume size in GiB. Empty inherits from the worker MachineSet.
       volumeSize: ""
-      # @desc: vSphere sizing. Empty inherits from the worker MachineSet.
+      # vSphere vCPUs. Empty inherits from the worker MachineSet.
       numCPUs: ""
+      # vSphere cores per socket. Empty inherits from the worker MachineSet.
       numCoresPerSocket: ""
+      # vSphere memory in MiB. Empty inherits from the worker MachineSet.
       memoryMiB: ""
-      # @desc: Bare metal only: node names to designate as storage. Empty takes the first
-      # @desc: `replicas` nodes instead.
+      # Bare metal only: node names to designate as storage. Empty takes the first
+      # `replicas` nodes instead.
       nodes: []
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management
@@ -65,8 +63,8 @@ stack:
         severity: medium
         disabled: false
 
-      # @description: odf and local-storage depend on this
-      # @description: policy by name, so it is the readiness gate for the whole storage stack.
+      # odf and local-storage depend on this
+      # policy by name, so it is the readiness gate for the whole storage stack.
       - name: ready
         enabled: true
         description: "Reports NonCompliant until the storage nodes are ready"
@@ -132,9 +130,9 @@ stack:
         enableTemplateParameters: true
         templateParameters: *storageParams
 
-      # @description: Readiness for the label-existing-nodes path, where no storage MachineSets
-      # @description: exist and machineset-ready would report Compliant with nothing checked.
-      # @description: Asserts that config.replicas nodes carry the storage label.
+      # Readiness for the label-existing-nodes path, where no storage MachineSets
+      # exist and machineset-ready would report Compliant with nothing checked.
+      # Asserts that config.replicas nodes carry the storage label.
       - name: labeled-nodes
         enabled: true
         description: "config.replicas nodes are designated for storage"

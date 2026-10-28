@@ -1,33 +1,29 @@
 stack:
-  # @description: "MetalLB load balancer: address pools, advertisements and BGP peers"
   metallb:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Optional pieces, switchable per cluster
     toggles:
-      # @desc: Apply a ResourceQuota to the metallb namespace
+      # Apply a ResourceQuota to the metallb namespace
       quota: false
-      # @desc: Apply the address pools, advertisements and peers configured below
+      # Apply the address pools, advertisements and peers configured below
       addressing: false
 
-    # @description: MetalLB configuration. Map keys are object names; values are MetalLB API specs.
+    # MetalLB configuration. Map keys are object names; values are MetalLB API specs.
     config:
-      # @desc: IPAddressPool specs, e.g.
-      # @desc: internal: {addresses: ["192.168.100.1-192.168.100.20"], autoAssign: true}
+      # IPAddressPool specs, e.g.
+      # internal: {addresses: ["192.168.100.1-192.168.100.20"], autoAssign: true}
       ipAddressPools: {}
-      # @desc: L2Advertisement specs, e.g. internal: {ipAddressPools: [internal]}
+      # L2Advertisement specs, e.g. internal: {ipAddressPools: [internal]}
       l2Advertisements: {}
-      # @desc: BGPAdvertisement specs, e.g. internal: {ipAddressPools: [internal], peers: [rack1]}
+      # BGPAdvertisement specs, e.g. internal: {ipAddressPools: [internal], peers: [rack1]}
       bgpAdvertisements: {}
-      # @desc: BGPPeer specs, e.g. rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1}
+      # BGPPeer specs, e.g. rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1}
       bgpPeers: {}
-      # @description: Namespace resource ceiling, applied when the quota toggle is on
+      # Namespace resource ceiling, applied when the quota toggle is on
       quota:
         cpu: "100m"
         memory: "256Mi"
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - SC System and Communications Protection
@@ -68,7 +64,7 @@ stack:
         remediationAction: enforce
         severity: medium
         disabled: false
-        # @desc: The MetalLB CRDs and controller must exist before any of these apply
+        # The MetalLB CRDs and controller must exist before any of these apply
         dependencies:
           - name: config
 
@@ -90,7 +86,6 @@ stack:
           source: redhat-operators
           sourceNamespace: openshift-marketplace
         upgradeApproval: Automatic
-        # @desc: Allowed CSV names; empty allows whatever the channel offers. Pin per environment or cluster; also set subscription.startingCSV when the pin is not the channel head
         versions: []
 
     configPolicies:

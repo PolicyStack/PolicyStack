@@ -1,32 +1,28 @@
 stack:
-  # @description: Service Mesh 3 in ambient mode, with Kiali, OpenTelemetry and Tempo
   ambientMesh:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Tracing is a large add-on (Tempo plus an ODF bucket), so it is toggled
-    # @description: separately from the mesh.
+    # Tracing is a large add-on (Tempo plus an ODF bucket), so it is toggled
+    # separately from the mesh.
     toggles:
-      # @desc: Deploy Tempo and wire the mesh and Kiali to it. Requires ODF on the same cluster.
+      # Deploy Tempo and wire the mesh and Kiali to it. Requires ODF on the same cluster.
       tracing: false
 
-    # @description: Mesh configuration
     config:
-      # @desc: Istio version the sail operator installs
+      # Istio version the sail operator installs
       istioVersion: v1.28-latest
-      # @desc: Resource requests for istiod
+      # Resource requests for istiod
       pilotRequests:
         cpu: 100m
         memory: 256Mi
       tracing:
-        # @desc: Export mesh traces and show them in Kiali. Keep in step with the tracing toggle.
+        # Export mesh traces and show them in Kiali. Keep in step with the tracing toggle.
         enabled: false
-        # @desc: OTel collector the mesh exports spans to
+        # OTel collector the mesh exports spans to
         collectorService: otel-collector.istio-system.svc.cluster.local
-        # @desc: Tempo query frontend Kiali reads traces from
+        # Tempo query frontend Kiali reads traces from
         tempoQueryUrl: http://tempo-servicemesh-query-frontend.tracing-system.svc.cluster.local:3200
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - SC System and Communications Protection
@@ -36,8 +32,8 @@ stack:
         - NIST SP 800-53
 
     policies:
-      # @description: The mesh needs the sail operator's CRDs and Kiali's, both of which live in
-      # @description: other elements on the same cluster.
+      # The mesh needs the sail operator's CRDs and Kiali's, both of which live in
+      # other elements on the same cluster.
       - name: mesh
         enabled: true
         description: "Service Mesh 3 control plane, CNI and ztunnel"
@@ -50,7 +46,7 @@ stack:
           - name: install
             element: kiali
 
-      # @description: Tracing pulls in Tempo (its own element) and an ODF bucket.
+      # Tracing pulls in Tempo (its own element) and an ODF bucket.
       - name: tracing
         enabled: true
         description: "Tempo tracing backend for the mesh"
@@ -91,7 +87,7 @@ stack:
         complianceType: musthave
         remediationAction: enforce
         severity: medium
-        # @desc: The namespaces must exist before the operands land in them
+        # The namespaces must exist before the operands land in them
         extraDependencies:
           - name: namespaces
         ignorePending: true

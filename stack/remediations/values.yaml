@@ -1,31 +1,26 @@
 stack:
-  # @description: Opinionated cluster remediations applied as policy
   remediations:
-    # @desc: Master control to enable/disable all policies in this element
     enabled: false
 
-    # @description: Each remediation is independently switchable per cluster
     toggles:
-      # @desc: Restrict the registries the cluster may pull and import from
+      # Restrict the registries the cluster may pull and import from
       registries: true
-      # @desc: Remove the Samples Operator and its imagestreams
+      # Remove the Samples Operator and its imagestreams
       samples: true
 
-    # @description: Tunables intended to be overridden per cluster or environment
     config:
-      # @desc: Registries permitted for `oc import-image`
+      # Registries permitted for `oc import-image`
       allowedRegistriesForImport:
         - domainName: quay.io
           insecure: false
         - domainName: registry.redhat.io
           insecure: false
-      # @desc: Registries the cluster may pull from at runtime
+      # Registries the cluster may pull from at runtime
       allowedRegistries:
         - quay.io
         - registry.redhat.io
         - image-registry.openshift-image-registry.svc:5000
 
-    # @description: Default policy metadata applied unless overridden per-policy
     default:
       categories:
         - CM Configuration Management

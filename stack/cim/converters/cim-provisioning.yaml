@@ -1,0 +1,17 @@
+{{- /*
+Provisioning provisioning-configuration, which deploys metal3. watchAllNamespaces lets it reconcile
+the BareMetalHosts SiteConfig renders into each cluster's namespace. musthave leaves the other
+fields alone, so a bare-metal hub keeps its provisioning network; only a hub without the CR is
+created with none.
+*/ -}}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: metal3.io/v1alpha1
+    kind: Provisioning
+    metadata:
+      name: provisioning-configuration
+    spec:
+      watchAllNamespaces: true
+{{ "{{-" }} if not (lookup "metal3.io/v1alpha1" "Provisioning" "" "provisioning-configuration") {{ "}}" }}
+      provisioningNetwork: Disabled
+{{ "{{-" }} end {{ "}}" }}

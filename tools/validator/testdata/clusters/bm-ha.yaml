@@ -1,0 +1,38 @@
+revision: main
+hub: acm-dc1
+version: 4.20.8
+channel: stable-4.20
+valueFiles:
+  - environments/prod.yaml
+  - datacenters/dc1.yaml
+  - platforms/baremetal.yaml
+install:
+  siteconfig:
+    machineNetwork: [10.20.40.0/24]
+    apiVIPs: [10.20.40.5]
+    ingressVIPs: [10.20.40.6]
+    ntpSources: [ntp.dc1.example.com]
+    nodes:
+      m0.bm-ha.dc1.example.com:
+        bmcAddress: redfish-virtualmedia://10.20.0.21/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:01"
+        rootDeviceHints:
+          deviceName: /dev/disk/by-path/pci-0000:01:00.0-scsi-0:2:0:0
+        network:
+          interfaces:
+            eno1: "00:11:22:33:44:01"
+          config:
+            interfaces:
+              - name: eno1
+                type: ethernet
+                state: up
+      m1.bm-ha.dc1.example.com:
+        bmcAddress: redfish-virtualmedia://10.20.0.22/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:02"
+      m2.bm-ha.dc1.example.com:
+        bmcAddress: redfish-virtualmedia://10.20.0.23/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:03"
+      w0.bm-ha.dc1.example.com:
+        role: worker
+        bmcAddress: idrac-virtualmedia://10.20.0.24/redfish/v1/Systems/System.Embedded.1
+        bootMACAddress: "00:11:22:33:44:04"

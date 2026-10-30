@@ -29,7 +29,6 @@ Under `stack.acm.config`. Maps merge across layers; lists are replaced whole.
 |---|---|---|
 | `availabilityConfig` | High or Basic. Basic runs single replicas and suits lab hubs. | `High` |
 | `selfManaged` | Whether the hub also manages itself as `local-cluster` | `true` |
-| `siteConfig` | Enable the SiteConfig component, needed by the lifecycle siteconfig engine | `false` |
 | `search` | ACM Search database storage |  |
 | `search.size` |  | `100Gi` |
 | `search.storageClass` | Empty uses the cluster default. The field is then omitted, since an empty string disables provisioning. | `''` |

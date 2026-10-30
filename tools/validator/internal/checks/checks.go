@@ -59,9 +59,17 @@ type Context struct {
 	AllElements []*chart.Element
 	// Layers is every values layer file, the root values.yaml first. Set for PhaseRepo only.
 	Layers []string
+	// Fleet is every fleet file that sets hub and is not state: absent. Set for PhaseRepo only.
+	Fleet []FleetFile
 	// AllRendered is not populated. Cross-element POLICY002 runs in run.Run.
 	AllRendered map[string][]byte
 	Logger      *slog.Logger
+}
+
+// FleetFile is a cluster a hub builds, with the files its lifecycle release merges, lowest first.
+type FleetFile struct {
+	Name, Hub string
+	Files     []string
 }
 
 // Check is implemented by every concrete rule.
@@ -91,6 +99,7 @@ func All() []Check {
 		&RemediationCheck{},      // POLICY036
 		&PolicySetCheck{},        // POLICY040
 		&LabelCheck{},            // POLICY050
+		&BareMetalCheck{},        // POLICY051
 		&PinningCheck{},          // POLICY060
 		&LintCheck{},             // POLICY070 (Runner set by run.buildRegistry)
 		&KubeconformCheck{},      // POLICY080 (Bin, SchemasDir set by run.buildRegistry)

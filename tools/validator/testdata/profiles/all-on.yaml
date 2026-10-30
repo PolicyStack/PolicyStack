@@ -13,6 +13,8 @@ stack:
       central: true
       secured: true
       console: true
+  cim:
+    enabled: true
   aap:
     enabled: true
     toggles:

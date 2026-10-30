@@ -1,0 +1,22 @@
+{{- /*
+AgentServiceConfig agent, which deploys the assisted service and image service. Any other name is
+ignored. The operator owns the PVCs and only resizes them; storageClassName is omitted when empty,
+since an empty string disables provisioning.
+*/ -}}
+{{- $s := .Values.stack.cim.config.storage }}
+apiVersion: agent-install.openshift.io/v1beta1
+kind: AgentServiceConfig
+metadata:
+  name: agent
+spec:
+  {{- range $key, $size := dict "databaseStorage" $s.database "filesystemStorage" $s.filesystem "imageStorage" $s.images }}
+  {{ $key }}:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: {{ $size | quote }}
+    {{- with $s.storageClass }}
+    storageClassName: {{ . | quote }}
+    {{- end }}
+  {{- end }}

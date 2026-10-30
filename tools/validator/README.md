@@ -45,6 +45,7 @@ In CI:
 | POLICY036  | error    | A `configPolicies` or `operatorPolicies` entry whose `remediationAction` differs (case-insensitive) from a set `policies[].remediationAction` of its parent. ACM applies the Policy-level action to every template, so an `inform` `mustnothave` gate under an `enforce` Policy deletes. `InformOnly` is skipped: ACM keeps it inform. An unset `configPolicies` action counts as the chart default, `inform`. Covers toggled-off entries |
 | POLICY040  | error    | `policySets[].policies[]` references a name not in `policies[]` |
 | POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state`, `version`, `channel` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; `version` that is not `x.y.z`, `install.version`; empty `hub`, `version` or `channel`, `hub` with no `hubs/<hub>.yaml`, `hub` naming the cluster itself, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
+| POLICY051  | error    | Two siteconfig nodes on one hub with the same `bootMACAddress` or `bmcAddress` (scheme aside), across fleet files that are not `state: absent`: two BareMetalHosts would drive one server |
 | POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY080  | error    | `kubeconform` schema check on rendered manifests |
@@ -73,6 +74,7 @@ drive the cascade in list order (matches `appset.yaml`).
 | `hive-aws` | Hive cluster on AWS, defaults from `values/platforms/aws.yaml` |
 | `hive-retired` | Hive `state: absent` |
 | `sno-edge` | SiteConfig single-node cluster, defaults from `values/platforms/baremetal.yaml` |
+| `bm-ha` | SiteConfig three masters and a worker, VIPs, static network |
 | `sno-retired` | SiteConfig `state: absent` |
 | `name-budget-30-characters-long` | The 30-character cluster name every element must fit (POLICY001) |
 

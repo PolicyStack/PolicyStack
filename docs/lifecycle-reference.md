@@ -11,7 +11,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
 | `engine` | `hypershift` | `hypershift`, `hive` or `siteconfig`. Fixed at create. |
 | `credential.namespace`, `.name` | required | Hub Secret with `pullSecret`, `ssh-publickey`, and for `hive` the cloud keys (vSphere: `username`, `password`, `cacertificate`). Any namespace. |
 | `baseDomain` | `""` | Required except on `KubeVirt`, which uses the hub's ingress domain. Fixed at create. |
-| `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | Image is `<releaseRepository>:<version>-multi`. Point at a mirror when disconnected. |
+| `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | Image is `<releaseRepository>:<version>-multi`, `-x86_64` on `siteconfig`. Point at a mirror when disconnected. |
 | `manifests` | `[]` | Extra hub objects with `apiVersion`, `kind`, `metadata`. Created before the cluster, deleted after it. |
 
 === "hypershift"
@@ -117,8 +117,25 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | `siteconfig.templates` | `ai` | `ai` (assisted installer) or `ibi` (image-based, single node). Fixed at create. |
     | `siteconfig.templateNamespace` | `open-cluster-management` | Namespace of the stock `<templates>-cluster-templates-v1` and `<templates>-node-templates-v1` ConfigMaps. |
     | `siteconfig.bmcCredential.namespace`, `.name` | required | Hub Secret with `username` and `password`, copied to `<cluster>-bmc`. |
-    | `siteconfig.clusterInstance` | `{}` | Merged under the generated ClusterInstance spec. |
-    | `siteconfig.nodes` | required | hostName to ClusterInstance node. `bmcAddress` and `bootMACAddress` required. Layers merge per host. |
+    | `siteconfig.machineNetwork` | | Node subnets. Required with `ai` and one master. |
+    | `siteconfig.apiVIPs`, `.ingressVIPs` | | Required with more than one master, forbidden with one. Up to 2 (dual-stack), the same number in each. |
+    | `siteconfig.clusterNetwork` | installer default | `{cidr, hostPrefix}` list. |
+    | `siteconfig.serviceNetwork` | installer default | Subnets. |
+    | `siteconfig.ntpSources` | | Extra NTP sources. |
+    | `siteconfig.proxy` | | `httpProxy` and/or `httpsProxy`, `noProxy`. |
+    | `siteconfig.extraManifests` | | ConfigMap names in namespace `<cluster>`, from `install.manifests`. |
+    | `siteconfig.nodes` | required | hostName to the keys below. Layers merge per host. |
+
+    | Node key | Default | Notes |
+    |---|---|---|
+    | `bmcAddress` | required | `redfish-`, `idrac-` or `ilo5-virtualmedia`, with optional `+http`/`+https`; `ilo4-virtualmedia`, optional `+https`. |
+    | `bootMACAddress` | required | Quote it. |
+    | `role` | `master` | `master`, `worker` or `arbiter`. |
+    | `rootDeviceHints` | | BareMetalHost hints. `deviceName` takes `/dev/` or `/dev/disk/by-path/` only. |
+    | `network` | | Static install network: `interfaces` (NIC name to MAC) and `config` (nmstate). Day 2 is `nmstate`. |
+    | `remove` | | `true` on a worker [scales it in](#scaling-siteconfig-workers). |
+
+    All of it is fixed at create; afterwards you can only add and remove workers. `ai` takes 1 or 3 masters, or 2 or more with an arbiter (4.19+). `ibi` takes one node and no VIPs, `clusterNetwork` or `serviceNetwork`. Anything else fails the render.
 
     ```yaml
     # values/platforms/baremetal.yaml
@@ -131,28 +148,22 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
         bmcCredential:
           namespace: bm-credentials
           name: bmc
-        clusterInstance:
-          networkType: OVNKubernetes
 
     # fleet/sno-edge.yaml
     install:
       siteconfig:
-        clusterInstance:
-          clusterType: SNO
-          machineNetwork:
-            - cidr: 10.20.30.0/24
+        machineNetwork: [10.20.30.0/24]
         nodes:
           sno-edge.dc1.example.com:     # (1)!
-            role: master
             bmcAddress: redfish-virtualmedia://10.20.0.11/redfish/v1/Systems/1
             bootMACAddress: "00:11:22:33:44:55"
     ```
 
-    1.  The key becomes `hostName`. `ibi` allows one node; `ai` with `-multi` at most 3 control-plane nodes.
+    1.  The key becomes `hostName`.
 
 ## Generated objects
 
-`<cluster>` is the fleet file name. Everything not listed uses the operator's defaults: set it in `hostedCluster`, `hive.clusterDeployment` or `siteconfig.clusterInstance`.
+`<cluster>` is the fleet file name. Everything not listed uses the operator's defaults. Override it in `hostedCluster` or `hive.clusterDeployment`. `siteconfig` takes only the keys above; any other key fails the render.
 
 === "hypershift"
 
@@ -178,10 +189,10 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | Object | Content |
     |---|---|
     | ClusterImageSet `lifecycle-<cluster>` | The release image. |
-    | ClusterInstance `<cluster>/<cluster>` | `clusterName`, `baseDomain`, `pullSecretRef`, `sshPublicKey`, templates, `clusterImageSetNameRef`, per node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and node templates. SiteConfig defaults `bootMode: UEFI`, `automatedCleaningMode: disabled`. |
+    | ClusterInstance `<cluster>/<cluster>` | The keys above, plus `clusterName`, `baseDomain`, `pullSecretRef`, `sshPublicKey`, templates, `clusterImageSetNameRef`, per node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and node templates. `clusterType` follows the masters: 1 is `SNO`, an arbiter `HighlyAvailableArbiter`, else `HighlyAvailable`. SiteConfig defaults `bootMode: UEFI`, `automatedCleaningMode: disabled`. |
     | KlusterletAddonConfig | Every add-on on. The stock `ai` one turns application-manager off, so ACM would never create the Argo CD secret. The chart suppresses it and renders its own. |
 
-Hive and SiteConfig reject release image changes, and SiteConfig any spec change before install completes. The chart reads those fields back from the live objects, so a `version` bump or credential rotation never touches them. Those clusters upgrade through [`upgrade`](upgrades.md).
+Hive rejects release image changes, and SiteConfig any spec change before install completes. No webhook guards the `siteconfig` ClusterImageSet. The chart reads those fields back from the live objects, so a `version` bump or credential rotation never touches them, and a hand edit to the image set is kept. Those clusters upgrade through [`upgrade`](upgrades.md).
 
 ## Policy chains
 
@@ -204,10 +215,10 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 | Template | Mode | `hypershift` | `hive` | `siteconfig` |
 |---|---|---|---|---|
 | `guard` | InformOnly | NonCompliant while something named `<cluster>` lacks the [marker](#ownership). Stops the chain. | same | same |
-| `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config`, `-certs` on vSphere | Namespace `<cluster>`, `-pull-secret`, `-bmc` |
+| `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config`, `-certs` on vSphere | Namespace `<cluster>`, `-pull-secret`, `-bmc`. Fails on an empty BMC `username` or `password`. |
 | `manifests` | enforce | `install.manifests` | same | same |
 | `cluster` | enforce | HostedCluster, NodePools | ClusterDeployment, ManagedCluster, KlusterletAddonConfig | ClusterImageSet, ClusterInstance, KlusterletAddonConfig |
-| `ready` | InformOnly | `version` is the desired and newest Completed version, and on every NodePool | `spec.installed: true` | `Provisioned` True |
+| `ready` | InformOnly | `version` is the desired and newest Completed version, and on every NodePool | `spec.installed: true` | `Provisioned` True and every host joined (Agent stage `Done`) or removed. Names the pending host's BareMetalHost while it exists, otherwise the ClusterInstance. |
 
 `absent-lifecycle-<cluster>`:
 
@@ -221,7 +232,7 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 | `cleanup` | enforce | Copied secrets, etcd key, `install.manifests` | Namespace `<cluster>`, `install.manifests` | Namespace `<cluster>`, ClusterImageSet, `install.manifests` |
 
 - An enforced delete is Compliant once the API accepts it, so every destroy step has an inform wait after it.
-- Create templates are `musthave`: operator-filled fields are not compared, so the Policy never fights HyperShift, Hive or SiteConfig.
+- Create templates are `musthave`: operator-filled fields are not compared, so the Policy never fights HyperShift or Hive. The ClusterInstance alone is `mustonlyhave` with `metadataComplianceType: musthave`, since `musthave` would append a changed node as a duplicate.
 - The credential is never deleted.
 - Every enforced step but `manifests` repeats the ownership check in the same evaluation and fails on a foreign object, so a stale guard result never lets it write or delete.
 
@@ -268,36 +279,79 @@ The operators reject changes to these, among others:
 Changing one does not change the cluster: `present-cluster-<cluster>` goes NonCompliant with the API server's message. Revert the value.
 
 - NodePool `upgradeType` or `arch`: add a new pool, remove the old one.
+- Any `siteconfig` key on a live cluster, including a field of an existing worker: `unauthorized changes in immutable fields` (cluster keys) or `unauthorized change to …` (host keys). Only adding and removing workers is allowed.
+- Any spec edit before the install completes: `spec update not allowed during provisioning or cluster reinstalls`. It applies by itself once the install completes.
 - Failed SiteConfig install: set `state: absent`, then build again with the fix.
 
-## Removing a NodePool or host
+While a denial stands, no other node change reaches that cluster.
 
-`musthave` never deletes. Removing an entry only stops managing it.
+!!! warning "Changing the rendered spec"
+    The ClusterInstance is `mustonlyhave`, so a chart or key change that alters the render of an installed cluster is denied on every evaluation. Rebuild the cluster or keep the render identical. A hand-set `spec.reinstall` stays NonCompliant the same way, and a SiteConfig webhook outage turns installed clusters NonCompliant until it returns.
 
-=== "NodePool"
+## Removing a NodePool
 
-    Remove the `nodePools` entry, then:
+`musthave` never deletes. Removing an entry only stops managing it. Remove the `nodePools` entry, then:
+
+```sh
+oc delete nodepool <cluster>-<pool> -n clusters
+```
+
+A pool from a shared layer, like `workers` in `platforms/kubevirt.yaml`, cannot be removed from a higher layer (the schema rejects `null`). Scale it down:
+
+```yaml
+install:
+  nodePools:
+    workers:
+      replicas: 0
+```
+
+## Scaling SiteConfig workers
+
+!!! note
+    Red Hat documents this flow for `clusterType: SNO`. On `HighlyAvailable`, SiteConfig accepts the same changes and its sample output shows it, but no doc covers it explicitly.
+
+**Scale out.** Add a host with `role: worker`. It reaches the ClusterInstance once the install completes, so one-master clusters can list workers from the start. The hub needs a valid kubeconfig for the cluster; if the API certificate changed, [update it first](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/). Keep the `bmcCredential` Secret on the hub: without it `credentials` fails and `cluster` never applies the change. `present-ready` stays NonCompliant until the host's Agent reports `Done`, and names the host once its BareMetalHost exists.
+
+**Scale in.** Set `remove: true` on the worker. Masters and arbiters cannot be removed.
+
+```yaml
+install:
+  siteconfig:
+    nodes:
+      w0.bm-ha.dc1.example.com:
+        role: worker
+        bmcAddress: redfish-virtualmedia://10.20.0.24/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:04"
+        remove: true
+```
+
+The `cluster` step then runs SiteConfig's documented scale-in, each write gated on the last:
+
+| Step | Written to the node | Waits for |
+|---|---|---|
+| 1 | `extraAnnotations` `remove-agent-and-node-on-delete` | The annotation on the BareMetalHost |
+| 2 | `pruneManifests`: BareMetalHost, InfraEnv, NMStateConfig | BareMetalHost gone, SiteConfig done (`observedGeneration`) |
+| 3 | Node dropped | |
+
+BMAC drains the Node, deprovisions the host and removes the Agent and Node. Follow it with `oc get bmh,agent -n <cluster>`. Once `present-ready` is Compliant, delete the fleet entry. Cleaning is metadata only: data stays on the disks.
+
+| You do | Result |
+|---|---|
+| Delete a live node's entry, or rename it | `cluster` fails with `not install.siteconfig.nodes`: SiteConfig would accept the drop and delete nothing, stranding the BareMetalHost, Agent and Node. |
+| Add a master to a live cluster | `cluster` fails: `is a new master`. |
+| Clear `remove` before step 2 | Scale-in cancelled. |
+| Clear `remove` after step 2 | `cluster` fails: `cannot be cancelled`. |
+| `remove` on a worker still joining | `cluster` fails: `has not finished joining`. Its drain would loop until SiteConfig's 30-minute timeout pauses the ClusterInstance. |
+| `remove` on a worker whose Node you already deleted | Not detected: the hub cannot see spoke Nodes. The drain fails the same way, and the BareMetalHost's drain-status annotation shows `failed to drain node`. |
+
+??? warning "Removing a worker that never joined, or whose Node is gone"
+    Either finish the install, or annotate its BareMetalHost so the drain gives up. BMAC honours this annotation, but no Red Hat doc covers it:
 
     ```sh
-    oc delete nodepool <cluster>-<pool> -n clusters
+    oc annotate bmh <host> -n <cluster> bmac.agent-install.openshift.io/drain-timeout=5m
     ```
 
-    A pool from a shared layer, like `workers` in `platforms/kubevirt.yaml`, cannot be removed from a higher layer (the schema rejects `null`). Scale it down:
-
-    ```yaml
-    install:
-      nodePools:
-        workers:
-          replicas: 0
-    ```
-
-=== "SiteConfig host"
-
-    Remove the `nodes` entry, then remove the host from the live object. Changing a host after install needs the same edit.
-
-    ```sh
-    oc edit clusterinstance <cluster> -n <cluster>
-    ```
+    The value is a Go duration, counted from the first drain attempt. If the ClusterInstance has already paused, also remove its paused annotation.
 
 ## Troubleshooting
 
@@ -347,7 +401,7 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
     oc get clusterinstance <cluster> -n <cluster> -o jsonpath='{.status.conditions}'
     ```
 
-    Check the AgentClusterInstall too. Destroy, fix, build again. A wrong ref, like `templateNamespace`, can be fixed by creating the missing object.
+    Check the AgentClusterInstall too. Destroy, fix, build again. A wrong ref, like `templateNamespace`, can be fixed by creating the missing object. Check `ready-cim-<hub>` for a hub problem.
 
 ??? failure "SiteConfig: cluster never imported"
     The hub cannot resolve `api.<cluster>.<baseDomain>`. Add the DNS record where the hub resolves it.

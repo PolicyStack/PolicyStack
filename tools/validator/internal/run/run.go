@@ -238,7 +238,14 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("list values layers: %w", err)
 	}
-	repoCtx := checks.Context{AllElements: all, Layers: layers, Logger: opts.Logger}
+	var fleet []checks.FleetFile
+	for _, cl := range clusters {
+		if cl.Hub != "" && cl.State != "absent" {
+			r := cascade.Resolve(cl, opts.LifecycleDir, "lifecycle", opts.RepoRoot, opts.ValuesDir)
+			fleet = append(fleet, checks.FleetFile{Name: cl.Name, Hub: cl.Hub, Files: append(r.ValueFiles, cl.SourceFile)})
+		}
+	}
+	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue

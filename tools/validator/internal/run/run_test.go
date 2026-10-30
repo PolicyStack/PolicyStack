@@ -400,3 +400,49 @@ func TestFleetIssueReportedOnce(t *testing.T) {
 		})
 	}
 }
+
+// TestPolicy051Wiring runs the check through Run: registration, the fleet files it reads, and that a
+// retired or import-only cluster does not count.
+func TestPolicy051Wiring(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, body string, mode os.FileMode) {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("helm", "#!/bin/sh\nexit 0\n", 0o755)
+	write("lifecycle/Chart.yaml", "apiVersion: v2\nname: lifecycle\nversion: 0.1.0\n", 0o644)
+	write("lifecycle/values.yaml", "stack:\n  siteconfig:\n    enabled: true\n", 0o644)
+	write("values.yaml", "policyNamespace: policies\n", 0o644)
+	nodes := "install:\n  siteconfig:\n    nodes:\n      h:\n        bootMACAddress: \"00:11:22:33:44:55\"\n        bmcAddress: redfish-virtualmedia://10.0.0.1/s\n"
+	write("fleet/a.yaml", "revision: main\nhub: acm-dc1\n"+nodes, 0o644)
+	write("fleet/b.yaml", "revision: main\nhub: acm-dc1\n"+nodes, 0o644)
+	write("fleet/c.yaml", "revision: main\nhub: acm-dc1\nstate: absent\n"+nodes, 0o644)
+	write("fleet/d.yaml", "revision: main\n", 0o644)
+	write("fleet/hubs/acm-dc1.yaml", "revision: main\n", 0o644)
+	res, err := Run(t.Context(), Options{
+		RepoRoot:     root,
+		StackDir:     filepath.Join(root, "stack"),
+		LifecycleDir: filepath.Join(root, "lifecycle"),
+		ValuesDir:    filepath.Join(root, "values"),
+		FixturesDir:  filepath.Join(root, "fleet"),
+		HelmBin:      filepath.Join(root, "helm"),
+		Only:         []string{"POLICY051"},
+		Logger:       slog.New(slog.DiscardHandler),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Findings) != 2 {
+		t.Fatalf("got %+v, want MAC and BMC findings on b", res.Findings)
+	}
+	for _, f := range res.Findings {
+		if f.Cluster != "b" || f.RuleID != "POLICY051" {
+			t.Errorf("finding %+v", f)
+		}
+	}
+}

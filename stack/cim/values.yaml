@@ -1,0 +1,91 @@
+stack:
+  cim:
+    # Hub-only: enable it in the hub's values layer. Needs a default StorageClass, or
+    # config.storage.storageClass, and a hub platform that runs metal3: bare metal, none, vSphere,
+    # OpenStack, AWS, Azure, GCP or KubeVirt.
+    enabled: false
+
+    # Settings the converters read.
+    config:
+      # AgentServiceConfig volumes. Sizes can grow; nothing else changes once the PVCs exist.
+      storage:
+        # Empty uses the cluster default. The field is then omitted, since an empty string disables
+        # provisioning.
+        storageClass: ""
+        database: 10Gi
+        filesystem: 100Gi
+        # RHCOS ISO cache: about 2Gi per osImages entry
+        images: 50Gi
+
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    # No pruneObjectBehavior: deleting the AgentServiceConfig deletes the assisted-service volumes,
+    # and deleting Provisioning removes metal3.
+    policies:
+      - name: hub
+        enabled: true
+        description: "Provisioning, AgentServiceConfig and the SiteConfig component"
+        remediationAction: enforce
+        severity: high
+        disabled: false
+
+      # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
+      - name: ready
+        enabled: true
+        description: "Reports NonCompliant until metal3, the assisted service and SiteConfig run"
+        severity: medium
+        disabled: false
+        dependencies:
+          - name: hub
+
+    configPolicies:
+      # Watch BareMetalHosts in every namespace. A hub without the CR gets one with no provisioning
+      # network; an existing CR keeps its network settings.
+      - name: cim-provisioning
+        enabled: true
+        description: "Provisioning provisioning-configuration"
+        policyRef: hub
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: cim-provisioning
+
+      - name: cim-agent
+        enabled: true
+        description: "AgentServiceConfig agent"
+        policyRef: hub
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        templateNames:
+          - name: cim-agent
+
+      - name: cim-siteconfig
+        enabled: true
+        description: "MultiClusterHub siteconfig component"
+        policyRef: hub
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: cim-siteconfig
+
+      - name: cim-health
+        enabled: true
+        description: "metal3, the AgentServiceConfig and the SiteConfig controller"
+        policyRef: ready
+        complianceType: musthave
+        remediationAction: InformOnly
+        severity: medium
+        rawTemplate: true
+        templateNames:
+          - name: cim-health

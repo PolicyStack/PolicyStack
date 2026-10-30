@@ -1,13 +1,53 @@
 {{- /*
-Compliant once the ClusterInstance reports Provisioned. While not, a mustnothave on the existing
-ClusterInstance forces NonCompliant.
+Compliant once the ClusterInstance reports Provisioned and, with the ai templates, every host has
+joined or left. A host has joined when its newest Agent, the one BMAC acts on, reports stage Done or,
+as after a hub restore, it has no Agent and its BareMetalHost is detached. A host being removed has
+left when it is gone from the ClusterInstance. While not, a mustnothave on the pending host's
+BareMetalHost, which names it, or on the ClusterInstance when it has none, forces NonCompliant.
 */ -}}
+{{- $s := .Values.install.siteconfig }}
 {{- $c := include "lifecycle.cluster" . }}
+{{ "{{-" }} $ci := lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }} {{ "}}" }}
 {{ "{{-" }} $provisioned := false {{ "}}" }}
-{{ "{{-" }} range (dig "status" "conditions" list (lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }})) {{ "}}" }}
+{{ "{{-" }} range (dig "status" "conditions" list $ci) {{ "}}" }}
 {{ "{{-" }} if and (eq .type "Provisioned") (eq .status "True") {{ "}}" }}{{ "{{-" }} $provisioned = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
 {{ "{{-" }} end {{ "}}" }}
-{{ "{{-" }} if not $provisioned {{ "}}" }}
+{{ "{{-" }} $live := list {{ "}}" }}
+{{ "{{-" }} range (dig "spec" "nodes" list $ci) {{ "}}" }}{{ "{{-" }} $live = append $live .hostName {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $pending := not $provisioned {{ "}}" }}
+{{- if ne ($s.templates | default "ai") "ibi" }}
+{{- range $host, $n := $s.nodes }}
+{{ "{{-" }} if $provisioned {{ "}}" }}
+{{ "{{-" }} $bmh := lookup "metal3.io/v1alpha1" "BareMetalHost" {{ $c | quote }} {{ $host | quote }} {{ "}}" }}
+{{- if $n.remove }}
+{{ "{{-" }} $hostPending := has {{ $host | quote }} $live {{ "}}" }}
+{{- else }}
+{{ "{{-" }} $hostPending := not (hasKey (dig "metadata" "annotations" dict $bmh) "baremetalhost.metal3.io/detached") {{ "}}" }}
+{{ "{{-" }} $newest := "" {{ "}}" }}
+{{ "{{-" }} range (lookup "agent-install.openshift.io/v1beta1" "Agent" {{ $c | quote }} "" "agent-install.openshift.io/bmh={{ $host }}").items {{ "}}" }}
+{{ "{{-" }} if ge (dig "metadata" "creationTimestamp" "" .) $newest {{ "}}" }}
+{{ "{{-" }} $newest = dig "metadata" "creationTimestamp" "" . {{ "}}" }}
+{{ "{{-" }} $hostPending = ne (dig "status" "progress" "currentStage" "" .) "Done" {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- end }}
+{{ "{{-" }} if $hostPending {{ "}}" }}
+{{ "{{-" }} if $bmh {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: metal3.io/v1alpha1
+    kind: BareMetalHost
+    metadata:
+      name: {{ $host }}
+      namespace: {{ $c }}
+{{ "{{-" }} else {{ "}}" }}
+{{ "{{-" }} $pending = true {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{- end }}
+{{- end }}
+{{ "{{-" }} if $pending {{ "}}" }}
 - complianceType: mustnothave
   objectDefinition:
     apiVersion: siteconfig.open-cluster-management.io/v1alpha1

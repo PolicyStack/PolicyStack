@@ -64,6 +64,10 @@ stack:
 # Hub self-management (see values/acm/acm-dc1.yaml):
 #   acm, gitops.
 #
+# No siteconfig clusters yet:
+#   cim - Provisioning, AgentServiceConfig and the SiteConfig component. Enable it before the first
+#   fleet file with engine siteconfig. Needs a default StorageClass, see "No default StorageClass".
+#
 # Heavier operators, off to keep the first run readable rather than for any technical reason:
 #   acs, aap, quay, virtualization, mtv, lvm,
 #   metallb, nmstate, kiali, tempo, opentelemetry, servicemesh, devSpaces, developerHub,

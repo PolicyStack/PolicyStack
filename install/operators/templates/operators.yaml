@@ -56,9 +56,3 @@ spec:
   {{- if not $cfg.selfManaged }}
   disableHubSelfManagement: true
   {{- end }}
-  {{- if $cfg.siteConfig }}
-  overrides:
-    components:
-      - name: siteconfig
-        enabled: true
-  {{- end }}

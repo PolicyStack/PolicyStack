@@ -50,10 +50,12 @@ manifests starts with it: the check runs in the same evaluation as the write.
 {{- end -}}
 
 {{/*
-<releaseRepository>:<version>-multi, the release every engine installs.
+<releaseRepository>:<version>-<arch>, the release an engine installs: x86_64 for siteconfig, whose
+assisted installer rates multi-architecture images Tech Preview, multi for the rest.
 */}}
 {{- define "lifecycle.releaseImage" -}}
-{{- printf "%s:%s-multi" .Values.install.releaseRepository (required "version is required" .Values.version) -}}
+{{- $arch := ternary "x86_64" "multi" (eq .Values.install.engine "siteconfig") -}}
+{{- printf "%s:%s-%s" .Values.install.releaseRepository (required "version is required" .Values.version) $arch -}}
 {{- end -}}
 
 {{/*

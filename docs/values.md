@@ -203,7 +203,7 @@ global:
     | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
     | `tenants/payments.yaml` | GitOps operator plus a payments team Argo CD |
     | `acm/acm-dc1.yaml` | Hub ACM and GitOps, commented out ([why](install.md#hand-the-operators-to-policystack)) |
-    | `clusters/acm-dc1.yaml` | Hub elements, and which are off and why |
+    | `clusters/acm-dc1.yaml` | Hub elements, and which are off and why (`cim` for SiteConfig clusters) |
     | `clusters/prod-east-1.yaml` | Infra nodes, machine health, user monitoring |
     | `clusters/hcp-agent.yaml` | `install`: hosted control plane service publishing. `stack`: guest MetalLB pool |
     | `clusters/nonprod-west-1.yaml` | Registry enforcement, MetalLB pool, user monitoring |

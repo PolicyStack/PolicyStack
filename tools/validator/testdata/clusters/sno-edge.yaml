@@ -8,12 +8,8 @@ valueFiles:
   - platforms/baremetal.yaml
 install:
   siteconfig:
-    clusterInstance:
-      clusterType: SNO
-      machineNetwork:
-        - cidr: 10.20.30.0/24
+    machineNetwork: [10.20.30.0/24]
     nodes:
       sno-edge.dc1.example.com:
-        role: master
         bmcAddress: redfish-virtualmedia://10.20.0.11/redfish/v1/Systems/1
         bootMACAddress: "00:11:22:33:44:55"

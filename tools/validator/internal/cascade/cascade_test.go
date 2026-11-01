@@ -203,6 +203,9 @@ func TestResolve_testdata(t *testing.T) {
 		"foo-name-budget-30-characters-long": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/nonprod.yaml",
 		},
+		"foo-bm-ha": {
+			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml", "values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",
+		},
 		"foo-sno-edge": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml", "values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",
 		},

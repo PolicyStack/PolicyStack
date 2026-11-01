@@ -17,7 +17,8 @@ install:
   engine: hypershift
   # hypershift: KubeVirt, Agent or None. Fixed at create.
   platform: ""
-  # The release image is <releaseRepository>:<version>-multi. Point it at a mirror when disconnected.
+  # The release image is <releaseRepository>:<version>-multi, -x86_64 on siteconfig. Point it at a
+  # mirror when disconnected.
   releaseRepository: quay.io/openshift-release-dev/ocp-release
   # hypershift: namespace of the HostedCluster, its NodePools and the secrets copied from the
   # credential. hive and siteconfig use namespace <cluster>.
@@ -64,10 +65,17 @@ install:
   #                      default: the MultiClusterHub's namespace
   #   bmcCredential:     namespace and name of a hub Secret with username and password, copied for
   #                      every node's BMC
-  #   clusterInstance:   ClusterInstance spec merged under the generated one: clusterType,
-  #                      networkType, machineNetwork, apiVIPs and the rest
-  #   nodes:             map of hostName to its ClusterInstance node: bmcAddress, bootMACAddress,
-  #                      role, nodeNetwork and the rest
+  #   machineNetwork:    node subnets. Required with ai and one master.
+  #   apiVIPs:           required with more than one master, forbidden with one
+  #   ingressVIPs:       as apiVIPs
+  #   clusterNetwork:    pod subnets, {cidr, hostPrefix}
+  #   serviceNetwork:    service subnets
+  #   ntpSources:        extra NTP sources
+  #   proxy:             install proxy: httpProxy, httpsProxy, noProxy
+  #   extraManifests:    names of ConfigMaps in namespace <cluster>, from install.manifests
+  #   nodes:             map of hostName to bmcAddress (virtual media), bootMACAddress, and optional
+  #                      role (master by default), rootDeviceHints, network ({interfaces: {name: MAC},
+  #                      config: nmstate}) and, on a worker, remove: true to scale it in
   siteconfig: {}
 
 # The hub ManagedCluster the Policies apply to. The lifecycle ApplicationSet replaces it with that
@@ -471,7 +479,7 @@ stack:
         templateNames:
           - name: siteconfig/ready
         customMessage:
-          noncompliant: "Waiting for the ClusterInstance to report Provisioned"
+          noncompliant: "Waiting for the ClusterInstance to report Provisioned and its nodes to join or leave: {{ .DefaultMessage }}"
 
       - name: guard
         enabled: true

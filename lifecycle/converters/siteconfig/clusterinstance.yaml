@@ -1,12 +1,32 @@
 {{- /*
-ClusterImageSet lifecycle-<cluster>, then the ClusterInstance SiteConfig renders the install from.
+ClusterImageSet lifecycle-<cluster>, then the ClusterInstance SiteConfig renders the install from,
+built from install.siteconfig. clusterType follows the masters, not the nodes: a scaled-out SNO
+stays SNO, and the field never changes after create.
 
-SiteConfig rejects any ClusterInstance spec change until the install completes, and after it only a
-few, so nothing in the spec follows a later change. The image set's name never changes, and its
-releaseImage and the ClusterInstance's sshPublicKey are read back from the live objects: a version
-bump or a rotated credential key reaches neither, and the cluster upgrades through the upgrade element
-instead. The image set carries no channel label, which would let MCE's cluster-image-set-controller
-delete it.
+The ClusterInstance is mustonlyhave, since musthave matches list items by name, which nodes lack: it
+appends a changed node as a duplicate and can never drop one. metadataComplianceType keeps what
+SiteConfig writes to metadata. CRD defaults are left out of the spec, which keeps the dry-run
+authoritative. SiteConfig rejects any spec change until the install completes, and after it most of
+them: the denial shows on this step and leaves the live object alone. The image set's name never
+changes, and its releaseImage and the ClusterInstance's sshPublicKey are read back from the live
+objects, so a version bump or a rotated credential key reaches neither, and the cluster upgrades
+through the upgrade element instead. The image set carries no channel label, which would let MCE's
+cluster-image-set-controller delete it.
+
+SiteConfig accepts edits that strand hosts or re-image them, so those fail here: a live node missing
+from the fleet file (dropping it deletes nothing), a new control-plane node, and a removal
+cancelled after pruning began (re-rendering would re-create the BareMetalHost).
+
+A new host waits for the install to complete. So does a worker of a one-master cluster at create,
+which the assisted installer does not accept until the cluster is up: it arrives by scale-out.
+
+remove: true runs SiteConfig's documented scale-in, each write gated on live state since SiteConfig
+renders only the latest spec: the annotation, then, once it is on the BareMetalHost, pruneManifests,
+then, once the BareMetalHost is gone and SiteConfig has finished the generation, the node is dropped.
+Pruning without the annotation deletes the BareMetalHost without deprovisioning and leaves the Node
+on the cluster. A host whose newest Agent, the one BMAC acts on, is bound and has not finished joining
+is refused, as its drain would loop until SiteConfig's timeout pauses the ClusterInstance: the
+drain-timeout annotation is the manual way past.
 
 The marker reaches the ManagedCluster through extraAnnotations, since SiteConfig renders
 and owns it. The stock ai KlusterletAddonConfig turns application-manager off, without which ACM
@@ -17,16 +37,60 @@ on, as the hive engine does.
 {{- $c := include "lifecycle.cluster" . }}
 {{- $t := $s.templates | default "ai" }}
 {{- $ns := $s.templateNamespace | default "open-cluster-management" }}
-{{- $nodes := list }}
-{{- range $host, $node := required "install.siteconfig.nodes is required" $s.nodes }}
-{{- $nodes = append $nodes (mergeOverwrite (deepCopy $node) (dict "hostName" $host "bmcCredentialsName" (dict "name" (printf "%s-bmc" $c)) "templateRefs" (list (dict "name" (printf "%s-node-templates-v1" $t) "namespace" $ns)))) }}
+{{- $masters := 0 }}
+{{- $arbiters := 0 }}
+{{- $owner := dict }}
+{{- $nodes := dict }}
+{{- range $host, $n := required "install.siteconfig.nodes is required" $s.nodes }}
+{{- $role := $n.role | default "master" }}
+{{- if eq $role "master" }}{{ $masters = add1 $masters }}{{ end }}
+{{- if eq $role "arbiter" }}{{ $arbiters = add1 $arbiters }}{{ end }}
+{{- range $id := list (lower $n.bootMACAddress) (regexReplaceAll "^[^:]*://" $n.bmcAddress "" | lower) }}
+{{- with get $owner $id }}{{ fail (printf "install.siteconfig.nodes: %s and %s share boot MAC or BMC address %s" . $host $id) }}{{ end }}
+{{- $_ := set $owner $id $host }}
 {{- end }}
-{{- $spec := dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.marker" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "nodes" $nodes }}
-{{- $spec = mergeOverwrite (deepCopy ($s.clusterInstance | default dict)) $spec }}
-{{- $_ := unset $spec "sshPublicKey" }}
+{{- $node := merge (dict "hostName" $host "bmcAddress" $n.bmcAddress "bootMACAddress" $n.bootMACAddress "bmcCredentialsName" (dict "name" (printf "%s-bmc" $c)) "templateRefs" (list (dict "name" (printf "%s-node-templates-v1" $t) "namespace" $ns))) (pick $n "role" "rootDeviceHints") }}
+{{- with $n.network }}
+{{- $interfaces := list }}
+{{- range $name, $mac := .interfaces }}{{ $interfaces = append $interfaces (dict "name" $name "macAddress" $mac) }}{{ end }}
+{{- $_ := set $node "nodeNetwork" (dict "interfaces" $interfaces "config" .config) }}
+{{- end }}
+{{- if eq $t "ibi" }}{{ $_ := set $node "cpuArchitecture" "x86_64" }}{{ end }}
+{{- $_ := set $nodes $host $node }}
+{{- end }}
+{{- $vips := and $s.apiVIPs $s.ingressVIPs }}
+{{- if $arbiters }}
+{{- if lt $masters 2 }}{{ fail "install.siteconfig.nodes: an arbiter needs at least 2 masters" }}{{ end }}
+{{- if semverCompare "<4.19.0-0" .Values.version }}{{ fail "install.siteconfig.nodes: an arbiter needs version 4.19 or later" }}{{ end }}
+{{- else if not (or (eq $masters 1) (eq $masters 3)) }}
+{{- fail (printf "install.siteconfig.nodes: %d masters; need 1, 3, or 2 or more with an arbiter" $masters) }}
+{{- end }}
+{{- if and (eq $masters 1) (or $s.apiVIPs $s.ingressVIPs) }}{{ fail "install.siteconfig: apiVIPs and ingressVIPs are forbidden with one master" }}{{ end }}
+{{- if and (gt $masters 1) (not $vips) }}{{ fail "install.siteconfig: apiVIPs and ingressVIPs are required with more than one master" }}{{ end }}
+{{- if and $vips (ne (len $s.apiVIPs) (len $s.ingressVIPs)) }}{{ fail "install.siteconfig: apiVIPs and ingressVIPs need the same number of entries" }}{{ end }}
+{{- if and (eq $masters 1) (eq $t "ai") (not $s.machineNetwork) }}{{ fail "install.siteconfig.machineNetwork is required with one master" }}{{ end }}
+{{- $spec := merge (dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.marker" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "clusterType" (ternary "HighlyAvailableArbiter" (ternary "SNO" "HighlyAvailable" (eq $masters 1)) (gt $arbiters 0))) (pick $s "clusterNetwork" "apiVIPs" "ingressVIPs" "proxy") }}
+{{- with $s.ntpSources }}{{ $_ := set $spec "additionalNTPSources" . }}{{ end }}
+{{- range $key := list "machineNetwork" "serviceNetwork" }}
+{{- with get $s $key }}{{ $l := list }}{{ range . }}{{ $l = append $l (dict "cidr" .) }}{{ end }}{{ $_ := set $spec $key $l }}{{ end }}
+{{- end }}
+{{- with $s.extraManifests }}{{ $l := list }}{{ range . }}{{ $l = append $l (dict "name" .) }}{{ end }}{{ $_ := set $spec "extraManifestsRefs" $l }}{{ end }}
+{{- $remove := dict "extraAnnotations" (dict "BareMetalHost" (dict "bmac.agent-install.openshift.io/remove-agent-and-node-on-delete" "true")) }}
+{{- $prune := dict "pruneManifests" (list (dict "apiVersion" "metal3.io/v1alpha1" "kind" "BareMetalHost") (dict "apiVersion" "agent-install.openshift.io/v1beta1" "kind" "InfraEnv") (dict "apiVersion" "agent-install.openshift.io/v1beta1" "kind" "NMStateConfig")) }}
 {{ include "lifecycle.refuse" . }}
-{{ "{{-" }} $releaseImage := dig "spec" "releaseImage" {{ include "lifecycle.releaseImage" . | quote }} (lookup "hive.openshift.io/v1" "ClusterImageSet" "" "lifecycle-{{ $c }}") {{ "}}" }}
-{{ "{{-" }} $ssh := dig "spec" "sshPublicKey" (fromSecret {{ include "lifecycle.credential" . }} "ssh-publickey" | base64dec) (lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }}) {{ "}}" }}
+{{ "{{-" }} $live := lookup "siteconfig.open-cluster-management.io/v1alpha1" "ClusterInstance" {{ $c | quote }} {{ $c | quote }} {{ "}}" }}
+{{ "{{-" }} $completed := false {{ "}}" }}
+{{ "{{-" }} range (dig "status" "conditions" list $live) {{ "}}" }}{{ "{{-" }} if and (eq .type "Provisioned") (eq .reason "Completed") {{ "}}" }}{{ "{{-" }} $completed = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $liveNodes := dict {{ "}}" }}
+{{ "{{-" }} range (dig "spec" "nodes" list $live) {{ "}}" }}
+{{ "{{-" }} $_ := set $liveNodes .hostName . {{ "}}" }}
+{{ "{{-" }} if not (has .hostName (list {{ range $host, $_ := $nodes }}{{ $host | quote }} {{ end }})) {{ "}}" }}{{ "{{" }} fail (printf "node %s is in the ClusterInstance but not install.siteconfig.nodes: set remove: true on a worker to scale it in; other nodes cannot be removed or renamed" .hostName) {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $ssh := dig "spec" "sshPublicKey" "" $live {{ "}}" }}
+{{ "{{-" }} if not $live {{ "}}" }}
+{{ "{{-" }} $ssh = fromSecret {{ include "lifecycle.credential" . }} "ssh-publickey" | base64dec | trim {{ "}}" }}
+{{ "{{-" }} if contains "\n" $ssh {{ "}}" }}{{ "{{" }} fail "install.credential ssh-publickey must hold one key: the stock templates fold the rest into the first" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: hive.openshift.io/v1
@@ -34,8 +98,9 @@ on, as the hive engine does.
     metadata:
       name: lifecycle-{{ $c }}
     spec:
-      releaseImage: '{{ "{{" }} $releaseImage {{ "}}" }}'
-- complianceType: musthave
+      releaseImage: '{{ "{{" }} dig "spec" "releaseImage" {{ include "lifecycle.releaseImage" . | quote }} (lookup "hive.openshift.io/v1" "ClusterImageSet" "" "lifecycle-{{ $c }}") {{ "}}" }}'
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
   objectDefinition:
     apiVersion: siteconfig.open-cluster-management.io/v1alpha1
     kind: ClusterInstance
@@ -45,6 +110,55 @@ on, as the hive engine does.
       annotations: {{- include "lifecycle.marker" . | nindent 8 }}
     spec: {{- $spec | toYaml | nindent 6 }}
       sshPublicKey: {{ "{{" }} printf "%q" $ssh {{ "}}" }}
+      nodes:
+        {{- range $host, $node := $nodes }}
+        {{- $n := get $s.nodes $host }}
+        {{- $worker := eq ($n.role | default "master") "worker" }}
+        {{ "{{-" }} $node := get $liveNodes {{ $host | quote }} {{ "}}" }}
+        {{- if $n.remove }}
+        {{ "{{-" }} if and $node $completed {{ "}}" }}
+        {{ "{{-" }} $bmh := lookup "metal3.io/v1alpha1" "BareMetalHost" {{ $c | quote }} {{ $host | quote }} {{ "}}" }}
+        {{ "{{-" }} $annotations := dig "metadata" "annotations" dict $bmh {{ "}}" }}
+        {{ "{{-" }} if dig "pruneManifests" list $node {{ "}}" }}
+        {{ "{{-" }} if or $bmh (ne (dig "status" "observedGeneration" 0 $live | toInt) (dig "metadata" "generation" 0 $live | toInt)) {{ "}}" }}
+        - {{ merge (dict) $node $remove $prune | toJson }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} else {{ "}}" }}
+        {{ "{{-" }} if not (hasKey $annotations "bmac.agent-install.openshift.io/drain-timeout") {{ "}}" }}
+        {{ "{{-" }} $newest := "" {{ "}}" }}
+        {{ "{{-" }} $joining := false {{ "}}" }}
+        {{ "{{-" }} range (lookup "agent-install.openshift.io/v1beta1" "Agent" {{ $c | quote }} "" "agent-install.openshift.io/bmh={{ $host }}").items {{ "}}" }}
+        {{ "{{-" }} if ge (dig "metadata" "creationTimestamp" "" .) $newest {{ "}}" }}
+        {{ "{{-" }} $newest = dig "metadata" "creationTimestamp" "" . {{ "}}" }}
+        {{ "{{-" }} $joining = and (dig "spec" "clusterDeploymentName" "" .) (ne (dig "status" "progress" "currentStage" "" .) "Done") {{ "}}" }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} if $joining {{ "}}" }}{{ "{{" }} fail "node {{ $host }} has not finished joining, so its scale-in drain would loop: finish the install, or set the bmac.agent-install.openshift.io/drain-timeout annotation on its BareMetalHost" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} if hasKey $annotations "bmac.agent-install.openshift.io/remove-agent-and-node-on-delete" {{ "}}" }}
+        - {{ merge (dict) $node $remove $prune | toJson }}
+        {{ "{{-" }} else {{ "}}" }}
+        - {{ merge (dict) $node $remove | toJson }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{ "{{-" }} else if $node {{ "}}" }}
+        - {{ $node | toJson }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{- else }}
+        {{ "{{-" }} if $node {{ "}}" }}
+        {{ "{{-" }} if dig "pruneManifests" list $node {{ "}}" }}{{ "{{" }} fail "node {{ $host }} is being scaled in, which cannot be cancelled: set remove: true again, then add it back once it is gone" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+        - {{ $node | toJson }}
+        {{- if $worker }}
+        {{ "{{-" }} else if or $completed (and (not $liveNodes) {{ gt $masters 1 }}) {{ "}}" }}
+        - {{ $node | toJson }}
+        {{- else }}
+        {{ "{{-" }} else if $liveNodes {{ "}}" }}{{ "{{" }} fail "node {{ $host }} is a new {{ $n.role | default "master" }}: SiteConfig does not add control-plane nodes" {{ "}}" }}
+        {{ "{{-" }} else {{ "}}" }}
+        - {{ $node | toJson }}
+        {{- end }}
+        {{ "{{-" }} end {{ "}}" }}
+        {{- end }}
+        {{- end }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: agent.open-cluster-management.io/v1

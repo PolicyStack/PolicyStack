@@ -24,8 +24,9 @@ const repoRoot = "../../../.."
 
 // object is one resolved object-templates-raw entry.
 type object struct {
-	ComplianceType   string                    `json:"complianceType"`
-	ObjectDefinition unstructured.Unstructured `json:"objectDefinition"`
+	ComplianceType         string                    `json:"complianceType"`
+	MetadataComplianceType string                    `json:"metadataComplianceType"`
+	ObjectDefinition       unstructured.Unstructured `json:"objectDefinition"`
 }
 
 // rawTemplate renders lifecycle/ for the fixture fleet file cluster, with setString ranking above
@@ -42,22 +43,25 @@ func rawTemplate(t *testing.T, cluster, name string, setString ...string) string
 // rawTemplates is rawTemplate for every ConfigurationPolicy with object-templates-raw, by name.
 func rawTemplates(t *testing.T, cluster string, setString ...string) map[string]string {
 	t.Helper()
+	release, files := lifecycleFiles(t, cluster)
+	return renderRaw(t, filepath.Join(repoRoot, "lifecycle"), release, files, setString...)
+}
+
+// lifecycleFiles returns the release name and value files of the fixture's lifecycle release.
+func lifecycleFiles(t *testing.T, cluster string) (string, []string) {
+	t.Helper()
 	clusters, err := fixtures.LoadDir(filepath.Join(repoRoot, "tools/validator/testdata/clusters"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var cl *fixtures.Cluster
 	for _, c := range clusters {
 		if c.Name == cluster && c.Hub != "" {
-			cl = c
+			res := cascade.Resolve(c, filepath.Join(repoRoot, "lifecycle"), "lifecycle", repoRoot, filepath.Join(repoRoot, "values"))
+			return res.ReleaseName, append(res.ValueFiles, c.SourceFile)
 		}
 	}
-	if cl == nil {
-		t.Fatalf("no hub-built fixture %q", cluster)
-	}
-	dir := filepath.Join(repoRoot, "lifecycle")
-	res := cascade.Resolve(cl, dir, "lifecycle", repoRoot, filepath.Join(repoRoot, "values"))
-	return renderRaw(t, dir, res.ReleaseName, append(res.ValueFiles, cl.SourceFile), setString...)
+	t.Fatalf("no hub-built fixture %q", cluster)
+	return "", nil
 }
 
 // allOn is the value files that turn every element and toggle on.

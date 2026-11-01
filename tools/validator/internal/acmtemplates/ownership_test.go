@@ -39,7 +39,7 @@ func TestOwnership(t *testing.T) {
 	}{
 		{[]string{"hcp-agent", "hcp-retired"}, "hypershift.openshift.io/v1beta1", "HostedCluster", "clusters"},
 		{[]string{"hive-aws", "hive-retired", "hive-vsphere"}, "hive.openshift.io/v1", "ClusterDeployment", ""},
-		{[]string{"sno-edge", "sno-retired"}, "siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", ""},
+		{[]string{"sno-edge", "bm-ha", "sno-retired"}, "siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", ""},
 	} {
 		for _, c := range tt.clusters {
 			t.Run(c, func(t *testing.T) {

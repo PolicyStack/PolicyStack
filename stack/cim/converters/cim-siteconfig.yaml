@@ -1,0 +1,18 @@
+{{- /*
+Turns on the SiteConfig component of the hub's MultiClusterHub, whatever its name. The
+config-policy-controller merges list items by name, so the other overrides are left alone.
+*/ -}}
+{{ "{{-" }} range (lookup "operator.open-cluster-management.io/v1" "MultiClusterHub" "" "").items {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: operator.open-cluster-management.io/v1
+    kind: MultiClusterHub
+    metadata:
+      name: '{{ "{{" }} .metadata.name {{ "}}" }}'
+      namespace: '{{ "{{" }} .metadata.namespace {{ "}}" }}'
+    spec:
+      overrides:
+        components:
+          - name: siteconfig
+            enabled: true
+{{ "{{-" }} end {{ "}}" }}

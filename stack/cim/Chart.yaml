@@ -1,0 +1,10 @@
+apiVersion: v2
+name: cim
+description: "Central infrastructure management for SiteConfig clusters: metal3, the assisted service and the SiteConfig component"
+type: application
+version: 0.1.0
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "3.4.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

@@ -11,9 +11,3 @@ spec:
   # The hub does not manage itself; no local-cluster is created
   disableHubSelfManagement: true
   {{- end }}
-  {{- if $cfg.siteConfig }}
-  overrides:
-    components:
-      - name: siteconfig
-        enabled: true
-  {{- end }}

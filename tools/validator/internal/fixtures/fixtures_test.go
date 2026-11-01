@@ -215,6 +215,7 @@ func TestLoadDir_testdata(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []struct{ name, hub, state string }{
+		{"bm-ha", "acm-dc1", ""},
 		{"hcp-agent", "acm-dc1", ""},
 		{"hcp-kubevirt", "acm-dc1", ""},
 		{"hcp-retired", "acm-dc1", "absent"},

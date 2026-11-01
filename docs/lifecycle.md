@@ -271,17 +271,18 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
 
     Needs:
 
-    - `stack.acm.config.siteConfig: true` in the hub's values layer.
-    - [Central infrastructure management](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/): AgentServiceConfig `agent`, and Provisioning `provisioning-configuration` with `watchAllNamespaces: true` (and `provisioningNetwork: Disabled` if the hub has none).
-    - Hosts with a Redfish virtual-media BMC the hub reaches. Hosts reach the hub's image service and API.
+    - `stack.cim.enabled: true` in the hub's values layer. It manages the Provisioning CR, AgentServiceConfig `agent` and the MultiClusterHub `siteconfig` component, and `ready-cim-<hub>` reports when they run. Yourself: a default StorageClass (or `config.storage.storageClass`), [the bare-metal ports](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/), and the NLB on an AWS hub.
+    - Hosts with a virtual-media BMC the hub reaches. Hosts reach the hub's image service and API.
     - DNS for `api.<cluster>.<baseDomain>` from hosts and hub. Multi-node adds `api-int` and `*.apps`.
 
     ```sh
     oc create namespace bm-credentials
     oc create secret generic hostinventory -n bm-credentials \
-      --from-file=pullSecret=pull-secret.json --from-file=ssh-publickey=id_ed25519.pub
+      --from-file=pullSecret=pull-secret.json --from-file=ssh-publickey=id_ed25519.pub # (1)!
     oc create secret generic bmc -n bm-credentials --from-literal=username=<user> --from-literal=password=<password>
     ```
+
+    1.  One key: the stock templates fold a second into the first, so the step fails on it.
 
     ```yaml
     # fleet/sno-edge.yaml
@@ -299,42 +300,37 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
         bmcCredential: # (1)!
           namespace: bm-credentials
           name: bmc
-        clusterInstance: # (2)!
-          clusterType: SNO
-          networkType: OVNKubernetes
-          machineNetwork:
-            - cidr: 10.20.30.0/24
-        nodes: # (3)!
+        machineNetwork: [10.20.30.0/24]
+        nodes: # (2)!
           sno-edge.edge.example.com:
-            role: master
-            bmcAddress: idrac-virtualmedia://10.20.0.11/redfish/v1/Systems/System.Embedded.1 # (4)!
-            bootMACAddress: "00:11:22:33:44:55" # (5)!
+            bmcAddress: idrac-virtualmedia://10.20.0.11/redfish/v1/Systems/System.Embedded.1 # (3)!
+            bootMACAddress: "00:11:22:33:44:55" # (4)!
             rootDeviceHints:
               deviceName: /dev/sda
     ```
 
     1.  `username` and `password`, used for every node.
-    2.  Any [ClusterInstance](https://github.com/stolostron/siteconfig/blob/release-2.16/api/v1alpha1/clusterinstance_types.go) spec field.
-    3.  Keyed by host name. Each entry takes any ClusterInstance node field.
-    4.  `idrac-virtualmedia://` for Dell, `redfish-virtualmedia://` otherwise.
-    5.  Keep the quotes: an unquoted MAC is not read as a string by YAML.
+    2.  Keyed by host name. [All keys](lifecycle-reference.md#install-keys).
+    3.  `idrac-virtualmedia://` for Dell, `redfish-virtualmedia://` otherwise. Other schemes need a provisioning network, which the [`cim`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/cim) default doesn't have, so the schema refuses them.
+    4.  Keep the quotes: an unquoted MAC is not read as a string by YAML.
+
+    !!! warning "Fixed after create"
+        SiteConfig allows no spec change until the install completes, and after it only adding and removing workers. A failed install is destroyed and rebuilt. Check addresses and networks before merging.
+
+    !!! warning "BMC certificates"
+        The stock BareMetalHost template hard-codes `disableCertificateVerification: true`, with no setting to change it. Keep BMCs on a restricted network.
 
     ??? example "Three nodes"
-        `HighlyAvailable`, VIPs, one entry per host:
+        One entry per host; `HighlyAvailable` follows from the masters:
 
         ```yaml
         install:
           siteconfig:
-            clusterInstance:
-              clusterType: HighlyAvailable
-              networkType: OVNKubernetes
-              machineNetwork:
-                - cidr: 10.20.40.0/24
-              apiVIPs: [10.20.40.5]
-              ingressVIPs: [10.20.40.6]
+            machineNetwork: [10.20.40.0/24]
+            apiVIPs: [10.20.40.5]
+            ingressVIPs: [10.20.40.6]
             nodes:
               m0.bm-ha.dc1.example.com:
-                role: master
                 bmcAddress: redfish-virtualmedia://10.20.0.21/redfish/v1/Systems/1
                 bootMACAddress: "00:11:22:33:44:01"
               m1.bm-ha.dc1.example.com: ...
@@ -342,7 +338,9 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
         ```
 
     ??? info "Image-based install"
-        `siteconfig.templates: ibi`. Single node only. Needs the multicluster engine `image-based-install-operator` component and a host preinstalled with a seed image at `version`.
+        `siteconfig.templates: ibi`. Single node only. Needs the multicluster engine `image-based-install-operator` component, which you enable yourself, and a host preinstalled with a seed image at `version`.
+
+    See [Scaling](lifecycle-reference.md#scaling-siteconfig-workers) to add and remove workers.
 
 === "KubeVirt"
 
@@ -376,7 +374,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
 
     Needs:
 
-    - An AgentServiceConfig, as for bare metal, and a LoadBalancer implementation, as for KubeVirt.
+    - An AgentServiceConfig (`stack.cim`, as for bare metal) and a LoadBalancer implementation, as for KubeVirt.
     - An InfraEnv in `agentNamespace`, with hosts booted from its ISO, approved, and labeled to match `agentLabelSelector`.
     - DNS for `*.apps.<cluster>.<baseDomain>` at the guest ingress. [`values/clusters/hcp-agent.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/values/clusters/hcp-agent.yaml) pins it with the `metallb` element.
 
@@ -465,7 +463,7 @@ Shipped layers:
 |---|---|
 | `values/platforms/aws.yaml` | `engine: hive`, credential `hive-credentials/aws`, 3+3 `m6i.xlarge`, `networking` |
 | `values/platforms/vmware.yaml` | `engine: hive`, credential `hive-credentials/vsphere`, 3+3 amd64 at installer default size |
-| `values/platforms/baremetal.yaml` | `engine: siteconfig`, credentials `bm-credentials/hostinventory` and `bm-credentials/bmc`, `networkType` |
+| `values/platforms/baremetal.yaml` | `engine: siteconfig`, credentials `bm-credentials/hostinventory` and `bm-credentials/bmc` |
 | `values/platforms/kubevirt.yaml` | `platform: KubeVirt`, credential `open-cluster-management/kubevirt-secret`, 2 workers |
 | `values/platforms/agent.yaml` | `platform: Agent`, credential `hcp-credentials/hostinventory`, `agentNamespace: hardware-inventory` |
 
@@ -522,10 +520,10 @@ Bump `version`, and `channel` on a minor bump ([Upgrades](upgrades.md)):
 
 | Engine | How |
 |---|---|
-| `hive`, `siteconfig` | On the cluster by `upgrade`, like imported clusters. The hub keeps the install release image; Hive and SiteConfig reject changes to it. |
+| `hive`, `siteconfig` | On the cluster by `upgrade`, like imported clusters. The hub keeps the install release image: Hive rejects changes to it, and the chart reads the `siteconfig` image set back from the live object. |
 | `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. A `version` below the control plane's desired version is never applied. NodePools follow once the control plane's newest Completed version is `version`. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Disconnected](disconnected.md)). |
 
-During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. A held downgrade, such as a reverted bump after the control plane moved, keeps it NonCompliant until the fleet file catches up. Clusters install from the `-multi` payload, so they are multi-architecture.
+During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. A held downgrade, such as a reverted bump after the control plane moved, keeps it NonCompliant until the fleet file catches up. `hypershift` and `hive` clusters install from the `-multi` payload, so they are multi-architecture. `siteconfig` installs `-x86_64` and stays single-architecture.
 
 ??? info "Minor upgrade blocked by `ClusterVersionUpgradeable=False`"
     Force it with the release image:
@@ -564,7 +562,7 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 | Engine | Left behind |
 |---|---|
 | `hive` | Nothing. Hive deprovisions the cloud resources or VMs, usually within 20 minutes. vSphere: the DNS records you created. |
-| `siteconfig` | Hosts still running, disks not wiped. Power off or reuse. |
+| `siteconfig` | Hosts still running, disks not wiped. Power off or reuse. A worker scaled in is powered off with its disk metadata cleaned; data stays on disk. |
 | `hypershift` Agent | Agents return to the InfraEnv for the next cluster. |
 | `hypershift` None | Your workers and their DNS. Delete them. |
 

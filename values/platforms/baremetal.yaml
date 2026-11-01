@@ -4,7 +4,7 @@
 #
 # install is read only by lifecycle/, for a cluster a hub builds with SiteConfig and the assisted
 # installer (docs/lifecycle.md). The fleet file or values/clusters/<cluster>.yaml sets the nodes and
-# the machine network.
+# the machine network. The hub needs stack.cim.
 install:
   engine: siteconfig
   credential:
@@ -14,8 +14,6 @@ install:
     bmcCredential:
       namespace: bm-credentials
       name: bmc
-    clusterInstance:
-      networkType: OVNKubernetes
 
 stack:
   infraNodes:

@@ -111,7 +111,7 @@ All toggles default to `true`. Empty input renders nothing.
 The `upgrade` element holds a `version` until it shows in `availableUpdates`, so a disconnected cluster needs `stack.upgrade.config.upstream` ([Site layer](#site-layer)).
 
 - Put the OSUS CA in `config.trustedCA`, not `registryCAs`. The CVO trusts only `trusted-ca-bundle`, which the Proxy's `trustedCA` feeds.
-- Hub-built clusters run `-multi` payloads and the CVO asks for the multi graph. Mirror the `multi` release architecture, or `availableUpdates` stays empty.
+- `hypershift` and `hive` clusters run `-multi` payloads and the CVO asks for the multi graph. `siteconfig` clusters run `-x86_64` and the CVO asks for the amd64 graph. Mirror the matching release architecture, or the install can't pull its image and `availableUpdates` stays empty.
 
 ## Hosted clusters
 

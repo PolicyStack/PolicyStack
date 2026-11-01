@@ -16,8 +16,6 @@ stack:
       availabilityConfig: High
       # Whether the hub also manages itself as `local-cluster`
       selfManaged: true
-      # Enable the SiteConfig component, needed by the lifecycle siteconfig engine
-      siteConfig: false
       # ACM Search database storage
       search:
         size: 100Gi

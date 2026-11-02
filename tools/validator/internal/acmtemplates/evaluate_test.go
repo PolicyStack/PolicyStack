@@ -25,11 +25,12 @@ spec:
 }
 
 func objectTemplate(definitions ...string) string {
-	out := "          object-templates:\n"
+	var out strings.Builder
+	out.WriteString("          object-templates:\n")
 	for _, d := range definitions {
-		out += "            - complianceType: musthave\n              objectDefinition:\n" + d
+		out.WriteString("            - complianceType: musthave\n              objectDefinition:\n" + d)
 	}
-	return out
+	return out.String()
 }
 
 func configMap(data string) string {
@@ -114,6 +115,12 @@ func TestEvaluate(t *testing.T) {
 			name:   "index on a missing object",
 			policy: policyYAML("", configMap(`{{ index (lookup "v1" "ConfigMap" "default" "absent").data "k" }}`)),
 			want:   "index of untyped nil",
+		},
+		// regression: 90dda88, an argument after a parenthesized field in the machineset converters.
+		{
+			name:   "argument to a field",
+			policy: policyYAML("", configMap(`{{ (index (list (dict "values" (list "sg"))) 0).values 0 }}`)),
+			want:   "is not a method but has arguments",
 		},
 		{
 			name:   "unknown kind",

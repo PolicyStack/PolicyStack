@@ -263,7 +263,7 @@ class RenderTest(Fixture):
 
     def test_operator_policies_list_rejected(self):
         values = "stack:\n  el:\n    operatorPolicies:\n      - name: x\n"
-        with self.assertRaisesRegex(ValueError, 'operatorPolicies must be a map'):
+        with self.assertRaisesRegex(TypeError, 'operatorPolicies must be a map'):
             self.render(values)
 
     def test_unknown_policy_ref_rejected(self):

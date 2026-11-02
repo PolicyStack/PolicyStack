@@ -18,7 +18,7 @@ PolicyStack runs on the ACM hub. You install it once per hub with Helm, from [`i
 - `oc`, and `helm` 3.14 or later (3.18 or later for `--take-ownership`).
 - A fork of PolicyStack, cloned locally. Argo CD reads your fleet files and values from it; upstream ships none.
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`.
-- A hub that builds clusters from fleet files needs ACM 2.16 or later ([Cluster lifecycle prerequisites](lifecycle.md#prerequisites)).
+- Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18. Argo CD renders with the Helm that GitOps bundles (3.18.4 in 1.18), and the validator evaluates ACM templates with the 2.16 engine. Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](lifecycle.md#prerequisites)).
 
 ```sh
 git clone https://github.com/<org>/<fork>.git && cd <fork>

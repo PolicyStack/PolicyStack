@@ -323,6 +323,5 @@ config:
 A map under `config` is listed key by key when its values are all scalars or any of its keys has a
 comment; otherwise it is one row, with long defaults folded below the table.
 
-Commit the README with the `values.yaml` change. CI runs the check on pull requests, and the
-`update-docs` label regenerates READMEs on the PR branch
-([Documentation Check](workflows.md#documentation-check)).
+Commit the README with the `values.yaml` change. The `element-readmes` hook regenerates it and
+fails CI when it is stale ([Hooks](workflows.md#hooks)).

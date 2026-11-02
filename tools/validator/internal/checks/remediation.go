@@ -1,75 +1,55 @@
 package checks
 
 import (
-	"cmp"
 	"fmt"
-	"strconv"
 	"strings"
-
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
-// RemediationCheck (POLICY036) reports a configPolicies or operatorPolicies entry whose
-// remediationAction differs from its parent's policies[].remediationAction. ACM applies the
-// Policy-level action to every template, so the template's own is silently overridden: an inform
-// mustnothave gate becomes an enforced delete. InformOnly is the exception and is skipped. Entries
-// governed by a toggle count as enabled, since a cluster layer may turn them on. An unset
-// configPolicies action is the chart's default, inform; an unset operatorPolicies action inherits
-// the parent's.
+// RemediationCheck (POLICY036) reports a rendered ConfigurationPolicy or OperatorPolicy whose
+// remediationAction differs from its Policy's. ACM applies the Policy-level action to every
+// template, so the template's own is silently overridden: an inform mustnothave gate becomes an
+// enforced delete. InformOnly is the exception and is skipped, and so is a dry run
+// (global.remediationAction), which overrides every Policy on purpose, and the templates
+// policy-library generates for an OperatorPolicy. Findings point at the
+// Policy's remediationAction, in whichever values file sets it.
 type RemediationCheck struct{}
 
 func (RemediationCheck) ID() string   { return "POLICY036" }
-func (RemediationCheck) Phase() Phase { return PhaseChart }
+func (RemediationCheck) Phase() Phase { return PhaseCluster }
 
 func (c *RemediationCheck) Run(ctx Context) []Finding {
-	if ctx.Element == nil || ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
+	if len(ctx.Rendered) == 0 || ctx.Element == nil || ctx.Cluster == nil {
 		return nil
 	}
-	el := ctx.Element
-	comp := el.Values.Component
-
-	// parents[name] is the first renderable policies[] entry of that name.
-	type parent struct {
-		idx    int
-		action string
+	pols, bad := policies(ctx, c.ID())
+	if bad != nil {
+		return bad
 	}
-	parents := map[string]parent{}
-	for i, p := range comp.Policies {
-		if _, dup := parents[p.Name]; !dup && comp.CouldBeEnabled(p.Name, p.Enabled) {
-			parents[p.Name] = parent{i, p.RemediationAction}
-		}
-	}
-
 	var out []Finding
-	check := func(name, ref, action string, enabled bool, where string, path ...string) {
-		par := parents[ref]
-		if action == "" || par.action == "" || informOnly(action) || strings.EqualFold(action, par.action) || !comp.CouldBeEnabled(name, enabled) {
-			return
+	for _, p := range pols {
+		pa := p.Spec.RemediationAction
+		// policy-library generates <op>-ns and <op>-status for each OperatorPolicy; no values set their action.
+		generated := map[string]bool{}
+		for _, t := range p.Spec.PolicyTemplates {
+			if od := t.ObjectDefinition; od.Kind == "OperatorPolicy" {
+				generated[od.Metadata.Name+"-ns"], generated[od.Metadata.Name+"-status"] = true, true
+			}
 		}
-		loc := sourceloc.Find(el.ValuesDoc, append([]string{"stack", el.StackKey}, path...)...)
-		// Fall back to the entry itself when remediationAction is unset.
-		if loc.Line == 0 {
-			loc = sourceloc.Find(el.ValuesDoc, append([]string{"stack", el.StackKey}, path[:len(path)-1]...)...)
+		for _, t := range p.Spec.PolicyTemplates {
+			od := t.ObjectDefinition
+			ta := od.Spec.RemediationAction
+			if (od.Kind != "ConfigurationPolicy" && od.Kind != "OperatorPolicy") || generated[od.Metadata.Name] ||
+				pa == "" || ta == "" || informOnly(ta) || strings.EqualFold(ta, pa) || dryRun(ctx) {
+				continue
+			}
+			where, file, loc := origin(ctx, p.Kind, p.Metadata.Name, "remediationAction")
+			out = append(out, Finding{
+				RuleID: c.ID(), Severity: SevError, Element: ctx.Element.ChartName,
+				Message: fmt.Sprintf("%s: remediationAction %s overrides %s %q's %s: ACM applies the Policy's action to every template, so it runs as %s",
+					where, pa, od.Kind, od.Metadata.Name, ta, pa),
+				File: file, Line: loc.Line, Col: loc.Col,
+			})
 		}
-		out = append(out, Finding{
-			RuleID: c.ID(), Severity: SevError,
-			Element: el.ChartName,
-			Message: fmt.Sprintf("%s: remediationAction %s is overridden by policies[%d].remediationAction %s: ACM applies the Policy's action to every template, so this one runs as %s",
-				where, action, par.idx, par.action, par.action),
-			File: el.ValuesFile, Line: loc.Line, Col: loc.Col,
-		})
-	}
-	for i, p := range comp.ConfigPolicies {
-		check(p.Name, p.PolicyRef, cmp.Or(p.RemediationAction, "inform"), p.Enabled, fmt.Sprintf("configPolicies[%d] %q", i, p.Name),
-			"configPolicies", strconv.Itoa(i), "remediationAction")
-	}
-	for k, p := range comp.OperatorPolicies.Sorted() {
-		check(p.Name, p.PolicyRef, p.RemediationAction, p.Enabled, "operatorPolicies."+k,
-			"operatorPolicies", k, "remediationAction")
 	}
 	return out
 }
-
-// informOnly reports a template action ACM keeps as inform under any Policy-level action. ACM
-// matches it case-insensitively.
-func informOnly(action string) bool { return strings.EqualFold(action, "informonly") }

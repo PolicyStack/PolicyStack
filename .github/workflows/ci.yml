@@ -1,6 +1,8 @@
-name: Documentation Site
+name: CI
 
-# No path filter: the build takes seconds and can be a required check.
+# ci is the one required check besides pr-title. No paths filter: a required check skipped by on.paths
+# never reports, so the PR waits on it forever. pr-title.yml stays separate, so a title edit re-runs
+# only that.
 on:
   pull_request:
   push:
@@ -16,9 +18,31 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  GOTOOLCHAIN: local
+
 jobs:
-  build:
-    name: Build site
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+
+      # Hooks in .pre-commit-config.yaml. A hook that rewrites a file fails and prints the diff.
+      - run: prek run --all-files --show-diff-on-failure
+
+  validate:
+    name: validate
+    # actionlint 1.7.12 rejects the self-repository form ($/...) zizmor asks for.
+    uses: ./.github/workflows/validate.yml # zizmor: ignore[self-repository]
+
+  docs:
+    name: docs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,29 +50,41 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
-          python-version: '3.14'
-          cache: pip
-          cache-dependency-path: tools/requirements-docs.txt
+          install_args: python
 
-      - run: pip install -r tools/requirements-docs.txt
+      - run: pip install -r tools/requirements.txt -r tools/requirements-docs.txt
+
+      - run: python -m unittest tools/test_doc_generator.py
 
       # Fails on a relative .md link or anchor that does not resolve, or a missing snippet.
       - run: zensical build --strict
 
-      # Only main is published. Pull requests and manual runs on other branches just build.
-      - if: github.ref == 'refs/heads/main'
+      - if: github.event_name == 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site
           path: site/
 
-  # A separate job so the write token never shares a runner with pip-installed build code.
+  # The one required check. A failed, cancelled or skipped job above turns it red.
+  ci:
+    name: ci
+    if: always()
+    needs: [lint, validate, docs]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+
+  # A separate job so the write token never shares a runner with pip-installed build code. Forks skip
+  # it: they have neither the App nor the gh-pages ruleset.
   publish:
-    name: Publish to gh-pages
-    if: github.ref == 'refs/heads/main'
-    needs: build
+    name: publish
+    if: github.event_name == 'push' && github.repository == 'PolicyStack/PolicyStack'
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Its deployment branch policy releases the App key to main only.

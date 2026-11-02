@@ -22,13 +22,20 @@ In CI:
 ./bin/policystack-validator --repo-root . --github
 ```
 
+`resolve-revision` prints the commit Argo CD renders for a fleet file's `revision`, resolved as
+POLICY052 does. Exit 1 when it does not resolve. `render-diff.sh` uses it:
+
+```sh
+./bin/policystack-validator resolve-revision --branch main --at <merge commit> -- v1.4.0
+```
+
 ## Rules
 
 <!-- --8<-- [start:rules] -->
 
 | ID         | Severity | What it catches |
 |------------|----------|-----------------|
-| POLICY001  | error    | Policy/PolicySet ACM-replicated name `<ns>.<name>-<release>` > 63 chars; ConfigurationPolicy/OperatorPolicy/CertificatePolicy `metadata.name` (`<parent>-<sub>`) > 63 chars |
+| POLICY001  | error    | A rendered Policy or PolicySet whose ACM-replicated name `<ns>.<name>-<release>` is over 63 characters, or a policy-template (ConfigurationPolicy, OperatorPolicy with its `-ns`/`-status` templates, CertificatePolicy) whose `metadata.name` is. Reads the render, so a values layer that renames an entry is caught, and points at the last cascade file defining the entry |
 | POLICY002  | error    | Duplicate rendered `metadata.name` WITHIN one element |
 | POLICY003  | error    | Two different elements render a policy-template with the same name. ACM requires template names to be unique across every Policy on a cluster, so `policies[].name: install` + `configPolicies[].name: ns-monitoring` in two elements is rejected on-cluster with "Template name must be unique". Covers toggled-off entries and the `-ns`/`-status` templates an operatorPolicy generates |
 | POLICY010  | error    | `policyRef` points to nonexistent or disabled parent policy |
@@ -39,16 +46,20 @@ In CI:
 | POLICY030  | error/warning | Invalid enum: severity / remediationAction / complianceType / upgradeApproval (`None` or `Automatic`). `configPolicies[].remediationAction` also takes `InformOnly`, any case. In `operatorPolicies` entries also: `subscription.installPlanApproval` set, a `versions` entry or `subscription.startingCSV` that is not a valid CSV name (templated entries skipped, comma-separated `versions` entries split), and a `name:` key, which is ignored (warning) |
 | POLICY031  | error/warning | values keys policy-library never reads: `enable:` (element renders nothing) and `defaultPolicy:` (metadata silently dropped) are errors; `default.severity`/`.remediationAction`/`.disabled` are warnings. Also flags `rawTemplate: true` with more than one `templateNames` entry, and `operatorPolicies` as a list (policy-library 3.x needs a map) |
 | POLICY032  | error/warning | `stack.<el>.operatorPolicies` in a values layer: a key the element's `values.yaml` does not define, a list, or any POLICY030 operator problem. Reported once per layer file |
-| POLICY033  | error/warning | `configPolicies[].pruneObjectBehavior` other than `None`: an invalid value, an effective `remediationAction` other than `enforce` (a policy-level value overrides the template's unless it is `InformOnly`), or any dependency (`waitForOperator`, `extraDependencies`, parent `dependencies`, `orderManifests` unless first template, `orderPolicies` unless first Policy), since ACM deletes the template whenever the dependency is unmet. `DeleteAll` is a warning |
+| POLICY033  | error/warning | A rendered ConfigurationPolicy's `pruneObjectBehavior` other than `None`: an invalid value, an effective `remediationAction` other than `enforce` (the Policy's overrides the template's unless it is `InformOnly`; skipped on a dry run, `global.remediationAction`), or any dependency (the template's `extraDependencies`, from `waitForOperator`, `extraDependencies` or `orderManifests`, or the Policy's, from `dependencies` or `orderPolicies`), since ACM deletes the template whenever the dependency is unmet. `DeleteAll` is a warning |
 | POLICY034  | error    | Top-level `version` or `channel` in a values layer: only the fleet file sets them. Reported once per layer file |
 | POLICY035  | error    | A key in the root `values.yaml` or a file under `values/` that nothing reads: an unknown top-level or `global` key, a `stack` key that names no element, an element key policy-library's schema rejects (reported here at the layer; RENDER000 reports it once per element at its `values.yaml`), a `toggles` key that names no entry of the element or of the layer's own lists, or a top-level `config` key missing from the element's `values.yaml`. Checks every file, used by a fleet file or not |
-| POLICY036  | error    | A `configPolicies` or `operatorPolicies` entry whose `remediationAction` differs (case-insensitive) from a set `policies[].remediationAction` of its parent. ACM applies the Policy-level action to every template, so an `inform` `mustnothave` gate under an `enforce` Policy deletes. `InformOnly` is skipped: ACM keeps it inform. An unset `configPolicies` action counts as the chart default, `inform`. Covers toggled-off entries |
+| POLICY036  | error    | A rendered Policy whose `remediationAction` differs (case-insensitive) from one of its ConfigurationPolicy or OperatorPolicy templates. ACM applies the Policy-level action to every template, so an `inform` `mustnothave` gate under an `enforce` Policy deletes. Skips `InformOnly`, which ACM keeps inform, a dry run (`global.remediationAction`), and the `-ns`/`-status` templates policy-library generates for an OperatorPolicy. Points at the Policy's `remediationAction`, in whichever cascade file sets it |
+| POLICY037  | error/warning | A rendered ConfigurationPolicy object-template that is `mustonlyhave` or `mustnothave` on an object OpenShift owns: ConfigMap `openshift-config/user-ca-bundle`, Secret `openshift-config/pull-secret`, ClusterVersion `version`, Proxy and Image `cluster` (`config.openshift.io`), or a Namespace starting `openshift-` or `kube-`. Enforced, it replaces or deletes platform state. `musthave` is not covered. Skips an `InformOnly` template and one annotated `validator.policystk.io/allow-destructive: <reason>`. `object-templates-raw` is read with its ACM template actions removed, so every branch counts; raw that is then not YAML is a warning |
+| POLICY038  | error    | An `operatorPolicies` `subscription.source`, in an element's `values.yaml` or a values layer, that is not `redhat-operators`, `certified-operators`, `community-operators`, `redhat-marketplace` or a `global.catalogSources` key in any layer. OLM finds no such CatalogSource, so the operator never installs. Templated values are skipped |
 | POLICY040  | error    | `policySets[].policies[]` references a name not in `policies[]` |
 | POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state`, `version`, `channel` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; `version` that is not `x.y.z`, `install.version`; empty `hub`, `version` or `channel`, `hub` with no `hubs/<hub>.yaml`, `hub` naming the cluster itself, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
 | POLICY051  | error    | Two siteconfig nodes on one hub with the same `bootMACAddress` or `bmcAddress` (scheme aside), across fleet files that are not `state: absent`: two BareMetalHosts would drive one server |
-| POLICY060  | warning  | `policy-library` version drift across element `Chart.yaml` files |
+| POLICY052  | error/warning | A fleet file's `revision`, resolved in git as Argo CD does (tag, `origin` branch, then a 5 to 40 character commit SHA; a PR's base branch is the merge commit), that does not resolve or whose commit lacks `stack/`, `lifecycle/converters/hypershift/` when `hub` is set, an upgrade element when `version` or `channel` is set, or a `valueFiles` entry, which Argo CD skips. A `values/clusters/<name>.yaml` no fleet file reads is a warning. Needs git history (`fetch-depth: 0`). `make validate` runs it on `fleet/` only |
+| POLICY060  | error    | `policy-library` version drift across element `Chart.yaml` files |
 | POLICY070  | error    | `helm lint` non-zero |
-| POLICY080  | error    | `kubeconform` schema check on rendered manifests |
+| POLICY071  | error    | `install/`, which each hub runs by hand: `helm lint` fails, an empty `hubName` or `gitRepo` does not fail the install, `policyNamespace` differs from the root `values.yaml`, an ApplicationSet (or its Application template), GitOpsCluster or Placement lacks `velero.io/exclude-from-backup: "true"`, or `install/operators` does not render the ACM and GitOps operators and a MultiClusterHub from the element values |
+| POLICY080  | error/warning | A rendered object that fails its CRD, checked as the API server would: an unknown field, a value outside an enum such as `remediationAction: enforec`, or a wrong type. Covers Policy, Placement, PlacementBinding and PolicySet, then each `policy-templates[].objectDefinition` (ConfigurationPolicy, OperatorPolicy, CertificatePolicy) with `InformOnly` read as `inform`, as the framework addon does. Findings name the values entry, without a cluster. A kind with no CRD is one warning per element |
 | POLICY081  | error    | An escaped ACM template ACM would fail to resolve, resolved hub then managed on an empty cluster: an undefined function in any branch, a failed call such as `index` on nil, a hub lookup outside the policy namespace without `hubTemplateOptions.serviceAccountName`, a kind discovery does not serve, or output with `<no value>` or an object without `apiVersion`/`kind`. A missing object is not a failure. Findings name the sub-policy without its cluster suffix and carry no cluster, so a broken template reports once |
 | POLICY082  | error    | A rendered Policy whose every template is a ConfigurationPolicy with no objects (`object-templates-raw` empty or `[]`, or no `object-templates`). ACM reports it Compliant without checking anything; policy-library renders `[]` when a raw converter's input map is empty. A Policy with only some empty templates passes |
 | POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key. Every other check then runs on each engine's component, and each fixture renders the one its `install.engine` selects |
@@ -102,11 +113,13 @@ a failed one as `# RENDER000:` comments. CI diffs two of these trees on PRs (`re
 
 ### Profiles
 
-`testdata/profiles/` turns on every element and toggle, so POLICY081 reaches every converter.
-`variants.yaml` holds what `all-on.yaml` cannot set at the same time. `TestProfileCoverage` fails for
+`testdata/profiles/` turns on every element and toggle, `tools/sample-element` included, so POLICY081
+reaches every converter. `make validate` runs every rule on them, so an enabled toggle
+needs its input map or POLICY082 fails. `variants.yaml` holds what `all-on.yaml` cannot set at the
+same time. `TestProfileCoverage` fails for
 a converter with ACM templates that no profile renders.
 
 ## Required tools
 
 - `helm` (required)
-- `kubeconform` (optional — POLICY080 is skipped if absent)
+- `curl`, for `make crds` (POLICY080 is skipped without the CRDs, and fails the run under `CI`)

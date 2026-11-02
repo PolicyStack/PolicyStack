@@ -1,0 +1,15 @@
+# Every tool version lives here; Go libraries live in tools/validator/go.mod. CI installs these with
+# mise-action, contributors with `mise install` (docs/contributing.md).
+[tools]
+go = "1.26"
+# The Helm that OpenShift GitOps 1.18 (Argo CD 3.1.6), the supported floor, renders with. Moves only
+# with the floor, so Renovate leaves it alone.
+helm = "3.18.4"
+python = "3.14"
+prek = "0.5.9"
+golangci-lint = "2.15.0"
+"aqua:rhysd/actionlint" = "1.7.12"
+shellcheck = "0.11.0"
+zizmor = "1.31.1"
+ruff = "0.17.3"
+lychee = "0.24.2"

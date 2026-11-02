@@ -7,6 +7,7 @@ import (
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 )
 
 // Severity controls whether a Finding fails the run by default.
@@ -61,6 +62,8 @@ type Context struct {
 	Layers []string
 	// Fleet is every fleet file that sets hub and is not state: absent. Set for PhaseRepo only.
 	Fleet []FleetFile
+	// Clusters is every fleet file. Set for PhaseRepo only.
+	Clusters []*fixtures.Cluster
 	// AllRendered is not populated. Cross-element POLICY002 runs in run.Run.
 	AllRendered map[string][]byte
 	Logger      *slog.Logger
@@ -97,12 +100,16 @@ func All() []Check {
 		&LayerFleetKeyCheck{},    // POLICY034
 		&LayerKeyCheck{},         // POLICY035
 		&RemediationCheck{},      // POLICY036
+		&ProtectedObjectCheck{},  // POLICY037
+		&SourceCheck{},           // POLICY038
 		&PolicySetCheck{},        // POLICY040
 		&LabelCheck{},            // POLICY050
 		&BareMetalCheck{},        // POLICY051
+		&FleetPinCheck{},         // POLICY052 (Root, Branch set by run.buildRegistry)
 		&PinningCheck{},          // POLICY060
 		&LintCheck{},             // POLICY070 (Runner set by run.buildRegistry)
-		&KubeconformCheck{},      // POLICY080 (Bin, SchemasDir set by run.buildRegistry)
+		&InstallCheck{},          // POLICY071 (Runner, Root set by run.buildRegistry)
+		&CRDSchemaCheck{},        // POLICY080 (CRDs set by run.buildRegistry)
 		&ACMTemplateCheck{},      // POLICY081
 		&EmptyPolicyCheck{},      // POLICY082
 		&CamelCaseCheck{},        // POLICY090

@@ -201,6 +201,7 @@ type OperatorPolicy struct {
 
 // Subscription is the part of operatorPolicies.<key>.subscription the checks inspect.
 type Subscription struct {
+	Source              string `yaml:"source"`
 	StartingCSV         string `yaml:"startingCSV"`
 	InstallPlanApproval string `yaml:"installPlanApproval"`
 }
@@ -316,7 +317,7 @@ func (t *TemplateName) UnmarshalYAML(n *yaml.Node) error {
 // LoadAll loads every element chart under stackDir, plus sampleDir when it
 // contains a Chart.yaml, and returns policyNamespace from rootValuesFile.
 func LoadAll(stackDir, sampleDir, rootValuesFile string) ([]*Element, string, error) {
-	ns, err := loadPolicyNamespace(rootValuesFile)
+	ns, err := LoadPolicyNamespace(rootValuesFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("read root values: %w", err)
 	}
@@ -490,7 +491,8 @@ func loadEngines(path string) ([]string, error) {
 	return s.Properties.Install.Properties.Engine.Enum, nil
 }
 
-func loadPolicyNamespace(path string) (string, error) {
+// LoadPolicyNamespace reads policyNamespace from a values file. Empty is an error.
+func LoadPolicyNamespace(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -514,12 +516,13 @@ func CamelFromKebab(s string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	out := strings.ToLower(parts[0])
+	var out strings.Builder
+	out.WriteString(strings.ToLower(parts[0]))
 	for _, p := range parts[1:] {
 		if p == "" {
 			continue
 		}
-		out += strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
+		out.WriteString(strings.ToUpper(p[:1]) + strings.ToLower(p[1:]))
 	}
-	return out
+	return out.String()
 }

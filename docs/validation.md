@@ -1,30 +1,30 @@
 # Validation
 
 `tools/validator` renders every element in `stack/` for each fixture cluster, building the values
-cascade like the ApplicationSet ([Order](values.md#order)), and checks sources and output. Needs Go
-and the Helm version CI pins ([Policy Validate](workflows.md#policy-validate)). kubeconform is
-optional; without it POLICY080 is skipped.
+cascade like the ApplicationSet ([Order](values.md#order)), and checks sources and output. Needs the
+Go and Helm in `mise.toml` (`mise install`).
 
 ## Running it
 
-The CI commands, from the repo root:
+CI runs the same Make targets, from the repo root:
 
 ```sh
-make -C tools/validator lint test build # (1)!
-tools/validator/bin/policystack-validator --repo-root . \
-  --extra-values tools/validator/testdata/baseline.yaml \
-  --include-sample-element --skip POLICY080,POLICY081 # (2)!
-for p in tools/validator/testdata/profiles/*.yaml; do # (3)!
-  tools/validator/bin/policystack-validator --repo-root . --only RENDER000,POLICY081 \
-    --extra-values "tools/validator/testdata/baseline.yaml,$p"
-done
+make -C tools/validator ci # (1)!
 ```
 
-1.  Format check, vet, Go tests, build.
-2.  Validates the fixtures. [Policy Validate](workflows.md#policy-validate) explains the skips.
-3.  Evaluates every converter's ACM templates, see [ACM templates](#acm-templates).
+1.  `lint`, `test` and `validate`. With `CI` set, findings print as GitHub annotations.
 
-`--extra-values` files override the whole cascade, except in `lifecycle/`, which ships its own
+| Target | Runs |
+| ------ | ---- |
+| `validate` | Builds, fetches the CRDs (`crds`), then three passes: the fixtures plus `tools/sample-element/` with POLICY081 skipped; every rule once per file in `testdata/profiles/`, sample element included ([ACM templates](#acm-templates)); `fleet/` when it has files. POLICY071 runs in the first pass only, POLICY052 in the last only |
+| `crds` | Downloads the [CRD schemas](#crd-schemas) into `tools/validator/.crds/` when a pin changed |
+| `test` | `crds`, then `go test -race ./...`. Tests that need Helm, the CRDs or a fetched policy-library skip without them, and fail under `CI`. A rule ID missing from the [Rules](#rules) table fails |
+| `lint` | golangci-lint (`.golangci.yml`, gofmt and goimports included; `make fmt` fixes formatting), `go mod tidy -diff`, `go tool govulncheck` |
+| `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` fetches on demand |
+| `consumers LIBRARY=<dir>` | `validate` against an unreleased policy-library checkout ([Chart changes](contributing.md#chart-changes)) |
+
+`validate` passes `--extra-values tools/validator/testdata/baseline.yaml`. `--extra-values` files
+override the whole cascade, except in `lifecycle/`, which ships its own
 `selector`. `baseline.yaml` supplies the `selector` the ApplicationSet normally injects
 ([Placement](policies.md#placement)). Without it `helm template` fails on any enabled element:
 
@@ -38,7 +38,7 @@ selector:
 !!! note
     `helm dependency update` runs unless `charts/` already holds `<name>-<version>.tgz` for every
     dependency. Bumping policy-library to an unpublished version fails the fetch, and RENDER000
-    reports the element unrendered.
+    reports the element unrendered. Test an unpublished chart with `consumers` instead.
 
 ## Fixtures
 
@@ -77,7 +77,7 @@ A clean run prints `ok: no findings`. Findings on rendered output also name the 
 | ---- | ------- |
 | `0` | No errors. Warnings alone pass |
 | `1` | Errors, or warnings with `--severity warning` |
-| `2` | The validator failed, e.g. Helm not on `PATH` |
+| `2` | The validator failed, e.g. Helm not on `PATH` or an unknown `--only`/`--skip` rule ID |
 
 | Flag | Effect |
 | ---- | ------ |
@@ -86,9 +86,11 @@ A clean run prints `ok: no findings`. Findings on rendered output also name the 
 | `--github` | GitHub Actions annotations |
 | `--fixtures-dir` | Fleet files to render, hubs in its `hubs/`. Default `tools/validator/testdata/clusters`. CI passes `fleet` when it exists |
 | `--lifecycle-dir` | Lifecycle chart, default `<repo>/lifecycle` |
+| `--base-branch` | Branch `HEAD` lands on, default `$GITHUB_BASE_REF`. POLICY052 resolves a `revision` naming it to `HEAD`, the PR's merge commit |
 | `--render-dir` | Writes `<dir>/<fleet file path without .yaml>/<element>.yaml`, a failed render as `# RENDER000:` lines. [Render Diff](workflows.md#render-diff) diffs two of these |
 
-`--help` lists the rest.
+`--help` lists the rest. `resolve-revision [--branch <b> --at <commit>] -- <revision>` prints the
+commit POLICY052 resolves a `revision` to, exit 1 when it does not resolve.
 
 ## ACM templates
 
@@ -129,9 +131,56 @@ stack:
       console: true
 ```
 
-Profiles enable toggles without their input maps, so POLICY082 fires there; CI runs only RENDER000
-and POLICY081 on them. A change to a lifecycle converter's ACM template needs a test case in
-`tools/validator/internal/acmtemplates`, which resolves them against fake hub objects.
+Every rule runs on the profiles, so a toggle needs its input map there too, or
+POLICY082 fails its empty Policy. A change to a lifecycle converter's ACM template needs a test
+case in `tools/validator/internal/acmtemplates`, which resolves them against fake hub objects.
+
+## CRD schemas
+
+POLICY080 checks rendered objects against the CRDs ACM 2.16, the floor, serves. The checks run
+in-process (`k8s.io/apiextensions-apiserver`) the same way the API server's do: prune unknown fields,
+apply defaults, validate. `make crds` fetches the CRDs at the SHAs pinned in `tools/validator/Makefile`:
+
+| Repo | Branch | CRDs |
+|---|---|---|
+| `stolostron/governance-policy-propagator` | `release-2.16` | Policy, PlacementBinding, PolicySet |
+| `stolostron/config-policy-controller` | `release-2.16` | ConfigurationPolicy, OperatorPolicy |
+| `stolostron/cert-policy-controller` | `release-2.16` | CertificatePolicy |
+| `open-cluster-management-io/api` | `release-1.2` (v1.2.0, what the propagator requires) | Placement |
+
+Nothing is committed. `--crds-dir` overrides `tools/validator/.crds`. Without CRDs, POLICY080 is
+skipped with a warning, or fails the run when `CI` is set. CI caches the directory keyed on the
+Makefile. The run logs how many objects were validated.
+
+!!! note "Bumping and adding"
+    Renovate moves each `*_SHA` to its branch head. Moving to a new ACM floor means changing the
+    `branch=` comments and SHAs by hand. To add a CRD, add its raw URL to `CRD_URLS`, plus a
+    `# renovate:` comment and `*_SHA` line for a new repo. Resolve the SHA with
+    `git ls-remote https://github.com/<repo> refs/heads/<branch>`.
+
+## Rendered output
+
+POLICY001, POLICY033, POLICY036, POLICY037, POLICY080 and POLICY082 read what Helm rendered from the
+whole cascade, so a values layer that renames an entry, restates a `remediationAction` or adds a
+template is checked like the element's `values.yaml`. A finding points at the entry in the last
+cascade file that defines it, since Helm replaces lists whole, or at a later file that sets the field
+on a map entry such as `operatorPolicies.<key>`. With no entry rendering the object, it points at the
+fleet file (POLICY080: the element's `values.yaml`).
+
+!!! warning "POLICY037: destructive templates on platform objects"
+    `mustonlyhave` and `mustnothave` on the objects in the [Rules](#rules) table replace or delete
+    what the installer and operators wrote. Use `musthave`, or make a gate `InformOnly`, which ACM
+    never enforces whatever the Policy says. To keep one on purpose, annotate its ConfigurationPolicy
+    with the reason:
+
+    ```yaml
+    metadata:
+      annotations:
+        validator.policystk.io/allow-destructive: "<reason>"
+    ```
+
+    policy-library sets no ConfigurationPolicy annotations from values yet. Until it does, the only
+    opt-out is `--skip POLICY037`.
 
 ## Rules
 

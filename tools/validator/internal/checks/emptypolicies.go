@@ -1,13 +1,9 @@
 package checks
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
-
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
@@ -26,32 +22,12 @@ func (c *EmptyPolicyCheck) Run(ctx Context) []Finding {
 		return nil
 	}
 	el := ctx.Element
+	pols, bad := policies(ctx, c.ID())
+	if bad != nil {
+		return bad
+	}
 	var out []Finding
-	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(ctx.Rendered), 4096)
-	for {
-		var p struct {
-			Kind     string `json:"kind"`
-			Metadata struct {
-				Name string `json:"name"`
-			} `json:"metadata"`
-			Spec struct {
-				PolicyTemplates []struct {
-					ObjectDefinition struct {
-						Kind string `json:"kind"`
-						Spec struct {
-							Raw             string `json:"object-templates-raw"`
-							ObjectTemplates []any  `json:"object-templates"`
-						} `json:"spec"`
-					} `json:"objectDefinition"`
-				} `json:"policy-templates"`
-			} `json:"spec"`
-		}
-		if err := dec.Decode(&p); err == io.EOF {
-			break
-		} else if err != nil {
-			return append(out, Finding{RuleID: c.ID(), Severity: SevError, Element: el.ChartName,
-				Message: "rendered output: " + err.Error(), File: el.ValuesFile})
-		}
+	for _, p := range pols {
 		if p.Kind != "Policy" {
 			continue
 		}

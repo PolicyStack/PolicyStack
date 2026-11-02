@@ -60,8 +60,8 @@ func TestCIMHealth(t *testing.T) {
 	find(t, objs, "CustomResourceDefinition", "baremetalhosts.metal3.io")
 	cond := func(kv ...string) []any {
 		var out []any
-		for i := 0; i < len(kv); i += 2 {
-			out = append(out, map[string]any{"type": kv[i], "status": kv[i+1]})
+		for c := range slices.Chunk(kv, 2) {
+			out = append(out, map[string]any{"type": c[0], "status": c[1]})
 		}
 		return out
 	}

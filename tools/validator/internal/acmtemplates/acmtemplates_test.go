@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/render"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
 const repoRoot = "../../../.."
@@ -73,10 +73,7 @@ var allOn = []string{
 // helmTemplate runs helm template on the chart in dir and returns its output.
 func helmTemplate(t *testing.T, dir, release string, valueFiles []string, setString ...string) []byte {
 	t.Helper()
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
+	helm := testenv.Helm(t)
 	runner := render.New(helm)
 	if err := runner.EnsureDeps(context.Background(), dir); err != nil {
 		t.Fatal(err)

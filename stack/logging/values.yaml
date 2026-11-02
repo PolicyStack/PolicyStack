@@ -1,7 +1,7 @@
 stack:
   logging:
     enabled: false
-    
+
     default:
       categories:
         - CM Configuration Management
@@ -9,7 +9,7 @@ stack:
         - CM-2 Baseline Configuration
       standards:
         - NIST SP 800-53
-    
+
     policies:
       - name: install
         enabled: true
@@ -20,7 +20,7 @@ stack:
         remediationAction: enforce
         severity: medium
         disabled: false
-    
+
     operatorPolicies:
       cluster-logging:
         enabled: true

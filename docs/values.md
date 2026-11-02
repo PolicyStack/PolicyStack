@@ -94,8 +94,8 @@ config:
     | Cause | Validator |
     |---|---|
     | Typo in a `valueFiles` entry | POLICY050 |
-    | Entry for a file the cluster's pinned `revision` lacks | [Fleet pin check](workflows.md#policy-validate) |
-    | Cluster values file name differs from the ManagedCluster name | [Fleet pin check](workflows.md#policy-validate) (warning) |
+    | Entry for a file the cluster's pinned `revision` lacks | POLICY052 |
+    | Cluster values file name differs from the ManagedCluster name | POLICY052 (warning) |
 
 Compare the Application's files with the repo at the cluster's revision:
 

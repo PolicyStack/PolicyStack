@@ -25,7 +25,7 @@ func (g GitHub) Write(w io.Writer, findings []checks.Finding) error {
 		}
 		var props []string
 		if rel := relTo(g.RepoRoot, f.File); rel != "" {
-			props = append(props, "file="+rel)
+			props = append(props, "file="+escapeProperty(rel))
 		}
 		if f.Line > 0 {
 			props = append(props, fmt.Sprintf("line=%d", f.Line))
@@ -34,7 +34,7 @@ func (g GitHub) Write(w io.Writer, findings []checks.Finding) error {
 			props = append(props, fmt.Sprintf("col=%d", f.Col))
 		}
 		props = append(props, "title="+f.RuleID)
-		msg := escape(f.Message)
+		msg := f.Message
 		if f.Element != "" {
 			prefix := "[" + f.Element
 			if f.Cluster != "" {
@@ -43,17 +43,19 @@ func (g GitHub) Write(w io.Writer, findings []checks.Finding) error {
 			prefix += "] "
 			msg = prefix + msg
 		}
-		fmt.Fprintf(w, "::%s %s::%s\n", level, strings.Join(props, ","), msg)
+		if _, err := fmt.Fprintf(w, "::%s %s::%s\n", level, strings.Join(props, ","), escape(msg)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func escape(s string) string {
-	s = strings.ReplaceAll(s, "%", "%25")
-	s = strings.ReplaceAll(s, "\r", "%0D")
-	s = strings.ReplaceAll(s, "\n", "%0A")
-	return s
-}
+// escape and escapeProperty follow escapeData and escapeProperty in @actions/core: a property
+// value also ends at ',' and the property list at ':'.
+var (
+	escape         = strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A").Replace
+	escapeProperty = strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A", ":", "%3A", ",", "%2C").Replace
+)
 
 // relTo returns path relative to an absolute repoRoot, or path unchanged.
 func relTo(repoRoot, path string) string {
@@ -64,8 +66,8 @@ func relTo(repoRoot, path string) string {
 		return path
 	}
 	rr := strings.TrimRight(repoRoot, "/") + "/"
-	if strings.HasPrefix(path, rr) {
-		return strings.TrimPrefix(path, rr)
+	if rel, ok := strings.CutPrefix(path, rr); ok {
+		return rel
 	}
 	return path
 }

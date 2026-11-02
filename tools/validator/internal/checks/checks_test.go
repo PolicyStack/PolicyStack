@@ -11,10 +11,6 @@ import (
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 )
 
-const (
-	stackKey = "myElement"
-)
-
 // loadElement is a test helper: writes values.yaml + Chart.yaml in a temp
 // dir and parses them via chart.Load.
 func loadElement(t *testing.T, valuesYAML string, chartYAML string, convertersFiles []string) *chart.Element {
@@ -48,64 +44,6 @@ dependencies:
 		t.Fatal(err)
 	}
 	return el
-}
-
-func TestPolicy001_ParentPolicyReplicated(t *testing.T) {
-	// "policy." + "long-name-..." + "-my-element-huge-cluster-name" must exceed 63.
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    policies:
-      - name: short
-        enabled: true
-      - name: this-is-a-deliberately-very-long-policy-name-overflow
-        enabled: true
-`, "", nil)
-	// PolicyNamespace defaults to "policy" via loadElement.
-	cl := &cascade.Resolved{ClusterName: "huge-cluster-name", ReleaseName: "my-element-huge-cluster-name"}
-	got := (&NameLengthCheck{}).Run(Context{Element: el, Cluster: cl})
-	if len(got) != 1 {
-		t.Fatalf("expected 1 finding, got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "ACM-replicated") {
-		t.Errorf("expected message to mention ACM-replicated form, got: %s", got[0].Message)
-	}
-	if !strings.Contains(got[0].Message, "metadata.name=") {
-		t.Errorf("expected message to disclose metadata.name, got: %s", got[0].Message)
-	}
-}
-
-func TestPolicy001_SubPolicyNoNamespacePrefix(t *testing.T) {
-	// Sub-policy metadata.name = <parent>-<sub>; no namespace, no Release.Name.
-	// Construct a name that's >63 only because of the parent-sub concatenation.
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    policies:
-      - name: parent-policy-with-a-medium-length-name
-        enabled: true
-    configPolicies:
-      - name: child-policy-with-yet-another-medium-length-name
-        enabled: true
-        policyRef: parent-policy-with-a-medium-length-name
-`, "", nil)
-	cl := &cascade.Resolved{ClusterName: "x", ReleaseName: "my-element-x"}
-	got := (&NameLengthCheck{}).Run(Context{Element: el, Cluster: cl})
-	if len(got) == 0 {
-		t.Fatalf("expected at least one finding, got 0")
-	}
-	// Expect a sub-policy finding; the parent's replicated name is under 63.
-	subFound := false
-	for _, f := range got {
-		if strings.Contains(f.Message, "ConfigurationPolicy") && !strings.Contains(f.Message, "ACM-replicated") {
-			subFound = true
-		}
-	}
-	if !subFound {
-		t.Fatalf("expected a ConfigurationPolicy finding without ACM-replicated wording, got: %+v", got)
-	}
 }
 
 func TestPolicy010_PolicyRefMissing(t *testing.T) {

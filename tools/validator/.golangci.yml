@@ -1,0 +1,32 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - modernize
+    - staticcheck
+    - unused
+  settings:
+    gosec:
+      excludes:
+        - G301 # 0o755 directories: --render-dir output is meant to be readable
+        - G304 # file paths from variables: the validator reads the repo it is pointed at
+        - G306 # 0o644 files: same as G301
+  exclusions:
+    rules:
+      # Tests run helm on fixture paths and hold fake credentials.
+      - path: _test\.go
+        linters: [gosec]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

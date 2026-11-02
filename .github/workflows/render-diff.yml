@@ -4,7 +4,7 @@ name: Render Diff
 # with a collapsed diff per cluster. Clusters come from fleet/ only; without fleet files, or when no
 # cluster's render changes, there is no comment. Not a gate. See docs/workflows.md#render-diff.
 # The render job runs PR code with a read-only token. The comment job runs none and is skipped for
-# fork and Dependabot PRs, whose token is read-only; they get the render job's summary.
+# fork PRs, whose token is read-only; they get the render job's summary.
 on:
   pull_request:
     paths:
@@ -15,6 +15,7 @@ on:
       - 'fleet/**'
       - '.github/workflows/render-diff.yml'
       - '.github/scripts/render-diff.sh'
+      - 'tools/validator/**'
 
 permissions:
   contents: read
@@ -24,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  HELM_VERSION: v3.22.0 # keep equal to validate.yml
+  GOTOOLCHAIN: local
 
 jobs:
   render:
@@ -50,16 +51,11 @@ jobs:
           files=$(for c in HEAD^1 HEAD; do git ls-tree --name-only "$c" -- fleet/ fleet/hubs/; done | grep '\.yaml$' || true)
           if [ -n "$files" ]; then echo "found=true" >> "$GITHUB_OUTPUT"; else echo "No fleet files, nothing to render." >> "$GITHUB_STEP_SUMMARY"; fi
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      # Go and Helm from mise.toml, the same versions as validate.yml.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         if: steps.fleet.outputs.found == 'true'
         with:
-          go-version-file: tools/validator/go.mod
-          cache-dependency-path: tools/validator/go.sum
-
-      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
-        if: steps.fleet.outputs.found == 'true'
-        with:
-          version: ${{ env.HELM_VERSION }}
+          install_args: go helm
 
       - name: Build validator
         if: steps.fleet.outputs.found == 'true'
@@ -82,9 +78,7 @@ jobs:
   comment:
     name: Comment
     needs: render
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

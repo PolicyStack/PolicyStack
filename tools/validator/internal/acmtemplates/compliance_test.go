@@ -8,7 +8,6 @@ import (
 	"io"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/render"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
 var complianceDir = filepath.Join(repoRoot, "stack/compliance")
@@ -439,10 +439,7 @@ func complianceMessages(t *testing.T) map[string]map[string]string {
 }
 
 func TestComplianceValuesRejected(t *testing.T) {
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
+	helm := testenv.Helm(t)
 	runner := render.New(helm)
 	if err := runner.EnsureDeps(context.Background(), complianceDir); err != nil {
 		t.Fatal(err)

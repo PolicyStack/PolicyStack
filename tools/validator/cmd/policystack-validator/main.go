@@ -10,16 +10,19 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/reporter"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/revision"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/run"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "resolve-revision" {
+		os.Exit(resolveRevision(os.Args[2:]))
+	}
 	if err := realMain(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(2)
@@ -40,11 +43,11 @@ func realMain() error {
 		onlyFlag      = flag.String("only", "", "comma-separated rule IDs to run exclusively")
 		jobs          = flag.Int("jobs", 0, "parallel render workers (default NumCPU)")
 		helmBin       = flag.String("helm-bin", "helm", "helm binary")
-		kcBin         = flag.String("kubeconform-bin", "kubeconform", "kubeconform binary; POLICY080 is skipped if not on PATH")
-		schemasDir    = flag.String("schemas-dir", "", "extra -schema-location for kubeconform")
+		crdsDir       = flag.String("crds-dir", "", "CRDs POLICY080 validates against, fetched by make crds (default <repo>/tools/validator/.crds)")
 		includeSample = flag.Bool("include-sample-element", false, "validate tools/sample-element/ alongside stack/")
 		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
 		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
+		baseBranch    = flag.String("base-branch", os.Getenv("GITHUB_BASE_REF"), "branch HEAD lands on; POLICY052 resolves a revision naming it to HEAD")
 		verbose       = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -53,12 +56,13 @@ func realMain() error {
 	if err != nil {
 		return err
 	}
-	defaults := struct{ stack, sample, lifecycle, values, fixtures string }{
+	defaults := struct{ stack, sample, lifecycle, values, fixtures, crds string }{
 		stack:     filepath.Join(root, "stack"),
 		sample:    filepath.Join(root, "tools", "sample-element"),
 		lifecycle: filepath.Join(root, "lifecycle"),
 		values:    filepath.Join(root, "values"),
 		fixtures:  filepath.Join(root, "tools/validator/testdata/clusters"),
+		crds:      filepath.Join(root, "tools/validator/.crds"),
 	}
 	if *stackDir == "" {
 		*stackDir = defaults.stack
@@ -75,6 +79,9 @@ func realMain() error {
 	if *fixturesDir == "" {
 		*fixturesDir = defaults.fixtures
 	}
+	if *crdsDir == "" {
+		*crdsDir = defaults.crds
+	}
 
 	level := slog.LevelInfo
 	if *verbose {
@@ -82,37 +89,28 @@ func realMain() error {
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 
-	// kubeconform is optional; POLICY080 is skipped when it is not on PATH.
-	resolvedKc := *kcBin
-	if resolvedKc != "" {
-		if _, err := exec.LookPath(resolvedKc); err != nil {
-			logger.Warn("kubeconform not on PATH; POLICY080 will be skipped", "binary", resolvedKc)
-			resolvedKc = ""
-		}
-	}
-
 	extras, err := absPaths(splitCSV(*extraValues))
 	if err != nil {
 		return err
 	}
 
 	opts := run.Options{
-		RepoRoot:       root,
-		StackDir:       *stackDir,
-		SampleDir:      *sampleDir,
-		LifecycleDir:   *lifecycleDir,
-		ValuesDir:      *valuesDir,
-		FixturesDir:    *fixturesDir,
-		HelmBin:        *helmBin,
-		KubeconformBin: resolvedKc,
-		SchemasDir:     *schemasDir,
-		ExtraValues:    extras,
-		RenderDir:      *renderDir,
-		Skip:           splitCSV(*skipFlag),
-		Only:           splitCSV(*onlyFlag),
-		IncludeSample:  *includeSample,
-		Jobs:           *jobs,
-		Logger:         logger,
+		RepoRoot:      root,
+		StackDir:      *stackDir,
+		SampleDir:     *sampleDir,
+		LifecycleDir:  *lifecycleDir,
+		ValuesDir:     *valuesDir,
+		FixturesDir:   *fixturesDir,
+		HelmBin:       *helmBin,
+		CRDsDir:       *crdsDir,
+		ExtraValues:   extras,
+		RenderDir:     *renderDir,
+		BaseBranch:    *baseBranch,
+		Skip:          splitCSV(*skipFlag),
+		Only:          splitCSV(*onlyFlag),
+		IncludeSample: *includeSample,
+		Jobs:          *jobs,
+		Logger:        logger,
 	}
 
 	res, err := run.Run(context.Background(), opts)
@@ -131,6 +129,32 @@ func realMain() error {
 		os.Exit(1)
 	}
 	return nil
+}
+
+// resolveRevision prints the commit Argo CD renders for a fleet file's revision, as POLICY052
+// resolves it. Exit 1 when it does not resolve, 2 on bad usage.
+func resolveRevision(args []string) int {
+	fs := flag.NewFlagSet("resolve-revision", flag.ContinueOnError)
+	root := fs.String("repo-root", ".", "path to repo root")
+	branch := fs.String("branch", "", "branch that points to --at; the revision HEAD or this branch resolves to --at")
+	at := fs.String("at", "HEAD", "commit --branch points to")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: policystack-validator resolve-revision [flags] [--] <revision>")
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(args); err != nil || fs.NArg() != 1 {
+		if err == nil {
+			fs.Usage()
+		}
+		return 2
+	}
+	sha, err := revision.Resolve(context.Background(), *root, fs.Arg(0), *branch, *at)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	fmt.Println(sha)
+	return 0
 }
 
 func shouldFail(r run.Result, threshold string) bool {

@@ -84,7 +84,7 @@ class Element:
         self.c = values.get('stack', {}).get(self.key) or {}
         self.toggles = self.c.get('toggles') or {}
         if isinstance(self.c.get('operatorPolicies'), list):
-            raise ValueError(f"{path}/values.yaml: operatorPolicies must be a map keyed by entry name "
+            raise TypeError(f"{path}/values.yaml: operatorPolicies must be a map keyed by entry name "
                              "(policy-library 3.0.0); convert the list")
         self.policies = self.c.get('policies') or []
         by_name = {p['name'] for p in self.policies}
@@ -185,8 +185,8 @@ class Element:
         rows = [(f"`{n}`", self.note('toggles', n), f"`{flow(v)}`", self.controls(n)) for n, v in self.toggles.items()]
         return ['## Toggles', '', *self.intro('toggles'),
                 *table(['Toggle', 'Description', 'Default', 'Controls'], rows), '',
-                'A toggle overrides `enabled` on every entry with that name; turning a Policy off '
-                'removes everything in it.', '']
+                ('A toggle overrides `enabled` on every entry with that name; turning a Policy off '
+                 'removes everything in it.'), '']
 
     def settings_section(self, config):
         rows, details = [], []
@@ -232,14 +232,14 @@ class Element:
         if not rows:
             return []
         return ['## Operators', '',
-                'Each also renders `<name>-ns` and `<name>-status`. Pin with '
-                '`operatorPolicies.<key>.versions` in a layer.', '',
+                ('Each also renders `<name>-ns` and `<name>-status`. Pin with '
+                 '`operatorPolicies.<key>.versions` in a layer.'), '',
                 *table(['Operator policy', 'Package', 'Channel', 'Source', 'Namespace', 'Versions'], rows), '']
 
     def policies_section(self):
         md = ['## Policies', '',
-              '`<cluster>` is the ManagedCluster name, or hubName on the hub. '
-              '`global.remediationAction: inform` overrides every action below.', '']
+              ('`<cluster>` is the ManagedCluster name, or hubName on the hub. '
+               '`global.remediationAction: inform` overrides every action below.'), '']
         default = self.c.get('default') or {}
         meta = [f"{label}: {', '.join(default[k])}." for k, label in
                 (('standards', 'Standards'), ('controls', 'Controls'), ('categories', 'Categories')) if default.get(k)]

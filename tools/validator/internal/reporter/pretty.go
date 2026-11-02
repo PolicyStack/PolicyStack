@@ -24,17 +24,19 @@ func (p Pretty) Write(w io.Writer, findings []checks.Finding) error {
 		case checks.SevWarning:
 			warnCount++
 		}
-		writeOne(w, f, useColor)
+		if err := writeOne(w, f, useColor); err != nil {
+			return err
+		}
 	}
 	if errorCount == 0 && warnCount == 0 {
-		fmt.Fprintln(w, color("ok: no findings", useColor, ansiGreen))
-		return nil
+		_, err := fmt.Fprintln(w, color("ok: no findings", useColor, ansiGreen))
+		return err
 	}
-	fmt.Fprintf(w, "\n%d error(s), %d warning(s)\n", errorCount, warnCount)
-	return nil
+	_, err := fmt.Fprintf(w, "\n%d error(s), %d warning(s)\n", errorCount, warnCount)
+	return err
 }
 
-func writeOne(w io.Writer, f checks.Finding, useColor bool) {
+func writeOne(w io.Writer, f checks.Finding, useColor bool) error {
 	tag := "warning"
 	c := ansiYellow
 	if f.Severity == checks.SevError {
@@ -56,13 +58,14 @@ func writeOne(w io.Writer, f checks.Finding, useColor bool) {
 		}
 		target += "] "
 	}
-	fmt.Fprintf(w, "%s %s %s%s\n    at %s\n",
+	_, err := fmt.Fprintf(w, "%s %s %s%s\n    at %s\n",
 		color(tag, useColor, c),
 		color(f.RuleID, useColor, ansiBold),
 		target,
 		f.Message,
 		loc,
 	)
+	return err
 }
 
 const (

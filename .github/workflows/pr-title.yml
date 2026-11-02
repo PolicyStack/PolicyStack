@@ -1,0 +1,25 @@
+name: PR Title
+
+# Squash merges use the PR title as the commit subject, so it must be a Conventional Commit.
+# pull_request, not pull_request_target: this job needs no token, so it runs the same for forks.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  pr-title:
+    name: pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # The title goes through env, never inline, so it cannot inject shell.
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|docs|chore|ci|refactor|test|perf|build|revert)(\([a-z0-9-]+\))?!?: .+'
+          if [[ ! $TITLE =~ $re ]]; then
+            echo "::error title=PR title::Use <type>(<scope>)!: <subject>. Types: feat fix docs chore ci refactor test perf build revert. Scope and ! are optional."
+            exit 1
+          fi

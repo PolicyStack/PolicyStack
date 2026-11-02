@@ -446,3 +446,63 @@ func TestPolicy051Wiring(t *testing.T) {
 		}
 	}
 }
+
+func TestFilterRules(t *testing.T) {
+	all := checks.All()
+	tests := []struct {
+		name       string
+		only, skip []string
+		want       []string // rule IDs kept; nil with wantErr
+		wantErr    string
+	}{
+		{name: "all", want: ruleIDs(all)},
+		{name: "only", only: []string{"POLICY081", "RENDER000"}, want: []string{"POLICY081", "RENDER000"}},
+		{name: "skip", skip: []string{"POLICY080"}, want: slices.DeleteFunc(ruleIDs(all), func(id string) bool { return id == "POLICY080" })},
+		{name: "only wins over skip", only: []string{"POLICY060"}, skip: []string{"POLICY060"}, want: []string{"POLICY060"}},
+		{name: "unknown only", only: []string{"RENDER000", "POLICY81"}, wantErr: `--only: unknown rule ID "POLICY81"`},
+		{name: "unknown skip", skip: []string{"policy080"}, wantErr: `--skip: unknown rule ID "policy080"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := filterRules(all, Options{Only: tt.only, Skip: tt.skip})
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("err = %v, want %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ids := ruleIDs(got); !slices.Equal(ids, tt.want) {
+				t.Errorf("got %v, want %v", ids, tt.want)
+			}
+		})
+	}
+}
+
+// TestLoadCRDs: missing CRDs skip POLICY080 locally and fail the run under CI.
+func TestLoadCRDs(t *testing.T) {
+	empty := t.TempDir()
+	tests := []struct {
+		name, ci string
+		opts     Options
+		wantErr  bool
+	}{
+		{name: "no dir", ci: "true", opts: Options{}},
+		{name: "skipped", ci: "true", opts: Options{CRDsDir: empty, Skip: []string{"POLICY080"}}},
+		{name: "not selected", ci: "true", opts: Options{CRDsDir: empty, Only: []string{"RENDER000"}}},
+		{name: "missing locally", opts: Options{CRDsDir: empty}},
+		{name: "missing in CI", ci: "true", opts: Options{CRDsDir: empty}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("CI", tt.ci)
+			tt.opts.Logger = slog.New(slog.DiscardHandler)
+			crds, err := loadCRDs(tt.opts)
+			if (err != nil) != tt.wantErr || crds != nil {
+				t.Errorf("got %v, %v; want error %v and no CRDs", crds, err, tt.wantErr)
+			}
+		})
+	}
+}

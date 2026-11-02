@@ -3,6 +3,8 @@
 
 Compliance Operator running STIG scans and applying remediations
 
+Guide: https://policystk.io/compliance/
+
 ```yaml
 stack:
   compliance:
@@ -15,7 +17,7 @@ Applying remediations reboots nodes, so it is opt-in per cluster
 
 | Toggle | Description | Default | Controls |
 |---|---|---|---|
-| `remediate` | Apply the ComplianceRemediations listed in config.autoRemediate | `false` | Policy [`remediate`](#policy-remediate) |
+| `remediate` | Enforce config.remediations | `false` | Policy [`remediate`](#policy-remediate) |
 
 A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
 
@@ -29,7 +31,8 @@ Under `stack.compliance.config`. Maps merge across layers; lists are replaced wh
 | `rawResultStorage` | Where raw scan results are persisted |  |
 | `rawResultStorage.enabled` |  | `true` |
 | `rawResultStorage.storageClass` | StorageClass for raw results. Omit to use the cluster default. | `''` |
-| `autoRemediate` | ComplianceRemediation names applied when the remediate toggle is on; reviewable in git. | `[]` |
+| `remediations` | ComplianceRemediation name: true to apply, false to revert (not every type reverts; see the guide). Removing an entry leaves it applied and reports it as drift. List only the base name of a -1, -2 family. | `{}` |
+| `waivers` | Accepted findings. Rule name (the compliance.openshift.io/rule annotation): reason. | `{}` |
 
 ## Operators
 
@@ -55,24 +58,30 @@ Standards: NIST SP 800-53, DISA STIG. Controls: CA-2 Control Assessments, CA-7 C
 
 ### Policy `scan`
 
-`scan-compliance-<cluster>`: Configure and bind the STIG scan. Depends on `install-compliance-<cluster>`.
+`scan-compliance-<cluster>`: Configure and bind the scan. Depends on `install-compliance-<cluster>`.
 
 | Template | Action | Waits for | Renders | Description |
 |---|---|---|---|---|
-| `scan-setting` | enforce | `install-compliance-status`<br>compliant while pending | [scan-setting](converters/scan-setting.yaml)<br>[agg-patch-role](converters/agg-patch-role.yaml)<br>[agg-patch-rolebinding](converters/agg-patch-rolebinding.yaml)<br>[scan-binding](converters/scan-binding.yaml) | Default ScanSetting |
+| `scan-setting` | enforce | `install-compliance-status`<br>compliant while pending | [scan-setting](converters/scan-setting.yaml)<br>[agg-patch-role](converters/agg-patch-role.yaml)<br>[agg-patch-rolebinding](converters/agg-patch-rolebinding.yaml)<br>[scan-binding](converters/scan-binding.yaml) (mustonlyhave) | Default ScanSetting |
 
-### Policy `ready`
+### Policy `findings`
 
-`ready-compliance-<cluster>`: Reports NonCompliant until the scan suite has finished. Depends on `scan-compliance-<cluster>`.
+`findings-compliance-<cluster>`: Failing compliance results not waived in git. Depends on `scan-compliance-<cluster>`.
 
 | Template | Action | Renders | Description |
 |---|---|---|---|
-| `ready-suite` | inform | [suite-ready](converters/suite-ready.yaml) | Scan suite completion |
+| `findings-scan-state` | inform (always) | [scan-state](converters/scan-state.yaml) | Scan results exist, are current, and the last scan did not fail |
+| `findings-high` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, high severity |
+| `findings-medium` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, medium severity |
+| `findings-low` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, low severity |
+| `findings-waived` | inform (always) | [waived](converters/waived.yaml) | Results of waived rules, with their current status |
+| `findings-drift` | inform (always) | [remediation-drift](converters/remediation-drift.yaml) | Applied remediations not declared in git |
 
 ### Policy `remediate`
 
-`remediate-compliance-<cluster>`: Apply the configured compliance remediations. Depends on `ready-compliance-<cluster>`. Off by default; turn on with toggle `remediate`.
+`remediate-compliance-<cluster>`: Apply the configured compliance remediations. Depends on `scan-compliance-<cluster>`. Off by default; turn on with toggle `remediate`.
 
 | Template | Action | Renders | Description |
 |---|---|---|---|
-| `remediate-remediations` | enforce | [auto-remediate](converters/auto-remediate.yaml) | Applied ComplianceRemediations |
+| `remediate-remediations` | enforce | [remediate](converters/remediate.yaml) | ComplianceRemediation spec.apply |
+| `remediate-remediation-state` | inform (always) | [remediation-state](converters/remediation-state.yaml) | What the operator did with each declared remediation |

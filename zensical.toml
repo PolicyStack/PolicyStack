@@ -23,6 +23,7 @@ nav = [
     { "Disconnected clusters" = "disconnected.md" },
     { "Upgrades" = "upgrades.md" },
     { "Advanced Cluster Security" = "acs.md" },
+    { "Compliance" = "compliance.md" },
   ] },
   { "Development" = [
     { "Writing an element" = "elements.md" },

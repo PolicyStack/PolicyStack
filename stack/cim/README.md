@@ -22,6 +22,7 @@ Under `stack.cim.config`. Maps merge across layers; lists are replaced whole.
 | `storage.database` |  | `10Gi` |
 | `storage.filesystem` |  | `100Gi` |
 | `storage.images` | RHCOS ISO cache: about 2Gi per osImages entry | `50Gi` |
+| `osImages` | RHCOS live ISOs you host, by OpenShift x.y: {version: RHCOS version, url}. Set when disconnected, as it replaces the default list: list every version a siteconfig cluster installs. Mirrors and CAs come from the disconnected element's config (docs/disconnected.md). | `{}` |
 
 ## Policies
 
@@ -36,6 +37,7 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 | Template | Action | Renders | Description |
 |---|---|---|---|
 | `hub-cim-provisioning` | enforce | [cim-provisioning](converters/cim-provisioning.yaml) | Provisioning provisioning-configuration |
+| `hub-cim-mirror` | enforce | [cim-mirror](converters/cim-mirror.yaml) (mustonlyhave) | Mirror registries and OS image CA for the assisted service |
 | `hub-cim-agent` | enforce | [cim-agent](converters/cim-agent.yaml) | AgentServiceConfig agent |
 | `hub-cim-siteconfig` | enforce | [cim-siteconfig](converters/cim-siteconfig.yaml) | MultiClusterHub siteconfig component |
 

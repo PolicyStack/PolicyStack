@@ -124,6 +124,8 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | `siteconfig.ntpSources` | | Extra NTP sources. |
     | `siteconfig.proxy` | | `httpProxy` and/or `httpsProxy`, `noProxy`. |
     | `siteconfig.extraManifests` | | ConfigMap names in namespace `<cluster>`, from `install.manifests`. |
+    | `siteconfig.fips` | `false` | `true` installs in FIPS mode. `ai` only. |
+    | `siteconfig.cpuPartitioning` | `false` | `true` installs with workload partitioning. `ai` only. Enable [`partitioning`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/partitioning) on the cluster for its PerformanceProfile. |
     | `siteconfig.nodes` | required | hostName to the keys below. Layers merge per host. |
 
     | Node key | Default | Notes |
@@ -135,7 +137,10 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | `network` | | Static install network: `interfaces` (NIC name to MAC) and `config` (nmstate). Day 2 is `nmstate`. |
     | `remove` | | `true` on a worker [scales it in](#scaling-siteconfig-workers). |
 
-    All of it is fixed at create; afterwards you can only add and remove workers. `ai` takes 1 or 3 masters, or 2 or more with an arbiter (4.19+). `ibi` takes one node and no VIPs, `clusterNetwork` or `serviceNetwork`. Anything else fails the render.
+    All of it is fixed at create; afterwards you can only add and remove workers. `ai` takes 1 or 3 masters, or 2 or more with an arbiter (4.19+). `ibi` takes one node and no VIPs, `clusterNetwork`, `serviceNetwork`, `fips` or `cpuPartitioning`: the seed image fixes them. Anything else fails the render.
+
+    !!! warning "FIPS"
+        The hub's nodes must run in FIPS mode: assisted-service runs the installer there, and the installer refuses FIPS on a non-FIPS host. The `ssh-publickey` must be RSA or ECDSA, as FIPS mode disables ed25519. `present-cluster-<cluster>` fails before create on either.
 
     ```yaml
     # values/platforms/baremetal.yaml
@@ -189,7 +194,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | Object | Content |
     |---|---|
     | ClusterImageSet `lifecycle-<cluster>` | The release image. |
-    | ClusterInstance `<cluster>/<cluster>` | The keys above, plus `clusterName`, `baseDomain`, `pullSecretRef`, `sshPublicKey`, templates, `clusterImageSetNameRef`, per node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and node templates. `clusterType` follows the masters: 1 is `SNO`, an arbiter `HighlyAvailableArbiter`, else `HighlyAvailable`. SiteConfig defaults `bootMode: UEFI`, `automatedCleaningMode: disabled`. |
+    | ClusterInstance `<cluster>/<cluster>` | The keys above, plus `clusterName`, `baseDomain`, `pullSecretRef`, `sshPublicKey`, templates, `clusterImageSetNameRef`, per node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and node templates. `clusterType` follows the masters: 1 is `SNO`, an arbiter `HighlyAvailableArbiter`, else `HighlyAvailable`. `fips` becomes `installConfigOverrides: '{"fips":true}'`, `cpuPartitioning` `cpuPartitioningMode: AllNodes`. SiteConfig defaults `bootMode: UEFI`, `automatedCleaningMode: disabled`. |
     | KlusterletAddonConfig | Every add-on on. The stock `ai` one turns application-manager off, so ACM would never create the Argo CD secret. The chart suppresses it and renders its own. |
 
 Hive rejects release image changes, and SiteConfig any spec change before install completes. No webhook guards the `siteconfig` ClusterImageSet. The chart reads those fields back from the live objects, so a `version` bump or credential rotation never touches them, and a hand edit to the image set is kept. Those clusters upgrade through [`upgrade`](upgrades.md).

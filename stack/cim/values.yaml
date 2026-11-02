@@ -17,6 +17,11 @@ stack:
         # RHCOS ISO cache: about 2Gi per osImages entry
         images: 50Gi
 
+      # RHCOS live ISOs you host, by OpenShift x.y: {version: RHCOS version, url}. Set when
+      # disconnected, as it replaces the default list: list every version a siteconfig cluster installs.
+      # Mirrors and CAs come from the disconnected element's config (docs/disconnected.md).
+      osImages: {}
+
     default:
       categories:
         - CM Configuration Management
@@ -57,6 +62,18 @@ stack:
         rawTemplate: true
         templateNames:
           - name: cim-provisioning
+
+      # Renders nothing unless the hub's layers set stack.disconnected.config mirrors or trustedCA
+      - name: cim-mirror
+        enabled: true
+        description: "Mirror registries and OS image CA for the assisted service"
+        policyRef: hub
+        complianceType: musthave
+        remediationAction: enforce
+        severity: high
+        rawTemplate: true
+        templateNames:
+          - name: cim-mirror
 
       - name: cim-agent
         enabled: true

@@ -17,6 +17,12 @@ SiteConfig accepts edits that strand hosts or re-image them, so those fail here:
 from the fleet file (dropping it deletes nothing), a new control-plane node, and a removal
 cancelled after pruning began (re-rendering would re-create the BareMetalHost).
 
+fips and cpuPartitioning render only when set, so other specs stay unchanged. FIPS has no
+ClusterInstance field: installConfigOverrides carries it, and the stock ai template copies it into
+the AgentClusterInstall. assisted-service runs openshift-install in the hub node's FIPS mode, and the
+installer refuses fips on a non-FIPS host, so a non-FIPS hub fails before create, as does an ed25519
+key, which FIPS mode disables.
+
 A new host waits for the install to complete. So does a worker of a one-master cluster at create,
 which the assisted installer does not accept until the cluster is up: it arrives by scale-out.
 
@@ -70,6 +76,8 @@ on, as the hive engine does.
 {{- if and $vips (ne (len $s.apiVIPs) (len $s.ingressVIPs)) }}{{ fail "install.siteconfig: apiVIPs and ingressVIPs need the same number of entries" }}{{ end }}
 {{- if and (eq $masters 1) (eq $t "ai") (not $s.machineNetwork) }}{{ fail "install.siteconfig.machineNetwork is required with one master" }}{{ end }}
 {{- $spec := merge (dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.marker" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "clusterType" (ternary "HighlyAvailableArbiter" (ternary "SNO" "HighlyAvailable" (eq $masters 1)) (gt $arbiters 0))) (pick $s "clusterNetwork" "apiVIPs" "ingressVIPs" "proxy") }}
+{{- if $s.fips }}{{ $_ := set $spec "installConfigOverrides" (dict "fips" true | toJson) }}{{ end }}
+{{- if $s.cpuPartitioning }}{{ $_ := set $spec "cpuPartitioningMode" "AllNodes" }}{{ end }}
 {{- with $s.ntpSources }}{{ $_ := set $spec "additionalNTPSources" . }}{{ end }}
 {{- range $key := list "machineNetwork" "serviceNetwork" }}
 {{- with get $s $key }}{{ $l := list }}{{ range . }}{{ $l = append $l (dict "cidr" .) }}{{ end }}{{ $_ := set $spec $key $l }}{{ end }}
@@ -90,6 +98,10 @@ on, as the hive engine does.
 {{ "{{-" }} if not $live {{ "}}" }}
 {{ "{{-" }} $ssh = fromSecret {{ include "lifecycle.credential" . }} "ssh-publickey" | base64dec | trim {{ "}}" }}
 {{ "{{-" }} if contains "\n" $ssh {{ "}}" }}{{ "{{" }} fail "install.credential ssh-publickey must hold one key: the stock templates fold the rest into the first" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{- if $s.fips }}
+{{ "{{-" }} if not (lookup "machineconfiguration.openshift.io/v1" "MachineConfig" "" "99-master-fips") {{ "}}" }}{{ "{{" }} fail "install.siteconfig.fips needs a FIPS hub: assisted-service runs the installer on the hub nodes" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if hasPrefix "ssh-ed25519" $ssh {{ "}}" }}{{ "{{" }} fail "install.siteconfig.fips needs an RSA or ECDSA install.credential ssh-publickey: FIPS mode disables ed25519" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{- end }}
 {{ "{{-" }} end {{ "}}" }}
 - complianceType: musthave
   objectDefinition:

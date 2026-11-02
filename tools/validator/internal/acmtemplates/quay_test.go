@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/stolostron/go-template-utils/v7/pkg/templates"
@@ -16,11 +17,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// objectDefinition renders the element in dir with the all-on profile and returns the
-// object-templates entry for kind/name as the JSON the config-policy-controller resolves.
-func objectDefinition(t *testing.T, dir, kind, name string) []byte {
+// objectDefinition renders the element in dir with the all-on profile and valueFiles above it, and
+// returns the object-templates entry for kind/name as the JSON the config-policy-controller resolves.
+func objectDefinition(t *testing.T, dir, kind, name string, valueFiles ...string) []byte {
 	t.Helper()
-	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(helmTemplate(t, dir, filepath.Base(dir), allOn)), 4096)
+	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(helmTemplate(t, dir, filepath.Base(dir), append(slices.Clone(allOn), valueFiles...))), 4096)
 	for {
 		var p policy
 		if err := dec.Decode(&p); err == io.EOF {

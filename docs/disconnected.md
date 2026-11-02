@@ -9,6 +9,7 @@ Run [oc-mirror v2](https://docs.redhat.com/en/documentation/openshift_container_
     - **Image mirroring.** oc-mirror's job.
     - **The chart repo.** Argo CD on the hub pulls `policy-library` from `policystack.github.io`, directly or through a proxy. Or mirror the chart and repoint every `Chart.yaml`.
     - **Update Service.** Run OSUS yourself; PolicyStack only points clusters at it ([Update Service](#update-service)).
+    - **RHCOS images.** Host the live ISOs for bare metal yourself ([Bare metal](#bare-metal)).
 
 ## Site layer
 
@@ -62,7 +63,7 @@ stack:
 1.  A `subscription.source` the elements use, mapped to a CatalogSource in `clusterResources`.
 2.  oc-mirror's `working-dir/cluster-resources`, unchanged.
 3.  Registry host, with `..` before a port.
-4.  CAs of internal Git and Helm servers.
+4.  CAs of internal Git, Helm and RHCOS image servers.
 5.  Only with `remediations` enabled. Lists replace, so restate the defaults.
 6.  Your OSUS graph. `channel-pin` writes it before the upgrade guard needs `availableUpdates`.
 
@@ -154,6 +155,49 @@ The HostedCluster owns mirrors, image config and proxy. Set them in the fleet fi
     ```
 
     1.  Replaces the site layer's list. CatalogSources only.
+
+## Bare metal
+
+`siteconfig` clusters install through the hub's assisted service, so the hub holds their mirrors. [`cim`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/cim) reads the site layer's `disconnected` config on the hub:
+
+| From | To |
+|---|---|
+| `ImageDigestMirrorSet`s in `clusterResources` | `registries.conf` in ConfigMap `multicluster-engine/assisted-mirror`, referenced as AgentServiceConfig `mirrorRegistryRef` |
+| `registryCAs` | `ca-bundle.crt` in the same ConfigMap |
+| `trustedCA`, once `osImages` is set | ConfigMap `image-service-additional-ca`, referenced as `OSImageCACertRef` |
+
+Assisted writes the mirrors and CAs into the discovery ISO and into each spoke's install-config, so the spoke installs from the mirror with its ImageDigestMirrorSet in place.
+
+```yaml
+# values/clusters/<hubName>.yaml
+stack:
+  cim:
+    enabled: true
+    config:
+      osImages: # (1)!
+        "4.20":
+          version: 9.6.20251015-1 # (2)!
+          url: https://images.dc2.example.com/rhcos-4.20-x86_64-live.iso
+```
+
+1.  Replaces the default list, which points at mirror.openshift.com. List every version the hub's `siteconfig` clusters install.
+2.  RHCOS version of the ISO.
+
+```yaml
+# values/datacenters/dc2.yaml
+install:
+  releaseRepository: mirror.dc2.example.com:8443/openshift/release-images # (1)!
+```
+
+1.  The ClusterImageSet pulls by tag, which digest-only mirrors don't cover.
+
+!!! note
+    - One mirror set per hub: every `siteconfig` cluster it builds uses it. The stock SiteConfig templates have no per-cluster mirror.
+    - Mirror the multicluster engine images with oc-mirror. The credential's `pullSecret` needs the mirror's auth.
+    - `ibi`: put an ImageDigestMirrorSet in a ConfigMap through `install.manifests` and list it in `siteconfig.extraManifests`.
+
+!!! warning "Removing entries"
+    The AgentServiceConfig is `musthave`. A removed `osImages` entry, or a `mirrorRegistryRef` once no mirrors remain, stays on it. Remove it with `oc edit agentserviceconfig agent`.
 
 ## The hub
 

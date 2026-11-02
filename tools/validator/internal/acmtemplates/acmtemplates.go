@@ -65,6 +65,7 @@ var kinds = []struct {
 	{"hypershift.openshift.io/v1beta1", "NodePool", "nodepools", true},
 	{"imageregistry.operator.openshift.io/v1", "Config", "configs", false},
 	{"machine.openshift.io/v1beta1", "MachineSet", "machinesets", true},
+	{"machineconfiguration.openshift.io/v1", "MachineConfig", "machineconfigs", false},
 	{"metal3.io/v1alpha1", "BareMetalHost", "baremetalhosts", true},
 	{"metal3.io/v1alpha1", "Provisioning", "provisionings", false},
 	{"operator.open-cluster-management.io/v1", "MultiClusterHub", "multiclusterhubs", true},

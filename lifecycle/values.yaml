@@ -73,6 +73,9 @@ install:
   #   ntpSources:        extra NTP sources
   #   proxy:             install proxy: httpProxy, httpsProxy, noProxy
   #   extraManifests:    names of ConfigMaps in namespace <cluster>, from install.manifests
+  #   fips:              ai only. true installs in FIPS mode. Needs a FIPS hub and an RSA or ECDSA ssh-publickey.
+  #   cpuPartitioning:   ai only. true sets cpuPartitioningMode AllNodes; the partitioning element supplies the
+  #                      PerformanceProfile
   #   nodes:             map of hostName to bmcAddress (virtual media), bootMACAddress, and optional
   #                      role (master by default), rootDeviceHints, network ({interfaces: {name: MAC},
   #                      config: nmstate}) and, on a worker, remove: true to scale it in

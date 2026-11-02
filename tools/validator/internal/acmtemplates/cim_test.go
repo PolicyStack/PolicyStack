@@ -2,8 +2,11 @@ package acmtemplates
 
 import (
 	"bytes"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -87,5 +90,107 @@ func TestCIMAgentStorage(t *testing.T) {
 	}
 	if bytes.Contains(od, []byte("storageClassName")) {
 		t.Errorf("storageClassName rendered: %s", od)
+	}
+}
+
+// mirrorValues is a hub layer with oc-mirror's mirror sets, a second registry CA and osImages. The
+// all-on profile adds a CatalogSource, the first registry CA and trustedCA.
+const mirrorValues = `stack:
+  cim:
+    config:
+      osImages:
+        "4.20": {version: 9.6.20251015-1, url: "https://images.example.com/rhcos-4.20.iso"}
+  disconnected:
+    config:
+      clusterResources:
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata: {name: cs-redhat-operator-index-v4-20, namespace: openshift-marketplace}
+          spec: {image: "mirror.example.com:8443/redhat/redhat-operator-index:v4.20", sourceType: grpc}
+        - apiVersion: config.openshift.io/v1
+          kind: ImageDigestMirrorSet
+          metadata: {name: idms-release-0}
+          spec:
+            imageDigestMirrors:
+              - {source: quay.io/openshift-release-dev/ocp-release, mirrors: ["mirror.example.com:8443/ocp/release", "mirror2.example.com/ocp/release"]}
+        - apiVersion: config.openshift.io/v1
+          kind: ImageDigestMirrorSet
+          metadata: {name: idms-operator-0}
+          spec:
+            imageDigestMirrors:
+              - {source: registry.redhat.io/multicluster-engine, mirrors: ["mirror.example.com:8443/mce"]}
+        - apiVersion: config.openshift.io/v1
+          kind: ImageTagMirrorSet
+          metadata: {name: itms-0}
+          spec: {imageTagMirrors: [{source: quay.io/x, mirrors: ["mirror.example.com:8443/x"]}]}
+      registryCAs:
+        mirror2.example.com: "B\n"
+`
+
+// TestCIMMirror: registries.conf holds every digest mirror, never a tag mirror; ca-bundle.crt the
+// registry CAs by host; and the AgentServiceConfig references both ConfigMaps and lists osImages.
+// Without mirrors or osImages, nothing renders and the AgentServiceConfig keeps its storage only.
+func TestCIMMirror(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "hub.yaml")
+	if err := os.WriteFile(f, []byte(mirrorValues), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(repoRoot, "stack/cim")
+	objs := resolve(t, renderRaw(t, dir, "cim-acm-dc1", append(slices.Clone(allOn), f))["hub-cim-mirror"])
+	mirror := find(t, objs, "ConfigMap", "assisted-mirror")
+	const conf = `[[registry]]
+  prefix = ""
+  location = "quay.io/openshift-release-dev/ocp-release"
+  mirror-by-digest-only = true
+  [[registry.mirror]]
+    location = "mirror.example.com:8443/ocp/release"
+  [[registry.mirror]]
+    location = "mirror2.example.com/ocp/release"
+[[registry]]
+  prefix = ""
+  location = "registry.redhat.io/multicluster-engine"
+  mirror-by-digest-only = true
+  [[registry.mirror]]
+    location = "mirror.example.com:8443/mce"
+`
+	if got := field(mirror, "data", "registries.conf"); got != conf {
+		t.Errorf("registries.conf\n%s\nwant\n%s", got, conf)
+	}
+	if got, want := field(mirror, "data", "ca-bundle.crt"), "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\nB\n"; got != want {
+		t.Errorf("ca-bundle.crt %q, want %q", got, want)
+	}
+	if mirror.ObjectDefinition.GetNamespace() != "multicluster-engine" || mirror.ObjectDefinition.GetLabels()["app"] != "assisted-service" {
+		t.Errorf("metadata %v", mirror.ObjectDefinition.Object["metadata"])
+	}
+	if got := field(find(t, objs, "ConfigMap", "image-service-additional-ca"), "data", "ca-bundle.crt"); got != "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n" {
+		t.Errorf("OS image CA %q", got)
+	}
+
+	var asc struct {
+		Spec map[string]any `json:"spec"`
+	}
+	if err := json.Unmarshal(objectDefinition(t, dir, "AgentServiceConfig", "agent", f), &asc); err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]any{
+		"mirrorRegistryRef": map[string]any{"name": "assisted-mirror"},
+		"OSImageCACertRef":  map[string]any{"name": "image-service-additional-ca"},
+		"osImages": []any{map[string]any{"openshiftVersion": "4.20", "version": "9.6.20251015-1",
+			"url": "https://images.example.com/rhcos-4.20.iso", "cpuArchitecture": "x86_64"}},
+	} {
+		if !reflect.DeepEqual(asc.Spec[key], want) {
+			t.Errorf("%s %v, want %v", key, asc.Spec[key], want)
+		}
+	}
+
+	// all-on alone: a CatalogSource and trustedCA, but no mirror set or osImages.
+	if objs := resolve(t, cimRaw(t)["hub-cim-mirror"]); len(objs) != 0 {
+		t.Errorf("no mirrors: %+v", objs)
+	}
+	od := objectDefinition(t, dir, "AgentServiceConfig", "agent")
+	for _, key := range []string{"mirrorRegistryRef", "OSImageCACertRef", "osImages"} {
+		if bytes.Contains(od, []byte(key)) {
+			t.Errorf("%s rendered without input: %s", key, od)
+		}
 	}
 }

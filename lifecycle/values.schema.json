@@ -167,6 +167,8 @@
               }
             },
             "extraManifests": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "fips": {"type": "boolean"},
+            "cpuPartitioning": {"type": "boolean"},
             "nodes": {
               "type": "object",
               "minProperties": 1,
@@ -176,7 +178,7 @@
           },
           "if": {"required": ["templates"], "properties": {"templates": {"const": "ibi"}}},
           "then": {
-            "not": {"anyOf": [{"required": ["apiVIPs"]}, {"required": ["ingressVIPs"]}, {"required": ["clusterNetwork"]}, {"required": ["serviceNetwork"]}]},
+            "not": {"anyOf": [{"required": ["apiVIPs"]}, {"required": ["ingressVIPs"]}, {"required": ["clusterNetwork"]}, {"required": ["serviceNetwork"]}, {"required": ["fips"]}, {"required": ["cpuPartitioning"]}]},
             "properties": {
               "nodes": {
                 "maxProperties": 1,

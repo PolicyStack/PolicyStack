@@ -274,6 +274,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
     - `stack.cim.enabled: true` in the hub's values layer. It manages the Provisioning CR, AgentServiceConfig `agent` and the MultiClusterHub `siteconfig` component, and `ready-cim-<hub>` reports when they run. Yourself: a default StorageClass (or `config.storage.storageClass`), [the bare-metal ports](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/), and the NLB on an AWS hub.
     - Hosts with a virtual-media BMC the hub reaches. Hosts reach the hub's image service and API.
     - DNS for `api.<cluster>.<baseDomain>` from hosts and hub. Multi-node adds `api-int` and `*.apps`.
+    - Disconnected: mirrors and RHCOS images on the hub ([Bare metal](disconnected.md#bare-metal)).
 
     ```sh
     oc create namespace bm-credentials
@@ -282,7 +283,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
     oc create secret generic bmc -n bm-credentials --from-literal=username=<user> --from-literal=password=<password>
     ```
 
-    1.  One key: the stock templates fold a second into the first, so the step fails on it.
+    1.  One key: the stock templates fold a second into the first, so the step fails on it. RSA or ECDSA with `siteconfig.fips`.
 
     ```yaml
     # fleet/sno-edge.yaml

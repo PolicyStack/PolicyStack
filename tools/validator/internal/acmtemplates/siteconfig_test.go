@@ -357,6 +357,33 @@ func TestClusterInstanceSSH(t *testing.T) {
 	}
 }
 
+// fipsHub is the MachineConfig the installer creates on a FIPS hub.
+const fipsHub = "apiVersion: machineconfiguration.openshift.io/v1\nkind: MachineConfig\nmetadata: {name: 99-master-fips}\nspec: {fips: true}\n"
+
+// TestClusterInstanceFIPS: FIPS is refused before create on a non-FIPS hub or with an ed25519 key,
+// both of which fail the install only after the hosts boot, and never checked once the cluster exists.
+func TestClusterInstanceFIPS(t *testing.T) {
+	raw := withValues(t, "sno-edge", "install:\n  siteconfig:\n    fips: true\n", false)["present-cluster-sno-edge"]
+	for _, tt := range []struct {
+		name, want string
+		live       []string
+	}{
+		{"non-FIPS hub", "needs a FIPS hub", []string{hostInventory("ssh-rsa KEY")}},
+		{"ed25519 key", "RSA or ECDSA", []string{hostInventory("ssh-ed25519 KEY"), fipsHub}},
+	} {
+		if _, err := tryResolve(t, raw, tt.live...); err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Errorf("%s: %v", tt.name, err)
+		}
+	}
+	for _, key := range []string{"ssh-rsa KEY", "ecdsa-sha2-nistp256 KEY"} {
+		ci := find(t, resolve(t, raw, hostInventory(key), fipsHub), "ClusterInstance", "sno-edge")
+		if got := field(ci, "spec", "installConfigOverrides"); got != `{"fips":true}` {
+			t.Errorf("%s: installConfigOverrides %q", key, got)
+		}
+	}
+	resolve(t, raw, liveCI(t, "sno-edge", "Completed", 1, 1, nil))
+}
+
 func TestSiteConfigCredentialsEmptyKey(t *testing.T) {
 	raw := rawTemplate(t, "sno-edge", "present-credentials-sno-edge")
 	for _, data := range []string{"{username: YWRtaW4=}", "{password: c2VjcmV0}"} {
@@ -399,6 +426,10 @@ func TestSiteConfigSchema(t *testing.T) {
 		{"ibi with remove", "sno-edge", "meet the specifications of the schema", []string{"install.siteconfig.templates=ibi", node + "role=worker", node + "remove=true"}},
 		{"ibi with clusterNetwork", "sno-edge", "meet the specifications of the schema", []string{"install.siteconfig.templates=ibi", "install.siteconfig.clusterNetwork[0].cidr=10.128.0.0/14", "install.siteconfig.clusterNetwork[0].hostPrefix=23"}},
 		{"ibi with serviceNetwork", "sno-edge", "meet the specifications of the schema", []string{"install.siteconfig.templates=ibi", "install.siteconfig.serviceNetwork={172.30.0.0/16}"}},
+		{"ibi with fips", "sno-edge", "meet the specifications of the schema", []string{"install.siteconfig.templates=ibi", "install.siteconfig.fips=true"}},
+		{"ibi with cpuPartitioning", "sno-edge", "meet the specifications of the schema", []string{"install.siteconfig.templates=ibi", "install.siteconfig.cpuPartitioning=true"}},
+		{"fips not bool", "sno-edge", "fips", []string{"install.siteconfig.fips=yes"}},
+		{"cpuPartitioning not bool", "sno-edge", "cpuPartitioning", []string{"install.siteconfig.cpuPartitioning=AllNodes"}},
 		{"uneven VIPs", "bm-ha", "same number", []string{"install.siteconfig.apiVIPs={1.1.1.1,fd00::1}"}},
 		{"uppercase host", "sno-edge", "UP", []string{"install.siteconfig.nodes.UP.bmcAddress=redfish-virtualmedia://1.1.1.1/s", "install.siteconfig.nodes.UP.bootMACAddress=00:11:22:33:44:77"}},
 		{"two masters", "", "2 masters", append(hosts(2), "install.siteconfig.apiVIPs={1.1.1.1}", "install.siteconfig.ingressVIPs={1.1.1.2}")},
@@ -508,6 +539,8 @@ install:
     ntpSources: [ntp.example.com]
     proxy: {httpProxy: "http://p:3128", httpsProxy: "http://p:3128", noProxy: .example.com}
     extraManifests: [enable-crun]
+    fips: true
+    cpuPartitioning: true
     nodes:
 ` + host("a0", ", role: master, rootDeviceHints: {deviceName: /dev/sda, minSizeGigabytes: 100}, network: {interfaces: {eno1: \"00:11:22:33:44:a0\"}, config: {dns-resolver: {config: {server: [1.1.1.1]}}}}") + host("a1", "") + host("a2", "") + host("a3", ", role: worker"),
 			common("HighlyAvailable") + `apiVIPs: [10.20.40.5, "fd00::5"]
@@ -518,6 +551,8 @@ serviceNetwork: [{cidr: 172.30.0.0/16}]
 additionalNTPSources: [ntp.example.com]
 proxy: {httpProxy: "http://p:3128", httpsProxy: "http://p:3128", noProxy: .example.com}
 extraManifestsRefs: [{name: enable-crun}]
+installConfigOverrides: '{"fips":true}'
+cpuPartitioningMode: AllNodes
 nodes:
 - ` + node("a0", `, role: master, rootDeviceHints: {deviceName: /dev/sda, minSizeGigabytes: 100}, nodeNetwork: {interfaces: [{name: eno1, macAddress: "00:11:22:33:44:a0"}], config: {dns-resolver: {config: {server: [1.1.1.1]}}}}`) + "\n- " + node("a1", "") + "\n- " + node("a2", "") + "\n- " + node("a3", ", role: worker") + "\n"},
 	} {
@@ -526,7 +561,7 @@ nodes:
 			if raw == "" {
 				t.Fatal("no present-cluster-bm-ha")
 			}
-			got, err := json.Marshal(nested(find(t, resolve(t, raw, hostInventory("KEY")), "ClusterInstance", "bm-ha"), "spec"))
+			got, err := json.Marshal(nested(find(t, resolve(t, raw, hostInventory("KEY"), fipsHub), "ClusterInstance", "bm-ha"), "spec"))
 			if err != nil {
 				t.Fatal(err)
 			}

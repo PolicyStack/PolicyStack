@@ -22,23 +22,27 @@ MAX_INLINE = 60
 
 
 def camel(name):
-    first, *rest = name.split('-')
-    return first + ''.join(p.capitalize() for p in rest)
+    first, *rest = name.split("-")
+    return first + "".join(p.capitalize() for p in rest)
 
 
 def comments(text):
     """Map each mapping key's path to the comment block directly above it, at the key's indent."""
-    lines = text.split('\n')
+    lines = text.split("\n")
     found = {}
 
     def above(mark):
-        if lines[mark.line][:mark.column].strip() not in ('', '-'):
-            return ''  # not the first key on its line, e.g. inside a flow mapping
-        block, line, indent = [], mark.line, lines[mark.line][:mark.column].replace('-', ' ')
-        while line > 0 and lines[line - 1].startswith(indent + '#'):
+        if lines[mark.line][: mark.column].strip() not in ("", "-"):
+            return ""  # not the first key on its line, e.g. inside a flow mapping
+        block, line, indent = (
+            [],
+            mark.line,
+            lines[mark.line][: mark.column].replace("-", " "),
+        )
+        while line > 0 and lines[line - 1].startswith(indent + "#"):
             line -= 1
-            block.insert(0, lines[line].strip().lstrip('#').strip())
-        return ' '.join(b for b in block if b)
+            block.insert(0, lines[line].strip().lstrip("#").strip())
+        return " ".join(b for b in block if b)
 
     def walk(node, path):
         if isinstance(node, yaml.MappingNode):
@@ -55,21 +59,28 @@ def comments(text):
 def cell(text):
     """Escape for a table cell or paragraph: GitHub drops <word> as HTML outside code spans.
     <br> is the generator's own line break."""
-    parts = re.split(r'(`[^`]*`)', ' '.join(str(text).split()))
-    return ''.join(p if p.startswith('`') else re.sub(r'<(?!br>)', '&lt;', p) for p in parts).replace('|', r'\|')
+    parts = re.split(r"(`[^`]*`)", " ".join(str(text).split()))
+    return "".join(
+        p if p.startswith("`") else re.sub(r"<(?!br>)", "&lt;", p) for p in parts
+    ).replace("|", r"\|")
 
 
 def table(headers, rows):
     """Markdown table, dropping columns that are empty in every row."""
     keep = [i for i in range(len(headers)) if any(r[i] for r in rows)]
-    out = ['| ' + ' | '.join(headers[i] for i in keep) + ' |', '|' + '---|' * len(keep)]
-    out += ['| ' + ' | '.join(cell(r[i]) for i in keep) + ' |' for r in rows]
+    out = ["| " + " | ".join(headers[i] for i in keep) + " |", "|" + "---|" * len(keep)]
+    out += ["| " + " | ".join(cell(r[i]) for i in keep) + " |" for r in rows]
     return out
 
 
 def flow(value):
-    return yaml.safe_dump(value, default_flow_style=True, sort_keys=False,
-                          width=float('inf')).removesuffix('\n...\n').strip()
+    return (
+        yaml.safe_dump(
+            value, default_flow_style=True, sort_keys=False, width=float("inf")
+        )
+        .removesuffix("\n...\n")
+        .strip()
+    )
 
 
 def scalar(value):
@@ -79,215 +90,351 @@ def scalar(value):
 class Element:
     def __init__(self, path, chart, values, notes):
         self.path, self.chart, self.notes = path, chart, notes
-        self.name = chart.get('name', path.name)
+        self.name = chart.get("name", path.name)
         self.key = camel(self.name)
-        self.c = values.get('stack', {}).get(self.key) or {}
-        self.toggles = self.c.get('toggles') or {}
-        if isinstance(self.c.get('operatorPolicies'), list):
-            raise TypeError(f"{path}/values.yaml: operatorPolicies must be a map keyed by entry name "
-                             "(policy-library 3.0.0); convert the list")
-        self.policies = self.c.get('policies') or []
-        by_name = {p['name'] for p in self.policies}
+        self.c = values.get("stack", {}).get(self.key) or {}
+        self.toggles = self.c.get("toggles") or {}
+        if isinstance(self.c.get("operatorPolicies"), list):
+            raise TypeError(
+                f"{path}/values.yaml: operatorPolicies must be a map keyed by entry name "
+                "(policy-library 3.0.0); convert the list"
+            )
+        self.policies = self.c.get("policies") or []
+        by_name = {p["name"] for p in self.policies}
         # (kind, entry) in policy-library render order; operatorPolicies take their key as name.
-        self.templates = ([('config', e) for e in self.c.get('configPolicies') or []]
-                          + [('operator', {**e, 'name': k})
-                             for k, e in (self.c.get('operatorPolicies') or {}).items() if isinstance(e, dict)]
-                          + [('certificate', e) for e in self.c.get('certificatePolicies') or []])
+        self.templates = (
+            [("config", e) for e in self.c.get("configPolicies") or []]
+            + [
+                ("operator", {**e, "name": k})
+                for k, e in (self.c.get("operatorPolicies") or {}).items()
+                if isinstance(e, dict)
+            ]
+            + [("certificate", e) for e in self.c.get("certificatePolicies") or []]
+        )
         for _, t in self.templates:
-            if t.get('policyRef') not in by_name:
-                raise ValueError(f"{path}/values.yaml: {t['name']} has policyRef "
-                                 f"{t.get('policyRef')!r}, which names no policy")
+            if t.get("policyRef") not in by_name:
+                raise ValueError(
+                    f"{path}/values.yaml: {t['name']} has policyRef "
+                    f"{t.get('policyRef')!r}, which names no policy"
+                )
         for name in self.toggles:
             if not self.controls(name):
-                raise ValueError(f"{path}/values.yaml: toggle {name!r} matches no entry")
+                raise ValueError(
+                    f"{path}/values.yaml: toggle {name!r} matches no entry"
+                )
 
     def note(self, *path):
-        return self.notes.get(('stack', self.key) + path, '')
+        return self.notes.get(("stack", self.key) + path, "")
 
     def own(self, entry):
         """policy-library.enabled: a set toggle overrides enabled."""
-        toggle = self.toggles.get(entry['name'])
-        return bool(entry.get('enabled') if toggle is None else toggle)
+        toggle = self.toggles.get(entry["name"])
+        return bool(entry.get("enabled") if toggle is None else toggle)
 
     def children(self, policy):
-        return [(k, t) for k, t in self.templates if t['policyRef'] == policy['name']]
+        return [(k, t) for k, t in self.templates if t["policyRef"] == policy["name"]]
 
     def on(self, policy):
         """A Policy renders only when it and at least one of its templates are on."""
         return self.own(policy) and any(self.own(t) for _, t in self.children(policy))
 
     def policy(self, name):
-        return next(p for p in self.policies if p['name'] == name)
+        return next(p for p in self.policies if p["name"] == name)
 
     def controls(self, name):
-        hits = [f"Policy [`{name}`](#policy-{name})" for p in self.policies if p['name'] == name]
+        hits = [
+            f"Policy [`{name}`](#policy-{name})"
+            for p in self.policies
+            if p["name"] == name
+        ]
         for kind, t in self.templates:
             # A template sharing its Policy's name is covered by the Policy hit.
-            if t['name'] == name and not (hits and t['policyRef'] == name):
+            if t["name"] == name and not (hits and t["policyRef"] == name):
                 hit = f"{kind} `{t['policyRef']}-{name}`"
-                parent = self.policy(t['policyRef'])
+                parent = self.policy(t["policyRef"])
                 if not self.own(parent):
                     hit += f" (needs `{parent['name']}`)"
                 hits.append(hit)
-        return ', '.join(hits)
+        return ", ".join(hits)
 
     def resolve(self, dep, owner, kind):
         """Dependency target name, as policy-library.dependencyList resolves it."""
-        name = dep['name']
-        if dep.get('raw'):
+        name = dep["name"]
+        if dep.get("raw"):
             pass
-        elif dep.get('kind', kind) == 'Policy':
-            suffix = dep.get('release') or f"{dep.get('element', self.name)}-<cluster>"
+        elif dep.get("kind", kind) == "Policy":
+            suffix = dep.get("release") or f"{dep.get('element', self.name)}-<cluster>"
             name = f"{name}-{suffix}"
         else:
             name = f"{dep.get('policyRef', owner)}-{name}"
-        state = dep.get('compliance', 'Compliant')
-        return f"`{name}`" + ('' if state == 'Compliant' else f" ({state})")
+        state = dep.get("compliance", "Compliant")
+        return f"`{name}`" + ("" if state == "Compliant" else f" ({state})")
 
     def waits(self, t):
-        wait = t.get('waitForOperator') or []
-        ops = self.c.get('operatorPolicies') or {}
-        deps = [f"`{ops[o]['policyRef']}-{o}-status`" for o in ([wait] if isinstance(wait, str) else wait)]
-        deps += [self.resolve(d, t['policyRef'], 'ConfigurationPolicy') for d in t.get('extraDependencies') or []]
-        if deps and t.get('ignorePending'):
-            deps.append('compliant while pending')
-        return '<br>'.join(deps)
+        wait = t.get("waitForOperator") or []
+        ops = self.c.get("operatorPolicies") or {}
+        deps = [
+            f"`{ops[o]['policyRef']}-{o}-status`"
+            for o in ([wait] if isinstance(wait, str) else wait)
+        ]
+        deps += [
+            self.resolve(d, t["policyRef"], "ConfigurationPolicy")
+            for d in t.get("extraDependencies") or []
+        ]
+        if deps and t.get("ignorePending"):
+            deps.append("compliant while pending")
+        return "<br>".join(deps)
 
     def action(self, kind, t, policy):
-        own = t.get('remediationAction') or (policy.get('remediationAction') if kind == 'operator' else None) or 'inform'
-        if own.lower() == 'informonly':
-            return 'inform (always)'
-        return policy.get('remediationAction') or own
+        own = (
+            t.get("remediationAction")
+            or (policy.get("remediationAction") if kind == "operator" else None)
+            or "inform"
+        )
+        if own.lower() == "informonly":
+            return "inform (always)"
+        return policy.get("remediationAction") or own
 
     def renders(self, kind, t):
         def ct(value):
-            return '' if (value or 'musthave') == 'musthave' else f" ({value})"
-        if kind == 'operator':
+            return "" if (value or "musthave") == "musthave" else f" ({value})"
+
+        if kind == "operator":
             return f"[operator](#operators) `{t.get('subscription', {}).get('name', t['name'])}`{ct(t.get('complianceType'))}"
-        if kind == 'certificate':
-            return 'CertificatePolicy'
+        if kind == "certificate":
+            return "CertificatePolicy"
         out = []
-        for n in t.get('templateNames') or []:
-            if t.get('rawTemplate'):
+        for n in t.get("templateNames") or []:
+            if t.get("rawTemplate"):
                 # Raw converters set complianceType on each object; the entry's is ignored.
-                found = re.findall(r'complianceType:\s*["\']?(\w+)', self.converter(n['name']))
-                kinds = ', '.join(dict.fromkeys(c for c in found if c != 'musthave'))
+                found = re.findall(
+                    r'complianceType:\s*["\']?(\w+)', self.converter(n["name"])
+                )
+                kinds = ", ".join(dict.fromkeys(c for c in found if c != "musthave"))
             else:
-                kinds = t.get('complianceType') or n.get('complianceType')
+                kinds = t.get("complianceType") or n.get("complianceType")
             out.append(f"[{n['name']}](converters/{n['name']}.yaml){ct(kinds)}")
-        return '<br>'.join(out)
+        return "<br>".join(out)
 
     def converter(self, name):
-        path = self.path / 'converters' / f"{name}.yaml"
-        return path.read_text() if path.exists() else ''
+        path = self.path / "converters" / f"{name}.yaml"
+        return path.read_text() if path.exists() else ""
 
     def toggles_section(self):
-        rows = [(f"`{n}`", self.note('toggles', n), f"`{flow(v)}`", self.controls(n)) for n, v in self.toggles.items()]
-        return ['## Toggles', '', *self.intro('toggles'),
-                *table(['Toggle', 'Description', 'Default', 'Controls'], rows), '',
-                ('A toggle overrides `enabled` on every entry with that name; turning a Policy off '
-                 'removes everything in it.'), '']
+        rows = [
+            (f"`{n}`", self.note("toggles", n), f"`{flow(v)}`", self.controls(n))
+            for n, v in self.toggles.items()
+        ]
+        return [
+            "## Toggles",
+            "",
+            *self.intro("toggles"),
+            *table(["Toggle", "Description", "Default", "Controls"], rows),
+            "",
+            (
+                "A toggle overrides `enabled` on every entry with that name; turning a Policy off "
+                "removes everything in it."
+            ),
+            "",
+        ]
 
     def settings_section(self, config):
         rows, details = [], []
 
         def walk(node, path):
             for k, v in node.items():
-                p, key = path + (k,), '.'.join(path + (k,))
-                if isinstance(v, dict) and v and (all(map(scalar, v.values()))
-                                                  or any(self.note('config', *p, ck) for ck in v)):
-                    rows.append((f"`{key}`", self.note('config', *p), ''))
+                p, key = path + (k,), ".".join(path + (k,))
+                if (
+                    isinstance(v, dict)
+                    and v
+                    and (
+                        all(map(scalar, v.values()))
+                        or any(self.note("config", *p, ck) for ck in v)
+                    )
+                ):
+                    rows.append((f"`{key}`", self.note("config", *p), ""))
                     walk(v, p)
-                elif (not scalar(v) and len(flow(v)) > MAX_INLINE) or (isinstance(v, str) and '\n' in v):
-                    rows.append((f"`{key}`", self.note('config', *p), 'below' if scalar(v) else f"{len(v)} entries, below"))
-                    fence, body = ('```', v.rstrip('\n')) if scalar(v) else \
-                        ('```yaml', yaml.safe_dump(v, sort_keys=False, width=100).strip())
-                    details.extend(['', f"<details><summary><code>{key}</code> default</summary>", '',
-                                    fence, body, '```', '', '</details>'])
+                elif (not scalar(v) and len(flow(v)) > MAX_INLINE) or (
+                    isinstance(v, str) and "\n" in v
+                ):
+                    rows.append(
+                        (
+                            f"`{key}`",
+                            self.note("config", *p),
+                            "below" if scalar(v) else f"{len(v)} entries, below",
+                        )
+                    )
+                    fence, body = (
+                        ("```", v.rstrip("\n"))
+                        if scalar(v)
+                        else (
+                            "```yaml",
+                            yaml.safe_dump(v, sort_keys=False, width=100).strip(),
+                        )
+                    )
+                    details.extend(
+                        [
+                            "",
+                            f"<details><summary><code>{key}</code> default</summary>",
+                            "",
+                            fence,
+                            body,
+                            "```",
+                            "",
+                            "</details>",
+                        ]
+                    )
                 else:
-                    rows.append((f"`{key}`", self.note('config', *p), f"`{flow(v)}`"))
+                    rows.append((f"`{key}`", self.note("config", *p), f"`{flow(v)}`"))
 
         walk(config, ())
-        return ['## Settings', '', *self.intro('config'),
-                f"Under `stack.{self.key}.config`. Maps merge across layers; lists are replaced whole.", '',
-                *table(['Key', 'Description', 'Default'], rows), *details, '']
+        return [
+            "## Settings",
+            "",
+            *self.intro("config"),
+            f"Under `stack.{self.key}.config`. Maps merge across layers; lists are replaced whole.",
+            "",
+            *table(["Key", "Description", "Default"], rows),
+            *details,
+            "",
+        ]
 
     def intro(self, section):
         text = self.note(section)
-        return [cell(text), ''] if text else []
+        return [cell(text), ""] if text else []
 
     def operators_section(self):
         rows = []
         for kind, t in self.templates:
-            if kind != 'operator':
+            if kind != "operator":
                 continue
-            sub = t.get('subscription') or {}
-            versions = '<br>'.join(f"`{v}`" for v in t.get('versions') or []) or 'any'
-            if t.get('upgradeApproval', 'Automatic') != 'Automatic':
+            sub = t.get("subscription") or {}
+            versions = "<br>".join(f"`{v}`" for v in t.get("versions") or []) or "any"
+            if t.get("upgradeApproval", "Automatic") != "Automatic":
                 versions += f", {t['upgradeApproval']} approval"
-            off = '' if self.own(t) else ' (off)'
-            rows.append((f"`{t['policyRef']}-{t['name']}`{off}", f"`{sub.get('name', '')}`",
-                         f"`{sub.get('channel', '')}`", f"`{sub.get('source', '')}`",
-                         f"`{t.get('namespace', '')}`", versions))
+            off = "" if self.own(t) else " (off)"
+            rows.append(
+                (
+                    f"`{t['policyRef']}-{t['name']}`{off}",
+                    f"`{sub.get('name', '')}`",
+                    f"`{sub.get('channel', '')}`",
+                    f"`{sub.get('source', '')}`",
+                    f"`{t.get('namespace', '')}`",
+                    versions,
+                )
+            )
         if not rows:
             return []
-        return ['## Operators', '',
-                ('Each also renders `<name>-ns` and `<name>-status`. Pin with '
-                 '`operatorPolicies.<key>.versions` in a layer.'), '',
-                *table(['Operator policy', 'Package', 'Channel', 'Source', 'Namespace', 'Versions'], rows), '']
+        return [
+            "## Operators",
+            "",
+            (
+                "Each also renders `<name>-ns` and `<name>-status`. Pin with "
+                "`operatorPolicies.<key>.versions` in a layer."
+            ),
+            "",
+            *table(
+                [
+                    "Operator policy",
+                    "Package",
+                    "Channel",
+                    "Source",
+                    "Namespace",
+                    "Versions",
+                ],
+                rows,
+            ),
+            "",
+        ]
 
     def policies_section(self):
-        md = ['## Policies', '',
-              ('`<cluster>` is the ManagedCluster name, or hubName on the hub. '
-               '`global.remediationAction: inform` overrides every action below.'), '']
-        default = self.c.get('default') or {}
-        meta = [f"{label}: {', '.join(default[k])}." for k, label in
-                (('standards', 'Standards'), ('controls', 'Controls'), ('categories', 'Categories')) if default.get(k)]
+        md = [
+            "## Policies",
+            "",
+            (
+                "`<cluster>` is the ManagedCluster name, or hubName on the hub. "
+                "`global.remediationAction: inform` overrides every action below."
+            ),
+            "",
+        ]
+        default = self.c.get("default") or {}
+        meta = [
+            f"{label}: {', '.join(default[k])}."
+            for k, label in (
+                ("standards", "Standards"),
+                ("controls", "Controls"),
+                ("categories", "Categories"),
+            )
+            if default.get(k)
+        ]
         if meta:
-            md += [cell(' '.join(meta)), '']
+            md += [cell(" ".join(meta)), ""]
         for p in self.policies:
             line = f"`{p['name']}-{self.name}-<cluster>`"
-            if p.get('description'):
+            if p.get("description"):
                 line += f": {p['description'].rstrip('.')}."
-            if p.get('dependencies'):
-                line += ' Depends on ' + ', '.join(self.resolve(d, p['name'], 'Policy') for d in p['dependencies']) + '.'
+            if p.get("dependencies"):
+                line += (
+                    " Depends on "
+                    + ", ".join(
+                        self.resolve(d, p["name"], "Policy") for d in p["dependencies"]
+                    )
+                    + "."
+                )
             if not self.own(p):
                 line += f" Off by default; turn on with toggle `{p['name']}`."
             elif not self.on(p):
-                line += ' Renders nothing by default: every template is off.'
+                line += " Renders nothing by default: every template is off."
             rows = []
             for kind, t in self.children(p):
                 # A same-name template switched off with its Policy is covered by the Policy line.
-                off = not self.own(t) and not (t['name'] == p['name'] and not self.own(p))
-                name = f"`{p['name']}-{t['name']}`" + (f" (off, toggle `{t['name']}`)" if off else '')
-                rows.append((name, self.action(kind, t, p), self.waits(t), self.renders(kind, t),
-                             t.get('description', '')))
-            md += [f"### Policy `{p['name']}`", '', cell(line), '']
+                off = not self.own(t) and not (
+                    t["name"] == p["name"] and not self.own(p)
+                )
+                name = f"`{p['name']}-{t['name']}`" + (
+                    f" (off, toggle `{t['name']}`)" if off else ""
+                )
+                rows.append(
+                    (
+                        name,
+                        self.action(kind, t, p),
+                        self.waits(t),
+                        self.renders(kind, t),
+                        t.get("description", ""),
+                    )
+                )
+            md += [f"### Policy `{p['name']}`", "", cell(line), ""]
             if rows:
-                md += [*table(['Template', 'Action', 'Waits for', 'Renders', 'Description'], rows), '']
+                md += [
+                    *table(
+                        ["Template", "Action", "Waits for", "Renders", "Description"],
+                        rows,
+                    ),
+                    "",
+                ]
         return md
 
     def render(self):
-        md = [HEADER, f"# {self.name}", '']
-        if self.chart.get('description'):
-            md += [cell(self.chart['description']), '']
-        if self.chart.get('home'):
-            md += [f"Guide: {self.chart['home']}", '']
-        md += ['```yaml', 'stack:', f"  {self.key}:", '    enabled: true', '```', '']
+        md = [HEADER, f"# {self.name}", ""]
+        if self.chart.get("description"):
+            md += [cell(self.chart["description"]), ""]
+        if self.chart.get("home"):
+            md += [f"Guide: {self.chart['home']}", ""]
+        md += ["```yaml", "stack:", f"  {self.key}:", "    enabled: true", "```", ""]
         if self.toggles:
             md += self.toggles_section()
-        if self.c.get('config'):
-            md += self.settings_section(self.c['config'])
+        if self.c.get("config"):
+            md += self.settings_section(self.c["config"])
         md += self.operators_section() + self.policies_section()
-        return '\n'.join(md).rstrip('\n') + '\n'
+        return "\n".join(md).rstrip("\n") + "\n"
 
 
 def generate(element_path):
     """README content for one element, or None when it has no stack.<key> values."""
-    values_file = element_path / 'values.yaml'
+    values_file = element_path / "values.yaml"
     if not values_file.exists():
         return None
-    chart_file = element_path / 'Chart.yaml'
+    chart_file = element_path / "Chart.yaml"
     chart = yaml.safe_load(chart_file.read_text()) if chart_file.exists() else {}
     text = values_file.read_text()
     element = Element(element_path, chart, yaml.safe_load(text) or {}, comments(text))
@@ -302,20 +449,34 @@ def write_if_changed(path, content):
 
 
 def elements(stack_dir):
-    return sorted(p for p in Path(stack_dir).iterdir() if p.is_dir() and not p.name.startswith('.'))
+    return sorted(
+        p
+        for p in Path(stack_dir).iterdir()
+        if p.is_dir() and not p.name.startswith(".")
+    )
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Generate stack/<element>/README.md")
-    parser.add_argument('--stack-dir', default='stack', help='directory containing elements (default: stack)')
-    parser.add_argument('--element', help='generate only this element')
-    parser.add_argument('--check', action='store_true', help='exit 1 when a README is missing or stale')
+    parser.add_argument(
+        "--stack-dir",
+        default="stack",
+        help="directory containing elements (default: stack)",
+    )
+    parser.add_argument("--element", help="generate only this element")
+    parser.add_argument(
+        "--check", action="store_true", help="exit 1 when a README is missing or stale"
+    )
     args = parser.parse_args(argv)
 
     if not Path(args.stack_dir).is_dir():
         print(f"error: {args.stack_dir} is not a directory")
         return 1
-    paths = [Path(args.stack_dir) / args.element] if args.element else elements(args.stack_dir)
+    paths = (
+        [Path(args.stack_dir) / args.element]
+        if args.element
+        else elements(args.stack_dir)
+    )
     stale = []
     for path in paths:
         content = generate(path) if path.is_dir() else None
@@ -324,18 +485,18 @@ def main(argv=None):
                 print(f"error: {path} has no stack.{camel(path.name)} values")
                 return 1
             continue
-        readme = path / 'README.md'
+        readme = path / "README.md"
         if args.check:
             if not readme.exists() or readme.read_text() != content:
                 stale.append(readme)
         elif write_if_changed(readme, content):
             print(f"updated {readme}")
     if stale:
-        print('Stale element READMEs, run python tools/doc-generator.py:')
-        print('\n'.join(f"  {p}" for p in stale))
+        print("Stale element READMEs, run python tools/doc-generator.py:")
+        print("\n".join(f"  {p}" for p in stale))
         return 1
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

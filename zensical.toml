@@ -1,6 +1,6 @@
 [project]
 site_name = "PolicyStack"
-# Must match the CNAME written by docs-site.yml.
+# Must match the CNAME written by ci.yml.
 site_url = "https://policystk.io/"
 repo_url = "https://github.com/PolicyStack/PolicyStack"
 # Inferred wrongly from repo_url otherwise: repo_name as "GitHub", edit_uri as edit/master/docs.
@@ -29,6 +29,7 @@ nav = [
     { "Writing an element" = "elements.md" },
     { "Validation" = "validation.md" },
     { "CI workflows" = "workflows.md" },
+    { "Contributing" = "contributing.md" },
   ] },
 ]
 

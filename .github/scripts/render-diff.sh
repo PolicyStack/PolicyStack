@@ -15,13 +15,8 @@ rm -rf "$work" && git worktree prune && mkdir -p "$work/before" "$work/after" "$
 # fleet <commit>: fleet file paths at commit
 fleet() { git ls-tree --name-only "$1" -- fleet/ fleet/hubs/ | grep '\.yaml$' || true; }
 # resolve <commit> <revision>: the commit Argo CD renders for revision when the default branch is at
-# commit, in the order validate.yml's pin check uses: tag, branch, SHA.
-resolve() {
-  case $2 in "") return 1 ;; HEAD | "$DEFAULT_BRANCH") echo "$1"; return ;; esac
-  git rev-parse -q --verify "refs/tags/$2^{commit}" ||
-    git rev-parse -q --verify "refs/remotes/origin/$2^{commit}" ||
-    { [[ $2 =~ ^[0-9a-f]{5,40}$ ]] && git rev-parse -q --verify "$2^{commit}"; }
-}
+# commit, as POLICY052 resolves it.
+resolve() { "$bin" resolve-revision --branch "$DEFAULT_BRANCH" --at "$1" -- "$2" 2>/dev/null; }
 # finish <changed> [<summary when unchanged>]
 finish() {
   echo "changed=$1" >> "$GITHUB_OUTPUT"
@@ -142,10 +137,11 @@ for c in $(printf '%s\n' "${!clusters[@]}" | sort); do
     ok/ok)
       revision=$(r "$a")
       [ "${rev[$b]}" = "${rev[$a]}" ] || revision="$(r "$b") → $(r "$a")"
-      for el in $(ls "$b" "$a" | grep '\.yaml$' | sort -u); do
+      for el in $(for f in "$b"/*.yaml "$a"/*.yaml; do [ -e "$f" ] && echo "${f##*/}"; done | sort -u); do
         ! cmp -s "$b/$el" "$a/$el" || continue
         if grep -q '^# RENDER000' "$a/$el" 2>/dev/null; then
           changes+=("${el%.yaml}: **render failed**")
+          # shellcheck disable=SC2016 # literal Markdown fences
           printf '%s: render failed\n````\n%s\n````\n\n' "${el%.yaml}" "$(sed 's/^# //' "$a/$el")" >> "$d"
           continue
         fi

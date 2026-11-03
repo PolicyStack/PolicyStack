@@ -76,7 +76,8 @@ func subPolicy(ctx Context, name string) (string, []string) {
 var (
 	undefinedFunc = regexp.MustCompile(`function "([^"]+)" not defined`)
 	escapedHub    = regexp.MustCompile(`\{\{ "\{\{-?" \}\}\s*hub`)
-	escaped       = regexp.MustCompile(`\{\{ "\{\{-?" \}\}`)
+	// Escaped matches an escaped ACM template opening, `{{ "{{" }}` or `{{ "{{-" }}`.
+	Escaped = regexp.MustCompile(`\{\{ "\{\{-?" \}\}`)
 )
 
 // locate returns the converter behind f and the line of its first template of f's pass, or for an
@@ -88,7 +89,7 @@ func locate(dir string, converters []string, f acmtemplates.Failure) (string, in
 		}
 		converters = converters[f.Template : f.Template+1]
 	}
-	want := escaped
+	want := Escaped
 	if f.Hub {
 		want = escapedHub
 	}

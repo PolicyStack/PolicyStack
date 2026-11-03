@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
@@ -167,8 +168,7 @@ a: {{ $cfg.x }}
 			}
 			var want []string
 			for _, w := range tt.want {
-				var pos, key string
-				fmt.Sscan(w, &pos, &key)
+				pos, key, _ := strings.Cut(w, " ")
 				want = append(want, fmt.Sprintf("%s reads stack.myElement.config.%s, which is not in the element's values.yaml", pos, key))
 			}
 			if !slices.Equal(got, want) {

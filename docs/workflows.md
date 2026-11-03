@@ -2,35 +2,108 @@
 
 | Workflow (`.github/workflows/`) | Trigger | Fails when |
 | -------- | ------- | ---------- |
-| [Policy Validate](#policy-validate) (`validate.yml`) | Changes to `stack/`, `lifecycle/`, `install/`, `values/`, `values.yaml`, `fleet/`, `tools/sample-element/`, `tools/validator/` | Validator error, bad fleet pin, broken install chart, failing test |
-| [Documentation Check](#documentation-check) (`docs-check.yml`) | Changes to `stack/` or the doc generator | An element README is stale |
-| [Render Diff](#render-diff) (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/` | Not a gate |
-| [Update Documentation](#update-documentation) (`docs-update.yml`) | `update-docs` label on a PR | Not a gate |
-| [Documentation Site](#documentation-site) (`docs-site.yml`) | Every PR and `main` push | A relative link, anchor or snippet does not resolve |
+| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook, the validator, a validator test, the doc generator tests or the site build fails |
+| [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit |
+| [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI and by the PolicyStack-chart PR CI | Validator error, bad fleet pin, broken install chart, failing test |
+| [Render Diff](#render-diff) (`render-diff.yml`) | PRs to the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` | Not a gate |
 
-Checks run on PRs and pushes to `main`. A new push to a PR cancels its running checks. Policy Validate, Documentation Check and Documentation Site can also be started from the Actions tab.
+A new push to a PR cancels its running checks. CI and Policy Validate can also be started from the Actions tab.
+
+## Required checks
+
+`ci` and `pr-title` are the required checks for `main`. Both names are fixed: the ruleset requires them by name.
+
+`ci` is the last job in `ci.yml`. It always runs and fails if any job it needs failed, was cancelled or was skipped ([alls-green](https://github.com/re-actors/alls-green)). A new job goes in its `needs`, not in the ruleset.
+
+!!! note
+    No gating workflow has a `paths` filter. A required check whose workflow is skipped by `on.paths` never reports, so the PR waits on it forever.
+
+## CI
+
+| Job | Runs |
+| --- | ---- |
+| `lint` | `prek run --all-files --show-diff-on-failure` over `.pre-commit-config.yaml` |
+| `validate` | [Policy Validate](#policy-validate) |
+| `docs` | Doc generator tests, then `zensical build --strict` |
+| `ci` | The required check over `lint`, `validate` and `docs` |
+| `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `ci`: the site to `gh-pages` |
+
+Tool versions come from `mise.toml`. The same run locally:
+
+```sh
+mise install
+prek run --all-files             # lint
+make -C tools/validator ci       # lint, validate, test
+```
+
+### Hooks
+
+| Hook | Checks |
+| ---- | ------ |
+| `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins. `templates/` and `converters/` are skipped: they are YAML only once rendered |
+| `actionlint`, `zizmor` | Workflows. zizmor runs offline |
+| `shellcheck` | Shell scripts |
+| `ruff-check`, `ruff-format` | `tools/*.py` |
+| `validator-lint` | `make -C tools/validator lint`: golangci-lint, `go mod tidy -diff`, govulncheck |
+| `element-readmes` | Regenerates `stack/*/README.md` ([Element reference](elements.md#element-reference)) |
+| `lychee` | Relative links in `docs/`, offline |
+
+A hook that rewrites a file fails. Commit what it wrote:
+
+```sh
+prek run element-readmes   # or: python tools/doc-generator.py
+git add stack/*/README.md
+```
+
+!!! tip
+    `prek install` runs the hooks on every commit.
+
+### Documentation site
+
+The `docs` job builds `docs/` with `zensical build --strict`. On `main`, `publish` pushes `site/` to the `gh-pages` branch as a single commit, using a GitHub App. The site is unversioned: for an older revision, read `docs/` at that revision on GitHub.
+
+```sh
+pip install -r tools/requirements-docs.txt
+zensical serve            # live preview, run from the repo root
+zensical build --strict   # the CI check
+```
+
+!!! warning "Not checked by strict mode"
+    Absolute links, `nav` in `zensical.toml`, and snippet content. Keep the rules section of `tools/validator/README.md` free of relative links, and restart `serve` after editing it.
+
+## PR Title
+
+The PR title must match:
+
+```text
+<type>(<scope>)!: <subject>
+```
+
+`type` is one of `feat fix docs chore ci refactor test perf build revert`. `(<scope>)` (lowercase, digits, `-`) and `!` (breaking) are optional.
+
+```text
+feat(validator): real POLICY080       # ok
+fix!: rename hubName                  # ok
+Revert "feat: add metallb"            # fails: retitle to revert: feat: add metallb
+```
+
+Editing the title re-runs the check.
 
 ## Policy Validate
 
 Findings are annotated on the PR at the file and line to fix. Errors fail the job, warnings only annotate.
 
+The job runs twice: with the Helm in `mise.toml` (3.18.4, what OpenShift GitOps 1.18 renders with) and with Helm 4.2.1. The 4.2.1 leg is advisory (`continue-on-error`) until Argo CD 3.5 ships in OpenShift GitOps or Helm 3 reaches end of life on 2027-02-10, whichever comes first.
+
 ```sh
-# Every validator run also gets --repo-root .; steps 2 and 4 also get --extra-values tools/validator/testdata/baseline.yaml
-make -C tools/validator lint build                                                  # (1)!
-policystack-validator --github --include-sample-element --skip POLICY080,POLICY081  # (2)!
-policystack-validator --github --extra-values "tools/validator/testdata/baseline.yaml,$profile" --only RENDER000,POLICY081 # (3)!
-policystack-validator --github --fixtures-dir fleet --skip POLICY080                # (4)!
-# fleet pin check, install chart check (below)
-make -C tools/validator test                                                        # (5)!
+make -C tools/validator validate   # (1)!
+make -C tools/validator test       # (2)!
 ```
 
-1.  gofmt, vet, build. Go version comes from `tools/validator/go.mod`.
-2.  Fixture clusters plus `tools/sample-element/`. POLICY080 is always skipped: it ignores every kind the chart emits.
-3.  Once per file in `tools/validator/testdata/profiles/`. They turn every element on, so every converter's ACM templates are evaluated ([ACM templates](validation.md#acm-templates)). Runs even if step 2 failed.
-4.  Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exist. Renders the PR's tree, not each file's `revision` ([Render Diff](#render-diff) does that).
-5.  Last, so a failing test does not hide the annotations.
+1.  Three validator passes ([Running it](validation.md#running-it)). Fixture clusters plus `tools/sample-element/` with POLICY081 skipped; every profile in `tools/validator/testdata/profiles/`, sample element included, with every rule ([ACM templates](validation.md#acm-templates)); POLICY080 needs the [CRDs](validation.md#crd-schemas), cached between runs; `fleet/` when it exists, rendering the PR's tree, not each file's `revision` ([Render Diff](#render-diff) does that).
+2.  Last, so a failing test does not hide the annotations. Helm 3 leg only.
 
-**Fleet pin check.** Each `revision` must be a tag, branch or commit SHA (5 to 40 hex characters) whose commit contains what the file uses, including every `valueFiles` entry. A pin to the PR's base branch is checked against the merge commit. A `values/clusters/<name>.yaml` with no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` is a warning, since a tag-pinned cluster's file lands first ([Onboarding](rollout.md#onboarding-a-cluster)).
+**Fleet pins (POLICY052).** Each `revision` must be a tag, branch or commit SHA (5 to 40 hex characters) whose commit contains what the file uses, including every `valueFiles` entry. A pin to the PR's base branch is checked against the merge commit. A `values/clusters/<name>.yaml` with no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` is a warning, since a tag-pinned cluster's file lands first ([Onboarding](rollout.md#onboarding-a-cluster)).
 
 ```yaml title="fleet/prod-east-1.yaml"
 revision: v1.4.0  # (1)!
@@ -45,10 +118,12 @@ version: 4.20.8   # (3)!
 !!! warning
     A pinned branch deleted after merge is not caught, and stops Argo CD generating Applications for every cluster. See [Revision](applicationset.md#revision).
 
-**Install chart check.** Runs even if an earlier step failed. `helm lint install` passes, an empty `hubName` or `gitRepo` fails the install, `policyNamespace` matches between `install/values.yaml` and `values.yaml`, and `install/operators` renders the ACM and GitOps operators plus a MultiClusterHub ([Installation](install.md)).
+**Install chart (POLICY071).** `helm lint install` passes, an empty `hubName` or `gitRepo` fails the install, `policyNamespace` matches between `install/values.yaml` and `values.yaml`, the ApplicationSets, their Applications, the GitOpsCluster and its Placement carry `velero.io/exclude-from-backup: "true"`, and `install/operators` renders the ACM and GitOps operators plus a MultiClusterHub ([Installation](install.md)).
+
+**Chart PRs.** The PolicyStack-chart CI calls this workflow with `library-artifact`, an artifact holding the unpacked `charts/policy-library` directory. It checks out PolicyStack `main` and runs `make -C tools/validator consumers`, which renders every element, `lifecycle/` and the sample element against that chart at their pinned version. The test step is skipped: a chart PR that adds a key must not fail on PolicyStack's own tests. POLICY071 still runs; `install/` does not use policy-library.
 
 !!! note
-    `HELM_VERSION` pins Helm in `validate.yml` and `render-diff.yml`. Keep them equal, on the major the hub's Argo CD bundles. Dependabot does not update it.
+    The Helm floor in `mise.toml` moves only when the supported OpenShift GitOps floor does ([Installation](install.md)). Renovate does not bump it.
 
 Run it locally: [Validation](validation.md).
 
@@ -71,66 +146,21 @@ Comments on the PR with what the merge changes in each `fleet/` cluster's render
 
 Each cluster gets a collapsed diff per element below the table, or the Helm error. `render fixed` means it failed on the base branch and renders now. An element that fails the same way on both sides is not listed. A cluster added or removed shows totals only.
 
-Each fleet file renders at its own `revision`, before and after the merge (`.github/scripts/render-diff.sh`). A cluster pinned to `main` or `HEAD` shows the PR. One pinned to a tag changes only when its pin moves.
+Each fleet file renders at its own `revision`, resolved as POLICY052 does, before and after the merge (`.github/scripts/render-diff.sh`). A cluster pinned to `main` or `HEAD` shows the PR. One pinned to a tag changes only when its pin moves.
 
 !!! info "Limits"
     - Comments stop near 60,000 characters. The full patch is the run's `render-diff.patch` artifact.
-    - Fork and Dependabot PRs have a read-only token and get the result in the job summary.
+    - Fork PRs have a read-only token and get the result in the job summary.
     - About 30 seconds per distinct commit rendered.
-
-## Documentation Check
-
-```sh
-python -m unittest tools/test_doc_generator.py
-python tools/doc-generator.py --check  # (1)!
-```
-
-1.  Regenerates each `stack/<element>/README.md` in memory and compares.
-
-When `Verify Documentation` fails, fix it either way:
-
-=== "Locally"
-
-    ```sh
-    python tools/doc-generator.py
-    git add stack/*/README.md
-    ```
-
-=== "Label"
-
-    Add the `update-docs` label to the PR.
-
-## Update Documentation
-
-On the `update-docs` label, regenerates `stack/*/README.md`, commits any change as `docs: update documentation [auto-generated]`, pushes it to the PR branch, and removes the label. A `GITHUB_TOKEN` push starts no workflows, so it dispatches Documentation Check and Policy Validate itself. Fork PRs are skipped.
-
-## Documentation Site
-
-Builds `docs/` with `zensical build --strict`. On `main`, a second job publishes `site/` to the `gh-pages` branch as a single commit, using a GitHub App. The site is unversioned: for an older revision, read `docs/` at that revision on GitHub.
-
-```sh
-pip install -r tools/requirements-docs.txt
-zensical serve            # live preview, run from the repo root
-zensical build --strict   # the CI check
-```
-
-!!! warning "Not checked by strict mode"
-    Absolute links, `nav` in `zensical.toml`, and snippet content. Keep the rules section of `tools/validator/README.md` free of relative links, and restart `serve` after editing it.
-
-??? info "One-time publish setup"
-    `GITHUB_TOKEN` cannot bypass rulesets and its pushes do not start a Pages build, hence the App.
-
-    | Where | Setting |
-    | ----- | ------- |
-    | Org Settings > GitHub Apps | No webhook, only **Contents: Read and write**, installed on this repository only |
-    | Settings > Environments > `github-pages` | Deployment branches: `main` and `gh-pages` (the Pages build from `gh-pages` deploys to this environment too). Variable `DOCS_APP_CLIENT_ID`, secret `DOCS_APP_PRIVATE_KEY` |
-    | Settings > Rules > Rulesets | On `gh-pages`: Restrict creations, updates, deletions, Block force pushes. Bypass: the App only, Always allow |
-    | Settings > Pages | Deploy from branch `gh-pages`, root. Custom domain `policystk.io`, Enforce HTTPS |
-    | Org Settings > Pages | Verified domain `policystk.io` |
-    | Cloudflare DNS | `policystk.io` A and AAAA to GitHub's Pages IPs, `www` CNAME to `policystack.github.io`, DNS only. Proxied needs SSL mode Full (strict) |
-
-    Keep all four rules: every publish force-pushes. The domain lives in `site_url` and the `CNAME` the publish job writes; change both together.
 
 ## Dependencies
 
-Actions are pinned to commit SHAs. Dependabot opens weekly PRs for actions, the validator's Go modules, and `tools/requirements*.txt`.
+Renovate opens the update PRs, from the org preset `renovate-config.json` in [`PolicyStack/.github`](https://github.com/PolicyStack/.github). `renovate.json` only extends it.
+
+| Pinned in | What |
+| --------- | ---- |
+| `mise.toml` | Every CLI tool, Go and Python |
+| `tools/validator/go.mod` | Go libraries and `govulncheck` (`go tool`) |
+| `tools/requirements*.txt` | PyYAML, Zensical |
+| `.github/workflows/` | Actions, by commit SHA |
+| `stack/*/Chart.yaml`, `lifecycle/`, `tools/sample-element/` | policy-library, bumped together in one PR after a chart release ([Contributing](contributing.md#chart-changes)) |

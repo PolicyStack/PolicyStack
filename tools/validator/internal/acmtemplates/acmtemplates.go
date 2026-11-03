@@ -1,6 +1,6 @@
 // Package acmtemplates evaluates the ACM templates a render escapes past Helm the way ACM does:
 // hub templates as the governance-policy-propagator resolves them, then managed templates as the
-// config-policy-controller does, against a fake cluster. helm template and kubeconform see these
+// config-policy-controller does, against a fake cluster. helm template and POLICY080 see these
 // templates only as strings.
 package acmtemplates
 

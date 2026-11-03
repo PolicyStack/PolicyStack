@@ -44,7 +44,7 @@ func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 		if alreadyDownloaded(elementDir) {
 			return
 		}
-		cmd := exec.CommandContext(ctx, r.HelmBin, "dependency", "update", elementDir)
+		cmd := exec.CommandContext(ctx, r.HelmBin, "dependency", "update", elementDir) //nolint:gosec // G204: no shell; the binary is --helm-bin
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
@@ -97,7 +97,7 @@ func (r *Runner) Template(ctx context.Context, elementDir, releaseName string, v
 	for _, kv := range setString {
 		args = append(args, "--set-string", kv)
 	}
-	cmd := exec.CommandContext(ctx, r.HelmBin, args...)
+	cmd := exec.CommandContext(ctx, r.HelmBin, args...) //nolint:gosec // G204: no shell; the binary is --helm-bin
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -109,9 +109,9 @@ func (r *Runner) Template(ctx context.Context, elementDir, releaseName string, v
 	return res
 }
 
-// Lint runs `helm lint <element>`. Returns non-nil err on lint failure.
-func (r *Runner) Lint(ctx context.Context, elementDir string) (output string, err error) {
-	cmd := exec.CommandContext(ctx, r.HelmBin, "lint", elementDir)
+// Lint runs `helm lint <element> <args...>`. Returns non-nil err on lint failure.
+func (r *Runner) Lint(ctx context.Context, elementDir string, args ...string) (output string, err error) {
+	cmd := exec.CommandContext(ctx, r.HelmBin, append([]string{"lint", elementDir}, args...)...) //nolint:gosec // G204: no shell; the binary is --helm-bin
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf

@@ -2,6 +2,7 @@ package checks
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
 func TestPolicy035_LayerKeys(t *testing.T) {
@@ -173,7 +175,7 @@ stack:
 func TestComponentKeys(t *testing.T) {
 	archives, _ := filepath.Glob("../../../../stack/*/charts/policy-library-*.tgz")
 	if len(archives) == 0 {
-		t.Skip("no policy-library archive under stack/*/charts")
+		testenv.Skip(t, "no policy-library archive under stack/*/charts")
 	}
 	seen := map[string]bool{}
 	for _, a := range archives {
@@ -205,12 +207,11 @@ func TestComponentKeys(t *testing.T) {
 // archiveFile returns name from the gzipped tar at path.
 func archiveFile(t *testing.T, path, name string) []byte {
 	t.Helper()
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-	gz, err := gzip.NewReader(f)
+	gz, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		t.Fatal(err)
 	}

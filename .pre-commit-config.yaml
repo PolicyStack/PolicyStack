@@ -1,0 +1,69 @@
+# Run by prek: in CI (ci.yml lint) as `prek run --all-files`, locally after `prek install`. Tools come
+# from mise.toml (language: system). Only the README generator gets its own env, for PyYAML.
+# Helm templates and converters are not YAML until rendered.
+exclude: (^|/)(templates|converters|__snapshot__)/|^(site|autoshiftv2|oac-apps)/
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: check-yaml
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/
+
+      - id: zizmor
+        name: zizmor
+        entry: zizmor --offline
+        language: system
+        files: ^\.github/workflows/
+
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format --check
+        language: system
+        types: [python]
+
+      - id: validator-lint
+        name: validator lint
+        entry: make -C tools/validator lint
+        language: system
+        files: ^tools/validator/
+        pass_filenames: false
+
+      # Rewrites stale element READMEs; a rewrite fails the hook. Commit the result.
+      - id: element-readmes
+        name: element READMEs
+        entry: python tools/doc-generator.py
+        language: python
+        additional_dependencies: [PyYAML==6.0.3] # keep equal to tools/requirements.txt
+        files: ^(stack/[^/]+/(Chart\.yaml|values\.yaml|README\.md)|tools/doc-generator\.py)$
+        pass_filenames: false
+
+      # Relative links only. zensical build --strict (ci.yml docs) checks anchors and snippets.
+      - id: lychee
+        name: lychee
+        entry: lychee --offline docs
+        language: system
+        files: ^docs/
+        pass_filenames: false

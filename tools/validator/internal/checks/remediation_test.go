@@ -3,94 +3,55 @@ package checks
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 )
 
 func TestPolicy036_RemediationOverride(t *testing.T) {
-	policy := func(name, action string) string {
-		s := "      - name: " + name + "\n        enabled: true\n"
-		if action != "" {
-			s += "        remediationAction: " + action + "\n"
-		}
-		return s
-	}
-	entry := func(name, ref, action string) string {
-		s := "      - name: " + name + "\n        enabled: true\n        policyRef: " + ref + "\n"
-		if action != "" {
-			s += "        remediationAction: " + action + "\n"
-		}
-		return s
-	}
-	operator := func(name, ref, action string) string {
-		return "      " + name + ":\n        enabled: true\n        policyRef: " + ref + "\n        remediationAction: " + action + "\n"
-	}
+	const values = "stack:\n  myElement:\n    enabled: true\n    policies:\n" +
+		"      - name: a\n        remediationAction: enforce\n" + // line 6
+		"    configPolicies:\n      - name: x\n        policyRef: a\n"
+	action := func(a string) string { return "          remediationAction: " + a + "\n" }
+	cfg := func(name, a string) string { return template("ConfigurationPolicy", name, "", action(a)) }
+	const enforce = "  remediationAction: enforce\n"
 	cases := []struct {
-		name, body string
-		want       []string // message prefixes, one per finding
+		name, rendered string
+		layers         []string
+		want           []want
 	}{
-		{"template inform under enforce", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "inform"),
-			[]string{`configPolicies[0] "x": remediationAction inform is overridden by policies[0].remediationAction enforce: ACM applies the Policy's action to every template, so this one runs as enforce`}},
-		{"template enforce under inform", "    policies:\n" + policy("b", "") + policy("a", "inform") + "    configPolicies:\n" + entry("x", "a", "enforce"),
-			[]string{`configPolicies[0] "x": remediationAction enforce is overridden by policies[1].remediationAction inform`}},
-		{"InformOnly under enforce", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "InformOnly") + entry("y", "a", "informonly"), nil},
-		{"same action", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},
-		{"case-insensitive", "    policies:\n" + policy("a", "Enforce") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},
-		{"policy unset", "    policies:\n" + policy("a", "") + "    configPolicies:\n" + entry("x", "a", "enforce"), nil},
-		{"template unset under enforce", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", ""),
-			[]string{`configPolicies[0] "x": remediationAction inform is overridden by policies[0].remediationAction enforce`}},
-		{"template unset under inform", "    policies:\n" + policy("a", "inform") + "    configPolicies:\n" + entry("x", "a", ""), nil},
-		{"unknown policyRef", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "b", "inform"), nil},
-		{"first of duplicate policies", "    policies:\n" + policy("a", "enforce") + policy("a", "inform") + "    configPolicies:\n" + entry("x", "a", "inform"),
-			[]string{`configPolicies[0] "x": remediationAction inform is overridden by policies[0].remediationAction enforce`}},
-		{"several templates", "    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", "inform") + entry("y", "a", "INFORM"),
-			[]string{`configPolicies[0] "w"`, `configPolicies[1] "x"`, `configPolicies[2] "y": remediationAction INFORM`}},
-
-		{"disabled template", "    policies:\n" + policy("a", "enforce") +
-			"    configPolicies:\n      - name: x\n        enabled: false\n        policyRef: a\n        remediationAction: inform\n", nil},
-		{"toggled-off template", "    toggles:\n      x: false\n    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "inform"),
-			[]string{`configPolicies[0] "x"`}},
-		{"toggled-on template", "    toggles:\n      x: true\n    policies:\n" + policy("a", "enforce") +
-			"    configPolicies:\n      - name: x\n        enabled: false\n        policyRef: a\n        remediationAction: inform\n",
-			[]string{`configPolicies[0] "x"`}},
-		{"disabled parent", "    policies:\n      - name: a\n        enabled: false\n        remediationAction: enforce\n" +
-			"    configPolicies:\n" + entry("x", "a", "inform"), nil},
-		{"toggled-off parent", "    toggles:\n      a: false\n    policies:\n" + policy("a", "enforce") + "    configPolicies:\n" + entry("x", "a", "inform"),
-			[]string{`configPolicies[0] "x"`}},
-
-		{"operator inform under enforce", "    policies:\n" + policy("a", "enforce") + "    operatorPolicies:\n" + operator("op", "a", "inform"),
-			[]string{"operatorPolicies.op: remediationAction inform is overridden by policies[0].remediationAction enforce"}},
-		{"operator same action", "    policies:\n" + policy("a", "enforce") + "    operatorPolicies:\n" + operator("op", "a", "Enforce"), nil},
-		{"operators sorted after configs", "    policies:\n" + policy("a", "inform") + "    operatorPolicies:\n" + operator("z", "a", "enforce") + operator("b", "a", "enforce") +
-			"    configPolicies:\n" + entry("x", "a", "enforce"),
-			[]string{`configPolicies[0] "x"`, "operatorPolicies.b:", "operatorPolicies.z:"}},
-		{"toggled-off operator", "    toggles:\n      op: false\n    policies:\n" + policy("a", "enforce") + "    operatorPolicies:\n" + operator("op", "a", "inform"),
-			[]string{"operatorPolicies.op:"}},
+		{"template inform under enforce", policyDoc("a", enforce, cfg("a-x", "inform")), nil,
+			[]want{{SevError, `policies[0] "a": remediationAction enforce overrides ConfigurationPolicy "a-x"'s inform: ACM applies the Policy's action to every template, so it runs as enforce`, inValues, 6}}},
+		{"template enforce under inform", policyDoc("a", "  remediationAction: inform\n", cfg("a-x", "enforce")), nil,
+			[]want{{SevError, `policies[0] "a": remediationAction inform overrides ConfigurationPolicy "a-x"'s enforce`, inValues, 6}}},
+		{"InformOnly", policyDoc("a", enforce, cfg("a-x", "InformOnly"), cfg("a-y", "informonly")), nil, nil},
+		{"same action, any case", policyDoc("a", "  remediationAction: Enforce\n", cfg("a-x", "enforce")), nil, nil},
+		{"policy unset", policyDoc("a", "", cfg("a-x", "enforce")), nil, nil},
+		{"several templates", policyDoc("a", enforce, cfg("a-w", "enforce"), cfg("a-x", "inform"), cfg("a-y", "INFORM")), nil,
+			[]want{{SevError, `policies[0] "a": remediationAction enforce overrides ConfigurationPolicy "a-x"'s inform`, inValues, 6},
+				{SevError, `policies[0] "a": remediationAction enforce overrides ConfigurationPolicy "a-y"'s INFORM`, inValues, 6}}},
+		{"OperatorPolicy", policyDoc("a", enforce, template("OperatorPolicy", "a-op", "", action("inform"))), nil,
+			[]want{{SevError, `policies[0] "a": remediationAction enforce overrides OperatorPolicy "a-op"'s inform`, inValues, 6}}},
+		{"operator templates policy-library generates", policyDoc("a", enforce,
+			cfg("a-op-ns", "inform"), template("OperatorPolicy", "a-op", "", action("enforce")), cfg("a-op-status", "inform")), nil, nil},
+		{"CertificatePolicy", policyDoc("a", enforce, template("CertificatePolicy", "a-c", "", action("inform"))), nil, nil},
+		{"dry run", policyDoc("a", "  remediationAction: inform\n", cfg("a-x", "enforce")), []string{"global:\n  remediationAction: inform\n"}, nil},
+		{"not from values", policyDoc("b", enforce, cfg("b-x", "inform")), nil,
+			[]want{{SevError, `Policy "b-my-element-spoke": remediationAction enforce overrides`, nowhere, 0}}},
+		// regression: 9ddc38f, a layer restating a Policy-level enforce over an inform gate.
+		{"layer restates enforce", policyDoc("a", enforce, cfg("a-x", "inform")),
+			[]string{"stack:\n  myElement:\n    policies:\n      - name: a\n        remediationAction: enforce\n"},
+			[]want{{SevError, `policies[0] "a": remediationAction enforce overrides ConfigurationPolicy "a-x"'s inform`, inLayer, 5}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			el := loadElement(t, "stack:\n  myElement:\n    enabled: true\n"+tc.body, "", nil)
-			got := (&RemediationCheck{}).Run(Context{Element: el})
-			if len(got) != len(tc.want) {
-				t.Fatalf("expected %d findings, got %d: %+v", len(tc.want), len(got), got)
-			}
-			for i, w := range tc.want {
-				f := got[i]
-				if f.RuleID != "POLICY036" || f.Severity != SevError || !strings.HasPrefix(f.Message, w) {
-					t.Errorf("finding %d = %+v, want error starting %q", i, f, w)
-				}
-				if f.File != el.ValuesFile || f.Element != "my-element" || f.Line == 0 {
-					t.Errorf("finding %d location wrong: %+v", i, f)
-				}
-			}
+			ctx := renderCtx(t, loadElement(t, values, "", nil), tc.rendered, tc.layers...)
+			assertFindings(t, "POLICY036", ctx, (&RemediationCheck{}).Run(ctx), tc.want)
 		})
 	}
 }
 
-// TestPolicy036_Engines checks each lifecycle engine as its own Element and locates the finding
-// under that engine's stack key.
+// TestPolicy036_Engines locates the finding under the rendered lifecycle engine's stack key.
 func TestPolicy036_Engines(t *testing.T) {
 	dir := t.TempDir()
 	for name, body := range map[string]string{
@@ -100,23 +61,11 @@ func TestPolicy036_Engines(t *testing.T) {
   hypershift:
     policies:
       - name: present
-        enabled: true
-        remediationAction: enforce
-    configPolicies:
-      - name: ready
-        enabled: true
-        policyRef: present
         remediationAction: enforce
   hive:
     policies:
       - name: present
-        enabled: true
         remediationAction: enforce
-    configPolicies:
-      - name: ready
-        enabled: true
-        policyRef: present
-        remediationAction: inform
 `,
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
@@ -127,11 +76,9 @@ func TestPolicy036_Engines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got []Finding
-	for _, el := range els {
-		got = append(got, (&RemediationCheck{}).Run(Context{Element: el})...)
-	}
-	if len(got) != 1 || got[0].Line != 21 || got[0].Element != "lifecycle" || !strings.HasPrefix(got[0].Message, `configPolicies[0] "ready": remediationAction inform`) {
-		t.Errorf("got %+v, want one finding at line 21", got)
-	}
+	rendered := "---\nkind: Policy\nmetadata: {name: present-lifecycle-spoke, namespace: policy}\nspec:\n  remediationAction: enforce\n  policy-templates:\n" +
+		template("ConfigurationPolicy", "present-ready", "", "          remediationAction: inform\n")
+	ctx := renderCtx(t, els[1], rendered)
+	assertFindings(t, "POLICY036", ctx, (&RemediationCheck{}).Run(ctx),
+		[]want{{SevError, `policies[0] "present": remediationAction enforce overrides`, inValues, 9}})
 }

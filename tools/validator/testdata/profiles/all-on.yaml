@@ -37,6 +37,8 @@ stack:
     enabled: true
   teamGitops:
     enabled: true
+    config:
+      teams: {dev: {}}
   infraNodes:
     enabled: true
     toggles:
@@ -72,6 +74,11 @@ stack:
     toggles:
       quota: true
       addressing: true
+    config:
+      ipAddressPools: {internal: {addresses: [192.168.100.1-192.168.100.20]}}
+      l2Advertisements: {internal: {ipAddressPools: [internal]}}
+      bgpAdvertisements: {internal: {ipAddressPools: [internal], peers: [rack1]}}
+      bgpPeers: {rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1}}
   mtv:
     enabled: true
   nmstate:
@@ -180,3 +187,6 @@ stack:
       trustedCA: |
         -----BEGIN CERTIFICATE-----
         -----END CERTIFICATE-----
+  # tools/sample-element, rendered with --include-sample-element
+  myElement:
+    enabled: true

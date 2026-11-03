@@ -10,9 +10,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -149,11 +151,11 @@ func liveCI(t *testing.T, cluster string, reason string, generation, observed in
 
 // bmh is a live BareMetalHost in namespace bm-ha carrying annotations.
 func bmh(name string, annotations ...string) string {
-	m := ""
+	var m strings.Builder
 	for _, a := range annotations {
-		m += fmt.Sprintf("%q: \"true\", ", a)
+		fmt.Fprintf(&m, "%q: \"true\", ", a)
 	}
-	return fmt.Sprintf("apiVersion: metal3.io/v1alpha1\nkind: BareMetalHost\nmetadata: {name: %s, namespace: bm-ha, annotations: {%s}}\n", name, m)
+	return fmt.Sprintf("apiVersion: metal3.io/v1alpha1\nkind: BareMetalHost\nmetadata: {name: %s, namespace: bm-ha, annotations: {%s}}\n", name, m.String())
 }
 
 // agent is a live Agent of host in namespace bm-ha at stage, bound when stage is set.
@@ -456,10 +458,7 @@ func TestSiteConfigSchema(t *testing.T) {
 // renders. An empty cluster renders the bare-metal layers without a fleet file.
 func renderError(t *testing.T, cluster string, set ...string) string {
 	t.Helper()
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
+	helm := testenv.Helm(t)
 	release, files := lifecycleFiles(t, cmp.Or(cluster, "bm-ha"))
 	if cluster == "" {
 		files = files[:len(files)-1]
@@ -699,12 +698,12 @@ func TestClusterInstanceReadyHosts(t *testing.T) {
 		live []string
 		kind string // the pending object's kind, "" when ready
 	}{
-		{"all joined", raw, append(done[:len(done):len(done)], ci), ""},
+		{"all joined", raw, append(slices.Clip(done), ci), ""},
 		{"not provisioned", raw, []string{liveCI(t, "bm-ha", "InProgress", 1, 1, nil)}, "ClusterInstance"},
 		{"worker joining", raw, []string{ci, agent(m(0), "Done"), agent(m(1), "Done"), agent(m(2), "Done"), agent(w0, "Joined"), bmh(w0)}, "BareMetalHost"},
 		{"worker not rendered yet", raw, []string{dropped, agent(m(0), "Done"), agent(m(1), "Done"), agent(m(2), "Done")}, "ClusterInstance"},
 		{"restored: no Agent, detached", raw, []string{ci, bmh(m(0), "baremetalhost.metal3.io/detached"), bmh(m(1), "baremetalhost.metal3.io/detached"), bmh(m(2), "baremetalhost.metal3.io/detached"), bmh(w0, "baremetalhost.metal3.io/detached")}, ""},
-		{"removal pending", remove, append(done[:len(done):len(done)], ci), "BareMetalHost"},
+		{"removal pending", remove, append(slices.Clip(done), ci), "BareMetalHost"},
 		{"removal waits for the drop", remove, []string{ci, agent(m(0), "Done"), agent(m(1), "Done"), agent(m(2), "Done")}, "ClusterInstance"},
 		{"removal done", remove, []string{dropped, agent(m(0), "Done"), agent(m(1), "Done"), agent(m(2), "Done")}, ""},
 	} {

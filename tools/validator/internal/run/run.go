@@ -27,15 +27,15 @@ import (
 
 // Options is the runtime configuration for a single Run.
 type Options struct {
-	RepoRoot       string
-	StackDir       string
-	SampleDir      string
-	LifecycleDir   string
-	ValuesDir      string
-	FixturesDir    string
-	HelmBin        string
-	KubeconformBin string
-	SchemasDir     string
+	RepoRoot     string
+	StackDir     string
+	SampleDir    string
+	LifecycleDir string
+	ValuesDir    string
+	FixturesDir  string
+	HelmBin      string
+	// CRDsDir holds the CRDs POLICY080 validates against. Empty disables POLICY080.
+	CRDsDir string
 	// ExtraValues are absolute paths appended to every (element, fixture)
 	// cascade but the lifecycle chart's, at highest precedence. Used to supply
 	// baseline values such as `selector` when fixture names have no file in
@@ -49,6 +49,9 @@ type Options struct {
 	// RenderDir, when set, receives each render at <RenderDir>/<fleet file path under
 	// FixturesDir, without .yaml>/<chart>.yaml, for diffing two trees.
 	RenderDir string
+	// BaseBranch is the branch the checked-out HEAD lands on, such as a PR's base branch. POLICY052
+	// resolves a revision naming it to HEAD.
+	BaseBranch string
 }
 
 // Result aggregates the run output.
@@ -104,8 +107,15 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 
 	runner := render.New(opts.HelmBin)
 
-	registered := buildRegistry(opts, runner)
-	enabled := filterRules(registered, opts.Only, opts.Skip)
+	crds, err := loadCRDs(opts)
+	if err != nil {
+		return Result{}, err
+	}
+	registered := buildRegistry(opts, runner, crds)
+	enabled, err := filterRules(registered, opts)
+	if err != nil {
+		return Result{}, err
+	}
 	opts.Logger.Debug("rule set", "enabled", ruleIDs(enabled))
 
 	res := Result{}
@@ -211,6 +221,11 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if err := errors.Join(writeErrs...); err != nil {
 		return Result{}, fmt.Errorf("write renders: %w", err)
 	}
+	for _, ck := range enabled {
+		if s, ok := ck.(*checks.CRDSchemaCheck); ok && s.CRDs != nil {
+			opts.Logger.Info("POLICY080 schema check", "validated", s.Validated())
+		}
+	}
 
 	// Cross-element POLICY002.
 	if !skipped("POLICY002", opts) {
@@ -245,7 +260,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 			fleet = append(fleet, checks.FleetFile{Name: cl.Name, Hub: cl.Hub, Files: append(r.ValueFiles, cl.SourceFile)})
 		}
 	}
-	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Logger: opts.Logger}
+	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Clusters: clusters, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue
@@ -488,17 +503,39 @@ func truncate(s string, max int) string {
 	return s[:max] + "..."
 }
 
+// loadCRDs loads the CRDs in opts.CRDsDir for POLICY080. When there are none, POLICY080 is skipped
+// with a warning, or fails the run under CI, where a skip would pass silently.
+func loadCRDs(opts Options) (checks.CRDs, error) {
+	if opts.CRDsDir == "" || skipped("POLICY080", opts) {
+		return nil, nil
+	}
+	crds, err := checks.LoadCRDs(opts.CRDsDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		if os.Getenv("CI") != "" {
+			return nil, fmt.Errorf("POLICY080: %w: run make -C tools/validator crds", err)
+		}
+		opts.Logger.Warn("POLICY080 skipped: run make -C tools/validator crds", "err", err)
+		return nil, nil
+	}
+	return crds, err
+}
+
 // buildRegistry instantiates checks with their runtime-configured fields.
-func buildRegistry(opts Options, runner *render.Runner) []checks.Check {
+func buildRegistry(opts Options, runner *render.Runner, crds checks.CRDs) []checks.Check {
 	out := []checks.Check{}
 	for _, c := range checks.All() {
 		switch v := c.(type) {
 		case *checks.LintCheck:
 			v.Runner = runner
 			out = append(out, v)
-		case *checks.KubeconformCheck:
-			v.Bin = opts.KubeconformBin
-			v.SchemasDir = opts.SchemasDir
+		case *checks.InstallCheck:
+			v.Runner, v.Root = runner, opts.RepoRoot
+			out = append(out, v)
+		case *checks.FleetPinCheck:
+			v.Root, v.Branch = opts.RepoRoot, opts.BaseBranch
+			out = append(out, v)
+		case *checks.CRDSchemaCheck:
+			v.CRDs = crds
 			out = append(out, v)
 		default:
 			out = append(out, c)
@@ -507,31 +544,24 @@ func buildRegistry(opts Options, runner *render.Runner) []checks.Check {
 	return out
 }
 
-func filterRules(all []checks.Check, only, skip []string) []checks.Check {
-	if len(only) > 0 {
-		set := map[string]struct{}{}
-		for _, id := range only {
-			set[strings.TrimSpace(id)] = struct{}{}
-		}
-		var out []checks.Check
-		for _, c := range all {
-			if _, ok := set[c.ID()]; ok {
-				out = append(out, c)
+// filterRules applies --only, else --skip. An unknown ID is an error: a typo would otherwise run
+// nothing or skip nothing, and the run would still pass.
+func filterRules(all []checks.Check, opts Options) ([]checks.Check, error) {
+	ids := ruleIDs(all)
+	var errs []error
+	unknown := func(flag string, list []string) {
+		for _, id := range list {
+			if !slices.Contains(ids, id) {
+				errs = append(errs, fmt.Errorf("--%s: unknown rule ID %q", flag, id))
 			}
 		}
-		return out
 	}
-	if len(skip) == 0 {
-		return all
+	unknown("only", opts.Only)
+	unknown("skip", opts.Skip)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
-	var out []checks.Check
-	for _, c := range all {
-		if slices.Contains(skip, c.ID()) {
-			continue
-		}
-		out = append(out, c)
-	}
-	return out
+	return slices.DeleteFunc(slices.Clone(all), func(c checks.Check) bool { return skipped(c.ID(), opts) }), nil
 }
 
 func ruleIDs(in []checks.Check) []string {

@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 	"gopkg.in/yaml.v3"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -17,10 +18,7 @@ import (
 // Argo CD does, and checks that manifest-generate-paths covers every values file the
 // Application reads.
 func TestTemplatePatch(t *testing.T) {
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
+	helm := testenv.Helm(t)
 	out, err := exec.CommandContext(t.Context(), helm, "template", "ci", "../../../../install",
 		"--set", "hubName=acm-dc1", "--set", "gitRepo=https://example.com/policystack.git").Output()
 	if err != nil {

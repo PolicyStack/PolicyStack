@@ -7,8 +7,7 @@ import (
 	"strings"
 )
 
-// PinningCheck (POLICY060) warns when elements depend on different
-// policy-library versions.
+// PinningCheck (POLICY060) reports elements that depend on different policy-library versions.
 type PinningCheck struct{}
 
 func (PinningCheck) ID() string   { return "POLICY060" }
@@ -46,7 +45,7 @@ func (c *PinningCheck) Run(ctx Context) []Finding {
 	for _, el := range ctx.AllElements {
 		out = append(out, Finding{
 			RuleID:   c.ID(),
-			Severity: SevWarning,
+			Severity: SevError,
 			Element:  el.ChartName,
 			Message:  "policy-library version drift across elements: " + strings.Join(parts, "; "),
 			File:     el.Dir + "/Chart.yaml",

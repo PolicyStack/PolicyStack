@@ -28,14 +28,16 @@ func (c *ConfigReadCheck) Run(ctx Context) []Finding {
 	}
 	keys := configKeys(el)
 	var out []Finding
-	_ = filepath.WalkDir(el.ConvertersDir, func(path string, d fs.DirEntry, err error) error {
+	converters := os.DirFS(el.ConvertersDir)
+	_ = fs.WalkDir(converters, ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := fs.ReadFile(converters, rel)
 		if err != nil {
 			return nil
 		}
+		path := filepath.Join(el.ConvertersDir, rel)
 		text := string(data)
 		for _, r := range configReadsIn(path, text, el.StackKey) {
 			if slices.Contains(keys, r.key) {

@@ -25,10 +25,3 @@ func (c *LabelCheck) Run(ctx Context) []Finding {
 	}
 	return out
 }
-
-func elementName(ctx Context) string {
-	if ctx.Element != nil {
-		return ctx.Element.ChartName
-	}
-	return ""
-}

@@ -50,9 +50,8 @@ It fails on a toggle that matches no entry and on a `policyRef` that names no po
 
 ## CI/CD Integration
 
-`docs-check.yml` runs the generator tests and `doc-generator.py --check` on pull requests, failing
-when an element README is stale. Adding the `update-docs` label runs `docs-update.yml`, which
-regenerates and commits `stack/*/README.md` to the PR branch. See [docs/workflows.md](../docs/workflows.md).
+`ci.yml` runs the generator tests, and its `element-readmes` prek hook regenerates
+`stack/*/README.md`, failing when one is stale. See [docs/workflows.md](../docs/workflows.md#hooks).
 
 ## Best Practices
 

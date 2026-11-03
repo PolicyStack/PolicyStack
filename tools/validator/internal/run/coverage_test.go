@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -16,16 +15,15 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
 // TestProfileCoverage renders every element for every fixture under each testdata/profiles file,
 // as the POLICY081 CI step does, and fails for a converter with escaped ACM templates that no
 // render includes.
 func TestProfileCoverage(t *testing.T) {
-	helm, err := exec.LookPath("helm")
-	if err != nil {
-		t.Skip("helm not on PATH")
-	}
+	helm := testenv.Helm(t)
 	root, _ := filepath.Abs("../../../..")
 	testdata := filepath.Join(root, "tools/validator/testdata")
 	profiles, _ := filepath.Glob(filepath.Join(testdata, "profiles/*.yaml"))
@@ -83,7 +81,7 @@ func TestProfileCoverage(t *testing.T) {
 			for _, tn := range cp.TemplateNames {
 				path := filepath.Join(el.ConvertersDir, tn.Name+".yaml")
 				data, _ := os.ReadFile(path)
-				if bytes.Contains(data, []byte(`{{ "{{" }}`)) {
+				if checks.Escaped.Match(data) {
 					rel, _ := filepath.Rel(root, path)
 					covered[rel] = covered[rel] || rendered[el.ChartName+"/"+cp.PolicyRef+"-"+cp.Name]
 				}

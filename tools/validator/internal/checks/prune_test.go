@@ -1,131 +1,55 @@
 package checks
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestPolicy033_Prune(t *testing.T) {
+	const values = "stack:\n  myElement:\n    enabled: true\n    policies:\n      - name: a\n    configPolicies:\n" +
+		"      - name: x\n        policyRef: a\n        pruneObjectBehavior: DeleteIfCreated\n" // line 9
 	const (
-		prune   = "        pruneObjectBehavior: DeleteIfCreated\n"
-		enforce = "        remediationAction: enforce\n"
+		enforce = "          remediationAction: enforce\n"
+		inform  = "          remediationAction: inform\n"
+		deps    = "extraDependencies:\n        - {kind: ConfigurationPolicy, name: w}\n      "
 	)
-	policy := func(name, extra string) string {
-		return "      - name: " + name + "\n        enabled: true\n" + extra
-	}
-	entry := func(name, ref, extra string) string {
-		return "      - name: " + name + "\n        enabled: true\n        policyRef: " + ref + "\n" + extra
-	}
-	type want struct {
-		sev Severity
-		msg string
-	}
-	depErr := func(src string) []want {
-		return []want{{SevError, "pruneObjectBehavior with a dependency (" + src + "): ACM deletes this template"}}
-	}
+	prune := func(v string) string { return "          pruneObjectBehavior: " + v + "\n" }
+	x := func(header, spec string) string { return template("ConfigurationPolicy", "a-x", header, spec) }
+	const dryRunLayer = "global:\n  remediationAction: inform\n"
 	cases := []struct {
-		name, body string
-		want       []want
+		name, rendered string
+		layers         []string
+		want           []want
 	}{
-		{"DeleteIfCreated enforce no dependencies", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune), nil},
-		{"None", "    orderManifests: true\n    policies:\n" + policy("a", "        dependencies:\n          - name: b\n") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", "        pruneObjectBehavior: None\n"), nil},
-		{"unset", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", "        waitForOperator: op\n"), nil},
-		{"invalid value", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+"        pruneObjectBehavior: deleteIfCreated\n"),
-			[]want{{SevError, `pruneObjectBehavior = "deleteIfCreated"; allowed: [None DeleteIfCreated DeleteAll]`}}},
-		{"DeleteAll", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+"        pruneObjectBehavior: DeleteAll\n"),
-			[]want{{SevWarning, "pruneObjectBehavior DeleteAll also deletes objects that existed before"}}},
+		{"enforce without dependencies", policyDoc("a", "", x("", enforce+prune("DeleteIfCreated"))), nil, nil},
+		{"None", policyDoc("a", "  dependencies:\n    - {kind: Policy, name: b}\n", x(deps, inform+prune("None"))), nil, nil},
+		{"unset", policyDoc("a", "", x(deps, inform)), nil, nil},
+		{"invalid value", policyDoc("a", "", x("", enforce+prune("deleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior = "deleteIfCreated"; allowed: [None DeleteIfCreated DeleteAll]`, inValues, 9}}},
+		{"DeleteAll", policyDoc("a", "", x("", enforce+prune("DeleteAll"))), nil,
+			[]want{{SevWarning, `configPolicies[0] "x": pruneObjectBehavior DeleteAll also deletes objects that existed before`, inValues, 9}}},
 
-		{"template inform", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", "        remediationAction: inform\n"+prune),
-			[]want{{SevError, "pruneObjectBehavior with remediationAction inform: ACM prunes only under enforce"}}},
-		{"template default inform", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", prune),
-			[]want{{SevError, "pruneObjectBehavior with remediationAction inform"}}},
-		{"policy inform overrides template enforce", "    policies:\n" + policy("a", "        remediationAction: inform\n") +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune),
-			[]want{{SevError, "pruneObjectBehavior with policies[0].remediationAction inform"}}},
-		{"policy enforce keeps template InformOnly", "    policies:\n" + policy("a", enforce) +
-			"    configPolicies:\n" + entry("x", "a", "        remediationAction: InformOnly\n"+prune),
-			[]want{{SevError, "pruneObjectBehavior with remediationAction InformOnly: ACM prunes only under enforce"}}},
-		{"policy enforce overrides template inform", "    policies:\n" + policy("a", enforce) +
-			"    configPolicies:\n" + entry("x", "a", "        remediationAction: inform\n"+prune), nil},
+		{"template inform", policyDoc("a", "", x("", inform+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior under remediationAction inform: ACM prunes only under enforce`, inValues, 9}}},
+		{"policy inform overrides template enforce", policyDoc("a", "  remediationAction: inform\n", x("", enforce+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior under remediationAction inform`, inValues, 9}}},
+		{"policy enforce overrides template inform", policyDoc("a", "  remediationAction: enforce\n", x("", inform+prune("DeleteIfCreated"))), nil, nil},
+		{"policy enforce keeps template InformOnly", policyDoc("a", "  remediationAction: enforce\n", x("", "          remediationAction: InformOnly\n"+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior under remediationAction InformOnly`, inValues, 9}}},
+		{"dry run", policyDoc("a", "  remediationAction: inform\n", x("", enforce+prune("DeleteIfCreated"))), []string{dryRunLayer}, nil},
 
-		{"waitForOperator", "    policies:\n" + policy("a", "") +
-			"    operatorPolicies:\n      op:\n        enabled: true\n        policyRef: a\n" +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune+"        waitForOperator: op\n"), depErr("waitForOperator")},
-		{"extraDependencies", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", enforce+prune+"        extraDependencies:\n          - name: w\n"),
-			depErr("extraDependencies")},
-		{"policy dependencies", "    policies:\n" + policy("b", "") + policy("a", "        dependencies:\n          - name: b\n") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), depErr("policies[1].dependencies")},
-		{"all sources", "    orderPolicies: true\n    orderManifests: true\n    policies:\n" + policy("b", "") + policy("a", "        dependencies:\n          - name: b\n") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("v", "a", "") +
-			entry("x", "a", enforce+prune+"        waitForOperator: op\n        extraDependencies:\n          - name: v\n"),
-			depErr("waitForOperator, extraDependencies, policies[1].dependencies, orderManifests, orderPolicies")},
-
-		{"orderManifests first template", "    orderManifests: true\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune) + entry("y", "a", ""), nil},
-		{"orderManifests second template", "    orderManifests: true\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", enforce+prune), depErr("orderManifests")},
-		{"orderManifests first template of its policy", "    orderManifests: true\n    policies:\n" + policy("b", "") + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), nil},
-		{"orderManifests after a disabled template", "    orderManifests: true\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n      - name: w\n        enabled: false\n        policyRef: a\n" + entry("x", "a", enforce+prune), nil},
-		{"orderManifests after a toggled-off template", "    orderManifests: true\n    toggles:\n      w: false\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", enforce+prune), depErr("orderManifests")},
-		{"policy orderManifests overrides component", "    policies:\n" + policy("a", "        orderManifests: true\n") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", enforce+prune), depErr("orderManifests")},
-		{"policy orderManifests false overrides component", "    orderManifests: true\n    policies:\n" + policy("a", "        orderManifests: false\n") +
-			"    configPolicies:\n" + entry("w", "a", "") + entry("x", "a", enforce+prune), nil},
-
-		{"orderPolicies first policy", "    orderPolicies: true\n    policies:\n" + policy("a", "") + policy("b", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune) + entry("w", "b", ""), nil},
-		{"orderPolicies second policy", "    orderPolicies: true\n    policies:\n" + policy("b", "") + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), depErr("orderPolicies")},
-		{"orderPolicies after a policy that does not render", "    orderPolicies: true\n    policies:\n" + policy("b", "") + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", enforce+prune), nil},
-		{"orderPolicies after a disabled policy", "    orderPolicies: true\n    policies:\n" + "      - name: b\n        enabled: false\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), nil},
-		{"orderPolicies after a toggled-off policy", "    orderPolicies: true\n    toggles:\n      b: false\n    policies:\n" + policy("b", "") + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), depErr("orderPolicies")},
-		{"orderPolicies after a policy whose templates are toggled off", "    orderPolicies: true\n    toggles:\n      w: false\n    policies:\n" + policy("b", "") + policy("a", "") +
-			"    configPolicies:\n" + entry("w", "b", "") + entry("x", "a", enforce+prune), depErr("orderPolicies")},
-
-		{"disabled entry", "    policies:\n" + policy("a", "") +
-			"    configPolicies:\n      - name: x\n        enabled: false\n        policyRef: a\n" + prune, nil},
-		{"toggled-off entry", "    toggles:\n      x: false\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", prune),
-			[]want{{SevError, "pruneObjectBehavior with remediationAction inform"}}},
-		{"toggled-on entry", "    toggles:\n      x: true\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n      - name: x\n        enabled: false\n        policyRef: a\n" + prune,
-			[]want{{SevError, "pruneObjectBehavior with remediationAction inform"}}},
-		{"parent disabled", "    policies:\n      - name: a\n        enabled: false\n" +
-			"    configPolicies:\n" + entry("x", "a", prune), nil},
-		{"parent toggled off", "    toggles:\n      a: false\n    policies:\n" + policy("a", "") +
-			"    configPolicies:\n" + entry("x", "a", prune),
-			[]want{{SevError, "pruneObjectBehavior with remediationAction inform"}}},
+		{"template dependency", policyDoc("a", "", x(deps, enforce+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior with a dependency (w): ACM deletes this template whenever the dependency is unmet`, inValues, 9}}},
+		{"policy dependency", policyDoc("a", "  dependencies:\n    - {kind: Policy, name: b-my-element-spoke}\n", x("", enforce+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior with a dependency (the Policy's dependencies)`, inValues, 9}}},
+		{"both dependencies", policyDoc("a", "  dependencies:\n    - {kind: Policy, name: b-my-element-spoke}\n", x(deps, enforce+prune("DeleteIfCreated"))), nil,
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior with a dependency (w, the Policy's dependencies)`, inValues, 9}}},
+		{"not a ConfigurationPolicy", policyDoc("a", "", template("CertificatePolicy", "a-x", "", inform+prune("DeleteIfCreated"))), nil, nil},
+		{"layer sets prune", policyDoc("a", "", x("", inform+prune("DeleteIfCreated"))),
+			[]string{"stack:\n  myElement:\n    configPolicies:\n      - name: x\n        policyRef: a\n        pruneObjectBehavior: DeleteIfCreated\n"},
+			[]want{{SevError, `configPolicies[0] "x": pruneObjectBehavior under remediationAction inform`, inLayer, 6}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			el := loadElement(t, "stack:\n  myElement:\n    enabled: true\n"+tc.body, "", nil)
-			got := (&PruneCheck{}).Run(Context{Element: el})
-			if len(got) != len(tc.want) {
-				t.Fatalf("expected %d findings, got %d: %+v", len(tc.want), len(got), got)
-			}
-			for i, w := range tc.want {
-				f := got[i]
-				if f.RuleID != "POLICY033" || f.Severity != w.sev || !strings.Contains(f.Message, w.msg) {
-					t.Errorf("finding %d = %+v, want %s containing %q", i, f, w.sev, w.msg)
-				}
-				if !strings.HasPrefix(f.Message, `configPolicies[`) || f.File != el.ValuesFile || f.Line == 0 {
-					t.Errorf("finding %d location/prefix wrong: %+v", i, f)
-				}
-			}
+			ctx := renderCtx(t, loadElement(t, values, "", nil), tc.rendered, tc.layers...)
+			assertFindings(t, "POLICY033", ctx, (&PruneCheck{}).Run(ctx), tc.want)
 		})
 	}
 }

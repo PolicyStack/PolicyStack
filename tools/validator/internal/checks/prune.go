@@ -1,127 +1,68 @@
 package checks
 
 import (
-	"cmp"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
-
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
 var allowedPrune = []string{"None", "DeleteIfCreated", "DeleteAll"}
 
-// PruneCheck (POLICY033) checks configPolicies[].pruneObjectBehavior.
+// PruneCheck (POLICY033) checks each rendered ConfigurationPolicy's pruneObjectBehavior.
 //
 // ACM prunes only under an effective enforce. When a template's dependency is unmet, template-sync
 // deletes the spoke ConfigurationPolicy without resetting prune, so prune with any dependency
-// deletes the template's objects whenever that dependency flaps. Dependencies are resolved the way
-// policy-library chains them: config templates render first in a policy, in list order, and
-// orderPolicies chains only Policies that render. Entries governed by a toggle count as enabled,
-// since a cluster layer may turn them on.
+// deletes the template's objects whenever that dependency flaps. policy-library renders
+// waitForOperator, extraDependencies and orderManifests as the template's extraDependencies, and
+// orderPolicies and policies[].dependencies as the Policy's dependencies.
 type PruneCheck struct{}
 
 func (PruneCheck) ID() string   { return "POLICY033" }
-func (PruneCheck) Phase() Phase { return PhaseChart }
+func (PruneCheck) Phase() Phase { return PhaseCluster }
 
 func (c *PruneCheck) Run(ctx Context) []Finding {
-	if ctx.Element == nil || ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
+	if len(ctx.Rendered) == 0 || ctx.Element == nil || ctx.Cluster == nil {
 		return nil
 	}
-	el := ctx.Element
-	comp := el.Values.Component
-
-	// hasTemplate[name] reports whether policy name has a template that could be enabled, so the Policy renders.
-	hasTemplate := map[string]bool{}
-	for _, p := range comp.ConfigPolicies {
-		hasTemplate[p.PolicyRef] = hasTemplate[p.PolicyRef] || comp.CouldBeEnabled(p.Name, p.Enabled)
+	pols, bad := policies(ctx, c.ID())
+	if bad != nil {
+		return bad
 	}
-	for _, p := range comp.OperatorPolicies {
-		hasTemplate[p.PolicyRef] = hasTemplate[p.PolicyRef] || comp.CouldBeEnabled(p.Name, p.Enabled)
-	}
-	for _, p := range comp.CertificatePolicies {
-		hasTemplate[p.PolicyRef] = hasTemplate[p.PolicyRef] || comp.CouldBeEnabled(p.Name, p.Enabled)
-	}
-
-	type parent struct {
-		idx    int
-		policy chart.Policy
-		first  bool // first rendered Policy, which orderPolicies leaves unchained
-	}
-	parents := map[string]parent{}
-	for i, p := range comp.Policies {
-		if !comp.CouldBeEnabled(p.Name, p.Enabled) || !hasTemplate[p.Name] {
-			continue
-		}
-		if _, dup := parents[p.Name]; !dup {
-			parents[p.Name] = parent{i, p, len(parents) == 0}
-		}
-	}
-
 	var out []Finding
-	rendered := map[string]bool{} // policies that already rendered a config template
-	for i, sp := range comp.ConfigPolicies {
-		if !comp.CouldBeEnabled(sp.Name, sp.Enabled) {
-			continue
-		}
-		firstTemplate := !rendered[sp.PolicyRef]
-		rendered[sp.PolicyRef] = true
-		par, ok := parents[sp.PolicyRef]
-		if !ok || sp.PruneObjectBehavior == "" || sp.PruneObjectBehavior == "None" {
-			continue
-		}
-		where := fmt.Sprintf("configPolicies[%d] %q", i, sp.Name)
-		add := func(sev Severity, msg string) {
-			loc := sourceloc.Find(el.ValuesDoc, "stack", el.StackKey, "configPolicies", strconv.Itoa(i), "pruneObjectBehavior")
-			out = append(out, Finding{
-				RuleID: c.ID(), Severity: sev,
-				Element: el.ChartName,
-				Message: where + ": " + msg,
-				File:    el.ValuesFile, Line: loc.Line, Col: loc.Col,
-			})
-		}
+	for _, p := range pols {
+		for _, t := range p.Spec.PolicyTemplates {
+			od := t.ObjectDefinition
+			prune := od.Spec.PruneObjectBehavior
+			if od.Kind != "ConfigurationPolicy" || prune == "" || prune == "None" {
+				continue
+			}
+			add := func(sev Severity, msg string) {
+				where, file, loc := origin(ctx, od.Kind, od.Metadata.Name, "pruneObjectBehavior")
+				out = append(out, Finding{RuleID: c.ID(), Severity: sev, Element: ctx.Element.ChartName,
+					Message: where + ": " + msg, File: file, Line: loc.Line, Col: loc.Col})
+			}
 
-		if !slices.Contains(allowedPrune, sp.PruneObjectBehavior) {
-			add(SevError, fmt.Sprintf("pruneObjectBehavior = %q; allowed: %v", sp.PruneObjectBehavior, allowedPrune))
-			continue
-		}
-		if sp.PruneObjectBehavior == "DeleteAll" {
-			add(SevWarning, "pruneObjectBehavior DeleteAll also deletes objects that existed before the policy, such as shared namespaces; prefer DeleteIfCreated")
-		}
-
-		// A Policy-level remediationAction overrides every template's but InformOnly; policy-library defaults templates to inform.
-		action, from := cmp.Or(sp.RemediationAction, "inform"), "remediationAction"
-		if par.policy.RemediationAction != "" && !informOnly(sp.RemediationAction) {
-			action, from = par.policy.RemediationAction, fmt.Sprintf("policies[%d].remediationAction", par.idx)
-		}
-		if !strings.EqualFold(action, "enforce") {
-			add(SevError, fmt.Sprintf("pruneObjectBehavior with %s %s: ACM prunes only under enforce", from, action))
-		}
-
-		var deps []string
-		if len(sp.WaitForOperator) > 0 {
-			deps = append(deps, "waitForOperator")
-		}
-		if len(sp.ExtraDependencies) > 0 {
-			deps = append(deps, "extraDependencies")
-		}
-		if len(par.policy.Dependencies) > 0 {
-			deps = append(deps, fmt.Sprintf("policies[%d].dependencies", par.idx))
-		}
-		orderManifests := comp.OrderManifests
-		if par.policy.OrderManifests != nil {
-			orderManifests = *par.policy.OrderManifests
-		}
-		if orderManifests && !firstTemplate {
-			deps = append(deps, "orderManifests")
-		}
-		if comp.OrderPolicies && !par.first {
-			deps = append(deps, "orderPolicies")
-		}
-		if len(deps) > 0 {
-			add(SevError, fmt.Sprintf("pruneObjectBehavior with a dependency (%s): ACM deletes this template whenever the dependency is unmet, and prune deletes its objects", strings.Join(deps, ", ")))
+			if !slices.Contains(allowedPrune, prune) {
+				add(SevError, fmt.Sprintf("pruneObjectBehavior = %q; allowed: %v", prune, allowedPrune))
+				continue
+			}
+			if prune == "DeleteAll" {
+				add(SevWarning, "pruneObjectBehavior DeleteAll also deletes objects that existed before the policy, such as shared namespaces; prefer DeleteIfCreated")
+			}
+			// A dry run renders every Policy inform on purpose.
+			if action := p.action(od.Spec.RemediationAction); !strings.EqualFold(action, "enforce") && !dryRun(ctx) {
+				add(SevError, fmt.Sprintf("pruneObjectBehavior under remediationAction %s: ACM prunes only under enforce", action))
+			}
+			var deps []string
+			for _, d := range t.ExtraDependencies {
+				deps = append(deps, d.Name)
+			}
+			if len(p.Spec.Dependencies) > 0 {
+				deps = append(deps, "the Policy's dependencies")
+			}
+			if len(deps) > 0 {
+				add(SevError, fmt.Sprintf("pruneObjectBehavior with a dependency (%s): ACM deletes this template whenever the dependency is unmet, and prune deletes its objects", strings.Join(deps, ", ")))
+			}
 		}
 	}
 	return out

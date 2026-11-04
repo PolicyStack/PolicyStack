@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -11,23 +13,14 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage Red Hat OpenShift Dev Spaces"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     operatorPolicies:
       devspaces:
-        enabled: true
         description: "Red Hat OpenShift Dev Spaces cloud development environments"
         # Must match the CSV displayName so the generated status check can find it
         displayName: "Red Hat OpenShift Dev Spaces"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-operators-redhat
         operatorGroup:
           # Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
@@ -35,7 +28,4 @@ stack:
         subscription:
           channel: stable
           name: devspaces
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []

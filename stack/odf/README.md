@@ -9,14 +9,13 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `noobaa-pvpool` | PV-pool backing store for NooBaa. Not needed when fronting a cloud object store. | `false` | config `config-noobaa-pvpool` |
-| `pdb-alert` | Suppress the permanent NooBaa PodDisruptionBudgetAtLimit alert | `true` | config `config-pdb-alert` |
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| template `config-noobaa-pvpool` | NooBaa PV-pool backing store | `policies.config.templates.noobaa-pvpool.enabled: true` |
 
 ## Settings
 
@@ -24,6 +23,7 @@ Under `stack.odf.config`. Maps merge across layers; lists are replaced whole.
 
 | Key | Description | Default |
 |---|---|---|
+| `name` | StorageCluster name. ODF names its StorageClasses after it. | `ocs-storagecluster` |
 | `resourceProfile` | balanced, lean or performance | `balanced` |
 | `defaultStorageClass` | StorageClass marked default cluster-wide. Every other class is marked non-default. | `ocs-storagecluster-ceph-rbd` |
 | `flexibleScaling` | Allow OSDs to be unevenly distributed. Set true on bare metal when the storage node count is not a multiple of three. Leave unset to let ODF decide. | `null` |
@@ -39,7 +39,7 @@ Under `stack.odf.config`. Maps merge across layers; lists are replaced whole.
 | `encryption.keyRotationSchedule` |  | `'@weekly'` |
 | `network` |  |  |
 | `network.encryptionEnabled` | Encrypt Ceph in-cluster traffic | `true` |
-| `noobaa` | NooBaa PV-pool sizing, used when the noobaa-pvpool toggle is on | 4 entries, below |
+| `noobaa` | NooBaa PV-pool sizing, used when the noobaa-pvpool template is enabled | 4 entries, below |
 
 <details><summary><code>noobaa</code> default</summary>
 
@@ -58,7 +58,7 @@ limits:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -70,45 +70,45 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CP-9 System Backup, SC-28 Protection of Information at Rest. Categories: CP Contingency Planning, SC System and Communications Protection.
 
-### Policy `install`
-
-`install-odf-<cluster>`: Install and manage the ODF operator.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-odf` | enforce | [operator](#operators) `odf-operator` | OpenShift Data Foundation operator |
-
 ### Policy `cluster`
 
 `cluster-odf-<cluster>`: Deploy the StorageCluster. Depends on `install-odf-<cluster>`, `ready-storage-nodes-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `cluster-storagecluster` | enforce | `install-odf-status`<br>compliant while pending | [storage-cluster](converters/storage-cluster.yaml) | StorageCluster and Ceph CSI placement |
-
-### Policy `ready`
-
-`ready-odf-<cluster>`: Reports NonCompliant until ODF has published its StorageClasses. Depends on `cluster-odf-<cluster>`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-available` | inform | [storage-cluster-ready](converters/storage-cluster-ready.yaml) | ODF StorageClasses exist |
-
-### Policy `health`
-
-`health-odf-<cluster>`: Reports live StorageCluster health. Depends on `ready-odf-<cluster>`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `health-conditions` | inform | [storage-cluster-health](converters/storage-cluster-health.yaml) | StorageCluster reports Available and not Degraded |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `cluster-storagecluster` | enforce | high | `install-odf-status`<br>compliant while pending | [storagecluster](converters/cluster/storagecluster.yaml) | StorageCluster and Ceph CSI placement |
 
 ### Policy `config`
 
 `config-odf-<cluster>`: Default StorageClass, console plugin and NooBaa tuning. Depends on `ready-odf-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-storageclass` | enforce | [default-storageclass](converters/default-storageclass.yaml) | Default StorageClass selection |
-| `config-console` | enforce | [odf-console-plugin](converters/odf-console-plugin.yaml) | ODF console plugin |
-| `config-noobaa-pvpool` (off, toggle `noobaa-pvpool`) | enforce | [noobaa-backing-store](converters/noobaa-backing-store.yaml) | NooBaa PV-pool backing store |
-| `config-pdb-alert` | enforce | [noobaa-pdb-alert](converters/noobaa-pdb-alert.yaml) | Suppress the NooBaa PDB alert |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-console` | enforce | low | [console](converters/config/console.yaml) | ODF console plugin |
+| `config-noobaa-pvpool` (off) | enforce | medium | [noobaa-pvpool](converters/config/noobaa-pvpool.yaml) | NooBaa PV-pool backing store |
+| `config-pdb-alert` | enforce | low | [pdb-alert](converters/config/pdb-alert.yaml) | Suppress the NooBaa PDB alert |
+| `config-storageclass` | enforce | medium | [storageclass](converters/config/storageclass.yaml) | Default StorageClass selection |
+
+### Policy `health`
+
+`health-odf-<cluster>`: Reports live StorageCluster health. Depends on `ready-odf-<cluster>`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `health-conditions` | inform | medium | [conditions](converters/health/conditions.yaml) | StorageCluster reports Available and not Degraded |
+
+### Policy `install`
+
+`install-odf-<cluster>`: Install and manage the ODF operator.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-odf` | enforce | medium | [operator](#operators) `odf-operator` | OpenShift Data Foundation operator |
+
+### Policy `ready`
+
+`ready-odf-<cluster>`: Reports NonCompliant until ODF has published its StorageClasses. Depends on `cluster-odf-<cluster>`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-available` | inform | medium | [available](converters/ready/available.yaml) | ODF StorageClasses exist |

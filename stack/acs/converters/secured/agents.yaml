@@ -1,0 +1,44 @@
+{{- /*
+The SecuredCluster CR. One definition covers the hub and managed clusters; the values cascade, not
+separate placements, decides which clusters get it.
+
+clusterName is the ManagedCluster name, from the hub, so hosted-mode clusters (no local klusterlet
+agent) get one too. centralEndpoint is Central's Route on the hub (a CRS carries no endpoint); index
+fails closed when the Route is missing, so an empty endpoint is never pushed.
+*/ -}}
+{{- $cfg := .Config }}
+{{- $ac := $cfg.admissionControl }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: SecuredCluster
+metadata:
+  name: stackrox-secured-cluster-services
+  namespace: stackrox
+spec:
+  clusterName: '{{ "{{" }}hub .ManagedClusterName hub{{ "}}" }}'
+  centralEndpoint: '{{ "{{" }}hub index (lookup "route.openshift.io/v1" "Route" "stackrox" "central") "spec" "host" hub{{ "}}" }}:443'
+  auditLogs:
+    collection: Auto
+  admissionControl:
+    enforcement: {{ ternary "Enabled" "Disabled" $ac.enabled }}
+    listenOnCreates: {{ $ac.enabled }}
+    listenOnUpdates: {{ $ac.enabled }}
+    listenOnEvents: true
+    contactImageScanners: {{ $ac.contactImageScanners }}
+    failurePolicy: {{ $ac.failurePolicy }}
+  scannerV4:
+    # The SecuredCluster enum is Default|AutoSense|Disabled; Enabled maps to AutoSense.
+    scannerComponent: {{ eq $cfg.scannerV4 "Enabled" | ternary "AutoSense" $cfg.scannerV4 }}
+  perNode:
+    collector:
+      collection: {{ $cfg.collector.collection }}
+      imageFlavor: Regular
+    taintToleration: TolerateTaints
+  {{- with $cfg.networkPolicies }}
+  network:
+    policies: {{ . }}
+  {{- end }}
+  {{- if not (kindIs "invalid" $cfg.monitoring) }}
+  monitoring:
+    openshift:
+      enabled: {{ $cfg.monitoring }}
+  {{- end }}

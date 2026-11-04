@@ -95,7 +95,7 @@ func TestUpgradeTrigger(t *testing.T) {
 
 // TestUpgradeDisconnected: with no availableUpdates the guard blocks, and channel-pin still writes
 // the OSUS upstream (without a channel when none is set) so the CVO can fill them. channel-pin
-// renders only for a channel or upstream, and toggles.channel gates both.
+// renders only for a channel or upstream, and policies.channel.enabled gates both.
 func TestUpgradeDisconnected(t *testing.T) {
 	raws := upgradeRaw(t, "version=4.19.2", "stack.upgrade.config.upstream="+osus)
 	live := clusterVersion("{}", "False", "")
@@ -113,12 +113,12 @@ func TestUpgradeDisconnected(t *testing.T) {
 		t.Error("channel-pin rendered with neither channel nor upstream")
 	}
 	off := filepath.Join(t.TempDir(), "off.yaml")
-	if err := os.WriteFile(off, []byte("stack: {upgrade: {toggles: {channel: false}}}"), 0o600); err != nil {
+	if err := os.WriteFile(off, []byte("stack: {upgrade: {policies: {channel: {enabled: false}}}}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := renderRaw(t, upgradeDir, "upgrade", append(allOn, off), "version=4.19.2", "channel=stable-4.19",
 		"stack.upgrade.config.upstream="+osus)["channel-pin"]; ok {
-		t.Error("channel-pin rendered with toggles.channel off")
+		t.Error("channel-pin rendered with policies.channel off")
 	}
 }
 

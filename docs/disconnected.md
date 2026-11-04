@@ -81,9 +81,9 @@ stack:
 
 ## What the element applies
 
-All toggles default to `true`. Empty input renders nothing.
+Every policy is on; turn one off with `policies.<policy>.enabled: false`. Empty input renders nothing.
 
-| Toggle | Applies |
+| Policy | Applies |
 |---|---|
 | `resources` | `config.clusterResources`, as is. |
 | `registry-ca` | ConfigMap `openshift-config/registry-cas` from `config.registryCAs`, and `additionalTrustedCA` on `image.config.openshift.io/cluster`. |
@@ -98,7 +98,7 @@ All toggles default to `true`. Empty input renders nothing.
 `trusted-cas` = `user-ca-bundle` (the installer's `additionalTrustBundle`) + `config.trustedCA`. `user-ca-bundle` is read on the cluster, never written.
 
 ??? info "Turning trusted-ca off"
-    Turning the toggle off or emptying `config.trustedCA` leaves the Proxy on a stale `trusted-cas`, still trusted. Clean up by hand:
+    Turning `trusted-ca` off or emptying `config.trustedCA` leaves the Proxy on a stale `trusted-cas`, still trusted. Clean up by hand:
 
     ```sh
     oc patch proxy/cluster --type merge -p '{"spec":{"trustedCA":{"name":"user-ca-bundle"}}}' # (1)!
@@ -144,9 +144,11 @@ The HostedCluster owns mirrors, image config and proxy. Set them in the fleet fi
     stack:
       disconnected:
         enabled: true
-        toggles:
-          registry-ca: false
-          trusted-ca: false
+        policies:
+          registry-ca:
+            enabled: false
+          trusted-ca:
+            enabled: false
         config:
           clusterResources: # (1)!
             - apiVersion: operators.coreos.com/v1alpha1

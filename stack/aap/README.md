@@ -9,15 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `storage` | Request a NooBaa bucket from ODF and wire it up as hub content storage. Requires odf on the same cluster. | `false` | Policy [`storage`](#policy-storage) |
-| `certs` | Give AAP the cluster service CA and trusted CA bundle | `false` | Policy [`certs`](#policy-certs) |
-| `link` | Publish an OpenShift console link to AAP | `true` | Policy [`link`](#policy-link) |
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`certs`](#policy-certs) | CA bundle for AAP | `policies.certs.enabled: true` |
+| Policy [`storage`](#policy-storage) | Object storage for Automation Hub content | `policies.storage.enabled: true` |
 
 ## Settings
 
@@ -35,14 +34,14 @@ Under `stack.aap.config`. Maps merge across layers; lists are replaced whole.
 | `hub` | Automation Hub (private content repository) |  |
 | `hub.disabled` | true skips this component | `false` |
 | `hub.storage` | Hub content storage |  |
-| `hub.storage.type` | none, file (RWX PVC), or s3 (NooBaa bucket via the storage toggle) | `none` |
+| `hub.storage.type` | none, file (RWX PVC), or s3 (NooBaa bucket via the storage policy) | `none` |
 | `hub.storage.size` | PVC size when type is file | `10Gi` |
 | `hub.storage.storageClass` | RWX StorageClass when type is file | `ocs-storagecluster-cephfs` |
 | `customCaBundle` | Give AAP the cluster CA bundle even when not using S3 storage | `false` |
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -54,42 +53,42 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
+### Policy `certs`
+
+`certs-aap-<cluster>`: CA bundle for AAP. Depends on `install-aap-<cluster>`. Off by default; turn on with `policies.certs.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `certs-ca-bundle` | enforce | medium | [ca-bundle](converters/certs/ca-bundle.yaml) | Service CA and trusted CA bundle for AAP |
+
 ### Policy `install`
 
 `install-aap-<cluster>`: Install and manage the Ansible Automation Platform operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-aap` | enforce | [operator](#operators) `ansible-automation-platform-operator` | Ansible Automation Platform operator |
-
-### Policy `certs`
-
-`certs-aap-<cluster>`: CA bundle for AAP. Depends on `install-aap-<cluster>`. Off by default; turn on with toggle `certs`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `certs-ca-bundle` | enforce | [aap-service-ca](converters/aap-service-ca.yaml)<br>[aap-trusted-ca](converters/aap-trusted-ca.yaml)<br>[aap-ca-bundle](converters/aap-ca-bundle.yaml) | Service CA and trusted CA bundle for AAP |
-
-### Policy `storage`
-
-`storage-aap-<cluster>`: Object storage for Automation Hub content. Depends on `install-aap-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with toggle `storage`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `storage-bucket` | enforce | [aap-bucketclaim](converters/aap-bucketclaim.yaml)<br>[aap-s3-secret](converters/aap-s3-secret.yaml) | NooBaa bucket and the S3 secret AAP consumes |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-aap` | enforce | medium | [operator](#operators) `ansible-automation-platform-operator` | Ansible Automation Platform operator |
 
 ### Policy `instance`
 
 `instance-aap-<cluster>`: Deploy the AnsibleAutomationPlatform instance. Depends on `install-aap-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `instance-platform` | enforce | `install-aap-status`<br>compliant while pending | [aap-instance](converters/aap-instance.yaml) (mustonlyhave) | AnsibleAutomationPlatform instance |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `instance-platform` | enforce | medium | `install-aap-status`<br>compliant while pending | [platform](converters/instance/platform.yaml) (mustonlyhave) | AnsibleAutomationPlatform instance |
 
 ### Policy `link`
 
 `link-aap-<cluster>`: Console link to AAP. Depends on `instance-aap-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `link-aap-console` | enforce | [aap-console-link](converters/aap-console-link.yaml) | AAP console link |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `link-aap-console` | enforce | low | [aap-console](converters/link/aap-console.yaml) | AAP console link |
+
+### Policy `storage`
+
+`storage-aap-<cluster>`: Object storage for Automation Hub content. Depends on `install-aap-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with `policies.storage.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `storage-bucket` | enforce | medium | [bucket](converters/storage/bucket.yaml) | NooBaa bucket and the S3 secret AAP consumes |

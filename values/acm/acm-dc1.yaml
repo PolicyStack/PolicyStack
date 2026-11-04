@@ -12,6 +12,8 @@
 #    enabled: true
 #  gitops:
 #    enabled: true
-#    toggles:
-#      instance: false
-#      link: false
+#    policies:
+#      instance:
+#        enabled: false
+#      link:
+#        enabled: false

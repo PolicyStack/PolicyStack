@@ -57,7 +57,7 @@ repos:
         entry: python tools/doc-generator.py
         language: python
         additional_dependencies: [PyYAML==6.0.3] # keep equal to tools/requirements.txt
-        files: ^(stack/[^/]+/(Chart\.yaml|values\.yaml|README\.md)|tools/doc-generator\.py)$
+        files: ^(stack/[^/]+/(Chart\.yaml|values\.yaml|README\.md|converters/.*)|tools/doc-generator\.py)$
         pass_filenames: false
 
       # Relative links only. zensical build --strict (ci.yml docs) checks anchors and snippets.

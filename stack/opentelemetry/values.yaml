@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -11,46 +13,17 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage Red Hat build of OpenTelemetry"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     operatorPolicies:
       otel:
-        enabled: true
         description: "Red Hat build of OpenTelemetry for distributed tracing"
         # Must match the CSV displayName so the generated status check can find it
         displayName: "Red Hat build of OpenTelemetry"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-opentelemetry-operator
+        clusterMonitoring: true
         subscription:
           channel: stable
           name: opentelemetry-product
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      # Adds the cluster-monitoring label so the operator's metrics are scraped
-      - name: opentelemetry-ns-monitoring
-        enabled: true
-        description: "Adds openshift.io/cluster-monitoring label to the operator namespace"
-        policyRef: install
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        evaluationInterval:
-          compliant: "10m"
-          noncompliant: "30s"
-        templateNames:
-          - name: ns-monitoring-label
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-opentelemetry-operator

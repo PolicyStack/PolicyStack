@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,8 +27,7 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-nfd-<cluster>`: Install and configure the Node Feature Discovery Operator and instance.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `install-nfd-ns-monitoring` | enforce |  | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to operator namespace |
-| `install-nfd-instance` | enforce | `install-node-feature-discovery-status`<br>compliant while pending | [nfd-instance](converters/nfd-instance.yaml) | Deploy the NodeFeatureDiscovery custom resource |
-| `install-node-feature-discovery` | enforce |  | [operator](#operators) `nfd` | Node Feature Discovery Operator |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `install-nfd-instance` | enforce | medium | `install-node-feature-discovery-status`<br>compliant while pending | [nfd-instance](converters/install/nfd-instance.yaml) | Deploy the NodeFeatureDiscovery custom resource |
+| `install-node-feature-discovery` | enforce | medium |  | [operator](#operators) `nfd` | Node Feature Discovery Operator |

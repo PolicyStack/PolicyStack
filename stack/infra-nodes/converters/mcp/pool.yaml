@@ -1,0 +1,18 @@
+{{- /* MachineConfigPool for infra, drawing from both the worker and infra MachineConfig roles. */ -}}
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfigPool
+metadata:
+  name: {{ .Config.role }}
+  labels:
+    pools.operator.machineconfiguration.openshift.io/{{ .Config.role }}: ""
+spec:
+  machineConfigSelector:
+    matchExpressions:
+      - key: machineconfiguration.openshift.io/role
+        operator: In
+        values:
+          - worker
+          - {{ .Config.role }}
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/{{ .Config.role }}: ""

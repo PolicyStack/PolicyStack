@@ -22,12 +22,8 @@ func TestACMTemplateCheck(t *testing.T) {
 	write("first", "kind: ConfigMap\n")
 	write("second", "# comment\ndata:\n  a: ok\n  v: '{{ \"{{-\" }} lookpu {{ \"}}\" }}'\n")
 
-	component := func(templates ...string) *chart.Component {
-		cp := chart.SubPolicy{Name: "ready", PolicyRef: "present"}
-		for _, n := range templates {
-			cp.TemplateNames = append(cp.TemplateNames, chart.TemplateName{Name: n})
-		}
-		return &chart.Component{ConfigPolicies: []chart.SubPolicy{cp}}
+	component := func(files ...string) *chart.Component {
+		return &chart.Component{Policies: chart.Policies{"present": {Name: "present", Templates: chart.Templates{"ready": {Name: "ready", Files: files}}}}}
 	}
 	// An engine copy of the lifecycle chart: Components holds every engine, Values.Component the
 	// selected one.

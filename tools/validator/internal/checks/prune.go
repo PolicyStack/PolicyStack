@@ -14,7 +14,7 @@ var allowedPrune = []string{"None", "DeleteIfCreated", "DeleteAll"}
 // deletes the spoke ConfigurationPolicy without resetting prune, so prune with any dependency
 // deletes the template's objects whenever that dependency flaps. policy-library renders
 // waitForOperator, extraDependencies and orderManifests as the template's extraDependencies, and
-// orderPolicies and policies[].dependencies as the Policy's dependencies.
+// policies.<p>.dependencies as the Policy's dependencies.
 type PruneCheck struct{}
 
 func (PruneCheck) ID() string   { return "POLICY033" }

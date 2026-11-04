@@ -18,8 +18,8 @@ func TestOperatorPolicies_Decode(t *testing.T) {
 		legacy     bool
 		hasName    bool
 	}{
-		{"map takes name from key", "      op:\n        policyRef: p\n", false, false},
-		{"stray name keeps key", "      op:\n        name: other\n        policyRef: p\n", false, true},
+		{"map takes name from key", "      op:\n        subscription: {name: op}\n", false, false},
+		{"stray name keeps key", "      op:\n        name: other\n", false, true},
 		{"legacy list keyed by name", "      - name: op\n        policyRef: p\n", true, false},
 	}
 	for _, tc := range cases {
@@ -27,7 +27,7 @@ func TestOperatorPolicies_Decode(t *testing.T) {
 			el := loadElement(t, "stack:\n  myElement:\n    operatorPolicies:\n"+tc.body, "", nil)
 			comp := el.Values.Component
 			op, ok := comp.OperatorPolicies["op"]
-			if !ok || op.Name != "op" || op.PolicyRef != "p" || op.HasName != tc.hasName {
+			if !ok || op.Name != "op" || op.HasName != tc.hasName {
 				t.Fatalf("got %+v", comp.OperatorPolicies)
 			}
 			if comp.LegacyOperatorPolicies != tc.legacy {
@@ -59,7 +59,6 @@ func TestPolicy030_OperatorPolicies(t *testing.T) {
 		{"installPlanApproval", "subscription:\n          installPlanApproval: Manual", "ACM rejects it", SevError},
 		{"bad version", "versions:\n          - Op_v1", `.versions[0]: "Op_v1" is not a valid CSV name`, SevError},
 		{"bad comma entry", "versions:\n          - op.v1, op v2", `"op v2" is not a valid CSV name`, SevError},
-		{"bad remediationAction", "remediationAction: Enforce", `.remediationAction = "Enforce"`, SevError},
 		{"comma in startingCSV", "subscription:\n          startingCSV: op.v1,op.v2", `"op.v1,op.v2" is not a valid CSV name`, SevError},
 		{"bad startingCSV", "subscription:\n          startingCSV: op.v1.", `.subscription.startingCSV: "op.v1." is not a valid CSV name`, SevError},
 		{"too long", "versions:\n          - " + strings.Repeat("a", 254), "is not a valid CSV name", SevError},
@@ -92,13 +91,8 @@ func TestPolicy032_ValuesLayers(t *testing.T) {
 stack:
   myElement:
     enabled: true
-    policies:
-      - name: p
-        enabled: true
     operatorPolicies:
       op:
-        enabled: true
-        policyRef: p
         upgradeApproval: None
         versions: []
 `

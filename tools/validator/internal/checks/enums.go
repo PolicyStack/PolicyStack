@@ -3,7 +3,7 @@ package checks
 import (
 	"fmt"
 	"slices"
-	"strconv"
+	"strings"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
@@ -14,13 +14,14 @@ var (
 	allowedCompliance = []string{"musthave", "mustnothave", "mustonlyhave"}
 	allowedUpgrade    = []string{"None", "Automatic"}
 
-	// A template may also be InformOnly; the Policy CRD rejects it.
-	allowedTemplateRemed = []string{"inform", "enforce", "InformOnly"}
+	// A template's own action is InformOnly or nothing: otherwise it takes its Policy's.
+	allowedTemplateRemed = []string{"InformOnly"}
 )
 
 // EnumCheck (POLICY030) validates the enum fields ACM rejects when invalid:
 // severity, remediationAction, complianceType and upgradeApproval, plus the other
-// operatorPolicies fields operatorFindings covers.
+// operatorPolicies fields operatorFindings covers. A template's remediationAction is InformOnly or
+// unset.
 type EnumCheck struct{}
 
 func (EnumCheck) ID() string   { return "POLICY030" }
@@ -34,7 +35,7 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 	stackKey := ctx.Element.StackKey
 	var out []Finding
 
-	emit := func(field, value string, allowed []string, valuePath ...string) {
+	emit := func(value string, allowed []string, valuePath ...string) {
 		if value == "" || slices.Contains(allowed, value) {
 			return
 		}
@@ -43,7 +44,7 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 			RuleID:   c.ID(),
 			Severity: SevError,
 			Element:  ctx.Element.ChartName,
-			Message:  fmt.Sprintf("%s = %q; allowed: %v", field, value, allowed),
+			Message:  fmt.Sprintf("%s = %q; allowed: %v", strings.Join(valuePath, "."), value, allowed),
 			File:     ctx.Element.ValuesFile,
 			Line:     loc.Line, Col: loc.Col,
 		})
@@ -51,26 +52,20 @@ func (c *EnumCheck) Run(ctx Context) []Finding {
 
 	// policy-library reads `default`, not `defaultPolicy`; POLICY031 reports the legacy spelling.
 	if comp.Default != nil {
-		emit("default.severity", comp.Default.Severity, allowedSeverity, "default", "severity")
-		emit("default.remediationAction", comp.Default.RemediationAction, allowedRemed, "default", "remediationAction")
+		emit(comp.Default.Severity, allowedSeverity, "default", "severity")
+		emit(comp.Default.RemediationAction, allowedRemed, "default", "remediationAction")
 	}
-	for i, p := range comp.Policies {
-		emit("policies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "policies", strconv.Itoa(i), "severity")
-		emit("policies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedRemed, "policies", strconv.Itoa(i), "remediationAction")
-	}
-	for i, p := range comp.ConfigPolicies {
-		emit("configPolicies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "configPolicies", strconv.Itoa(i), "severity")
-		if !informOnly(p.RemediationAction) {
-			emit("configPolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedTemplateRemed, "configPolicies", strconv.Itoa(i), "remediationAction")
+	for _, p := range comp.Policies.Sorted() {
+		emit(p.Severity, allowedSeverity, append(slices.Clone(p.Path), "severity")...)
+		emit(p.RemediationAction, allowedRemed, append(slices.Clone(p.Path), "remediationAction")...)
+		for _, t := range p.Templates.Sorted() {
+			emit(t.Severity, allowedSeverity, append(slices.Clone(t.Path), "severity")...)
+			emit(t.RemediationAction, allowedTemplateRemed, append(slices.Clone(t.Path), "remediationAction")...)
+			emit(t.ComplianceType, allowedCompliance, append(slices.Clone(t.Path), "complianceType")...)
 		}
-		emit("configPolicies["+strconv.Itoa(i)+"].complianceType", p.ComplianceType, allowedCompliance, "configPolicies", strconv.Itoa(i), "complianceType")
 	}
 	for k, p := range comp.OperatorPolicies.Sorted() {
 		out = append(out, operatorFindings(c.ID(), ctx.Element, ctx.Element.ValuesFile, ctx.Element.ValuesDoc, k, p)...)
-	}
-	for i, p := range comp.CertificatePolicies {
-		emit("certificatePolicies["+strconv.Itoa(i)+"].severity", p.Severity, allowedSeverity, "certificatePolicies", strconv.Itoa(i), "severity")
-		emit("certificatePolicies["+strconv.Itoa(i)+"].remediationAction", p.RemediationAction, allowedRemed, "certificatePolicies", strconv.Itoa(i), "remediationAction")
 	}
 	return out
 }

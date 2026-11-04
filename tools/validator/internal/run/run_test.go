@@ -447,6 +447,71 @@ func TestPolicy051Wiring(t *testing.T) {
 	}
 }
 
+// TestV3Chart checks that a policy-library 3.x chart is rendered and reported only by POLICY031,
+// while a 4.0 chart beside it is checked as usual.
+func TestV3Chart(t *testing.T) {
+	root := t.TempDir()
+	log := filepath.Join(root, "helm.log")
+	write := func(rel, body string, mode os.FileMode) {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("helm", "#!/bin/sh\necho \"$*\" >> "+log+"\nexit 0\n", 0o755)
+	for _, name := range []string{"old", "new"} {
+		write("stack/"+name+"/Chart.yaml", "apiVersion: v2\nname: "+name+"\nversion: 0.1.0\n", 0o644)
+		write("stack/"+name+"/converters/flat.yaml", "kind: ConfigMap\n", 0o644)
+	}
+	write("stack/old/values.yaml", `stack:
+  old:
+    enabled: true
+    toggles: {cm: true}
+    policies:
+      - name: install
+    configPolicies:
+      - name: cm
+        policyRef: install
+        remediationAction: enforce
+        templateNames: [flat]
+`, 0o644)
+	write("stack/new/values.yaml", "stack:\n  new:\n    enabled: true\n", 0o644)
+	write("values.yaml", "policyNamespace: policies\n", 0o644)
+	write("values/x.yaml", "stack:\n  old:\n    toggles: {cm: false}\n", 0o644)
+	write("fleet/c.yaml", "revision: main\n", 0o644)
+	res, err := Run(t.Context(), Options{
+		RepoRoot:     root,
+		StackDir:     filepath.Join(root, "stack"),
+		LifecycleDir: filepath.Join(root, "lifecycle"),
+		ValuesDir:    filepath.Join(root, "values"),
+		FixturesDir:  filepath.Join(root, "fleet"),
+		HelmBin:      filepath.Join(root, "helm"),
+		Only:         []string{"POLICY021", "POLICY030", "POLICY031", "POLICY035", "RENDER000"},
+		Logger:       slog.New(slog.DiscardHandler),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range res.Findings {
+		got = append(got, f.RuleID+" "+f.Element)
+	}
+	slices.Sort(got)
+	if want := []string{"POLICY021 new", "POLICY031 old"}; !slices.Equal(got, want) {
+		t.Errorf("findings %q, want %q", got, want)
+	}
+	calls, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(calls), "template old-c "+filepath.Join(root, "stack/old")) {
+		t.Errorf("old not rendered:\n%s", calls)
+	}
+}
+
 func TestFilterRules(t *testing.T) {
 	all := checks.All()
 	tests := []struct {

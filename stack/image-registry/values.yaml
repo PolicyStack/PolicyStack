@@ -2,16 +2,8 @@ stack:
   imageRegistry:
     enabled: false
 
-    # Enable only one storage backend. `pvc` needs an RWX StorageClass; `s3` needs
-    # ODF's NooBaa gateway on the same cluster.
-    toggles:
-      # Back the registry with an RWX PersistentVolumeClaim
-      pvc: false
-      # Back the registry with a NooBaa bucket from ODF
-      s3: false
-
     config:
-      # Must match the toggle you enabled above: pvc or s3
+      # Must match the policy you enabled below: pvc or s3
       storageType: s3
       # Managed, Unmanaged or Removed
       managementState: Managed
@@ -33,6 +25,8 @@ stack:
         bucketStorageClass: openshift-storage.noobaa.io
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -40,99 +34,42 @@ stack:
       standards:
         - NIST SP 800-53
 
+    # Enable only one storage backend. `pvc` needs an RWX StorageClass; `s3` needs
+    # ODF's NooBaa gateway on the same cluster.
     policies:
-      - name: pvc
-        enabled: true
+      # Back the registry with an RWX PersistentVolumeClaim
+      pvc:
+        enabled: false
         description: "PVC-backed registry storage"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          claim:
+            description: "Registry PVC"
 
-      # S3-backed storage comes from ODF's NooBaa gateway, so it waits for the
-      # storage cluster to be usable.
-      - name: s3
-        enabled: true
+      # Back the registry with a NooBaa bucket from ODF. Waits for the storage cluster
+      # to be usable.
+      s3:
+        enabled: false
         description: "S3-backed registry storage from ODF"
-        # No Policy-level remediationAction: it would override the inform gate below.
-        severity: medium
-        disabled: false
         dependencies:
           - name: ready
             element: odf
+        templates:
+          bucket:
+            description: "Registry bucket"
 
-      - name: config
-        enabled: true
+          bucket-ready:
+            description: "Registry bucket is provisioned"
+            remediationAction: InformOnly
+
+          credentials:
+            description: "Registry S3 credentials and trust bundle"
+            # The credentials only exist once the bucket has been provisioned
+            extraDependencies:
+              - name: bucket-ready
+            ignorePending: true
+
+      config:
         description: "Point the registry at its storage and enable it"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: claim
-        enabled: true
-        description: "Registry PVC"
-        policyRef: pvc
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: registry-pvc
-        enableTemplateParameters: true
-        templateParameters: &registryParams
-          namespace: openshift-image-registry
-          claimName: image-registry-storage
-          trustBundleName: image-registry-s3-bundle
-
-      - name: bucket
-        enabled: true
-        description: "Registry bucket"
-        policyRef: s3
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: registry-bucket
-        enableTemplateParameters: true
-        templateParameters: *registryParams
-
-      - name: bucket-ready
-        enabled: true
-        description: "Registry bucket is provisioned"
-        policyRef: s3
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: registry-bucket-ready
-        enableTemplateParameters: true
-        templateParameters: *registryParams
-
-      - name: credentials
-        enabled: true
-        description: "Registry S3 credentials and trust bundle"
-        policyRef: s3
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        # The credentials only exist once the bucket has been provisioned
-        extraDependencies:
-          - name: bucket-ready
-        ignorePending: true
-        templateNames:
-          - name: registry-s3-secret
-        enableTemplateParameters: true
-        templateParameters: *registryParams
-
-      - name: registry
-        enabled: true
-        description: "Image registry configuration"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: registry-config
-        enableTemplateParameters: true
-        templateParameters: *registryParams
+        templates:
+          registry:
+            description: "Image registry configuration"

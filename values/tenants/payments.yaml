@@ -10,10 +10,14 @@ stack:
   # that instance, so they go off with it; link would otherwise wait on it indefinitely.
   gitops:
     enabled: true
-    toggles:
-      instance: false
-      ca-bundle: false
-      link: false
+    policies:
+      instance:
+        enabled: false
+        templates:
+          ca-bundle:
+            enabled: false
+      link:
+        enabled: false
 
   # A team ArgoCD in openshift-gitops-payments. teams is a map, so a cluster file can add more teams
   # without restating this one.

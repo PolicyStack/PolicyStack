@@ -1,327 +1,277 @@
 # Writing an element
 
-An element is a Helm chart under `stack/` that renders ACM policies through the
-[policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md)
-chart. Every option of every policy type is in that README.
+An element is a Helm chart under `stack/` that renders ACM policies through
+[policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md).
+Manifests go in `converters/<policy>/<template>.yaml`. `values.yaml` holds curated settings and the
+exceptions to the [defaults](#what-you-leave-out). The library README lists every key.
 
-## Naming
+## Workflow
 
-- Lowercase kebab-case. Directory name and chart `name` must match: the Application and Helm
-  release take the directory name ([Applications](applicationset.md#applications)), the values key
-  takes the chart name, and `element:` dependencies and the validator assume both are equal.
-- Short: the common abbreviation (`acm`, `odf`) or a plain noun (`logging`). No `openshift-`
-  prefix, no `-operator` suffix ([Naming limits](policies.md#naming-limits)).
-- Must not start with another element's name plus `-`. `gitops` on cluster `dev-c` and
-  `gitops-dev` on cluster `c` would both be release `gitops-dev-c` (POLICY091).
-- `lifecycle` is reserved.
+1.  **Scaffold.**
 
-!!! warning
-    Element and policy names are part of every object name. Renaming one recreates its Policies on
-    every cluster.
-
-## Creating an element
-
-```sh
-./tools/create-element.sh cert-manager "Certificate management"
-# Created stack/cert-manager, values key stack.certManager. ...
-```
-
-It prompts for missing arguments, refuses a name that is not kebab-case or already exists, and
-copies [`tools/sample-element/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/sample-element)
-to `stack/<name>/`, replacing `my-element` with the name and `myElement` with its camelCase form.
-The result passes the validator as is. Then:
-
-1. Set the operator's `namespace`, `operatorGroup` and `subscription` in `values.yaml`.
-2. Replace `converters/<name>-configmap.yaml` with one file per `templateNames` entry. A missing
-   converter fails (POLICY020), an unused one warns (POLICY021).
-3. Describe each toggle and setting with a comment above it and [generate the README](#element-reference).
-4. Run the [validator](validation.md).
-5. Turn it on for one nonprod cluster in `values/clusters/<cluster>.yaml`.
-
-## Layout
-
-The files of `tools/sample-element/`. It has one of each piece: an operator under an `install`
-policy, a `config` policy that depends on it, a toggle, and one converter.
-
-=== "Chart.yaml"
-
-    ```yaml
-    apiVersion: v2
-    name: my-element # (1)!
-    description: Example element. tools/create-element.sh copies it to stack/<name>.
-    type: application
-    version: 0.1.0
-    dependencies:
-      - name: policy-library
-        alias: stack # (2)!
-        version: "3.4.0"
-        repository: "https://policystack.github.io/PolicyStack-chart"
+    ```sh
+    tools/create-element.sh demo "Demo element"
     ```
 
-    1.  Same as the directory name.
-    2.  The alias puts values under `stack:` and lets the library [schema](values.md#schema) check them.
+    Copies the [sample element](#sample-element) to `stack/<name>/`, renames `my-element` and
+    `myElement`, and generates the README. Refuses a name that isn't kebab-case, is over 17 characters
+    or collides with another element (POLICY091).
+
+2.  **Drop manifests into `converters/<policy>/`.** Each directory is a Policy, each file in it one
+    ConfigurationPolicy named `<policy>-<file>`. Set the operator's `namespace`, `subscription` and
+    `displayName` (the CSV display name the status check matches) under `operatorPolicies`.
+
+3.  **Move site data into `config`.** Converters read it as `.Config`. Expose curated, typed settings
+    and build the manifest in the converter; don't pass a CR spec through values. Comment each key:
+    the comment is its README description.
+
+4.  **Preview.**
+
+    ```sh
+    make -C tools/validator preview ELEMENT=demo CLUSTER=nonprod-west-1
+    ```
+
+    Turns the element on and prints the rendered Policies and `<element>.evaluated.yaml`, the objects
+    ACM would apply with ACM templates resolved on an empty cluster. Without `CLUSTER` it renders every
+    fixture into a temporary directory, or `PREVIEW=<dir>` (relative to `tools/validator`).
+
+5.  **Validate.**
+
+    ```sh
+    make -C tools/validator validate ELEMENT=demo
+    ```
+
+    Every [rule](validation.md#rules), this element only. Add it to
+    `tools/validator/testdata/profiles/all-on.yaml`, or CI never evaluates its ACM templates
+    ([ACM templates](validation.md#acm-templates)).
+
+6.  **Enable on one cluster.** Set `enabled: true` in `values/clusters/<cluster>.yaml` of a nonprod
+    cluster and pin its fleet file to your branch
+    ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)). Read compliance, then widen.
+
+## Sample element
+
+`tools/sample-element/`, included from source: one operator, one converter reading `.Config`, one
+optional template. `README.md` is [generated](#element-reference).
 
 === "values.yaml"
 
     ```yaml
-    stack:
-      myElement: # (1)!
-        enabled: false # (2)!
-
-        toggles:
-          # Apply the ConfigMap configured below
-          config: true # (3)!
-
-        # Settings the converters read.
-        config:
-          # ConfigMap data, e.g. {logLevel: info}
-          data: {} # (4)!
-
-        default:
-          categories:
-            - CM Configuration Management
-          controls:
-            - CM-2 Baseline Configuration
-          standards:
-            - NIST SP 800-53
-
-        policies:
-          - name: install
-            enabled: true
-            description: "Install the operator"
-            remediationAction: inform # (5)!
-            severity: medium
-            disabled: false
-
-          - name: config
-            enabled: true
-            description: "Configure the operator"
-            remediationAction: inform
-            severity: medium
-            disabled: false
-            # ACM holds this policy Pending until install is compliant
-            dependencies:
-              - name: install
-
-        operatorPolicies:
-          my-element:
-            enabled: true
-            description: "Example operator"
-            displayName: "Example Operator"
-            policyRef: install # (6)!
-            severity: medium
-            remediationAction: inform
-            complianceType: musthave
-            namespace: my-element
-            operatorGroup:
-              name: my-element
-            subscription:
-              channel: stable
-              name: my-element-operator
-              source: redhat-operators
-              sourceNamespace: openshift-marketplace
-            upgradeApproval: Automatic
-            # Allowed CSV names; empty allows whatever the channel offers
-            versions: [] # (7)!
-
-        configPolicies:
-          - name: my-element-config # (8)!
-            enabled: true
-            description: "Example ConfigMap"
-            policyRef: config
-            complianceType: musthave
-            remediationAction: inform
-            severity: medium
-            # Wait for the operator's CSV, and stay compliant while waiting
-            waitForOperator: my-element
-            ignorePending: true
-            templateNames:
-              - name: my-element-configmap # (9)!
+    --8<-- "tools/sample-element/values.yaml"
     ```
 
-    1.  camelCase of the chart name ([Element values](policies.md#element-values)).
-    2.  Off by default. A layer in `values/` turns it on.
-    3.  Overrides `enabled` of the entry named `config`.
-    4.  Site data. Converters read it, layers set it.
-    5.  New policies start in `inform`.
-    6.  The policy this operator renders into.
-    7.  Pin versions in layers, not here ([Operator upgrades](rollout.md#operator-upgrades)).
-    8.  Prefixed with the element name: template names must be unique across all Policies on a cluster.
-    9.  Renders `converters/my-element-configmap.yaml`.
-
-=== "converters/my-element-configmap.yaml"
+=== "converters/install/my-element-instance.yaml"
 
     ```yaml
-    {{- /* One object per converter. Site data comes from config, not hard-coded values. */ -}}
+    --8<-- "tools/sample-element/converters/install/my-element-instance.yaml"
+    ```
+
+=== "converters/install/my-element-netpol.yaml"
+
+    ```yaml
+    --8<-- "tools/sample-element/converters/install/my-element-netpol.yaml"
+    ```
+
+=== "Chart.yaml"
+
+    ```yaml
+    --8<-- "tools/sample-element/Chart.yaml"
+    ```
+
+- `enabled: false`: a [values layer](values.md) turns the element on.
+- `default.remediationAction: inform`: switch to `enforce` once compliance reads clean.
+- `waitForOperator`: the template waits for the CSV to succeed and stays compliant meanwhile.
+- `versions: []`: pin per environment in layers ([Operator upgrades](rollout.md#operator-upgrades)).
+- `alias: stack` puts values under `stack:` and turns on the library [schema](values.md#schema).
+- `templates/policy.yaml` is one line, `include "policy-library.render"`. Leave it.
+
+## What you leave out
+
+| Key | Resolves to |
+|---|---|
+| `enabled` on a policy, template or operator | on |
+| `policies` | one Policy per `converters/` directory, plus `install` when there are operators |
+| `policies.<p>.templates` | one template per `converters/<p>/*.yaml` |
+| `remediationAction` | `policies.<p>` → `default` → `inform` |
+| `severity` | template or operator → `policies.<p>` → `default` → `low` |
+| `categories`, `controls`, `standards` | `policies.<p>` → `default` → none |
+| `complianceType` | `musthave` |
+| `ignorePending` | `true` with `waitForOperator` |
+| `subscription.source`, `sourceNamespace` | `redhat-operators`, `openshift-marketplace` |
+| `upgradeApproval` | `Automatic` |
+| `operatorGroup.name` | `subscription.name`, all namespaces |
+| `displayName` | `subscription.name` |
+
+!!! warning "Template `remediationAction` accepts only `InformOnly`"
+    Every template takes its Policy's action. Mark readiness checks and `mustnothave` signals
+    `InformOnly` so an `enforce` Policy never enforces them. `global.remediationAction: inform` still
+    overrides every Policy.
+
+## Converter shapes
+
+A converter is a Helm template rendered with the chart root plus `.Config` (element `config` merged
+with `templates.<t>.config`). The trimmed output picks the field:
+
+=== "One object"
+
+    ```yaml
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: my-element
       namespace: my-element
     data:
-      {{- toYaml .Values.stack.myElement.config.data | nindent 2 }}
+      logLevel: {{ .Config.logLevel | quote }}
     ```
 
-=== "templates/policy.yaml"
+=== "Documents"
+
+    One `object-templates` entry per column-0 `---` document. Empty documents are dropped.
 
     ```yaml
-    {{- include "policy-library.render" . -}}
-    ```
-
-=== ".gitignore"
-
-    ```
-    Chart.lock
-    *.tgz
-    charts/
-    ```
-
-A converter is the manifest for one `configPolicies[].templateNames` entry, rendered with Helm's
-`tpl`. It reads `.Values`, and `.Parameters` (that config policy's `templateParameters`) when the
-config policy sets `enableTemplateParameters: true`. `README.md` is
-[generated](#element-reference).
-
-## Conventions
-
-From [`stack/metallb`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/metallb):
-
-| Convention | metallb |
-| ---------- | ------- |
-| Off by default | `enabled: false`; a [values layer](values.md) turns it on |
-| [Toggles](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) for optional pieces | `toggles.quota` and `toggles.addressing` ship `false`; a cluster flips one in one line instead of restating the `policies` list |
-| A `config` map for site data | Converters read `config.ipAddressPools`, `l2Advertisements`, `bgpPeers`, `quota`. Maps merge ([Merge rules](values.md#merge-rules)), so a cluster sets only its keys |
-| Install, then configure | `config` depends on `install`, `addressing` on `config`. ACM holds each `Pending` until the previous one is compliant ([dependencies](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#policy-dependencies)) |
-| Wait for the CSV | `metallb-instance` sets `waitForOperator: metallb` and `ignorePending: true`, so it waits for the operator without going noncompliant ([waiting for an operator](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#waiting-for-an-operator)) |
-| `rawTemplate` when the object count varies | Pool, advertisement and peer converters emit one object per map key. An empty map renders an empty list ([raw object templates](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#raw-object-templates)) |
-| Short names | Element, policy, config and operator policy names end up in length-limited object names ([Naming limits](policies.md#naming-limits)) |
-
-A cluster turning it on, `values/clusters/nonprod-west-1.yaml`:
-
-```yaml
-stack:
-  metallb:
-    enabled: true
-    toggles:
-      addressing: true
-    config:
-      ipAddressPools:
-        services: # (1)!
-          addresses:
-            - 10.20.30.100-10.20.30.120
-          autoAssign: true
-      l2Advertisements:
-        services:
-          ipAddressPools:
-            - services
-```
-
-1.  Map key is the object name, value is the `IPAddressPool` spec.
-
-The `rawTemplate` converter that reads it, `converters/metallb-ipaddresspools.yaml`:
-
-```yaml
-{{- range $name, $spec := .Values.stack.metallb.config.ipAddressPools }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: metallb.io/v1beta1
-    kind: IPAddressPool
+    {{- range $name, $data := .Config.maps }}
+    apiVersion: v1
+    kind: ConfigMap
     metadata:
       name: {{ $name }}
-      namespace: {{ $.Parameters.namespace }} # (1)!
-    spec:{{ toYaml $spec | nindent 6 }}
-{{- end }}
+      namespace: my-element
+    data: {{- toYaml $data | nindent 2 }}
+    ---
+    {{- end }}
+    ```
+
+    !!! note
+        A leading `---` and full-line `#` comments are fine. A `---` with text after it on the line
+        (`--- # c`) is not a separator, so the document starts with `-` and goes raw.
+
+=== "Raw list"
+
+    Output starting with `-`, `[` or `{{` goes verbatim to `object-templates-raw`. Use it when the
+    managed cluster decides the object count. It must be the template's only output.
+
+    ```yaml
+    {{ "{{-" }} range (lookup "v1" "Namespace" "" "" "team=a").items {{ "}}" }}
+    - complianceType: musthave
+      objectDefinition:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: my-element
+          namespace: {{ "{{" }} .metadata.name {{ "}}" }}
+    {{ "{{-" }} end {{ "}}" }}
+    ```
+
+Empty output renders `object-templates-raw: []`; a Policy with nothing else fails POLICY082.
+
+## Helm or ACM: who evaluates what
+
+| Data | Evaluated by | Write |
+|---|---|---|
+| `values.yaml`, layers, `.Config` | Helm, when Argo CD renders | `{{ .Config.x }}` |
+| Objects on the managed cluster (`lookup`, `fromConfigMap`) | ACM on the managed cluster, every evaluation | `{{ "{{" }} lookup ... {{ "}}" }}` |
+| Hub secrets and cluster labels (`copySecretData`, `.ManagedClusterLabels`) | ACM on the hub, when the Policy propagates | `{{ "{{" }}hub ... hub{{ "}}" }}` |
+
+Escape only what ACM evaluates: Helm prints `{{ "{{" }}` as `{{`. Anything known from values belongs
+to Helm. `make preview` shows both stages: the Policy after Helm, `.evaluated.yaml` after ACM.
+
+## Partials and file reuse
+
+Files and directories starting with `_` are never discovered. `templates.<t>.file` points a template
+at one, or at a list of files whose objects are concatenated. From
+[`stack/compliance`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/compliance), three
+templates from one file, each with its own `config`:
+
+```yaml
+templates:
+  high:
+    file: findings/_findings
+    config:
+      severity: "compliance.openshift.io/check-severity=high"
+  medium:
+    file: findings/_findings
+    severity: medium
+    config:
+      severity: "compliance.openshift.io/check-severity=medium"
 ```
 
-1.  From the `pools` config policy's `templateParameters`.
+## Optional pieces
+
+Ship a policy, template or operator with `enabled: false`. A layer turns it on in one line,
+`policies.install.templates.my-element-netpol.enabled: true`, and the README lists it under
+*Optional pieces*. Give it its input defaults in `config`, or the enabled Policy may render empty.
+
+## Naming
+
+- Lowercase kebab-case, directory name equal to chart `name`. The values key is its camelCase.
+- At most 17 characters: `pstack.install-<element>-<cluster>` must fit 63 with a 30-character
+  cluster. Policy name plus element name: 24 at most ([Naming limits](policies.md#naming-limits)).
+- Not another element's name plus `-`, nor a prefix of one: `gitops` on cluster `dev-c` and
+  `gitops-dev` on cluster `c` share release `gitops-dev-c` (POLICY091). `lifecycle` is reserved.
+- Prefix template files with the element (`my-element-instance`). Template names are unique across
+  every Policy on a cluster (POLICY003).
+- No `openshift-` prefix or `-operator` suffix.
+
+!!! warning
+    Element, policy and template names are part of every object name. Renaming one recreates its
+    Policies on every cluster.
 
 ## Good practices
 
-- **One product per element.** Clusters turn an element on as a unit. An operator and its
-  configuration belong together, unrelated settings do not.
-- **Prefix config and operator policy names with the element.** Two elements that both put a
-  `ns-monitoring` config policy under an `install` policy render the same template name
-  `install-ns-monitoring` and collide on the cluster (POLICY003). metallb uses `metallb-instance`.
-- **Start in `inform`.** Roll out to a nonprod revision, read compliance, then switch to `enforce`.
-- **Pin operator versions in layers.** Ship `versions: []`, set it per environment or cluster
-  ([Operator upgrades](rollout.md#operator-upgrades)).
-- **Try changes on one cluster first.** Push a branch, then pin a nonprod cluster's fleet file to it
-  with a pull request to the default branch ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)).
-
-!!! warning "Policy-level `remediationAction` overrides inform gates"
-    ACM applies it to every template in the Policy but `InformOnly` ones, so `enforce` there
-    enforces readiness checks and `mustnothave` signals. Set gates to `InformOnly` (config policies
-    only), as lifecycle, upgrade and storage-nodes do, or leave the Policy's action unset and set it
-    on each config and operator policy, as acs and cert-manager do.
-    `global.remediationAction: inform` still overrides all of them.
+- **One product per element.** Clusters turn an element on as a unit.
+- **Start in `inform`.** Roll out, read compliance, then `enforce`.
+- **Compliance annotations only for controls the element implements.** There is no fallback.
 
 !!! warning "`pruneObjectBehavior` decides whether removal deletes objects"
-    Set it only on templates without dependencies (POLICY033), in its own commit, so it reaches
-    the cluster before the removal
+    Set it only on templates without dependencies (POLICY033), in its own commit, so it reaches the
+    cluster before the removal
     ([What happens on the managed cluster](rollout.md#what-happens-on-the-managed-cluster)).
 
 !!! danger "Keep the branch until the pin moves back"
     A fleet file pinned to a deleted branch freezes the Applications of every cluster
     ([Revision](applicationset.md#revision)).
 
-### Secrets
+## Secrets
 
-Values live in Git. Read runtime secrets on the hub with an ACM hub template, escaped so Helm
-passes it through. From
-[`stack/acs/converters/acs-sync-crs.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/converters/acs-sync-crs.yaml):
+Values live in Git. Read runtime secrets on the hub with a hub template. From
+[`stack/acs/converters/secured/tls.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/converters/secured/tls.yaml):
 
 ```yaml
-data: '{{ "{{" }}hub copySecretData "{{ .Parameters.hubNamespace }}" "cluster-registration-secret" hub{{ "}}" }}'
+data: '{{ "{{" }}hub copySecretData "stackrox" "cluster-registration-secret" hub{{ "}}" }}'
 ```
 
-`copySecretData` copies every key of `data`, not the type, labels or annotations. `fromSecret` reads one key and returns `''` when it is missing.
+`copySecretData` copies every key of `data`, not the type, labels or annotations. `fromSecret` reads
+one key and returns `''` when it is missing.
 
-Hub lookups are limited to the policy namespace. To read another, point the policy at a
-ServiceAccount in the policy namespace that can read it, as acs does:
+Hub lookups stay in the policy namespace. To read another, point the Policy at a ServiceAccount in
+the policy namespace that can read it:
 
 ```yaml
 policies:
-  - name: secured # (1)!
+  secured:
     hubTemplateOptions:
       serviceAccountName: acs-hub-templates
 ```
 
-1.  Trimmed; see `stack/acs/values.yaml`.
-
-The validator evaluates escaped templates as POLICY081 ([ACM templates](validation.md#acm-templates)).
+POLICY081 evaluates escaped templates ([ACM templates](validation.md#acm-templates)).
 
 ## Element reference
 
-`stack/<element>/README.md` is generated from `Chart.yaml` and `values.yaml`. Do not edit it by hand.
+`stack/<element>/README.md` is generated. Don't edit it.
 
 ```sh
 pip install -r tools/requirements.txt
-python tools/doc-generator.py          # regenerate all READMEs
+python tools/doc-generator.py          # all elements
 python tools/doc-generator.py --check  # report stale ones, write nothing
 ```
 
-It shows the values key, toggles, settings (`config`), operators, and each Policy with its templates as
-they appear in the ACM console. Descriptions come from:
-
 | Source | Shown as |
-| ------ | -------- |
+|---|---|
 | `Chart.yaml` `description` | Lead paragraph |
 | `Chart.yaml` `home` | Guide link, for elements with a page under `docs/` |
-| Comment above `toggles:` or `config:` | Section intro |
-| Comment above a key under `toggles` or `config` | That row's description |
-| `description:` of a policy, config or operator policy | Policy line or template row |
+| Comment above `config:` | Settings intro |
+| Comment above a key under `config` | That row's description |
+| `description:` of a policy, template or operator | Policy line or template row |
+| `enabled: false` entries | *Optional pieces* table |
 
-```yaml
-config:
-  # Ceph CSI tolerations are not managed: see the converter. # (1)!
-
-  # Device sets per replica
-  count: 2
-```
-
-1.  A blank line separates a maintainer note from the key. Comments anywhere else are never rendered.
-
-A map under `config` is listed key by key when its values are all scalars or any of its keys has a
-comment; otherwise it is one row, with long defaults folded below the table.
-
-Commit the README with the `values.yaml` change. The `element-readmes` hook regenerates it and
-fails CI when it is stale ([Hooks](workflows.md#hooks)).
+A blank line between a comment and its key keeps the comment out, for maintainer notes. The
+`element-readmes` hook regenerates READMEs and fails CI when one is stale ([Hooks](workflows.md#hooks)).

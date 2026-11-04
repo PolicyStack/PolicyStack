@@ -1,0 +1,33 @@
+{{- /*
+Reports what the operator did with each declared remediation.
+
+true must reach Applied; a missing object is a violation unless its check passes, because no
+remediation is generated for a passing rule.
+
+false must reach NotApplied. apply: false does not undo a KubeletConfig (Red Hat documents manual
+removal), so that stays a violation until the entry is removed. RevertManually does not exist, and
+ACM never writes status.
+*/ -}}
+{{ include "compliance.scansDone" . }}
+{{ "{{" }}- if $done {{ "}}" }}
+{{- range $name, $apply := .Config.remediations }}
+{{- if kindIs "bool" $apply }}
+{{ "{{" }}- $rem := lookup "compliance.openshift.io/v1alpha1" "ComplianceRemediation" "{{ $.Config.namespace }}" "{{ $name }}" {{ "}}" }}
+{{ "{{" }}- if {{ if $apply }}or $rem (ne (dig "status" "" (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ $.Config.namespace }}" "{{ $name }}")) "PASS"){{ else }}$rem{{ end }} {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceRemediation
+    metadata:
+      name: {{ $name }}
+      namespace: {{ $.Config.namespace }}
+    status:
+      {{- if $apply }}
+      applicationState: Applied
+      {{- else }}
+      applicationState: {{ "{{" }} ternary "RevertManually" "NotApplied" (eq (dig "spec" "current" "object" "kind" "" $rem) "KubeletConfig") {{ "}}" }}
+      {{- end }}
+{{ "{{" }}- end {{ "}}" }}
+{{- end }}
+{{- end }}
+{{ "{{" }}- end {{ "}}" }}

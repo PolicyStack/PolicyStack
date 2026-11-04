@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-kiali-<cluster>`: Install and manage Kiali Operator provided by Red Hat.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-kiali` | enforce | [operator](#operators) `kiali-ossm` | Kiali service mesh observability console |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-kiali` | enforce | medium | [operator](#operators) `kiali-ossm` | Kiali service mesh observability console |

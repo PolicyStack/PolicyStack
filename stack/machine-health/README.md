@@ -41,6 +41,6 @@ Standards: NIST SP 800-53. Controls: CP-10 System Recovery and Reconstitution. C
 
 `config-machine-health-<cluster>`: MachineHealthChecks per MachineSet.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-checks` | enforce | [machine-health-checks](converters/machine-health-checks.yaml) | One MachineHealthCheck per discovered MachineSet |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-checks` | enforce | medium | [checks](converters/config/checks.yaml) | One MachineHealthCheck per discovered MachineSet |

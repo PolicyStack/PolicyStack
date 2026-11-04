@@ -40,7 +40,7 @@ ACM statements setting $done: every live scan has finished. The aggregator rewri
 during a scan. Suite status keeps entries of deleted scans, so it is not read.
 */ -}}
 {{- define "compliance.scansDone" -}}
-{{ "{{" }}- $scans := (lookup "compliance.openshift.io/v1alpha1" "ComplianceScan" "{{ .Parameters.namespace }}" "" "compliance.openshift.io/suite={{ .Parameters.binding }}").items {{ "}}" }}
+{{ "{{" }}- $scans := (lookup "compliance.openshift.io/v1alpha1" "ComplianceScan" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
 {{ "{{" }}- $done := $scans {{ "}}" }}
 {{ "{{" }}- range $scans {{ "}}" }}
 {{ "{{" }}- if ne (dig "status" "phase" "" .) "DONE" {{ "}}" }}

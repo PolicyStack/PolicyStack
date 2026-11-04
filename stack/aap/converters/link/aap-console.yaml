@@ -1,0 +1,13 @@
+{{- /* Console shortcut. The route host is only known on the managed cluster, so the link is
+skipped until the Route exists. */ -}}
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: ansible-automation-platform
+spec:
+  location: ApplicationMenu
+  text: Ansible Automation Platform
+  href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "ansible-automation-platform" "aap").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
+  applicationMenu:
+    section: Red Hat Applications
+    imageURL: https://www.ansible.com/hubfs/Ansible_AutomationPlatform_icon.svg

@@ -7,6 +7,7 @@ This directory contains automation utilities for PolicyStack development and doc
 - [Overview](#overview)
 - [create-element.sh](#create-elementsh)
 - [doc-generator.py](#doc-generatorpy)
+- [migrate-4.0.py](#migrate-40py)
 - [CI/CD Integration](#cicd-integration)
 - [Best Practices](#best-practices)
 
@@ -14,7 +15,7 @@ This directory contains automation utilities for PolicyStack development and doc
 
 The PolicyStack tools provide:
 - **Element Creation**: Automated scaffolding of new policy elements with proper structure
-- **Documentation Generation**: Element READMEs generated from `Chart.yaml` and `values.yaml`
+- **Documentation Generation**: Element READMEs generated from `Chart.yaml`, `values.yaml` and `converters/`
 - **CI/CD Support**: GitHub Actions workflows for documentation validation and auto-generation
 
 ## create-element.sh
@@ -24,9 +25,10 @@ The PolicyStack tools provide:
 ```
 
 Copies `tools/sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
-with its camelCase form, and sets the description. It prompts for missing arguments and refuses a
-name that is not lowercase kebab-case or already exists. The new element passes the validator as is.
-See [Creating an element](../docs/elements.md#creating-an-element).
+with its camelCase form, sets the description and generates the README. It prompts for missing
+arguments and refuses a name that is not lowercase kebab-case, is longer than 17 characters
+(POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The new element
+passes the validator and prek as is. See [Workflow](../docs/elements.md#workflow).
 
 ## doc-generator.py
 
@@ -38,15 +40,28 @@ python tools/doc-generator.py --check          # exit 1 when a README is missing
 python -m unittest tools/test_doc_generator.py
 ```
 
-Writes `stack/<element>/README.md` from `Chart.yaml` and `values.yaml`: the values key, toggles,
-settings, operators, and each Policy with its templates, actions, dependencies and converters.
+Writes `stack/<element>/README.md` from `Chart.yaml`, `values.yaml` and `converters/`: the values
+key, optional pieces (`enabled: false` entries), settings, operators, and each Policy with its
+templates, actions, dependencies and converters.
 
-The comment lines directly above a key under `toggles:` or `config:`, or above those two keys, are
-its description. A blank line ends the block, so a maintainer note separated by one is not
-rendered. Other comments are never rendered. See
-[Element reference](../docs/elements.md#element-reference).
+The comment lines directly above a key under `config:`, or above `config:` itself, are its
+description. A blank line ends the block, so a maintainer note separated by one is not rendered.
+Other comments are never rendered. See [Element reference](../docs/elements.md#element-reference).
 
-It fails on a toggle that matches no entry and on a `policyRef` that names no policy.
+It fails on a policy-library 3.x `values.yaml` (`policies` list, `configPolicies`); run
+`tools/migrate-4.0.py` first.
+
+## migrate-4.0.py
+
+```bash
+uv run tools/migrate-4.0.py                    # the whole repo
+uv run tools/migrate-4.0.py stack/<el> values  # only these paths
+```
+
+Converts elements and values layers from policy-library 3.x to 4.0. Idempotent: skips what is
+already 4.0. Prints what it could not convert; review the result with `git diff` and Render Diff.
+Without uv, `pip install 'ruamel.yaml>=0.18'` first. See
+[Migrating to policy-library 4](../docs/contributing.md#migrating-to-policy-library-4).
 
 ## CI/CD Integration
 
@@ -57,7 +72,7 @@ It fails on a toggle that matches no entry and on a `policyRef` that names no po
 
 ### For doc-generator.py
 
-1. **Comment Placement**: Put a description directly above the toggle or setting it describes
+1. **Comment Placement**: Put a description directly above the setting it describes
 2. **Description Quality**: Write descriptions that explain "why" not just "what"
 3. **Consistency**: Use consistent terminology across descriptions
 4. **Validation**: Run the generator locally before committing values changes

@@ -44,7 +44,6 @@ func operatorFindings(rule string, el *chart.Element, file string, doc *yaml.Nod
 		add(SevWarning, ".name is ignored; the map key is the name", "name")
 	}
 	enum("severity", op.Severity, allowedSeverity)
-	enum("remediationAction", op.RemediationAction, allowedRemed)
 	enum("complianceType", op.ComplianceType, allowedCompliance)
 	enum("upgradeApproval", op.UpgradeApproval, allowedUpgrade)
 	if op.Subscription.InstallPlanApproval != "" {

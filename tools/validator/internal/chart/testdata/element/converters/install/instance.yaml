@@ -1,0 +1,6 @@
+apiVersion: example.com/v1
+kind: Instance
+metadata:
+  name: instance
+spec:
+  image: {{ .Config.operandImage }}

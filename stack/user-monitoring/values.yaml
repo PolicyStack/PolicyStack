@@ -35,6 +35,8 @@ stack:
         resources: {}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - AU Audit and Accountability
       controls:
@@ -43,43 +45,18 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      config:
         description: "Enable and configure User Workload Monitoring"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          enable:
+            description: "Enable UWM and write its configuration"
 
-      - name: ready
-        enabled: true
+      ready:
         description: "Reports NonCompliant until the UWM StatefulSets are ready"
         # A status can only be observed, so this policy never enforces
         remediationAction: inform
-        severity: medium
-        disabled: false
         dependencies:
           - name: config
-
-    configPolicies:
-      - name: enable
-        enabled: true
-        description: "Enable UWM and write its configuration"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Merges into an existing ConfigMap read on the managed cluster
-        rawTemplate: true
-        templateNames:
-          - name: uwm-enable
-
-      - name: statefulsets
-        enabled: true
-        description: "UWM StatefulSet readiness"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: uwm-ready
+        templates:
+          statefulsets:
+            description: "UWM StatefulSet readiness"

@@ -47,17 +47,21 @@ stack:
   # --- storage chain: the only thing that exercises cross-element dependencies for real ----------
 
   # Designate three existing workers as storage nodes rather than creating new MachineSets.
-  # values/platforms/aws.yaml turns the `aws` toggle on, which would build new EC2 instances; this
-  # overrides it to the label-existing-nodes path instead. The toggle is named `baremetal` because
+  # values/platforms/aws.yaml enables the `aws` policy, which would build new EC2 instances; this
+  # overrides it to the label-existing-nodes path instead. The policy is named `baremetal` because
   # that is the platform where it is normally needed - the behaviour is "label what is already
   # here", which is what we want on AWS too.
   storageNodes:
     enabled: true
-    toggles:
-      aws: false
-      vmware: false
-      baremetal: true
-      ready: true
+    policies:
+      aws:
+        enabled: false
+      vmware:
+        enabled: false
+      baremetal:
+        enabled: true
+      ready:
+        enabled: true
     config:
       # How many existing workers to designate. The converter prefers dedicated workers and will
       # not pick control-plane nodes; set config.nodes explicitly to choose them by name.
@@ -75,7 +79,7 @@ stack:
         size: 100Gi
         storageClassName: gp3-csi
       # Leave gp3-csi as the cluster default. The storageclass policy still runs - it relabels every
-      # StorageClass - so the rawTemplate loop is exercised without changing cluster behaviour
+      # StorageClass - so the per-StorageClass loop is exercised without changing cluster behaviour
       # mid-test. Flip to ocs-storagecluster-ceph-rbd once ODF is healthy if you want that too.
       defaultStorageClass: gp3-csi
 
@@ -94,9 +98,11 @@ stack:
   # and its chunks land in a NooBaa bucket from ODF.
   loki:
     enabled: true
-    toggles:
-      forwarder: true
-      observability-ui: true
+    policies:
+      forwarder:
+        enabled: true
+      observability-ui:
+        enabled: true
     config:
       # Smallest supported LokiStack; intended for exactly this kind of test.
       size: 1x.demo
@@ -131,9 +137,10 @@ stack:
     enabled: true
   nmstate:
     enabled: true
-    toggles:
+    policies:
       # NNCPs change host networking; leave them off on a cloud cluster.
-      nncp: false
+      nncp:
+        enabled: false
 
 # Deliberately off, and why:
 #

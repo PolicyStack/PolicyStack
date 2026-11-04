@@ -21,7 +21,7 @@ Under `stack.mtv.config`. Maps merge across layers; lists are replaced whole.
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -33,19 +33,18 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
-
-`install-mtv-<cluster>`: Install and manage the Migration Toolkit for Virtualization operator.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-mtv-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to the operator namespace |
-| `install-mtv` | enforce | [operator](#operators) `mtv-operator` | Migration Toolkit for Virtualization |
-
 ### Policy `config`
 
 `config-mtv-<cluster>`: Deploy the ForkliftController instance. Depends on `install-mtv-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `config-forklift` | enforce | medium | `install-mtv-status`<br>compliant while pending | [forklift](converters/config/forklift.yaml) | ForkliftController instance |
+
+### Policy `install`
+
+`install-mtv-<cluster>`: Install and manage the Migration Toolkit for Virtualization operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `config-forklift` | enforce | `install-mtv-status`<br>compliant while pending | [forklift-controller](converters/forklift-controller.yaml) | ForkliftController instance |
+| `install-mtv` | enforce | medium | [operator](#operators) `mtv-operator` | Migration Toolkit for Virtualization |

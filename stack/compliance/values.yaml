@@ -2,12 +2,11 @@ stack:
   compliance:
     enabled: false
 
-    # Applying remediations reboots nodes, so it is opt-in per cluster
-    toggles:
-      # Enforce config.remediations
-      remediate: false
-
     config:
+      # Compliance Operator namespace
+      namespace: openshift-compliance
+      # ScanSettingBinding name, also the suite label on its scans and results
+      binding: stig
       # Profiles bound to the scan
       profiles:
         - ocp4-stig
@@ -26,6 +25,8 @@ stack:
       waivers: {}
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CA Security Assessment and Authorization
       controls:
@@ -36,208 +37,98 @@ stack:
         - DISA STIG
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the Compliance Operator"
-        remediationAction: enforce
         severity: medium
-        disabled: false
 
-      - name: scan
-        enabled: true
+      scan:
         description: "Configure and bind the scan"
-        remediationAction: enforce
-        severity: high
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          setting:
+            description: "Default ScanSetting"
+            severity: medium
+            waitForOperator: compliance
 
-      - name: findings
-        enabled: true
+      findings:
         description: "Failing compliance results not waived in git"
         remediationAction: inform
-        severity: high
-        disabled: false
         dependencies:
           - name: scan
+        templates:
+          scan-state:
+            description: "Scan results exist, are current, and the last scan did not fail"
+            remediationAction: InformOnly
+            # Scan age changes with no event to watch. Both states poll, or a violation would never clear.
+            evaluationInterval:
+              compliant: 1h
+              noncompliant: 10m
 
-      - name: remediate
-        enabled: true
+          high:
+            description: "Findings, high severity"
+            file: findings/_findings
+            remediationAction: InformOnly
+            customMessage: &findings
+              noncompliant: '{{ with .Policy.status.relatedObjects }}{{ len . }} findings: {{ range $i, $o := . }}{{ if $i }}, {{ end }}{{ $o.object.metadata.name }}{{ end }}{{ else }}{{ $.DefaultMessage }}{{ end }}'
+              compliant: 'No findings'
+            config:
+              severity: "compliance.openshift.io/check-severity=high"
+
+          medium:
+            description: "Findings, medium severity"
+            file: findings/_findings
+            remediationAction: InformOnly
+            severity: medium
+            customMessage: *findings
+            config:
+              severity: "compliance.openshift.io/check-severity=medium"
+
+          low:
+            description: "Findings, low severity"
+            file: findings/_findings
+            remediationAction: InformOnly
+            severity: low
+            customMessage: *findings
+            config:
+              severity: "compliance.openshift.io/check-severity notin (high,medium)"
+
+          waived:
+            description: "Results of waived rules, with their current status"
+            remediationAction: InformOnly
+            severity: low
+            customMessage:
+              compliant: '{{ with .Policy.status.relatedObjects }}{{ len . }} waived: {{ range $i, $o := . }}{{ if $i }}, {{ end }}{{ $o.object.metadata.name }}={{ $o.object.status }}{{ end }}{{ else }}0 waived{{ end }}'
+
+          drift:
+            description: "Applied remediations not declared in git"
+            remediationAction: InformOnly
+
+      # Enforce config.remediations. Applying them reboots nodes, so it is opt-in per cluster.
+      remediate:
+        enabled: false
         description: "Apply the configured compliance remediations"
-        remediationAction: enforce
-        severity: high
-        disabled: false
         dependencies:
           - name: scan
+        templates:
+          remediations:
+            description: "ComplianceRemediation spec.apply"
+
+          remediation-state:
+            description: "What the operator did with each declared remediation"
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: '{{ .DefaultMessage }}; states: {{ range .Policy.status.relatedObjects }}{{ .object.metadata.name }}={{ dig "object" "status" "applicationState" "missing" . }} {{ end }}'
 
     operatorPolicies:
       compliance:
-        enabled: true
         description: "OpenShift Compliance Operator"
         displayName: "Compliance Operator"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-compliance
         operatorGroup:
-          name: compliance-operator
           targetNamespaces:
             - openshift-compliance
         subscription:
           channel: stable
           name: compliance-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: setting
-        enabled: true
-        description: "Default ScanSetting"
-        policyRef: scan
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: compliance
-        ignorePending: true
-        templateNames:
-          - name: scan-setting
-          - name: agg-patch-role
-          - name: agg-patch-rolebinding
-          # musthave would merge lists and keep a removed profile bound
-          - name: scan-binding
-            complianceType: mustonlyhave
-            metadataComplianceType: musthave
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          scanSetting: default
-          binding: stig
-
-      - name: scan-state
-        enabled: true
-        description: "Scan results exist, are current, and the last scan did not fail"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: scan-state
-        # Scan age changes with no event to watch. Both states poll, or a violation would never clear.
-        evaluationInterval:
-          compliant: 1h
-          noncompliant: 10m
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-
-      - name: high
-        enabled: true
-        description: "Findings, high severity"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: findings
-        customMessage: &findings
-          noncompliant: '{{ with .Policy.status.relatedObjects }}{{ len . }} findings: {{ range $i, $o := . }}{{ if $i }}, {{ end }}{{ $o.object.metadata.name }}{{ end }}{{ else }}{{ $.DefaultMessage }}{{ end }}'
-          compliant: 'No findings'
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-          severity: "compliance.openshift.io/check-severity=high"
-
-      - name: medium
-        enabled: true
-        description: "Findings, medium severity"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: findings
-        customMessage: *findings
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-          severity: "compliance.openshift.io/check-severity=medium"
-
-      - name: low
-        enabled: true
-        description: "Findings, low severity"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: low
-        rawTemplate: true
-        templateNames:
-          - name: findings
-        customMessage: *findings
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-          severity: "compliance.openshift.io/check-severity notin (high,medium)"
-
-      - name: waived
-        enabled: true
-        description: "Results of waived rules, with their current status"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: low
-        rawTemplate: true
-        templateNames:
-          - name: waived
-        customMessage:
-          compliant: '{{ with .Policy.status.relatedObjects }}{{ len . }} waived: {{ range $i, $o := . }}{{ if $i }}, {{ end }}{{ $o.object.metadata.name }}={{ $o.object.status }}{{ end }}{{ else }}0 waived{{ end }}'
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-
-      - name: drift
-        enabled: true
-        description: "Applied remediations not declared in git"
-        policyRef: findings
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: remediation-drift
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-
-      - name: remediations
-        enabled: true
-        description: "ComplianceRemediation spec.apply"
-        policyRef: remediate
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: remediate
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig
-
-      - name: remediation-state
-        enabled: true
-        description: "What the operator did with each declared remediation"
-        policyRef: remediate
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: remediation-state
-        customMessage:
-          noncompliant: '{{ .DefaultMessage }}; states: {{ range .Policy.status.relatedObjects }}{{ .object.metadata.name }}={{ dig "object" "status" "applicationState" "missing" . }} {{ end }}'
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-compliance
-          binding: stig

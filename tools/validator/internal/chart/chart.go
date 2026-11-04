@@ -4,6 +4,7 @@
 package chart
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,86 +72,186 @@ type Values struct {
 	Component       *Component // values.stack[stackKey]
 }
 
-// Component mirrors the per-element block under `stack.<key>`.
+// Component mirrors stack.<key>. Only the keys the checks inspect are modelled.
 //
-// policy-library reads `enabled` and `default`. The legacy `enable` and `defaultPolicy` spellings
-// are modelled separately so DeadKeyCheck can report them; an element using them renders wrong
-// without any error.
+// policy-library 4 keys policies and their templates by name, and Load adds the templates
+// converters/ holds, as policy-library.model does. The 3.x shape (a policies list, configPolicies,
+// toggles) only sets V3, so Render Diff can load a revision pinned before 4.0. Entries keep the
+// values as written; Action, Severity and Pending apply policy-library's defaults.
+//
+// The legacy `enable` and `defaultPolicy` spellings are modelled so DeadKeyCheck can report them.
 type Component struct {
-	Enabled             bool                `yaml:"enabled"`
-	Policies            []Policy            `yaml:"policies"`
-	ConfigPolicies      []SubPolicy         `yaml:"configPolicies"`
-	OperatorPolicies    OperatorPolicies    `yaml:"operatorPolicies"`
-	CertificatePolicies []CertificatePolicy `yaml:"certificatePolicies"`
-	PolicySets          []PolicySet         `yaml:"policySets"`
-	Default             *Default            `yaml:"default"`
-	// Toggles overrides an entry's Enabled by name (chart 1.3.0).
-	Toggles        map[string]bool `yaml:"toggles"`
-	OrderPolicies  bool            `yaml:"orderPolicies"`
-	OrderManifests bool            `yaml:"orderManifests"`
+	Enabled          bool             `yaml:"enabled"`
+	Default          *Default         `yaml:"default"`
+	Policies         Policies         `yaml:"-"`
+	OperatorPolicies OperatorPolicies `yaml:"operatorPolicies"`
+	PolicySets       []PolicySet      `yaml:"policySets"`
 
 	// Legacy spellings the chart never reads, modelled only so they can be reported.
 	LegacyEnable        *bool    `yaml:"enable"`
 	LegacyDefaultPolicy *Default `yaml:"defaultPolicy"`
-	// LegacyOperatorPolicies is set when operatorPolicies is the pre-3.0 list, which policy-library
-	// 3.x rejects.
+	// LegacyOperatorPolicies is set when operatorPolicies is the pre-3.0 list.
 	LegacyOperatorPolicies bool `yaml:"-"`
+	// V3 is set for the policy-library 3.x shape: a policies list, configPolicies or toggles.
+	V3 bool `yaml:"-"`
 }
 
-// Default is the per-component defaults block. policy-library reads only
-// categories/controls/standards from it; Severity, RemediationAction and Disabled are modelled so
-// DeadKeyCheck can report that they have no effect here.
+// Default is the per-component defaults block. Disabled is modelled so DeadKeyCheck can report that
+// it has no effect here.
 type Default struct {
 	Severity          string `yaml:"severity"`
 	RemediationAction string `yaml:"remediationAction"`
 	Disabled          *bool  `yaml:"disabled"`
 }
 
-// CouldBeEnabled reports whether an entry is enabled, or is governed by a toggle and so may be
-// enabled on some cluster. Structural checks use this instead of IsEnabled so that references inside
-// a sub-feature that is off by default are still validated before a cluster turns it on.
-func (c *Component) CouldBeEnabled(name string, declared bool) bool {
-	if c != nil {
-		if _, ok := c.Toggles[name]; ok {
-			return true
+// UnmarshalYAML decodes the 4.0 shape and detects the 3.x one, leaving its policies unread.
+func (c *Component) UnmarshalYAML(n *yaml.Node) error {
+	type plain Component
+	var v struct {
+		plain    `yaml:",inline"`
+		Policies yaml.Node `yaml:"policies"`
+	}
+	if err := n.Decode(&v); err != nil {
+		return err
+	}
+	*c = Component(v.plain)
+	c.LegacyOperatorPolicies = IsLegacyOperatorPolicies(mapValue(n, "operatorPolicies"))
+	c.V3 = v.Policies.Kind == yaml.SequenceNode || mapValue(n, "configPolicies") != nil || mapValue(n, "toggles") != nil
+	if !c.V3 && v.Policies.Kind == yaml.MappingNode {
+		return v.Policies.Decode(&c.Policies)
+	}
+	return nil
+}
+
+// Action is the remediationAction policy-library renders on p and its OperatorPolicies: p's own,
+// else default.remediationAction, else inform.
+func (c *Component) Action(p *Policy) string {
+	return cmp.Or(p.RemediationAction, c.defaults().RemediationAction, "inform")
+}
+
+// TemplateAction is t's remediationAction under p: InformOnly when t sets it, else p's Action.
+func (c *Component) TemplateAction(p *Policy, t *Template) string {
+	if t.RemediationAction == "InformOnly" {
+		return t.RemediationAction
+	}
+	return c.Action(p)
+}
+
+// Severity is the severity of t, or of p when t is nil: the entry's own, then p's, then
+// default.severity, else low.
+func (c *Component) Severity(p *Policy, t *Template) string {
+	own := ""
+	if t != nil {
+		own = t.Severity
+	}
+	return cmp.Or(own, p.Severity, c.defaults().Severity, "low")
+}
+
+func (c *Component) defaults() Default {
+	if c.Default == nil {
+		return Default{}
+	}
+	return *c.Default
+}
+
+// Policies is keyed by policy name.
+type Policies map[string]*Policy
+
+// UnmarshalYAML decodes the 4.0 map, naming each entry and its templates by key.
+func (ps *Policies) UnmarshalYAML(n *yaml.Node) error {
+	var m map[string]*Policy
+	if err := n.Decode(&m); err != nil {
+		return err
+	}
+	*ps = Policies{}
+	for name, p := range m {
+		if p == nil {
+			p = &Policy{}
 		}
+		p.Name, p.Path = name, []string{"policies", name}
+		for tn, t := range p.Templates {
+			if t == nil {
+				t = &Template{}
+				p.Templates[tn] = t
+			}
+			t.Name, t.Path, t.Files = tn, append(slices.Clone(p.Path), "templates", tn), t.File
+		}
+		(*ps)[name] = p
 	}
-	return c.IsEnabled(name, declared)
+	return nil
 }
 
-// IsToggled reports whether an entry's enablement is governed by the toggles map.
-func (c *Component) IsToggled(name string) bool {
-	if c == nil {
-		return false
+// Sorted yields the policies in name order, so findings are deterministic.
+func (ps Policies) Sorted() iter.Seq2[string, *Policy] { return sorted(ps) }
+
+// get returns policy name, adding it when absent.
+func (ps Policies) get(name string) *Policy {
+	if ps[name] == nil {
+		ps[name] = &Policy{Name: name, Path: []string{"policies", name}}
 	}
-	_, ok := c.Toggles[name]
-	return ok
+	return ps[name]
 }
 
-// IsEnabled returns an entry's effective enabled state. A toggle keyed by the entry's name
-// overrides its declared `enabled` in either direction.
-func (c *Component) IsEnabled(name string, declared bool) bool {
-	if c == nil {
-		return declared
-	}
-	if v, ok := c.Toggles[name]; ok {
-		return v
-	}
-	return declared
-}
-
-// Policy is a parent ACM Policy entry.
+// Policy is one ACM Policy: policies.<name>, a converters/<name>/ directory, or install.
 type Policy struct {
-	Name              string     `yaml:"name"`
-	Enabled           bool       `yaml:"enabled"`
+	Name              string     `yaml:"-"`
+	Enabled           *bool      `yaml:"enabled"`
 	Severity          string     `yaml:"severity"`
 	RemediationAction string     `yaml:"remediationAction"`
 	Dependencies      []DepEntry `yaml:"dependencies"`
-	// OrderManifests overrides the component's orderManifests for this policy when set.
-	OrderManifests *bool `yaml:"orderManifests"`
+	// OrderManifests lists the templates that render first, in order, each waiting for the last.
+	OrderManifests []string  `yaml:"orderManifests"`
+	Templates      Templates `yaml:"templates"`
+	// Path is the entry's path under stack.<key>, whether or not values.yaml sets it.
+	Path []string `yaml:"-"`
 }
 
-// DepEntry is one entry of policies[].dependencies or *.extraDependencies.
+// On reports whether p renders: every entry is on unless it sets enabled: false.
+func (p *Policy) On() bool { return on(p.Enabled) }
+
+// template returns p's template name, adding it when absent.
+func (p *Policy) template(name string) *Template {
+	if p.Templates == nil {
+		p.Templates = Templates{}
+	}
+	if p.Templates[name] == nil {
+		p.Templates[name] = &Template{Name: name, Path: append(slices.Clone(p.Path), "templates", name)}
+	}
+	return p.Templates[name]
+}
+
+// Templates is keyed by template name.
+type Templates map[string]*Template
+
+// Sorted yields the templates in name order.
+func (ts Templates) Sorted() iter.Seq2[string, *Template] { return sorted(ts) }
+
+// Template is one ConfigurationPolicy, named <policy>-<template>.
+type Template struct {
+	Name              string     `yaml:"-"`
+	Enabled           *bool      `yaml:"enabled"`
+	Severity          string     `yaml:"severity"`
+	RemediationAction string     `yaml:"remediationAction"`
+	ComplianceType    string     `yaml:"complianceType"`
+	ExtraDependencies []DepEntry `yaml:"extraDependencies"`
+	WaitForOperator   StringList `yaml:"waitForOperator"`
+	IgnorePending     *bool      `yaml:"ignorePending"`
+	// PruneObjectBehavior is passed through verbatim; ACM defaults it to None.
+	PruneObjectBehavior string `yaml:"pruneObjectBehavior"`
+	// File is templates.<t>.file as written: paths under converters/ without .yaml.
+	File StringList `yaml:"file"`
+	// Files are the converters the template renders: File, else the one discovered for it.
+	Files []string `yaml:"-"`
+	Path  []string `yaml:"-"`
+}
+
+// On reports whether t renders.
+func (t *Template) On() bool { return on(t.Enabled) }
+
+// Pending is the template's ignorePending: as set, else whether it sets waitForOperator.
+func (t *Template) Pending() bool { return pending(t.IgnorePending, t.WaitForOperator) }
+
+// DepEntry is one entry of policies.<p>.dependencies or *.extraDependencies.
 type DepEntry struct {
 	Name       string `yaml:"name"`
 	Kind       string `yaml:"kind"`
@@ -164,40 +265,27 @@ type DepEntry struct {
 	Raw     bool   `yaml:"raw"`
 }
 
-// SubPolicy is the union shape used by configPolicies (ConfigurationPolicy).
-type SubPolicy struct {
-	Name              string          `yaml:"name"`
-	Enabled           bool            `yaml:"enabled"`
-	PolicyRef         string          `yaml:"policyRef"`
-	Severity          string          `yaml:"severity"`
-	RemediationAction string          `yaml:"remediationAction"`
-	ComplianceType    string          `yaml:"complianceType"`
-	TemplateNames     []TemplateName  `yaml:"templateNames"`
-	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
-	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
-	IgnorePending     bool            `yaml:"ignorePending"`
-	RawTemplate       bool            `yaml:"rawTemplate"`
-	// PruneObjectBehavior is passed through verbatim; ACM defaults it to None.
-	PruneObjectBehavior string `yaml:"pruneObjectBehavior"`
-}
-
 // OperatorPolicy mirrors operatorPolicies entries. Name is the map key.
 type OperatorPolicy struct {
-	Name              string          `yaml:"name"`
-	Enabled           bool            `yaml:"enabled"`
-	PolicyRef         string          `yaml:"policyRef"`
-	Severity          string          `yaml:"severity"`
-	RemediationAction string          `yaml:"remediationAction"`
-	ComplianceType    string          `yaml:"complianceType"`
-	UpgradeApproval   string          `yaml:"upgradeApproval"`
-	Versions          []string        `yaml:"versions"`
-	Subscription      Subscription    `yaml:"subscription"`
-	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
-	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
-	IgnorePending     bool            `yaml:"ignorePending"`
+	Name              string       `yaml:"name"`
+	Enabled           *bool        `yaml:"enabled"`
+	Severity          string       `yaml:"severity"`
+	ComplianceType    string       `yaml:"complianceType"`
+	UpgradeApproval   string       `yaml:"upgradeApproval"`
+	Versions          []string     `yaml:"versions"`
+	Subscription      Subscription `yaml:"subscription"`
+	ExtraDependencies []DepEntry   `yaml:"extraDependencies"`
+	WaitForOperator   StringList   `yaml:"waitForOperator"`
+	IgnorePending     *bool        `yaml:"ignorePending"`
 	// HasName reports an explicit `name:` in a map entry, which policy-library ignores.
 	HasName bool `yaml:"-"`
 }
+
+// On reports whether o renders.
+func (o OperatorPolicy) On() bool { return on(o.Enabled) }
+
+// Pending is the OperatorPolicy's ignorePending, as Template.Pending.
+func (o OperatorPolicy) Pending() bool { return pending(o.IgnorePending, o.WaitForOperator) }
 
 // Subscription is the part of operatorPolicies.<key>.subscription the checks inspect.
 type Subscription struct {
@@ -206,15 +294,15 @@ type Subscription struct {
 	InstallPlanApproval string `yaml:"installPlanApproval"`
 }
 
-// OperatorPolicies is keyed by entry name (policy-library 3.x).
+// OperatorPolicies is keyed by entry name.
 type OperatorPolicies map[string]OperatorPolicy
 
 // UnmarshalYAML decodes the map shape, taking Name from the key. The pre-3.0 list shape is keyed by
 // each entry's name, so older trees still load; Component.LegacyOperatorPolicies reports it.
 func (o *OperatorPolicies) UnmarshalYAML(n *yaml.Node) error {
+	*o = OperatorPolicies{}
 	switch n.Kind {
 	case yaml.MappingNode:
-		*o = OperatorPolicies{}
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			var p OperatorPolicy
 			if err := n.Content[i+1].Decode(&p); err != nil {
@@ -232,7 +320,6 @@ func (o *OperatorPolicies) UnmarshalYAML(n *yaml.Node) error {
 		if err := n.Decode(&items); err != nil {
 			return err
 		}
-		*o = OperatorPolicies{}
 		for _, p := range items {
 			(*o)[p.Name] = p
 		}
@@ -243,37 +330,17 @@ func (o *OperatorPolicies) UnmarshalYAML(n *yaml.Node) error {
 }
 
 // Sorted yields the entries in key order, so findings are deterministic.
-func (o OperatorPolicies) Sorted() iter.Seq2[string, OperatorPolicy] {
-	return func(yield func(string, OperatorPolicy) bool) {
-		for _, k := range slices.Sorted(maps.Keys(o)) {
-			if !yield(k, o[k]) {
-				return
-			}
-		}
-	}
-}
+func (o OperatorPolicies) Sorted() iter.Seq2[string, OperatorPolicy] { return sorted(o) }
 
-// CertificatePolicy mirrors certificatePolicies entries.
-type CertificatePolicy struct {
-	Name              string          `yaml:"name"`
-	Enabled           bool            `yaml:"enabled"`
-	PolicyRef         string          `yaml:"policyRef"`
-	Severity          string          `yaml:"severity"`
-	RemediationAction string          `yaml:"remediationAction"`
-	ExtraDependencies []DepEntry      `yaml:"extraDependencies"`
-	WaitForOperator   WaitForOperator `yaml:"waitForOperator"`
-	IgnorePending     bool            `yaml:"ignorePending"`
-}
-
-// WaitForOperator accepts either a single operator name or a list of them.
-type WaitForOperator []string
+// StringList accepts either a single name or a list of them, as waitForOperator and file do.
+type StringList []string
 
 // UnmarshalYAML coerces a bare scalar into a one-element list.
-func (w *WaitForOperator) UnmarshalYAML(n *yaml.Node) error {
+func (w *StringList) UnmarshalYAML(n *yaml.Node) error {
 	switch n.Kind {
 	case yaml.ScalarNode:
-		if n.Value != "" {
-			*w = WaitForOperator{n.Value}
+		if n.Value != "" && n.Tag != "!!null" {
+			*w = StringList{n.Value}
 		}
 		return nil
 	case yaml.SequenceNode:
@@ -284,34 +351,107 @@ func (w *WaitForOperator) UnmarshalYAML(n *yaml.Node) error {
 		*w = items
 		return nil
 	default:
-		return fmt.Errorf("waitForOperator: unexpected yaml kind %d at line %d", n.Kind, n.Line)
+		return fmt.Errorf("unexpected yaml kind %d at line %d", n.Kind, n.Line)
 	}
 }
 
 // PolicySet groups policies into a PolicySet ACM resource.
 type PolicySet struct {
 	Name     string   `yaml:"name"`
-	Enabled  bool     `yaml:"enabled"`
+	Enabled  *bool    `yaml:"enabled"`
 	Policies []string `yaml:"policies"`
 }
 
-// TemplateName accepts both forms documented in chart-readme.md:
-// "templateNames: [foo]" and "templateNames: [{name: foo}]".
-type TemplateName struct {
-	Name string `yaml:"name"`
+// SubPolicy is one policy-template a component renders with every entry on.
+type SubPolicy struct {
+	// Name is metadata.name without the suffixTemplateNames suffix.
+	Name, Kind string
+	Policy     string
+	// Path is the values entry that renders it, under stack.<key>.
+	Path []string
+	// Files are a ConfigurationPolicy's converters, empty for an operator's.
+	Files []string
 }
 
-// UnmarshalYAML coerces a bare scalar into a TemplateName{Name: scalar}.
-func (t *TemplateName) UnmarshalYAML(n *yaml.Node) error {
-	if n.Kind == yaml.ScalarNode {
-		t.Name = n.Value
-		return nil
+// Where describes the values entry, such as policies.install.templates.instance.
+func (s SubPolicy) Where() string { return strings.Join(s.Path, ".") }
+
+// SubPolicies returns every policy-template c renders when all its entries are on, in name order:
+// each template, and an operator's OperatorPolicy with its -ns and -status ConfigurationPolicies,
+// all in install.
+func (c *Component) SubPolicies() []SubPolicy {
+	var out []SubPolicy
+	for _, p := range c.Policies.Sorted() {
+		for _, t := range p.Templates.Sorted() {
+			out = append(out, SubPolicy{p.Name + "-" + t.Name, "ConfigurationPolicy", p.Name, t.Path, t.Files})
+		}
 	}
-	if n.Kind == yaml.MappingNode {
-		type raw TemplateName
-		return n.Decode((*raw)(t))
+	for k := range c.OperatorPolicies.Sorted() {
+		base, path := "install-"+k, []string{"operatorPolicies", k}
+		out = append(out,
+			SubPolicy{base, "OperatorPolicy", "install", path, nil},
+			SubPolicy{base + "-ns", "ConfigurationPolicy", "install", path, nil},
+			SubPolicy{base + "-status", "ConfigurationPolicy", "install", path, nil})
 	}
-	return fmt.Errorf("templateNames entry: unexpected yaml kind %d at line %d", n.Kind, n.Line)
+	return out
+}
+
+// discover adds what policy-library.model finds beyond values.yaml: a template per
+// converters/<policy>/<template>.yaml in found, unless the template sets file, and the install
+// Policy operators render into. A 3.x component is not modelled.
+func (c *Component) discover(found map[string][]string) {
+	if c.V3 {
+		return
+	}
+	if c.Policies == nil {
+		c.Policies = Policies{}
+	}
+	for p, templates := range found {
+		pol := c.Policies.get(p)
+		for _, name := range templates {
+			if t := pol.template(name); len(t.File) == 0 {
+				t.Files = []string{p + "/" + name}
+			}
+		}
+	}
+	if len(c.OperatorPolicies) > 0 {
+		c.Policies.get("install")
+	}
+}
+
+// Discover returns the templates policy-library discovers in dir, converters/, by policy:
+// <policy>/<template>.yaml, skipping partials, any name starting with _.
+func Discover(dir string) map[string][]string {
+	paths, _ := filepath.Glob(filepath.Join(dir, "*", "*.yaml"))
+	out := map[string][]string{}
+	for _, path := range paths {
+		p, t := filepath.Base(filepath.Dir(path)), strings.TrimSuffix(filepath.Base(path), ".yaml")
+		if !strings.HasPrefix(p, "_") && !strings.HasPrefix(t, "_") {
+			out[p] = append(out[p], t)
+		}
+	}
+	return out
+}
+
+func on(enabled *bool) bool { return enabled == nil || *enabled }
+
+// pending is policy-library's ignorePending: as set, else true when waitForOperator is set.
+func pending(ignore *bool, waitFor StringList) bool {
+	if ignore != nil {
+		return *ignore
+	}
+	return len(waitFor) > 0
+}
+
+// sorted yields m's entries in key order.
+func sorted[M ~map[string]V, V any](m M) iter.Seq2[string, V] {
+	return func(yield func(string, V) bool) {
+		for _, k := range slices.Sorted(maps.Keys(m)) {
+			if !yield(k, m[k]) {
+				return
+			}
+		}
+	}
 }
 
 // LoadAll loads every element chart under stackDir, plus sampleDir when it
@@ -379,6 +519,10 @@ func Load(dir, policyNamespace string) (*Element, error) {
 	if err != nil {
 		return nil, err
 	}
+	found := Discover(filepath.Join(dir, "converters"))
+	for _, c := range comps {
+		c.Component.discover(found)
+	}
 	var first NamedComponent
 	if len(comps) > 0 {
 		first = comps[0]
@@ -444,7 +588,6 @@ func decodeComponents(doc *yaml.Node, all bool) ([]NamedComponent, error) {
 		if err := valueNode.Decode(&c); err != nil {
 			return nil, fmt.Errorf("decode stack.%s: %w", keyNode.Value, err)
 		}
-		c.LegacyOperatorPolicies = IsLegacyOperatorPolicies(mapValue(valueNode, "operatorPolicies"))
 		out = append(out, NamedComponent{Key: keyNode.Value, Component: &c})
 	}
 	return out, nil

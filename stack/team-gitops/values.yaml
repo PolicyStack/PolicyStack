@@ -36,6 +36,8 @@ stack:
             limits: {cpu: 500m, memory: 256Mi}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -45,25 +47,11 @@ stack:
 
     policies:
       # Requires the ArgoCD CRD from the gitops element on the same cluster.
-      - name: teams
-        enabled: true
+      teams:
         description: "Per-team ArgoCD instances"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
             element: gitops
-
-    configPolicies:
-      - name: instances
-        enabled: true
-        description: "Namespace and ArgoCD instance per team"
-        policyRef: teams
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Two objects per team in config.teams
-        rawTemplate: true
-        templateNames:
-          - name: team-argocd
+        templates:
+          instances:
+            description: "Namespace and ArgoCD instance per team"

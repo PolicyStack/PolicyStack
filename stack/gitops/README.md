@@ -9,16 +9,6 @@ stack:
     enabled: true
 ```
 
-## Toggles
-
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `instance` | Deploy the platform ArgoCD instance. Disable to install only the operator. | `true` | Policy [`instance`](#policy-instance) |
-| `ca-bundle` | Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA | `true` | config `instance-ca-bundle` |
-| `link` | Publish a console link to ArgoCD | `true` | Policy [`link`](#policy-link) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
-
 ## Settings
 
 Under `stack.gitops.config`. Maps merge across layers; lists are replaced whole.
@@ -105,7 +95,7 @@ ha:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -121,23 +111,23 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-gitops-<cluster>`: Install and manage the OpenShift GitOps operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-gitops` | enforce | [operator](#operators) `openshift-gitops-operator` | OpenShift GitOps operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-gitops` | enforce | medium | [operator](#operators) `openshift-gitops-operator` | OpenShift GitOps operator |
 
 ### Policy `instance`
 
 `instance-gitops-<cluster>`: Platform ArgoCD instance. Depends on `install-gitops-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `instance-ca-bundle` | enforce |  | [gitops-ca-bundle](converters/gitops-ca-bundle.yaml) | Trusted CA bundle for ArgoCD |
-| `instance-argocd` | enforce | `install-gitops-status`<br>compliant while pending | [argocd-instance](converters/argocd-instance.yaml) | ArgoCD instance |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `instance-argocd` | enforce | medium | `install-gitops-status`<br>compliant while pending | [argocd](converters/instance/argocd.yaml) | ArgoCD instance |
+| `instance-ca-bundle` | enforce | medium |  | [ca-bundle](converters/instance/ca-bundle.yaml) | Trusted CA bundle for ArgoCD |
 
 ### Policy `link`
 
 `link-gitops-<cluster>`: Console link to ArgoCD. Depends on `instance-gitops-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `link-argocd-console` | enforce | [gitops-console-link](converters/gitops-console-link.yaml) | ArgoCD console link |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `link-argocd-console` | enforce | low | [argocd-console](converters/link/argocd-console.yaml) | ArgoCD console link |

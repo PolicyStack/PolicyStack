@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -23,19 +23,18 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
-
-`install-virtualization-<cluster>`: Install and manage the OpenShift Virtualization operator.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-openshift-virtualization-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to the operator namespace |
-| `install-virt` | enforce | [operator](#operators) `kubevirt-hyperconverged` | OpenShift Virtualization |
-
 ### Policy `config`
 
 `config-virtualization-<cluster>`: Deploy the HyperConverged instance. Depends on `install-virtualization-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `config-hyperconverged` | enforce | medium | `install-virt-status`<br>compliant while pending | [hyperconverged](converters/config/hyperconverged.yaml) | HyperConverged instance |
+
+### Policy `install`
+
+`install-virtualization-<cluster>`: Install and manage the OpenShift Virtualization operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `config-hyperconverged` | enforce | `install-virt-status`<br>compliant while pending | [hyperconverged](converters/hyperconverged.yaml) | HyperConverged instance |
+| `install-virt` | enforce | medium | [operator](#operators) `kubevirt-hyperconverged` | OpenShift Virtualization |

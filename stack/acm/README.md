@@ -9,17 +9,15 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Optional hub capabilities. The element is hub-only: enable it in values/acm/*.yaml.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `observability` | Long-term metric storage via Thanos. Requires ODF on the same cluster. | `false` | Policy [`observability`](#policy-observability) |
-| `search` | Persistent storage for ACM Search | `false` | Policy [`search`](#policy-search) |
-| `addons` | Tune the policy addons pushed to managed clusters | `false` | Policy [`addons`](#policy-addons) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`addons`](#policy-addons) | Policy addon tuning | `policies.addons.enabled: true` |
+| Policy [`observability`](#policy-observability) | Long-term metric storage | `policies.observability.enabled: true` |
+| Policy [`search`](#policy-search) | ACM Search persistent storage | `policies.search.enabled: true` |
 
 ## Settings
 
@@ -33,6 +31,8 @@ Under `stack.acm.config`. Maps merge across layers; lists are replaced whole.
 | `search.size` |  | `100Gi` |
 | `search.storageClass` | Empty uses the cluster default. The field is then omitted, since an empty string disables provisioning. | `''` |
 | `observability` | Observability sizing |  |
+| `observability.namespace` | Namespace for MultiClusterObservability and its bucket | `open-cluster-management-observability` |
+| `observability.bucket` | ObjectBucketClaim name. Its ConfigMap and Secret carry the Thanos bucket credentials. | `acm-observability` |
 | `observability.enableMetrics` |  | `true` |
 | `observability.interval` |  | `300` |
 | `observability.storageClass` |  | `gp3-csi` |
@@ -71,7 +71,7 @@ governance-policy-framework:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -83,43 +83,43 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
+### Policy `addons`
 
-`install-acm-<cluster>`: Install and manage the ACM operator.
+`addons-acm-<cluster>`: Policy addon tuning. Depends on `hub-acm-<cluster>`. Off by default; turn on with `policies.addons.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-acm` | enforce | [operator](#operators) `advanced-cluster-management` | Advanced Cluster Management operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `addons-addon-tuning` | enforce | medium | [addon-tuning](converters/addons/addon-tuning.yaml) | Policy addon concurrency and resources |
 
 ### Policy `hub`
 
 `hub-acm-<cluster>`: Deploy the MultiClusterHub. Depends on `install-acm-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `hub-mch` | enforce | high | `install-acm-status`<br>compliant while pending | [mch](converters/hub/mch.yaml) | MultiClusterHub |
+
+### Policy `install`
+
+`install-acm-<cluster>`: Install and manage the ACM operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `hub-mch` | enforce | `install-acm-status`<br>compliant while pending | [multiclusterhub](converters/multiclusterhub.yaml) | MultiClusterHub |
+| `install-acm` | enforce | medium | [operator](#operators) `advanced-cluster-management` | Advanced Cluster Management operator |
 
 ### Policy `observability`
 
-`observability-acm-<cluster>`: Long-term metric storage. Depends on `hub-acm-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with toggle `observability`.
+`observability-acm-<cluster>`: Long-term metric storage. Depends on `hub-acm-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with `policies.observability.enabled: true`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `observability-bucket` | enforce |  | [acm-observability-ns](converters/acm-observability-ns.yaml)<br>[acm-observability-bucket](converters/acm-observability-bucket.yaml) | Observability namespace and Thanos bucket |
-| `observability-mco` | enforce | `observability-bucket`<br>compliant while pending | [acm-observability](converters/acm-observability.yaml) | MultiClusterObservability and its object storage config |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `observability-bucket` | enforce | medium |  | [bucket](converters/observability/bucket.yaml) | Observability namespace and Thanos bucket |
+| `observability-mco` | enforce | medium | `observability-bucket`<br>compliant while pending | [mco](converters/observability/mco.yaml) | MultiClusterObservability and its object storage config |
 
 ### Policy `search`
 
-`search-acm-<cluster>`: ACM Search persistent storage. Depends on `hub-acm-<cluster>`. Off by default; turn on with toggle `search`.
+`search-acm-<cluster>`: ACM Search persistent storage. Depends on `hub-acm-<cluster>`. Off by default; turn on with `policies.search.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `search-search-storage` | enforce | [acm-search](converters/acm-search.yaml) | Search database storage |
-
-### Policy `addons`
-
-`addons-acm-<cluster>`: Policy addon tuning. Depends on `hub-acm-<cluster>`. Off by default; turn on with toggle `addons`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `addons-addon-tuning` | enforce | [acm-addon-tuning](converters/acm-addon-tuning.yaml) | Policy addon concurrency and resources |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `search-search-storage` | enforce | medium | [search-storage](converters/search/search-storage.yaml) | Search database storage |

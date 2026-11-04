@@ -2,9 +2,8 @@ package checks
 
 import (
 	"fmt"
-	"strconv"
+	"path/filepath"
 
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
@@ -57,9 +56,10 @@ func (c *NameLengthCheck) Run(ctx Context) []Finding {
 	return out
 }
 
-// DuplicateNameCheck (POLICY002) reports entries within one element that render to the same
-// metadata.name. Cross-element collisions are reported by run.Run (parent policies, POLICY002) and
-// by POLICY003 (sub-policy templates).
+// DuplicateNameCheck (POLICY002) reports policy-templates within one element that render to the same
+// metadata.name, such as template b-c of policy a and template c of policy a-b. Cross-element
+// collisions are reported by run.Run (parent policies, POLICY002) and by POLICY003 (sub-policy
+// templates).
 type DuplicateNameCheck struct{}
 
 func (DuplicateNameCheck) ID() string   { return "POLICY002" }
@@ -69,55 +69,28 @@ func (c *DuplicateNameCheck) Run(ctx Context) []Finding {
 	if ctx.Element == nil || ctx.Cluster == nil || ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
 		return nil
 	}
-	rel := ctx.Cluster.ReleaseName
-	comp := ctx.Element.Values.Component
 	seen := map[string]string{}
 	var out []Finding
-
-	check := func(rendered, source string, path ...string) {
-		if prior, ok := seen[rendered]; ok {
-			loc := sourceloc.Find(ctx.Element.ValuesDoc, append([]string{"stack", ctx.Element.StackKey}, path...)...)
-			out = append(out, Finding{
-				RuleID:   "POLICY002",
-				Severity: SevError,
-				Element:  ctx.Element.ChartName,
-				Cluster:  ctx.Cluster.ClusterName,
-				Message:  fmt.Sprintf("rendered name %q from %s collides with prior %s in same element", rendered, source, prior),
-				File:     ctx.Element.ValuesFile,
-				Line:     loc.Line,
-				Col:      loc.Col,
-			})
-			return
-		}
-		seen[rendered] = source
-	}
-
-	for i, p := range comp.Policies {
-		if p.Name == "" {
+	for _, s := range ctx.Element.Values.Component.SubPolicies() {
+		prior, ok := seen[s.Name]
+		if !ok {
+			seen[s.Name] = s.Where()
 			continue
 		}
-		check(fmt.Sprintf("%s-%s", p.Name, rel), "policies["+strconv.Itoa(i)+"].name", "policies", strconv.Itoa(i), "name")
-	}
-	for i, p := range comp.ConfigPolicies {
-		if p.Name == "" {
-			continue
+		file, loc := ctx.Element.ValuesFile, sourceloc.Find(ctx.Element.ValuesDoc, append([]string{"stack", ctx.Element.StackKey}, s.Path...)...)
+		if loc.Line == 0 && len(s.Files) > 0 { // discovered from converters/, absent from values.yaml
+			file, loc = filepath.Join(ctx.Element.ConvertersDir, s.Files[0]+".yaml"), sourceloc.Loc{Line: 1}
 		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "configPolicies["+strconv.Itoa(i)+"].name", "configPolicies", strconv.Itoa(i), "name")
-	}
-	for k, p := range comp.OperatorPolicies.Sorted() {
-		if p.Name == "" {
-			continue
-		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "operatorPolicies."+k, "operatorPolicies", k)
-	}
-	for i, p := range comp.CertificatePolicies {
-		if p.Name == "" {
-			continue
-		}
-		check(fmt.Sprintf("%s-%s", p.PolicyRef, p.Name), "certificatePolicies["+strconv.Itoa(i)+"].name", "certificatePolicies", strconv.Itoa(i), "name")
+		out = append(out, Finding{
+			RuleID:   "POLICY002",
+			Severity: SevError,
+			Element:  ctx.Element.ChartName,
+			Cluster:  ctx.Cluster.ClusterName,
+			Message:  fmt.Sprintf("rendered name %q from %s collides with prior %s in same element", s.Name, s.Where(), prior),
+			File:     file,
+			Line:     loc.Line,
+			Col:      loc.Col,
+		})
 	}
 	return out
 }
-
-// Cross-element POLICY002 needs every element and runs in run.Run.
-var _ = chart.Element{}

@@ -81,11 +81,12 @@ stack:
   dns:
     enabled: false
   remediations:
-    toggles:
-      samples: false # (1)!
+    policies:
+      samples:
+        enabled: false # (1)!
 ```
 
-1.  A [toggle](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles) turns off one entry of an element.
+1.  `enabled: false` on a policy, template or operator turns off one part of an element ([Merge rules](values.md#merge-rules)).
 
 The element renders nothing, sync prunes it from the hub (`allowEmpty` is set), and ACM removes its policies from the cluster ([What happens on the managed cluster](#what-happens-on-the-managed-cluster)). A failed render prunes nothing: the Application shows `ComparisonError` / `Unknown` and the Policies stay.
 
@@ -136,7 +137,7 @@ The policy goes away; what it created stays unless the template sets `pruneObjec
 !!! danger "Prune deletes live objects"
     Set `pruneObjectBehavior` in its own commit and remove the policy only after it reached the cluster. Renaming an element, policy, template or `hubName` deletes and recreates objects, which with prune set happens on the managed cluster too.
 
-- POLICY033 rejects prune on a template with any dependency (`waitForOperator`, `extraDependencies`, the policy's `dependencies`, or a place after another template/policy under `orderManifests`/`orderPolicies`). ACM deletes a template while a dependency is unmet, such as during an operator upgrade, and prune would delete its objects ([Validation](validation.md)).
+- POLICY033 rejects prune on a template with any dependency (`waitForOperator`, `extraDependencies`, the policy's `dependencies`, or a place after another template under `orderManifests`). ACM deletes a template while a dependency is unmet, such as during an operator upgrade, and prune would delete its objects ([Validation](validation.md)).
 - Keep the Placement's default tolerations. With `placement.tolerations: []`, a disconnected cluster drops out and loses its policies.
 
 ## Pausing removals
@@ -155,7 +156,7 @@ oc patch applicationset policystack -n openshift-gitops --type json \
 
 ## Operator upgrades
 
-Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Operator Policy Options](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operator-policy-options)).
+Each `operatorPolicies` entry renders an OperatorPolicy named after its key ([Operators](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#operators)).
 
 | `upgradeApproval` | `versions` | When enforced |
 |---|---|---|
@@ -196,17 +197,20 @@ Swapping old for new in one change makes every cluster NonCompliant until it upg
 | Goal | Set on the key | Result |
 |---|---|---|
 | Unpin | `versions: []` in a higher layer, or delete the pin | Follows the channel |
-| Stop managing | `enabled: false` or `toggles.<key>: false` (never `null`) | Stays installed |
+| Stop managing | `enabled: false` (never `null`) | Stays installed |
 | Uninstall | `complianceType: mustnothave` | Deletes Subscription, CSV, and an unused OperatorGroup. Keeps CRDs and namespace ([Removing an operator](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#removing-an-operator)) |
 
-Stop managing and Uninstall both fail the render unless entries naming the key in `waitForOperator` are turned off in the same layer.
+Stop managing and Uninstall both fail the render unless templates naming the key in `waitForOperator` are turned off in the same layer.
 
 ```yaml
 # values/clusters/prod-east-1.yaml: uninstall metallb
 stack:
   metallb:
-    toggles:
-      metallb-instance: false # (1)!
+    policies:
+      config:
+        templates:
+          metallb-instance:
+            enabled: false # (1)!
     operatorPolicies:
       metallb:
         complianceType: mustnothave # (2)!

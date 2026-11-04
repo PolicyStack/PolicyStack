@@ -7,9 +7,9 @@ import (
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
-// PolicySetCheck (POLICY040) verifies every name in policySets[].policies[]
-// is defined in policies[]. Disabled parents are accepted; the Policy object
-// still exists in ACM.
+// PolicySetCheck (POLICY040) verifies every name in policySets[].policies[] is a policy of the
+// element: a policies key, a converters/ directory, or install. Disabled policies are accepted, since
+// a values layer may turn them on.
 type PolicySetCheck struct{}
 
 func (PolicySetCheck) ID() string   { return "POLICY040" }
@@ -20,16 +20,10 @@ func (c *PolicySetCheck) Run(ctx Context) []Finding {
 		return nil
 	}
 	comp := ctx.Element.Values.Component
-	defined := map[string]struct{}{}
-	for _, p := range comp.Policies {
-		if p.Name != "" {
-			defined[p.Name] = struct{}{}
-		}
-	}
 	var out []Finding
 	for i, ps := range comp.PolicySets {
 		for j, name := range ps.Policies {
-			if _, ok := defined[name]; ok {
+			if _, ok := comp.Policies[name]; ok {
 				continue
 			}
 			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey,
@@ -38,7 +32,7 @@ func (c *PolicySetCheck) Run(ctx Context) []Finding {
 				RuleID:   c.ID(),
 				Severity: SevError,
 				Element:  ctx.Element.ChartName,
-				Message: fmt.Sprintf("policySets[%d] %q references policy %q which is not defined in policies[]",
+				Message: fmt.Sprintf("policySets[%d] %q references policy %q, which is not a policy of the element",
 					i, ps.Name, name),
 				File: ctx.Element.ValuesFile,
 				Line: loc.Line, Col: loc.Col,

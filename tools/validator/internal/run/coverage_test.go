@@ -77,13 +77,13 @@ func TestProfileCoverage(t *testing.T) {
 	}
 	covered := map[string]bool{} // stack/<chart>/converters/<name>.yaml with escaped templates
 	for _, el := range elements {
-		for _, cp := range el.Values.Component.ConfigPolicies {
-			for _, tn := range cp.TemplateNames {
-				path := filepath.Join(el.ConvertersDir, tn.Name+".yaml")
+		for _, s := range el.Values.Component.SubPolicies() {
+			for _, f := range s.Files {
+				path := filepath.Join(el.ConvertersDir, f+".yaml")
 				data, _ := os.ReadFile(path)
 				if checks.Escaped.Match(data) {
 					rel, _ := filepath.Rel(root, path)
-					covered[rel] = covered[rel] || rendered[el.ChartName+"/"+cp.PolicyRef+"-"+cp.Name]
+					covered[rel] = covered[rel] || rendered[el.ChartName+"/"+s.Name]
 				}
 			}
 		}
@@ -96,7 +96,7 @@ func TestProfileCoverage(t *testing.T) {
 	}
 	slices.Sort(missed)
 	for _, m := range missed {
-		t.Errorf("%s is not evaluated: enable its element and toggle in a testdata/profiles file", m)
+		t.Errorf("%s is not evaluated: enable its element and template in a testdata/profiles file", m)
 	}
 	t.Logf("%d/%d converters with ACM templates evaluated", len(covered)-len(missed), len(covered))
 }

@@ -1,0 +1,51 @@
+{{- /*
+The ConfigMaps AgentServiceConfig agent references, in the assisted service's namespace. Each renders
+nothing without its input.
+
+assisted-mirror holds registries.conf, built from the disconnected element's ImageDigestMirrorSets,
+and ca-bundle.crt from its registryCAs. Assisted writes both into the discovery ISO and into every
+spoke's install-config as imageDigestSources and additionalTrustBundle. Digest-only, as release
+images are pulled by digest.
+
+image-service-additional-ca holds the disconnected element's trustedCA once osImages is set: the
+image service trusts it for HTTPS osImages. It takes exactly one key.
+*/ -}}
+{{- $d := dig "disconnected" "config" dict .Values.stack }}
+{{- with include "cim.mirrors" . | fromJsonArray }}
+{{- $conf := "" }}
+{{- range . }}
+{{- $conf = printf "%s[[registry]]\n  prefix = \"\"\n  location = %q\n  mirror-by-digest-only = true\n" $conf .source }}
+{{- range .mirrors }}{{ $conf = printf "%s  [[registry.mirror]]\n    location = %q\n" $conf . }}{{ end }}
+{{- end }}
+{{- $data := dict "registries.conf" $conf }}
+{{- with $d.registryCAs }}
+{{- $cas := list }}
+{{- range keys . | sortAlpha }}{{ $cas = append $cas (get $d.registryCAs . | trim) }}{{ end }}
+{{- $_ := set $data "ca-bundle.crt" (printf "%s\n" (join "\n" $cas)) }}
+{{- end }}
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: assisted-mirror
+      namespace: multicluster-engine
+      labels:
+        app: assisted-service
+    data: {{- toYaml $data | nindent 6 }}
+{{- end }}
+{{- if .Config.osImages }}
+{{- with $d.trustedCA }}
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: image-service-additional-ca
+      namespace: multicluster-engine
+    data:
+      ca-bundle.crt: {{ . | quote }}
+{{- end }}
+{{- end }}

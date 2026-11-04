@@ -2,15 +2,6 @@ stack:
   workerNodes:
     enabled: false
 
-    # Kubelet tuning is safe; resizing MachineSets is not, so it is opt-in.
-    toggles:
-      # Apply the kubelet configuration below to the worker pool
-      config: true
-      # Scale and resize the existing worker MachineSets
-      machines: false
-      # Report NonCompliant until the workers report the requested replica count
-      ready: false
-
     config:
       # Replicas per worker MachineSet. Empty keeps the installer's value.
       replicas: ""
@@ -36,6 +27,8 @@ stack:
       evictionMemory: 500Mi
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -44,69 +37,29 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      # Apply the kubelet configuration in config to the worker pool
+      config:
         description: "Worker kubelet configuration"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          worker-kubelet:
+            description: "KubeletConfig for the worker pool"
 
-      - name: machines
-        enabled: true
+      # Scale and resize the existing worker MachineSets. Opt-in: kubelet tuning is safe,
+      # resizing MachineSets is not.
+      machines:
+        enabled: false
         description: "Worker MachineSet sizing"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          scale:
+            description: "Scale and resize existing worker MachineSets"
 
-      - name: ready
-        enabled: true
+      # Report NonCompliant until the workers report the requested replica count
+      ready:
+        enabled: false
         description: "Reports NonCompliant until workers reach the requested count"
         remediationAction: inform
-        severity: medium
-        disabled: false
         dependencies:
           - name: machines
-
-    configPolicies:
-      - name: worker-kubelet
-        enabled: true
-        description: "KubeletConfig for the worker pool"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: node-kubelet-config
-        enableTemplateParameters: true
-        templateParameters:
-          role: worker
-
-      - name: scale
-        enabled: true
-        description: "Scale and resize existing worker MachineSets"
-        policyRef: machines
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: worker-scale
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-machine-api
-
-      - name: worker-replicas
-        enabled: true
-        description: "Worker MachineSet readiness"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-ready
-        enableTemplateParameters: true
-        templateParameters:
-          role: worker
-          namespace: openshift-machine-api
+        templates:
+          worker-replicas:
+            description: "Worker MachineSet readiness"

@@ -2,28 +2,12 @@ stack:
   infraNodes:
     enabled: false
 
-    # Enable only one platform toggle (aws or vmware). Set it in
-    # values/platforms/<platform>.yaml, selected by a
-    # platform.<N> config entry in the cluster's fleet file.
-    toggles:
-      # MachineConfigPool for the infra role
-      mcp: true
-      # Kubelet configuration for the infra pool
-      config: true
-      # Create infra MachineSets by cloning the worker MachineSet (AWS)
-      aws: false
-      # Clone each worker MachineSet per vSphere failure domain
-      vmware: false
-      # Report NonCompliant until the infra nodes are ready
-      ready: true
-      # Move gitops, ingress, image registry and monitoring onto infra nodes
-      workloads: false
-      # Move the `workloads` components back off infra nodes. Disabling `workloads` stops
-      # enforcement but does not revert placement. Enable this to revert, then disable it
-      # once the components have moved.
-      restore: false
-
     config:
+      # Node role: names the MachineConfigPool, MachineSets, node label and taints
+      role: infra
+      # Labels set on new infra nodes
+      nodeLabels:
+        node-role.kubernetes.io/infra: ""
       # Infra nodes per zone
       replicas: 3
       # AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
@@ -54,6 +38,8 @@ stack:
       evictionMemory: 500Mi
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -61,186 +47,84 @@ stack:
       standards:
         - NIST SP 800-53
 
+    # Enable only one platform policy (aws or vmware). Set it in
+    # values/platforms/<platform>.yaml, listed in the cluster's fleet file.
     policies:
-      - name: mcp
-        enabled: true
+      # MachineConfigPool for the infra role
+      mcp:
         description: "MachineConfigPool for infra nodes"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          pool:
+            description: "Infra MachineConfigPool"
 
-      - name: config
-        enabled: true
+      # Kubelet configuration for the infra pool
+      config:
         description: "Infra kubelet configuration"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: mcp
+        templates:
+          infra-kubelet:
+            description: "KubeletConfig for the infra pool"
 
-      - name: aws
-        enabled: true
+      # Create infra MachineSets by cloning the worker MachineSet (AWS)
+      aws:
+        enabled: false
         description: "Infra MachineSets on AWS"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: mcp
+        templates:
+          infra-machinesets:
+            description: "Infra MachineSets cloned from the worker MachineSet"
 
-      - name: vmware
-        enabled: true
+      # Clone each worker MachineSet per vSphere failure domain
+      vmware:
+        enabled: false
         description: "Infra MachineSets on vSphere"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: mcp
+        templates:
+          infra-machinesets:
+            description: "Infra MachineSets per vSphere failure domain"
 
-      - name: ready
-        enabled: true
+      # Report NonCompliant until the infra nodes are ready
+      ready:
         description: "Reports NonCompliant until the infra nodes are ready"
         remediationAction: inform
-        severity: medium
-        disabled: false
+        templates:
+          infra-replicas:
+            description: "Infra MachineSet readiness"
 
-      - name: workloads
-        enabled: true
+      # Move gitops, ingress, image registry and monitoring onto infra nodes
+      workloads:
+        enabled: false
         description: "Move platform components onto infra nodes"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         # Move workloads only after the infra nodes are ready
         dependencies:
           - name: ready
-
-      - name: restore
-        enabled: true
-        description: "Move platform components back off infra nodes"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: pool
-        enabled: true
-        description: "Infra MachineConfigPool"
-        policyRef: mcp
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: infra-mcp
-        enableTemplateParameters: true
-        templateParameters:
-          role: infra
-
-      - name: infra-kubelet
-        enabled: true
-        description: "KubeletConfig for the infra pool"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: node-kubelet-config
-        enableTemplateParameters: true
-        templateParameters:
-          role: infra
-
-      - name: infra-machinesets
-        enabled: true
-        description: "Infra MachineSets cloned from the worker MachineSet"
-        policyRef: aws
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-aws
-        enableTemplateParameters: true
-        templateParameters: &infraParams
-          role: infra
-          namespace: openshift-machine-api
-          nodeLabels:
-            node-role.kubernetes.io/infra: ""
-
-      - name: infra-machinesets
-        enabled: true
-        description: "Infra MachineSets per vSphere failure domain"
-        policyRef: vmware
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-vmware
-        enableTemplateParameters: true
-        templateParameters: *infraParams
-
-      - name: infra-replicas
-        enabled: true
-        description: "Infra MachineSet readiness"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-ready
-        enableTemplateParameters: true
-        templateParameters: *infraParams
-
-      - name: components
-        enabled: true
-        description: "Gitops, ingress and image registry pinned to infra"
-        policyRef: workloads
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: infra-gitops
-          - name: infra-ingress
-          - name: infra-registry
-        enableTemplateParameters: true
-        templateParameters:
-          role: infra
-
-      - name: monitoring
-        enabled: true
-        description: "Monitoring stack pinned to infra"
-        policyRef: workloads
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Merges placement keys into the existing cluster-monitoring-config
-        rawTemplate: true
-        templateNames:
-          - name: infra-monitoring
-        enableTemplateParameters: true
-        templateParameters:
-          role: infra
-          # Monitoring components to pin. Alertmanager and Prometheus use the most resources.
+        templates:
           components:
-            - alertmanagerMain
-            - prometheusK8s
-            - prometheusOperator
-            - kubeStateMetrics
-            - telemeterClient
-            - openshiftStateMetrics
-            - thanosQuerier
-            - monitoringPlugin
+            description: "Gitops, ingress and image registry pinned to infra"
 
-      - name: revert
-        enabled: true
-        description: "Platform components moved back off infra"
-        policyRef: restore
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: infra-restore
-        enableTemplateParameters: true
-        templateParameters:
-          role: infra
+          monitoring:
+            description: "Monitoring stack pinned to infra"
+            config:
+              # Monitoring components to pin. Alertmanager and Prometheus use the most resources.
+              components:
+                - alertmanagerMain
+                - prometheusK8s
+                - prometheusOperator
+                - kubeStateMetrics
+                - telemeterClient
+                - openshiftStateMetrics
+                - thanosQuerier
+                - monitoringPlugin
+
+      # Move the `workloads` components back off infra nodes. Disabling `workloads` stops
+      # enforcement but does not revert placement. Enable this to revert, then disable it
+      # once the components have moved.
+      restore:
+        enabled: false
+        description: "Move platform components back off infra nodes"
+        templates:
+          revert:
+            description: "Platform components moved back off infra"

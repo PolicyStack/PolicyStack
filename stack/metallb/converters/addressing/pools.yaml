@@ -1,0 +1,16 @@
+{{- /*
+IPAddressPool objects, one per entry in config.ipAddressPools. The key is the object name and the
+value is the spec verbatim, so addressing stays reviewable in values.
+
+Object count follows the map, hence a raw list.
+*/ -}}
+{{- range $name, $spec := .Config.ipAddressPools }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: metallb.io/v1beta1
+    kind: IPAddressPool
+    metadata:
+      name: {{ $name }}
+      namespace: metallb-system
+    spec:{{ toYaml $spec | nindent 6 }}
+{{- end }}

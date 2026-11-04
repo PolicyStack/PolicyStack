@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/acmtemplates"
 )
@@ -50,25 +49,19 @@ func (c *ACMTemplateCheck) Run(ctx Context) []Finding {
 	return out
 }
 
-// subPolicy returns the configPolicies entry rendered as name, "<policyRef>-<name>" plus the cluster
-// under suffixTemplateNames, by that unsuffixed name and its templateNames. An unknown name is
-// returned as is.
+// subPolicy returns the template rendered as ConfigurationPolicy name, "<policy>-<template>" plus
+// the cluster under suffixTemplateNames, by that unsuffixed name, and its converters. An unknown name
+// is returned as is.
 func subPolicy(ctx Context, name string) (string, []string) {
 	if ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
 		return name, nil
 	}
-	suffix := ""
+	release := ""
 	if ctx.Cluster != nil {
-		suffix, _ = strings.CutPrefix(ctx.Cluster.ReleaseName, ctx.Element.ChartName+"-")
+		release = ctx.Cluster.ReleaseName
 	}
-	for _, cp := range ctx.Element.Values.Component.ConfigPolicies {
-		if base := cp.PolicyRef + "-" + cp.Name; name == base || name == base+"-"+suffix {
-			out := make([]string, len(cp.TemplateNames))
-			for i, tn := range cp.TemplateNames {
-				out[i] = tn.Name
-			}
-			return base, out
-		}
+	if s := renders(ctx.Element.Values.Component, ctx.Element, release, "ConfigurationPolicy", name); s != nil {
+		return s.Name, s.Files
 	}
 	return name, nil
 }
@@ -80,15 +73,9 @@ var (
 	Escaped = regexp.MustCompile(`\{\{ "\{\{-?" \}\}`)
 )
 
-// locate returns the converter behind f and the line of its first template of f's pass, or for an
-// undefined function the line naming it.
+// locate returns the first of converters holding f's pass, its first escaped template or, for a hub
+// failure, its first hub template, or for an undefined function the line naming it.
 func locate(dir string, converters []string, f acmtemplates.Failure) (string, int) {
-	if f.Template >= 0 {
-		if f.Template >= len(converters) {
-			return "", 0
-		}
-		converters = converters[f.Template : f.Template+1]
-	}
 	want := Escaped
 	if f.Hub {
 		want = escapedHub

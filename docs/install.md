@@ -207,9 +207,11 @@ stack:
     enabled: true
   gitops:
     enabled: true
-    toggles:
-      instance: false  # (1)!
-      link: false  # (2)!
+    policies:
+      instance:
+        enabled: false  # (1)!
+      link:
+        enabled: false  # (2)!
 ```
 
 1.  PolicyStack never reconciles the Argo CD instance that delivers it. A bad value there would break the path that fixes it.

@@ -11,17 +11,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Which ACS role this cluster plays, set by the values cascade. Turn `central` on in values/acm/*.yaml and `secured` on wherever ACS agents should run.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `central` | Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings the declarative auth config, security policies and a check that the hub holds a cluster registration secret (CRS) with over 90 days left; you generate it once, see docs/acs.md. | `false` | Policy [`central`](#policy-central) |
-| `secured` | Run the secured-cluster agents here. Usually every cluster, including the hub. A rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md. | `false` | Policy [`secured`](#policy-secured) |
-| `console` | Publish a console link to Central. Only meaningful where Central runs. | `true` | config `central-console` (needs `central`) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`central`](#policy-central) | Central, its declarative auth config and security policies | `policies.central.enabled: true` |
+| Policy [`secured`](#policy-secured) | Secured-cluster agents and their TLS material | `policies.secured.enabled: true` |
 
 ## Settings
 
@@ -107,7 +104,7 @@ no-shell-spawning:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -119,33 +116,33 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: SI-3 Malicious Code Protection, CM-6 Configuration Settings. Categories: SI System and Information Integrity, CM Configuration Management.
 
+### Policy `central`
+
+`central-acs-<cluster>`: Central, its declarative auth config and security policies. Depends on `install-acs-<cluster>`. Off by default; turn on with `policies.central.enabled: true`.
+
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `central-central` | enforce | high | `install-acs-status`<br>compliant while pending | [acs-namespace](converters/_shared/acs-namespace.yaml)<br>[central](converters/central/central.yaml) | Central and its declarative configuration |
+| `central-central-ready` | inform (always) | medium |  | [central-ready](converters/central/central-ready.yaml) | Central readiness |
+| `central-console` | enforce | low |  | [console](converters/central/console.yaml) | Console link to Central |
+| `central-crs-ready` | inform (always) | medium |  | [crs-ready](converters/central/crs-ready.yaml) | The hub holds a CRS with over 90 days left |
+| `central-hub-access` | enforce | high |  | [hub-access](converters/central/hub-access.yaml) (mustonlyhave) | ServiceAccount and RBAC for the secured policy's hub templates |
+| `central-policies` | enforce | medium | `central-central-ready`<br>compliant while pending | [policies](converters/central/policies.yaml) | SecurityPolicy objects |
+
 ### Policy `install`
 
 `install-acs-<cluster>`: Install and manage the ACS operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-acs` | enforce | [operator](#operators) `rhacs-operator` | Advanced Cluster Security operator |
-
-### Policy `central`
-
-`central-acs-<cluster>`: Central, its declarative auth config and security policies. Depends on `install-acs-<cluster>`. Off by default; turn on with toggle `central`.
-
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `central-central` | enforce | `install-acs-status`<br>compliant while pending | [acs-namespace](converters/acs-namespace.yaml)<br>[acs-declarative-config](converters/acs-declarative-config.yaml)<br>[acs-central](converters/acs-central.yaml) | Central and its declarative configuration |
-| `central-central-ready` | inform |  | [acs-central-ready](converters/acs-central-ready.yaml) | Central readiness |
-| `central-policies` | enforce | `central-central-ready`<br>compliant while pending | [acs-security-policies](converters/acs-security-policies.yaml) | SecurityPolicy objects |
-| `central-crs-ready` | inform |  | [acs-crs-ready](converters/acs-crs-ready.yaml) | The hub holds a CRS with over 90 days left |
-| `central-hub-access` | enforce |  | [acs-hub-sa](converters/acs-hub-sa.yaml)<br>[acs-hub-role](converters/acs-hub-role.yaml) (mustonlyhave)<br>[acs-hub-rolebinding](converters/acs-hub-rolebinding.yaml) | ServiceAccount and RBAC for the secured policy's hub templates |
-| `central-console` | enforce |  | [acs-console-link](converters/acs-console-link.yaml) | Console link to Central |
+| `install-acs` | enforce | medium | [operator](#operators) `rhacs-operator` | Advanced Cluster Security operator |
 
 ### Policy `secured`
 
-`secured-acs-<cluster>`: Secured-cluster agents and their TLS material. Depends on `install-acs-<cluster>`. Off by default; turn on with toggle `secured`.
+`secured-acs-<cluster>`: Secured-cluster agents and their TLS material. Depends on `install-acs-<cluster>`. Off by default; turn on with `policies.secured.enabled: true`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `secured-tls` | enforce |  | [acs-namespace](converters/acs-namespace.yaml)<br>[acs-sync-crs](converters/acs-sync-crs.yaml) | Cluster registration secret from the hub |
-| `secured-agents` | enforce | `install-acs-status`<br>`secured-tls`<br>compliant while pending | [acs-secured-cluster](converters/acs-secured-cluster.yaml) | SecuredCluster agents |
-| `secured-agents-ready` | inform |  | [acs-secured-ready](converters/acs-secured-ready.yaml)<br>[acs-sensor-ready](converters/acs-sensor-ready.yaml) | SecuredCluster readiness |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `secured-agents` | enforce | high | `install-acs-status`<br>`secured-tls`<br>compliant while pending | [agents](converters/secured/agents.yaml) | SecuredCluster agents |
+| `secured-agents-ready` | inform (always) | medium |  | [agents-ready](converters/secured/agents-ready.yaml) | SecuredCluster readiness |
+| `secured-tls` | enforce | high |  | [acs-namespace](converters/_shared/acs-namespace.yaml)<br>[tls](converters/secured/tls.yaml) | Cluster registration secret from the hub |

@@ -1,0 +1,8 @@
+{{- range $k, $v := .Config.maps }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata: {name: {{ $k }}, namespace: default}
+    data: {value: {{ $v }}}
+{{- end }}

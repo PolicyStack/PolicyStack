@@ -85,35 +85,32 @@ type Check interface {
 // All returns the registered checks in stable order.
 func All() []Check {
 	return []Check{
-		&NameLengthCheck{},       // POLICY001
-		&DuplicateNameCheck{},    // POLICY002
-		&SubPolicyNameCheck{},    // POLICY003
-		&PolicyRefCheck{},        // POLICY010
-		&DependencyCheck{},       // POLICY011
-		&MissingConverterCheck{}, // POLICY020
-		&UnusedConverterCheck{},  // POLICY021
-		&ConfigReadCheck{},       // POLICY022
-		&EnumCheck{},             // POLICY030
-		&DeadKeyCheck{},          // POLICY031
-		&LayerOperatorCheck{},    // POLICY032
-		&PruneCheck{},            // POLICY033
-		&LayerFleetKeyCheck{},    // POLICY034
-		&LayerKeyCheck{},         // POLICY035
-		&RemediationCheck{},      // POLICY036
-		&ProtectedObjectCheck{},  // POLICY037
-		&SourceCheck{},           // POLICY038
-		&PolicySetCheck{},        // POLICY040
-		&LabelCheck{},            // POLICY050
-		&BareMetalCheck{},        // POLICY051
-		&FleetPinCheck{},         // POLICY052 (Root, Branch set by run.buildRegistry)
-		&PinningCheck{},          // POLICY060
-		&LintCheck{},             // POLICY070 (Runner set by run.buildRegistry)
-		&InstallCheck{},          // POLICY071 (Runner, Root set by run.buildRegistry)
-		&CRDSchemaCheck{},        // POLICY080 (CRDs set by run.buildRegistry)
-		&ACMTemplateCheck{},      // POLICY081
-		&EmptyPolicyCheck{},      // POLICY082
-		&CamelCaseCheck{},        // POLICY090
-		&ElementNameCheck{},      // POLICY091
-		&RenderCheck{},           // RENDER000
+		&NameLengthCheck{},      // POLICY001
+		&DuplicateNameCheck{},   // POLICY002
+		&SubPolicyNameCheck{},   // POLICY003
+		&DependencyCheck{},      // POLICY011
+		&UnusedConverterCheck{}, // POLICY021
+		&ConfigReadCheck{},      // POLICY022
+		&EnumCheck{},            // POLICY030
+		&DeadKeyCheck{},         // POLICY031
+		&LayerOperatorCheck{},   // POLICY032
+		&PruneCheck{},           // POLICY033
+		&LayerFleetKeyCheck{},   // POLICY034
+		&LayerKeyCheck{},        // POLICY035
+		&ProtectedObjectCheck{}, // POLICY037
+		&SourceCheck{},          // POLICY038
+		&PolicySetCheck{},       // POLICY040
+		&LabelCheck{},           // POLICY050
+		&BareMetalCheck{},       // POLICY051
+		&FleetPinCheck{},        // POLICY052 (Root, Branch set by run.buildRegistry)
+		&PinningCheck{},         // POLICY060
+		&LintCheck{},            // POLICY070 (Runner set by run.buildRegistry)
+		&InstallCheck{},         // POLICY071 (Runner, Root set by run.buildRegistry)
+		&CRDSchemaCheck{},       // POLICY080 (CRDs set by run.buildRegistry)
+		&ACMTemplateCheck{},     // POLICY081
+		&EmptyPolicyCheck{},     // POLICY082
+		&CamelCaseCheck{},       // POLICY090
+		&ElementNameCheck{},     // POLICY091
+		&RenderCheck{},          // RENDER000
 	}
 }

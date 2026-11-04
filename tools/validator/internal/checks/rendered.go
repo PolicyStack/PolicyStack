@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -96,11 +97,10 @@ func (p policyObject) action(template string) string {
 func informOnly(action string) bool { return strings.EqualFold(action, "informonly") }
 
 // origin locates the values entry that renders the object kind/name for ctx.Cluster, in the last
-// cascade file defining it: Helm replaces lists whole, so that file holds the entry. It returns the
-// entry's description, the file and the location of field, else of the entry. Helm merges maps, so a
-// later file setting field on a map entry, such as operatorPolicies.<key>, takes the finding. An
-// object no entry renders is described by kind and name with no file, which run.Run reports at the
-// fleet file.
+// cascade file defining it. It returns the entry's description, the file and the location of field,
+// else of the entry. Helm merges maps, so a later file setting field on the entry takes the finding.
+// A template no values file sets is located at its first converter. An object no entry renders is
+// described by kind and name with no file, which run.Run reports at the fleet file.
 func origin(ctx Context, kind, name, field string) (string, string, sourceloc.Loc) {
 	el := ctx.Element
 	type layer struct {
@@ -121,7 +121,7 @@ func origin(ctx Context, kind, name, field string) (string, string, sourceloc.Lo
 		if n := sourceloc.FindNode(&doc, "stack", el.StackKey); n == nil || n.Decode(&comp) != nil {
 			continue
 		}
-		if where, path := entry(&comp, el, ctx.Cluster.ReleaseName, kind, name); path != nil {
+		if where, path, _ := entry(&comp, el, ctx.Cluster.ReleaseName, kind, name); path != nil {
 			path = append([]string{"stack", el.StackKey}, path...)
 			for _, l := range later {
 				if loc := sourceloc.Find(l.doc, append(path, field)...); loc.Line != 0 {
@@ -135,6 +135,11 @@ func origin(ctx Context, kind, name, field string) (string, string, sourceloc.Lo
 			return where, f, loc
 		}
 		later = append(later, layer{f, &doc})
+	}
+	if el.Values != nil && el.Values.Component != nil {
+		if where, _, files := entry(el.Values.Component, el, ctx.Cluster.ReleaseName, kind, name); len(files) > 0 {
+			return where, filepath.Join(el.ConvertersDir, files[0]+".yaml"), sourceloc.Loc{Line: 1}
+		}
 	}
 	return fmt.Sprintf("%s %q", kind, name), "", sourceloc.Loc{}
 }

@@ -2,13 +2,6 @@ stack:
   quay:
     enabled: false
 
-    # The bootstrap Job is opinionated (it creates an initial user, org and repo), so
-    # it is opt-in separately from the registry deployment. The Job verifies Quay's route
-    # against the default ingress certificate and the cluster trust bundle.
-    toggles:
-      # Run the one-shot bootstrap Job and publish the console link
-      configure: false
-
     config:
       # Quay components the operator manages. Set a component to false to supply it
       # externally, e.g. Postgres or object storage.
@@ -50,6 +43,8 @@ stack:
       bootstrapImage: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -58,40 +53,37 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the Quay operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      - name: deploy
-        enabled: true
+      deploy:
         description: "Deploy the Quay registry"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          registry:
+            description: "Quay namespace, config bundle and QuayRegistry"
+            waitForOperator: quay
 
-      - name: configure
-        enabled: true
+      # Run the one-shot bootstrap Job and publish the console link. Opt-in: the Job is
+      # opinionated (it creates an initial user, org and repo). It verifies Quay's route
+      # against the default ingress certificate and the cluster trust bundle.
+      configure:
+        enabled: false
         description: "Bootstrap the registry and publish its console link"
-        remediationAction: enforce
         severity: low
-        disabled: false
         dependencies:
           - name: deploy
+        templates:
+          bootstrap:
+            description: "Bootstrap Job, its RBAC and CA bundles, and the console link"
+            config:
+              consoleText: Red Hat Quay Enterprise Registry
 
     operatorPolicies:
       quay:
-        enabled: true
         description: "Red Hat Quay operator"
         displayName: "Red Hat Quay"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-operators
         operatorGroup:
           # Reuse the namespace's existing cluster-scoped OperatorGroup
@@ -99,54 +91,4 @@ stack:
         subscription:
           channel: stable-3.17
           name: quay-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: registry
-        enabled: true
-        description: "Quay namespace, config bundle and QuayRegistry"
-        policyRef: deploy
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: quay
-        ignorePending: true
-        templateNames:
-          - name: quay-namespace
-          - name: quay-config-bundle
-          - name: quay-registry
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: quay-enterprise
-          name: registry
-          configBundleSecret: quay-registry-config-bundle
-
-      - name: bootstrap
-        enabled: true
-        description: "Bootstrap Job, its RBAC and CA bundles, and the console link"
-        policyRef: configure
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: quay-bootstrap-sa
-          - name: quay-bootstrap-role
-          - name: quay-bootstrap-rolebinding
-          - name: quay-trusted-ca
-          - name: quay-ingress-ca
-          - name: quay-bootstrap-job
-          - name: quay-host-configmap
-          - name: quay-console-link
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: quay-enterprise
-          name: registry
-          bootstrapName: create-admin-user
-          trustedCaName: quay-trusted-ca
-          ingressCaName: quay-ingress-ca
-          routeName: registry-quay
-          consoleText: Red Hat Quay Enterprise Registry
-          consoleImageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg

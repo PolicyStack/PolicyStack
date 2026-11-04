@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-dev-spaces-<cluster>`: Install and manage Red Hat OpenShift Dev Spaces.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-devspaces` | enforce | [operator](#operators) `devspaces` | Red Hat OpenShift Dev Spaces cloud development environments |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-devspaces` | enforce | medium | [operator](#operators) `devspaces` | Red Hat OpenShift Dev Spaces cloud development environments |

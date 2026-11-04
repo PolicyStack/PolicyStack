@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-logging-<cluster>`: Policy for any operator installation.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-cluster-logging` | enforce | [operator](#operators) `cluster-logging` | Installs the OpenShift logging operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-cluster-logging` | enforce | high | [operator](#operators) `cluster-logging` | Installs the OpenShift logging operator |

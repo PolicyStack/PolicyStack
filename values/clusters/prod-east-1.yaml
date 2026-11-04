@@ -12,7 +12,7 @@
 # values/environments/prod.yaml supplies the security baseline and values/platforms/aws.yaml selects
 # the AWS MachineSet path for node elements. This file adds the cluster's own workload.
 stack:
-  # One m6i.2xlarge infra node in each of three zones. The `workloads` toggle moves ingress, the
+  # One m6i.2xlarge infra node in each of three zones. The `workloads` policy moves ingress, the
   # registry, monitoring and GitOps onto them; the GitOps part needs gitops on this cluster.
   infraNodes:
     enabled: true

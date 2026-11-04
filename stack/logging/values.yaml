@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -11,32 +13,18 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
-        namespace: open-cluster-management
+      install:
         description: "Policy for any operator installation"
-        # Set on the Policy, so it overrides every template's action, including the
-        # OperatorPolicy below. With inform, the operator is reported missing, not installed.
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     operatorPolicies:
       cluster-logging:
-        enabled: true
         description: "Installs the OpenShift logging operator"
         displayName: "Red Hat OpenShift Logging"
-        policyRef: install
         severity: high
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-logging
         operatorGroup:
           name: openshift-logging-group
         subscription:
           channel: stable-6.5
           name: cluster-logging
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []

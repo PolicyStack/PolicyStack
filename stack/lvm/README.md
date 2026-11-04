@@ -24,7 +24,7 @@ Under `stack.lvm.config`. Maps merge across layers; lists are replaced whole.
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -36,26 +36,26 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
-
-`install-lvm-<cluster>`: Install and manage the LVM Storage operator.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-lvms` | enforce | [operator](#operators) `lvms-operator` | LVM Storage operator |
-
 ### Policy `config`
 
 `config-lvm-<cluster>`: Deploy the LVMCluster instance. Depends on `install-lvm-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `config-lvmcluster` | enforce | medium | `install-lvms-status`<br>compliant while pending | [lvmcluster](converters/config/lvmcluster.yaml) | LVMCluster instance |
+
+### Policy `install`
+
+`install-lvm-<cluster>`: Install and manage the LVM Storage operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `config-lvmcluster` | enforce | `install-lvms-status`<br>compliant while pending | [lvmcluster](converters/lvmcluster.yaml) | LVMCluster instance |
+| `install-lvms` | enforce | medium | [operator](#operators) `lvms-operator` | LVM Storage operator |
 
 ### Policy `ready`
 
 `ready-lvm-<cluster>`: Reports NonCompliant until the LVMCluster is Ready. Depends on `config-lvm-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-lvmcluster-ready` | inform | [lvmcluster-ready](converters/lvmcluster-ready.yaml) | LVMCluster readiness gate |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-lvmcluster-ready` | inform | medium | [lvmcluster-ready](converters/ready/lvmcluster-ready.yaml) | LVMCluster readiness gate |

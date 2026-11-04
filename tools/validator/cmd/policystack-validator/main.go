@@ -48,6 +48,9 @@ func realMain() error {
 		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
 		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
 		baseBranch    = flag.String("base-branch", os.Getenv("GITHUB_BASE_REF"), "branch HEAD lands on; POLICY052 resolves a revision naming it to HEAD")
+		element       = flag.String("element", "", "check and render only this chart; repo-wide rules still read every element but report only this one")
+		cluster       = flag.String("cluster", "", "render only the fleet file of this name")
+		evaluate      = flag.Bool("evaluate", false, "with --render-dir, also write <chart>.evaluated.yaml beside each render: the objects ACM applies, templates resolved on an empty cluster")
 		verbose       = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -89,6 +92,9 @@ func realMain() error {
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 
+	if *evaluate && *renderDir == "" {
+		return fmt.Errorf("--evaluate needs --render-dir")
+	}
 	extras, err := absPaths(splitCSV(*extraValues))
 	if err != nil {
 		return err
@@ -106,6 +112,9 @@ func realMain() error {
 		ExtraValues:   extras,
 		RenderDir:     *renderDir,
 		BaseBranch:    *baseBranch,
+		Element:       *element,
+		Cluster:       *cluster,
+		Evaluate:      *evaluate,
 		Skip:          splitCSV(*skipFlag),
 		Only:          splitCSV(*onlyFlag),
 		IncludeSample: *includeSample,

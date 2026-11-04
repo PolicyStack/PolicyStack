@@ -2,15 +2,6 @@ stack:
   acm:
     enabled: false
 
-    # Optional hub capabilities. The element is hub-only: enable it in values/acm/*.yaml.
-    toggles:
-      # Long-term metric storage via Thanos. Requires ODF on the same cluster.
-      observability: false
-      # Persistent storage for ACM Search
-      search: false
-      # Tune the policy addons pushed to managed clusters
-      addons: false
-
     config:
       # High or Basic. Basic runs single replicas and suits lab hubs.
       availabilityConfig: High
@@ -24,6 +15,10 @@ stack:
         storageClass: ""
       # Observability sizing
       observability:
+        # Namespace for MultiClusterObservability and its bucket
+        namespace: open-cluster-management-observability
+        # ObjectBucketClaim name. Its ConfigMap and Secret carry the Thanos bucket credentials.
+        bucket: acm-observability
         enableMetrics: true
         interval: 300
         storageClass: gp3-csi
@@ -50,6 +45,8 @@ stack:
           limits: {memory: 512Mi}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -57,62 +54,65 @@ stack:
       standards:
         - NIST SP 800-53
 
+    # The element is hub-only: enable it and its optional policies in values/acm/*.yaml.
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the ACM operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      - name: hub
-        enabled: true
+      hub:
         description: "Deploy the MultiClusterHub"
-        remediationAction: enforce
         severity: high
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          mch:
+            description: "MultiClusterHub"
+            waitForOperator: acm
 
-      # Thanos stores long-term metrics in a NooBaa bucket, so this waits for ODF.
-      - name: observability
-        enabled: true
+      # Long-term metric storage via Thanos in a NooBaa bucket. Requires ODF on the
+      # same cluster, so this waits for it.
+      observability:
+        enabled: false
         description: "Long-term metric storage"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: hub
           - name: ready
             element: odf
+        templates:
+          bucket:
+            description: "Observability namespace and Thanos bucket"
 
-      - name: search
-        enabled: true
+          mco:
+            description: "MultiClusterObservability and its object storage config"
+            # The bucket credentials only exist once the bucket is provisioned
+            extraDependencies:
+              - name: bucket
+            ignorePending: true
+
+      # Persistent storage for ACM Search
+      search:
+        enabled: false
         description: "ACM Search persistent storage"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: hub
+        templates:
+          search-storage:
+            description: "Search database storage"
 
-      - name: addons
-        enabled: true
+      # Tune the policy addons pushed to managed clusters
+      addons:
+        enabled: false
         description: "Policy addon tuning"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: hub
+        templates:
+          addon-tuning:
+            description: "Policy addon concurrency and resources"
 
     operatorPolicies:
       acm:
-        enabled: true
         description: "Advanced Cluster Management operator"
         displayName: "Advanced Cluster Management for Kubernetes"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: open-cluster-management
         operatorGroup:
           name: open-cluster-management
@@ -121,82 +121,4 @@ stack:
         subscription:
           channel: release-2.17
           name: advanced-cluster-management
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: mch
-        enabled: true
-        description: "MultiClusterHub"
-        policyRef: hub
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        waitForOperator: acm
-        ignorePending: true
-        templateNames:
-          - name: multiclusterhub
-        enableTemplateParameters: true
-        templateParameters: &acmParams
-          name: multiclusterhub
-          namespace: open-cluster-management
-          observabilityNamespace: open-cluster-management-observability
-          observabilityBucket: acm-observability
-
-      - name: bucket
-        enabled: true
-        description: "Observability namespace and Thanos bucket"
-        policyRef: observability
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: acm-observability-ns
-          - name: acm-observability-bucket
-        enableTemplateParameters: true
-        templateParameters: *acmParams
-
-      - name: mco
-        enabled: true
-        description: "MultiClusterObservability and its object storage config"
-        policyRef: observability
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        # The bucket credentials only exist once the bucket is provisioned
-        extraDependencies:
-          - name: bucket
-        ignorePending: true
-        templateNames:
-          - name: acm-observability
-        enableTemplateParameters: true
-        templateParameters: *acmParams
-
-      - name: search-storage
-        enabled: true
-        description: "Search database storage"
-        policyRef: search
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: acm-search
-        enableTemplateParameters: true
-        templateParameters: *acmParams
-
-      - name: addon-tuning
-        enabled: true
-        description: "Policy addon concurrency and resources"
-        policyRef: addons
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Two objects per configured addon
-        rawTemplate: true
-        templateNames:
-          - name: acm-addon-tuning
-        enableTemplateParameters: true
-        templateParameters: *acmParams

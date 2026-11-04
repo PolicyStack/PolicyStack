@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,7 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-coo-<cluster>`: Install and manage Cluster Observability Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-cluster-observability-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to the operator namespace |
-| `install-coo` | enforce | [operator](#operators) `cluster-observability-operator` | Cluster Observability Operator for monitoring, logging and tracing UIs |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-coo` | enforce | medium | [operator](#operators) `cluster-observability-operator` | Cluster Observability Operator for monitoring, logging and tracing UIs |

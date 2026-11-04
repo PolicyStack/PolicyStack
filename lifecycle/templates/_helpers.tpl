@@ -16,11 +16,11 @@ lifecycle.policystk.io/hub: {{ .Values.hub | quote }}
 {{- end -}}
 
 {{/*
-The engine's root object by identity alone, from converters/<engine>/root.yaml: the object
+The engine's root object by identity alone, from converters/_<engine>/root.yaml: the object
 lifecycle creates first and deletes to destroy the cluster.
 */}}
 {{- define "lifecycle.root" -}}
-{{- tpl (.Files.Get (printf "converters/%s/root.yaml" .Values.install.engine)) . -}}
+{{- tpl (.Files.Get (printf "converters/_%s/root.yaml" .Values.install.engine)) . -}}
 {{- end -}}
 
 {{/*

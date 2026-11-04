@@ -36,7 +36,7 @@ func configPolicy(name, spec string) string {
 const operatorPolicy = `    - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1beta1
         kind: OperatorPolicy
-        metadata: {name: a-op-spoke}
+        metadata: {name: install-op-spoke}
         spec:
           complianceType: musthave
           remediationAction: enforce
@@ -50,16 +50,13 @@ func TestPolicy080_CRDSchema(t *testing.T) {
   myElement:
     enabled: true
     policies:
-      - name: a
+      a:
         remediationAction: enforce
-    configPolicies:
-      - name: ns
-        policyRef: a
-        remediationAction: enforce
-        severity: high
+        templates:
+          ns:
+            severity: high
     operatorPolicies:
       op:
-        policyRef: a
         upgradeApproval: Automatic
 `
 	policy := func(spec string, templates ...string) string {
@@ -81,21 +78,21 @@ func TestPolicy080_CRDSchema(t *testing.T) {
 		{"informonly", policy("", configPolicy("a-ns", "          remediationAction: informonly\n")), nil},
 		// regression: a typo the chart passes through verbatim.
 		{"remediationAction typo", policy("", configPolicy("a-ns", "          remediationAction: enforec\n")),
-			[]want{{`configPolicies[0] "ns": spec.remediationAction: Unsupported value: "enforec"`, 10}}},
+			[]want{{`policies.a.templates.ns: spec.remediationAction: Unsupported value: "enforec"`, 9}}},
 		{"severity typo", policy("", configPolicy("a-ns", "          severity: hgih\n")),
-			[]want{{`configPolicies[0] "ns": spec.severity: Unsupported value: "hgih"`, 11}}},
+			[]want{{`policies.a.templates.ns: spec.severity: Unsupported value: "hgih"`, 9}}},
 		{"unknown field", policy("", configPolicy("a-ns", "          pruneObjectBehaviour: DeleteAll\n")),
-			[]want{{`configPolicies[0] "ns": spec.pruneObjectBehaviour: unknown field`, 8}}},
+			[]want{{`policies.a.templates.ns: spec.pruneObjectBehaviour: unknown field`, 9}}},
 		{"suffixed sub-policy", policy("", configPolicy("a-ns-spoke", "          severity: hgih\n")),
-			[]want{{`configPolicies[0] "ns": spec.severity`, 11}}},
-		{"OperatorPolicy", policy("", operatorPolicy), []want{{"operatorPolicies.op: spec.upgradeAproval: unknown field", 14}}},
+			[]want{{`policies.a.templates.ns: spec.severity`, 9}}},
+		{"OperatorPolicy", policy("", operatorPolicy), []want{{"operatorPolicies.op: spec.upgradeAproval: unknown field", 12}}},
 		{"Policy remediationAction typo", policy("  remediationAction: enforec\n", configPolicy("a-ns", "")),
-			[]want{{`policies[0] "a": spec.remediationAction: Unsupported value: "enforec"`, 6}}},
+			[]want{{`policies.a: spec.remediationAction: Unsupported value: "enforec"`, 6}}},
 		// The addon normalizes templates only: the Policy enum rejects InformOnly.
 		{"Policy InformOnly", policy("  remediationAction: InformOnly\n", configPolicy("a-ns", "")),
-			[]want{{`policies[0] "a": spec.remediationAction: Unsupported value: "InformOnly"`, 6}}},
+			[]want{{`policies.a: spec.remediationAction: Unsupported value: "InformOnly"`, 6}}},
 		{"Policy type error", policy("  copyPolicyMetadata: \"no\"\n", configPolicy("a-ns", "")),
-			[]want{{`policies[0] "a": spec.copyPolicyMetadata: Invalid value: "string"`, 5}}},
+			[]want{{`policies.a: spec.copyPolicyMetadata: Invalid value: "string"`, 6}}},
 		{"Placement", "---\napiVersion: cluster.open-cluster-management.io/v1beta1\nkind: Placement\nmetadata:\n  name: a-my-element-spoke\nspec:\n  numberOfCluster: 1\n",
 			[]want{{`Placement "a-my-element-spoke": spec.numberOfCluster: unknown field`, 0}}},
 		{"unknown sub-policy", policy("", configPolicy("other", "          severity: hgih\n")),
@@ -129,12 +126,12 @@ func TestPolicy080_CRDSchema(t *testing.T) {
 func TestPolicy080_Layer(t *testing.T) {
 	const values = `stack:
   myElement:
-    configPolicies:
-      - name: ns
-        policyRef: a
+    policies:
+      a:
+        templates:
+          ns: {}
     operatorPolicies:
       op:
-        policyRef: a
         upgradeApproval: Automatic
 `
 	op := strings.Replace(operatorPolicy, "upgradeAproval: None", "severity: hihg", 1)
@@ -142,10 +139,10 @@ func TestPolicy080_Layer(t *testing.T) {
 		name, rendered, layer string
 		want                  []want
 	}{
-		// Helm replaces lists whole: the layer restating configPolicies holds the entry.
-		{"list entry", policyDoc("a", "  disabled: false\n", configPolicy("a-ns", "          severity: hgih\n")),
-			"stack:\n  myElement:\n    configPolicies:\n      - name: ns\n        policyRef: a\n        severity: hgih\n",
-			[]want{{SevError, `configPolicies[0] "ns": spec.severity: Unsupported value: "hgih"`, inLayer, 6}}},
+		// Helm merges maps: the layer sets one field of a template values.yaml declares.
+		{"template field", policyDoc("a", "  disabled: false\n", configPolicy("a-ns", "          severity: hgih\n")),
+			"stack:\n  myElement:\n    policies:\n      a:\n        templates:\n          ns:\n            severity: hgih\n",
+			[]want{{SevError, `policies.a.templates.ns: spec.severity: Unsupported value: "hgih"`, inLayer, 7}}},
 		// Helm merges maps: the layer sets one field of an entry values.yaml defines.
 		{"map field", policyDoc("a", "  disabled: false\n", op),
 			"stack:\n  myElement:\n    operatorPolicies:\n      op:\n        severity: hihg\n",
@@ -156,6 +153,13 @@ func TestPolicy080_Layer(t *testing.T) {
 			ctx := renderCtx(t, loadElement(t, values, "", nil), tc.rendered, tc.layer)
 			assertFindings(t, "POLICY080", ctx, (&CRDSchemaCheck{CRDs: crds(t)}).Run(ctx), tc.want)
 		})
+	}
+
+	// A template no values file sets is reported at its converter.
+	el := loadElement(t, values, "", []string{"b/cm.yaml"})
+	got := (&CRDSchemaCheck{CRDs: crds(t)}).Run(renderCtx(t, el, policyDoc("b", "  disabled: false\n", configPolicy("b-cm", "          severity: hgih\n"))))
+	if len(got) != 1 || got[0].File != filepath.Join(el.ConvertersDir, "b/cm.yaml") || got[0].Line != 1 || !strings.HasPrefix(got[0].Message, "policies.b.templates.cm: spec.severity") {
+		t.Errorf("got %+v, want one finding at converters/b/cm.yaml:1", got)
 	}
 }
 

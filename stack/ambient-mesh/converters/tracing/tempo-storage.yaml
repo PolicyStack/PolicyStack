@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tracing-system
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: tempo-bucket-odf
+  namespace: tracing-system
+spec:
+  generateBucketName: tempo-bucket-odf
+  storageClassName: openshift-storage.noobaa.io
+---
+{{- /*
+Reshapes the tempo bucket's generated Secret and ConfigMap into what TempoStack expects. Both are
+created by the OBC controller on the managed cluster, so these reads stay ACM templating.
+*/}}
+{{- $ns := .Config.tracingNamespace }}
+{{- $bucket := .Config.tempoBucket }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tempo-s3-secret
+  namespace: {{ $ns }}
+type: Opaque
+stringData:
+  bucket: '{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_NAME" {{ "}}" }}'
+  endpoint: 'https://{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_HOST" {{ "}}" }}:{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_PORT" {{ "}}" }}'
+  access_key_id: '{{ "{{" }} fromSecret "{{ $ns }}" "{{ $bucket }}" "AWS_ACCESS_KEY_ID" | base64dec {{ "}}" }}'
+  access_key_secret: '{{ "{{" }} fromSecret "{{ $ns }}" "{{ $bucket }}" "AWS_SECRET_ACCESS_KEY" | base64dec {{ "}}" }}'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-s3-ca-bundle
+  namespace: tracing-system
+  annotations:
+    service.beta.openshift.io/inject-cabundle: 'true'

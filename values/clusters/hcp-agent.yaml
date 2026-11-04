@@ -87,8 +87,9 @@ stack:
   # Pins the guest router's ingress VIP.
   metallb:
     enabled: true
-    toggles:
-      addressing: true
+    policies:
+      addressing:
+        enabled: true
     config:
       ipAddressPools:
         default-ingress:

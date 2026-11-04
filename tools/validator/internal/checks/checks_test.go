@@ -3,6 +3,7 @@ package checks
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -46,138 +47,43 @@ dependencies:
 	return el
 }
 
-func TestPolicy010_PolicyRefMissing(t *testing.T) {
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    policies:
-      - name: real
-        enabled: true
-    configPolicies:
-      - name: typo
-        enabled: true
-        policyRef: realll
-`, "", nil)
-	got := (&PolicyRefCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "not defined") {
-		t.Errorf("unexpected: %s", got[0].Message)
-	}
-}
-
-func TestPolicy010_PolicyRefDisabled(t *testing.T) {
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    policies:
-      - name: real
-        enabled: false
-    configPolicies:
-      - name: child
-        enabled: true
-        policyRef: real
-`, "", nil)
-	got := (&PolicyRefCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "disabled") {
-		t.Errorf("unexpected: %s", got[0].Message)
-	}
-}
-
-func TestPolicy020_MissingConverter(t *testing.T) {
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    configPolicies:
-      - name: c
-        enabled: true
-        policyRef: foo
-        templateNames:
-          - name: present
-          - name: missing
-`, "", []string{"present.yaml"})
-	got := (&MissingConverterCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "missing.yaml") {
-		t.Errorf("unexpected: %s", got[0].Message)
-	}
-}
-
-func TestPolicy020_BareStringTemplateName(t *testing.T) {
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    configPolicies:
-      - name: c
-        enabled: true
-        policyRef: foo
-        templateNames:
-          - bare-form
-`, "", nil)
-	got := (&MissingConverterCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "bare-form") {
-		t.Errorf("unexpected: %s", got[0].Message)
-	}
-}
-
 func TestPolicy021_UnusedConverter(t *testing.T) {
 	el := loadElement(t, `
 stack:
   myElement:
-    enable: true
-    configPolicies:
-      - name: c
-        enabled: true
-        policyRef: foo
-        templateNames:
-          - name: present
-`, "", []string{"present.yaml", "dead.yaml"})
-	got := (&UnusedConverterCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
+    enabled: true
+    policies:
+      config:
+        templates:
+          replaced:
+            file: _shared/used
+          extra:
+            file: [top, deep/a/b]
+`, "", []string{
+		"config/cm.yaml", "config/replaced.yaml", "config/old.yml", "config/notes.txt",
+		"_shared/used.yaml", "_shared/dead.yaml", "_shared/read.yaml", "config/_partial.yaml",
+		"top.yaml", "orphan.yaml", "deep/a/b.yaml", "deep/a/c.yaml",
+	})
+	if err := os.WriteFile(filepath.Join(el.Dir, "converters/config/cm.yaml"), []byte(`{{ tpl ($.Files.Get "converters/_shared/read.yaml") . }}`), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	if got[0].Severity != SevWarning {
-		t.Error("expected warning severity")
+	var got []string
+	for _, f := range (&UnusedConverterCheck{}).Run(Context{Element: el}) {
+		if f.Severity != SevWarning || f.Line != 1 || f.File != filepath.Join(el.ConvertersDir, strings.Fields(f.Message)[0][len("converters/"):]) {
+			t.Errorf("finding %+v", f)
+		}
+		got = append(got, f.Message)
 	}
-	if !strings.Contains(got[0].Message, "dead") {
-		t.Errorf("unexpected: %s", got[0].Message)
+	want := []string{
+		"converters/_shared/dead.yaml is never rendered: no templates.<t>.file names this partial and no chart file reads it",
+		"converters/config/_partial.yaml is never rendered: no templates.<t>.file names this partial and no chart file reads it",
+		"converters/config/old.yml is never rendered: policy-library renders only .yaml converters",
+		"converters/config/replaced.yaml is never rendered: it is not converters/<policy>/<template>.yaml of a template and no templates.<t>.file names it",
+		"converters/deep/a/c.yaml is never rendered: it is not converters/<policy>/<template>.yaml of a template and no templates.<t>.file names it",
+		"converters/orphan.yaml is never rendered: it is not converters/<policy>/<template>.yaml of a template and no templates.<t>.file names it",
 	}
-}
-
-func TestPolicy020_021_ConverterSubdirectories(t *testing.T) {
-	el := loadElement(t, `
-stack:
-  myElement:
-    enable: true
-    configPolicies:
-      - name: c
-        enabled: true
-        policyRef: foo
-        templateNames:
-          - name: hypershift/ready
-          - name: shared
-          - name: hive/missing
-`, "", []string{"hypershift/ready.yaml", "shared.yaml", "hive/dead.yaml", "hypershift/ready.txt"})
-	missing := (&MissingConverterCheck{}).Run(Context{Element: el})
-	if len(missing) != 1 || !strings.Contains(missing[0].Message, "converters/hive/missing.yaml") {
-		t.Errorf("POLICY020 = %+v, want only hive/missing", missing)
-	}
-	unused := (&UnusedConverterCheck{}).Run(Context{Element: el})
-	if len(unused) != 1 || !strings.Contains(unused[0].Message, "converters/hive/dead.yaml") {
-		t.Errorf("POLICY021 = %+v, want only hive/dead", unused)
+	if !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
 
@@ -185,42 +91,58 @@ func TestPolicy030_BadEnums(t *testing.T) {
 	el := loadElement(t, `
 stack:
   myElement:
-    enable: true
+    enabled: true
+    default:
+      severity: hi
     policies:
-      - name: p
-        enabled: true
+      p:
         severity: extreme
         remediationAction: nuke
+        templates:
+          t:
+            complianceType: musthav
 `, "", nil)
-	got := (&EnumCheck{}).Run(Context{Element: el})
-	if len(got) != 2 {
-		t.Fatalf("expected 2 findings, got %d: %+v", len(got), got)
+	var got []string
+	for _, f := range (&EnumCheck{}).Run(Context{Element: el}) {
+		got = append(got, f.Message)
+	}
+	want := []string{
+		`default.severity = "hi"; allowed: [low medium high critical]`,
+		`policies.p.severity = "extreme"; allowed: [low medium high critical]`,
+		`policies.p.remediationAction = "nuke"; allowed: [inform enforce]`,
+		`policies.p.templates.t.complianceType = "musthav"; allowed: [musthave mustnothave mustonlyhave]`,
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
-// TestPolicy030_InformOnly: a template may be InformOnly in any case; a Policy may not.
+// TestPolicy030_InformOnly: a template's own action is InformOnly or nothing; a Policy's is never
+// InformOnly.
 func TestPolicy030_InformOnly(t *testing.T) {
 	el := loadElement(t, `
 stack:
   myElement:
-    enable: true
+    enabled: true
     policies:
-      - name: p
-        enabled: true
+      p:
         remediationAction: InformOnly
-    configPolicies:
-      - name: a
-        enabled: true
-        policyRef: p
-        remediationAction: InformOnly
-      - name: b
-        enabled: true
-        policyRef: p
-        remediationAction: informonly
+        templates:
+          a:
+            remediationAction: InformOnly
+          b:
+            remediationAction: inform
 `, "", nil)
-	got := (&EnumCheck{}).Run(Context{Element: el})
-	if len(got) != 1 || !strings.HasPrefix(got[0].Message, `policies[0].remediationAction = "InformOnly"`) {
-		t.Errorf("got %+v, want one policies[0] finding", got)
+	var got []string
+	for _, f := range (&EnumCheck{}).Run(Context{Element: el}) {
+		got = append(got, f.Message)
+	}
+	want := []string{
+		`policies.p.remediationAction = "InformOnly"; allowed: [inform enforce]`,
+		`policies.p.templates.b.remediationAction = "inform"; allowed: [InformOnly]`,
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -228,23 +150,20 @@ func TestPolicy040_PolicySetMissingMember(t *testing.T) {
 	el := loadElement(t, `
 stack:
   myElement:
-    enable: true
-    policies:
-      - name: real
-        enabled: true
+    enabled: true
+    operatorPolicies:
+      op:
+        subscription: {name: op}
     policySets:
       - name: set
-        enabled: true
         policies:
           - real
+          - install
           - imaginary
-`, "", nil)
+`, "", []string{"real/cm.yaml"})
 	got := (&PolicySetCheck{}).Run(Context{Element: el})
-	if len(got) != 1 {
-		t.Fatalf("got %d: %+v", len(got), got)
-	}
-	if !strings.Contains(got[0].Message, "imaginary") {
-		t.Errorf("unexpected: %s", got[0].Message)
+	if len(got) != 1 || !strings.Contains(got[0].Message, `"imaginary", which is not a policy of the element`) || got[0].Line != 13 {
+		t.Fatalf("got %+v, want one imaginary finding", got)
 	}
 }
 

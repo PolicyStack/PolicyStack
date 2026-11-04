@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `config-dns-<cluster>`: Cluster DNS node placement.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-tolerations` | enforce | [dns-tolerations](converters/dns-tolerations.yaml) | DNS daemonset tolerations |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-tolerations` | enforce | medium | [tolerations](converters/config/tolerations.yaml) | DNS daemonset tolerations |

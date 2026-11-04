@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -12,34 +14,28 @@ stack:
 
     policies:
       # Operator install
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the OpenShift Virtualization operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
       # The HyperConverged operand, applied once the operator is ready
-      - name: config
-        enabled: true
+      config:
         description: "Deploy the HyperConverged instance"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         # The HyperConverged CRD only exists after the operator installs
         dependencies:
           - name: install
+        templates:
+          # HyperConverged operand
+          hyperconverged:
+            description: "HyperConverged instance"
+            # Wait for the operator's CSV; the CRD only exists after install
+            waitForOperator: virt
 
     operatorPolicies:
       virt:
-        enabled: true
         description: "OpenShift Virtualization"
         displayName: "OpenShift Virtualization"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-cnv
+        clusterMonitoring: true
         operatorGroup:
           name: kubevirt-hyperconverged-group
           # Own-namespace install mode
@@ -48,41 +44,4 @@ stack:
         subscription:
           channel: stable
           name: kubevirt-hyperconverged
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      # Adds the cluster-monitoring label so the operator's metrics are scraped
-      - name: openshift-virtualization-ns-monitoring
-        enabled: true
-        description: "Adds openshift.io/cluster-monitoring label to the operator namespace"
-        policyRef: install
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: ns-monitoring-label
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-cnv
-
-      # HyperConverged operand
-      - name: hyperconverged
-        enabled: true
-        description: "HyperConverged instance"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Wait for the operator's CSV; the CRD only exists after install
-        waitForOperator: virt
-        # Report compliant while waiting; avoids flapping during install
-        ignorePending: true
-        templateNames:
-          - name: hyperconverged
-        enableTemplateParameters: true
-        templateParameters:
-          name: kubevirt-hyperconverged
-          namespace: openshift-cnv

@@ -11,15 +11,13 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Applying remediations reboots nodes, so it is opt-in per cluster
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `remediate` | Enforce config.remediations | `false` | Policy [`remediate`](#policy-remediate) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`remediate`](#policy-remediate) | Apply the configured compliance remediations | `policies.remediate.enabled: true` |
 
 ## Settings
 
@@ -27,6 +25,8 @@ Under `stack.compliance.config`. Maps merge across layers; lists are replaced wh
 
 | Key | Description | Default |
 |---|---|---|
+| `namespace` | Compliance Operator namespace | `openshift-compliance` |
+| `binding` | ScanSettingBinding name, also the suite label on its scans and results | `stig` |
 | `profiles` | Profiles bound to the scan | `[ocp4-stig, ocp4-stig-node, rhcos4-stig]` |
 | `rawResultStorage` | Where raw scan results are persisted |  |
 | `rawResultStorage.enabled` |  | `true` |
@@ -36,7 +36,7 @@ Under `stack.compliance.config`. Maps merge across layers; lists are replaced wh
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -48,40 +48,40 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53, DISA STIG. Controls: CA-2 Control Assessments, CA-7 Continuous Monitoring. Categories: CA Security Assessment and Authorization.
 
+### Policy `findings`
+
+`findings-compliance-<cluster>`: Failing compliance results not waived in git. Depends on `scan-compliance-<cluster>`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `findings-drift` | inform (always) | high | [drift](converters/findings/drift.yaml) | Applied remediations not declared in git |
+| `findings-high` | inform (always) | high | [_findings](converters/findings/_findings.yaml) (mustnothave) | Findings, high severity |
+| `findings-low` | inform (always) | low | [_findings](converters/findings/_findings.yaml) (mustnothave) | Findings, low severity |
+| `findings-medium` | inform (always) | medium | [_findings](converters/findings/_findings.yaml) (mustnothave) | Findings, medium severity |
+| `findings-scan-state` | inform (always) | high | [scan-state](converters/findings/scan-state.yaml) | Scan results exist, are current, and the last scan did not fail |
+| `findings-waived` | inform (always) | low | [waived](converters/findings/waived.yaml) | Results of waived rules, with their current status |
+
 ### Policy `install`
 
 `install-compliance-<cluster>`: Install and manage the Compliance Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-compliance` | enforce | [operator](#operators) `compliance-operator` | OpenShift Compliance Operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-compliance` | enforce | medium | [operator](#operators) `compliance-operator` | OpenShift Compliance Operator |
+
+### Policy `remediate`
+
+`remediate-compliance-<cluster>`: Apply the configured compliance remediations. Depends on `scan-compliance-<cluster>`. Off by default; turn on with `policies.remediate.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `remediate-remediation-state` | inform (always) | high | [remediation-state](converters/remediate/remediation-state.yaml) | What the operator did with each declared remediation |
+| `remediate-remediations` | enforce | high | [remediations](converters/remediate/remediations.yaml) | ComplianceRemediation spec.apply |
 
 ### Policy `scan`
 
 `scan-compliance-<cluster>`: Configure and bind the scan. Depends on `install-compliance-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `scan-setting` | enforce | `install-compliance-status`<br>compliant while pending | [scan-setting](converters/scan-setting.yaml)<br>[agg-patch-role](converters/agg-patch-role.yaml)<br>[agg-patch-rolebinding](converters/agg-patch-rolebinding.yaml)<br>[scan-binding](converters/scan-binding.yaml) (mustonlyhave) | Default ScanSetting |
-
-### Policy `findings`
-
-`findings-compliance-<cluster>`: Failing compliance results not waived in git. Depends on `scan-compliance-<cluster>`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `findings-scan-state` | inform (always) | [scan-state](converters/scan-state.yaml) | Scan results exist, are current, and the last scan did not fail |
-| `findings-high` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, high severity |
-| `findings-medium` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, medium severity |
-| `findings-low` | inform (always) | [findings](converters/findings.yaml) (mustnothave) | Findings, low severity |
-| `findings-waived` | inform (always) | [waived](converters/waived.yaml) | Results of waived rules, with their current status |
-| `findings-drift` | inform (always) | [remediation-drift](converters/remediation-drift.yaml) | Applied remediations not declared in git |
-
-### Policy `remediate`
-
-`remediate-compliance-<cluster>`: Apply the configured compliance remediations. Depends on `scan-compliance-<cluster>`. Off by default; turn on with toggle `remediate`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `remediate-remediations` | enforce | [remediate](converters/remediate.yaml) | ComplianceRemediation spec.apply |
-| `remediate-remediation-state` | inform (always) | [remediation-state](converters/remediation-state.yaml) | What the operator did with each declared remediation |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `scan-setting` | enforce | medium | `install-compliance-status`<br>compliant while pending | [setting](converters/scan/setting.yaml) (mustonlyhave) | Default ScanSetting |

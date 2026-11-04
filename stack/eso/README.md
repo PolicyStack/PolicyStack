@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,7 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-eso-<cluster>`: Install and manage the External Secrets Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-external-secrets-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to operator namespace |
-| `install-external-secrets` | enforce | [operator](#operators) `openshift-external-secrets-operator` | External Secrets Operator (Red Hat build) |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-external-secrets` | enforce | medium | [operator](#operators) `openshift-external-secrets-operator` | External Secrets Operator (Red Hat build) |

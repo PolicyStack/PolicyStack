@@ -11,17 +11,6 @@ stack:
     enabled: true
 ```
 
-## Toggles
-
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `resources` | Apply the objects in config.clusterResources | `true` | Policy [`resources`](#policy-resources) |
-| `registry-ca` | Trust the mirror registries' CAs for image pulls | `true` | Policy [`registry-ca`](#policy-registry-ca) |
-| `trusted-ca` | Add config.trustedCA to the cluster trust bundle through ConfigMap trusted-cas (Proxy trustedCA) | `true` | Policy [`trusted-ca`](#policy-trusted-ca) |
-| `operatorhub` | Disable the default OperatorHub catalog sources, which cannot be reached | `true` | Policy [`operatorhub`](#policy-operatorhub) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
-
 ## Settings
 
 Site data, usually set once in a datacenter layer
@@ -40,34 +29,34 @@ Under `stack.disconnected.config`. Maps merge across layers; lists are replaced 
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SC-7 Boundary Protection. Categories: CM Configuration Management, SC System and Communications Protection.
 
-### Policy `resources`
+### Policy `operatorhub`
 
-`resources-disconnected-<cluster>`: Mirror sets and mirrored catalogs from oc-mirror.
+`operatorhub-disconnected-<cluster>`: Disable the default OperatorHub catalog sources.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `resources-objects` | enforce | [cluster-resources](converters/cluster-resources.yaml) | oc-mirror cluster resources |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `operatorhub-sources` | enforce | medium | [sources](converters/operatorhub/sources.yaml) | OperatorHub default sources |
 
 ### Policy `registry-ca`
 
 `registry-ca-disconnected-<cluster>`: Trust the mirror registries' CAs.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `registry-ca-trust` | enforce | [registry-ca](converters/registry-ca.yaml) (mustonlyhave) | Registry CA ConfigMap and image config |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `registry-ca-trust` | enforce | high | [trust](converters/registry-ca/trust.yaml) (mustonlyhave) | Registry CA ConfigMap and image config |
+
+### Policy `resources`
+
+`resources-disconnected-<cluster>`: Mirror sets and mirrored catalogs from oc-mirror.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `resources-objects` | enforce | high | [objects](converters/resources/objects.yaml) | oc-mirror cluster resources |
 
 ### Policy `trusted-ca`
 
 `trusted-ca-disconnected-<cluster>`: Add a CA bundle to the cluster trust bundle.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `trusted-ca-proxy` | enforce | [trusted-ca](converters/trusted-ca.yaml) (mustonlyhave) | trusted-cas ConfigMap and Proxy trustedCA |
-
-### Policy `operatorhub`
-
-`operatorhub-disconnected-<cluster>`: Disable the default OperatorHub catalog sources.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `operatorhub-sources` | enforce | [operatorhub](converters/operatorhub.yaml) | OperatorHub default sources |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `trusted-ca-proxy` | enforce | high | [proxy](converters/trusted-ca/proxy.yaml) (mustonlyhave) | trusted-cas ConfigMap and Proxy trustedCA |

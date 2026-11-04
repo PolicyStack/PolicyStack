@@ -9,14 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `quota` | Apply a ResourceQuota to the metallb namespace | `false` | Policy [`quota`](#policy-quota) |
-| `addressing` | Apply the address pools, advertisements and peers configured below | `false` | Policy [`addressing`](#policy-addressing) |
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`addressing`](#policy-addressing) | Address pools, advertisements and BGP peers | `policies.addressing.enabled: true` |
+| Policy [`quota`](#policy-quota) | Resource quota for the MetalLB namespace | `policies.quota.enabled: true` |
 
 ## Settings
 
@@ -30,13 +30,13 @@ Under `stack.metallb.config`. Maps merge across layers; lists are replaced whole
 | `l2Advertisements` | L2Advertisement specs, e.g. internal: {ipAddressPools: [internal]} | `{}` |
 | `bgpAdvertisements` | BGPAdvertisement specs, e.g. internal: {ipAddressPools: [internal], peers: [rack1]} | `{}` |
 | `bgpPeers` | BGPPeer specs, e.g. rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1} | `{}` |
-| `quota` | Namespace resource ceiling, applied when the quota toggle is on |  |
+| `quota` | Namespace resource ceiling, applied when the quota policy is enabled |  |
 | `quota.cpu` |  | `100m` |
 | `quota.memory` |  | `256Mi` |
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -48,37 +48,37 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: SC-7 Boundary Protection. Categories: SC System and Communications Protection.
 
-### Policy `install`
+### Policy `addressing`
 
-`install-metallb-<cluster>`: Install and manage the MetalLB operator.
+`addressing-metallb-<cluster>`: Address pools, advertisements and BGP peers. Depends on `config-metallb-<cluster>`. Off by default; turn on with `policies.addressing.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-metallb` | enforce | [operator](#operators) `metallb-operator` | MetalLB operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `addressing-bgp` | enforce | medium | [bgp](converters/addressing/bgp.yaml) (mustonlyhave) | BGPAdvertisements |
+| `addressing-l2` | enforce | medium | [l2](converters/addressing/l2.yaml) (mustonlyhave) | L2Advertisements |
+| `addressing-peers` | enforce | medium | [peers](converters/addressing/peers.yaml) (mustonlyhave) | BGPPeers |
+| `addressing-pools` | enforce | medium | [pools](converters/addressing/pools.yaml) (mustonlyhave) | IPAddressPools |
 
 ### Policy `config`
 
 `config-metallb-<cluster>`: Deploy the MetalLB instance. Depends on `install-metallb-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `config-metallb-instance` | enforce | medium | `install-metallb-status`<br>compliant while pending | [metallb-instance](converters/config/metallb-instance.yaml) | MetalLB instance |
+
+### Policy `install`
+
+`install-metallb-<cluster>`: Install and manage the MetalLB operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `config-metallb-instance` | enforce | `install-metallb-status`<br>compliant while pending | [metallb-cr](converters/metallb-cr.yaml) | MetalLB instance |
+| `install-metallb` | enforce | medium | [operator](#operators) `metallb-operator` | MetalLB operator |
 
 ### Policy `quota`
 
-`quota-metallb-<cluster>`: Resource quota for the MetalLB namespace. Depends on `install-metallb-<cluster>`. Off by default; turn on with toggle `quota`.
+`quota-metallb-<cluster>`: Resource quota for the MetalLB namespace. Depends on `install-metallb-<cluster>`. Off by default; turn on with `policies.quota.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `quota-resourcequota` | enforce | [metallb-quota](converters/metallb-quota.yaml) | MetalLB namespace quota |
-
-### Policy `addressing`
-
-`addressing-metallb-<cluster>`: Address pools, advertisements and BGP peers. Depends on `config-metallb-<cluster>`. Off by default; turn on with toggle `addressing`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `addressing-pools` | enforce | [metallb-ipaddresspools](converters/metallb-ipaddresspools.yaml) (mustonlyhave) | IPAddressPools |
-| `addressing-l2` | enforce | [metallb-l2advertisements](converters/metallb-l2advertisements.yaml) (mustonlyhave) | L2Advertisements |
-| `addressing-bgp` | enforce | [metallb-bgpadvertisements](converters/metallb-bgpadvertisements.yaml) (mustonlyhave) | BGPAdvertisements |
-| `addressing-peers` | enforce | [metallb-bgppeers](converters/metallb-bgppeers.yaml) (mustonlyhave) | BGPPeers |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `quota-resourcequota` | enforce | low | [resourcequota](converters/quota/resourcequota.yaml) | MetalLB namespace quota |

@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,7 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-developer-hub-<cluster>`: Install and manage Red Hat Developer Hub.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-developer-hub-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to the operator namespace |
-| `install-rhdh` | enforce | [operator](#operators) `rhdh` | Red Hat Developer Hub (Backstage) internal developer portal |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-rhdh` | enforce | medium | [operator](#operators) `rhdh` | Red Hat Developer Hub (Backstage) internal developer portal |

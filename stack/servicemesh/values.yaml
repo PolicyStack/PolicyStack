@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -11,23 +13,14 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage Red Hat OpenShift Service Mesh 3"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     operatorPolicies:
       servicemesh3:
-        enabled: true
         description: "Red Hat OpenShift Service Mesh 3 operator"
         # Must match the CSV displayName so the generated status check can find it
         displayName: "Red Hat OpenShift Service Mesh 3"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-operators
         operatorGroup:
           # Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
@@ -35,7 +28,4 @@ stack:
         subscription:
           channel: stable
           name: servicemeshoperator3
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []

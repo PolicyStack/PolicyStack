@@ -112,7 +112,7 @@ version: 4.20.8   # (3)!
 ```
 
 1.  `v1.4.0` must contain `stack/` and each `valueFiles` entry. A typo or a branch like `gh-pages` fails.
-2.  Also needs `lifecycle/converters/hypershift/`.
+2.  Also needs `lifecycle/converters/_hypershift/`, or `hypershift/` before policy-library 4.
 3.  `version` or `channel` also needs an `upgrade` element that reads them.
 
 !!! warning

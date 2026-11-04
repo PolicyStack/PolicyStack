@@ -9,17 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Kubelet tuning is safe; resizing MachineSets is not, so it is opt-in.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `config` | Apply the kubelet configuration below to the worker pool | `true` | Policy [`config`](#policy-config) |
-| `machines` | Scale and resize the existing worker MachineSets | `false` | Policy [`machines`](#policy-machines) |
-| `ready` | Report NonCompliant until the workers report the requested replica count | `false` | Policy [`ready`](#policy-ready) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`machines`](#policy-machines) | Worker MachineSet sizing | `policies.machines.enabled: true` |
+| Policy [`ready`](#policy-ready) | Reports NonCompliant until workers reach the requested count | `policies.ready.enabled: true` |
 
 ## Settings
 
@@ -49,22 +46,22 @@ Standards: NIST SP 800-53. Controls: CM-6 Configuration Settings. Categories: CM
 
 `config-worker-nodes-<cluster>`: Worker kubelet configuration.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-worker-kubelet` | enforce | [node-kubelet-config](converters/node-kubelet-config.yaml) | KubeletConfig for the worker pool |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-worker-kubelet` | enforce | medium | [worker-kubelet](converters/config/worker-kubelet.yaml) | KubeletConfig for the worker pool |
 
 ### Policy `machines`
 
-`machines-worker-nodes-<cluster>`: Worker MachineSet sizing. Off by default; turn on with toggle `machines`.
+`machines-worker-nodes-<cluster>`: Worker MachineSet sizing. Off by default; turn on with `policies.machines.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `machines-scale` | enforce | [worker-scale](converters/worker-scale.yaml) | Scale and resize existing worker MachineSets |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `machines-scale` | enforce | medium | [scale](converters/machines/scale.yaml) | Scale and resize existing worker MachineSets |
 
 ### Policy `ready`
 
-`ready-worker-nodes-<cluster>`: Reports NonCompliant until workers reach the requested count. Depends on `machines-worker-nodes-<cluster>`. Off by default; turn on with toggle `ready`.
+`ready-worker-nodes-<cluster>`: Reports NonCompliant until workers reach the requested count. Depends on `machines-worker-nodes-<cluster>`. Off by default; turn on with `policies.ready.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-worker-replicas` | inform | [machineset-ready](converters/machineset-ready.yaml) | Worker MachineSet readiness |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-worker-replicas` | inform | medium | [worker-replicas](converters/ready/worker-replicas.yaml) | Worker MachineSet readiness |

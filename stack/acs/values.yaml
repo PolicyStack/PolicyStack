@@ -147,7 +147,7 @@ stack:
               compliant: 24h
               noncompliant: 10m
 
-          # Lets the secured policy's hub templates read the CRS and Central's Route
+          # Lets the secured policy's hub templates read the CRS, Central's Route and ManagedCluster labels
           hub-access:
             description: "ServiceAccount and RBAC for the secured policy's hub templates"
 

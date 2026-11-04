@@ -44,3 +44,31 @@ mustonlyhave, so the old init-bundle grants are removed, not kept.
       - kind: ServiceAccount
         name: acs-hub-templates
         namespace: {{ .Values.policyNamespace }}
+{{- /*
+.ManagedClusterLabels in the secured policy makes the propagator read each target's ManagedCluster
+as this ServiceAccount. Cluster-scoped and one per secured cluster, so no resourceNames.
+*/}}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: acs-hub-templates
+    rules:
+      - apiGroups: [cluster.open-cluster-management.io]
+        resources: [managedclusters]
+        verbs: [get, list, watch]
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: acs-hub-templates
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: acs-hub-templates
+    subjects:
+      - kind: ServiceAccount
+        name: acs-hub-templates
+        namespace: {{ .Values.policyNamespace }}

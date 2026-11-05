@@ -1,6 +1,6 @@
-# Lifecycle reference
+# Lifecycle keys
 
-Details behind [Cluster lifecycle](lifecycle.md). Chart: [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle).
+Details behind [Cluster lifecycle](../guides/lifecycle.md). Chart: [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle). How a built cluster reaches Day-2: [Day-2 handoff](../concepts/architecture.md#day-2-handoff).
 
 ## Install keys
 
@@ -135,7 +135,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | `role` | `master` | `master`, `worker` or `arbiter`. |
     | `rootDeviceHints` | | BareMetalHost hints. `deviceName` takes `/dev/` or `/dev/disk/by-path/` only. |
     | `network` | | Static install network: `interfaces` (NIC name to MAC) and `config` (nmstate). Day 2 is `nmstate`. |
-    | `remove` | | `true` on a worker [scales it in](#scaling-siteconfig-workers). |
+    | `remove` | | `true` on a worker [scales it in](../guides/lifecycle.md#scaling-siteconfig-workers). |
 
     All of it is fixed at create; afterwards you can only add and remove workers. `ai` takes 1 or 3 masters, or 2 or more with an arbiter (4.19+). `ibi` takes one node and no VIPs, `clusterNetwork`, `serviceNetwork`, `fips` or `cpuPartitioning`: the seed image fixes them. Anything else fails the render.
 
@@ -197,7 +197,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
     | ClusterInstance `<cluster>/<cluster>` | The keys above, plus `clusterName`, `baseDomain`, `pullSecretRef`, `sshPublicKey`, templates, `clusterImageSetNameRef`, per node `hostName`, `bmcCredentialsName` `<cluster>-bmc` and node templates. `clusterType` follows the masters: 1 is `SNO`, an arbiter `HighlyAvailableArbiter`, else `HighlyAvailable`. `fips` becomes `installConfigOverrides: '{"fips":true}'`, `cpuPartitioning` `cpuPartitioningMode: AllNodes`. SiteConfig defaults `bootMode: UEFI`, `automatedCleaningMode: disabled`. |
     | KlusterletAddonConfig | Every add-on on. The stock `ai` one turns application-manager off, so ACM would never create the Argo CD secret. The chart suppresses it and renders its own. |
 
-Hive rejects release image changes, and SiteConfig any spec change before install completes. No webhook guards the `siteconfig` ClusterImageSet. The chart reads those fields back from the live objects, so a `version` bump or credential rotation never touches them, and a hand edit to the image set is kept. Those clusters upgrade through [`upgrade`](upgrades.md).
+Hive rejects release image changes, and SiteConfig any spec change before install completes. No webhook guards the `siteconfig` ClusterImageSet. The chart reads those fields back from the live objects, so a `version` bump or credential rotation never touches them, and a hand edit to the image set is kept. Those clusters upgrade through [`upgrade`](../guides/upgrades.md).
 
 ## Policy chains
 
@@ -244,17 +244,6 @@ Templates are named `<state>-<step>-<cluster>`, e.g. `present-guard-hcp-kubevirt
 !!! note
     No lifecycle template sets `pruneObjectBehavior`. Deleting the present Policy deletes nothing; only `state: absent` destroys.
 
-## Day-2 handoff
-
-1. The ManagedCluster appears. `hypershift`: the hypershift-addon creates it once the HostedCluster is available. `hive`, `siteconfig`: ACM imports the one the chart or SiteConfig created.
-2. It joins `global`, the GitOpsCluster creates its Argo CD secret, and ACM adds the `clusterID` label ([Install PolicyStack](install.md#install-policystack)).
-3. The Day-2 ApplicationSet pairs the secret with the same fleet file and creates `<element>-<cluster>` Applications. It ignores `hub`, `state` and `install`.
-
-Labels in `hostedCluster.metadata.labels` are copied to the ManagedCluster once, at creation.
-
-??? info "HyperShift auto-import disabled"
-    Auto-import is on by default. `autoImportDisabled` in the `hypershift-addon-deploy-config` AddOnDeploymentConfig leaves a built cluster without Day-2 until you import it by hand.
-
 ## Ownership
 
 Lifecycle acts only on what it built: objects carrying the annotation `lifecycle.policystk.io/hub: <hubName>`, written by `present-cluster-<cluster>` in the create itself. Only the key counts; the value records the last hub, so a restored or migrated object stays owned.
@@ -293,71 +282,6 @@ While a denial stands, no other node change reaches that cluster.
 !!! warning "Changing the rendered spec"
     The ClusterInstance is `mustonlyhave`, so a chart or key change that alters the render of an installed cluster is denied on every evaluation. Rebuild the cluster or keep the render identical. A hand-set `spec.reinstall` stays NonCompliant the same way, and a SiteConfig webhook outage turns installed clusters NonCompliant until it returns.
 
-## Removing a NodePool
-
-`musthave` never deletes. Removing an entry only stops managing it. Remove the `nodePools` entry, then:
-
-```sh
-oc delete nodepool <cluster>-<pool> -n clusters
-```
-
-A pool from a shared layer, like `workers` in `platforms/kubevirt.yaml`, cannot be removed from a higher layer (the schema rejects `null`). Scale it down:
-
-```yaml
-install:
-  nodePools:
-    workers:
-      replicas: 0
-```
-
-## Scaling SiteConfig workers
-
-!!! note
-    Red Hat documents this flow for `clusterType: SNO`. On `HighlyAvailable`, SiteConfig accepts the same changes and its sample output shows it, but no doc covers it explicitly.
-
-**Scale out.** Add a host with `role: worker`. It reaches the ClusterInstance once the install completes, so one-master clusters can list workers from the start. The hub needs a valid kubeconfig for the cluster; if the API certificate changed, [update it first](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/). Keep the `bmcCredential` Secret on the hub: without it `credentials` fails and `cluster` never applies the change. `present-ready` stays NonCompliant until the host's Agent reports `Done`, and names the host once its BareMetalHost exists.
-
-**Scale in.** Set `remove: true` on the worker. Masters and arbiters cannot be removed.
-
-```yaml
-install:
-  siteconfig:
-    nodes:
-      w0.bm-ha.dc1.example.com:
-        role: worker
-        bmcAddress: redfish-virtualmedia://10.20.0.24/redfish/v1/Systems/1
-        bootMACAddress: "00:11:22:33:44:04"
-        remove: true
-```
-
-The `cluster` step then runs SiteConfig's documented scale-in, each write gated on the last:
-
-| Step | Written to the node | Waits for |
-|---|---|---|
-| 1 | `extraAnnotations` `remove-agent-and-node-on-delete` | The annotation on the BareMetalHost |
-| 2 | `pruneManifests`: BareMetalHost, InfraEnv, NMStateConfig | BareMetalHost gone, SiteConfig done (`observedGeneration`) |
-| 3 | Node dropped | |
-
-BMAC drains the Node, deprovisions the host and removes the Agent and Node. Follow it with `oc get bmh,agent -n <cluster>`. Once `present-ready` is Compliant, delete the fleet entry. Cleaning is metadata only: data stays on the disks.
-
-| You do | Result |
-|---|---|
-| Delete a live node's entry, or rename it | `cluster` fails with `not install.siteconfig.nodes`: SiteConfig would accept the drop and delete nothing, stranding the BareMetalHost, Agent and Node. |
-| Add a master to a live cluster | `cluster` fails: `is a new master`. |
-| Clear `remove` before step 2 | Scale-in cancelled. |
-| Clear `remove` after step 2 | `cluster` fails: `cannot be cancelled`. |
-| `remove` on a worker still joining | `cluster` fails: `has not finished joining`. Its drain would loop until SiteConfig's 30-minute timeout pauses the ClusterInstance. |
-| `remove` on a worker whose Node you already deleted | Not detected: the hub cannot see spoke Nodes. The drain fails the same way, and the BareMetalHost's drain-status annotation shows `failed to drain node`. |
-
-??? warning "Removing a worker that never joined, or whose Node is gone"
-    Either finish the install, or annotate its BareMetalHost so the drain gives up. BMAC honours this annotation, but no Red Hat doc covers it:
-
-    ```sh
-    oc annotate bmh <host> -n <cluster> bmac.agent-install.openshift.io/drain-timeout=5m
-    ```
-
-    The value is a Go duration, counted from the first drain attempt. If the ClusterInstance has already paused, also remove its paused annotation.
-
 ## Troubleshooting
 
 Start with the Application for render errors (missing `version`, credential or required key), then the Policy:
@@ -368,7 +292,7 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Guard or any step: "`<Kind> <cluster>` ... not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing" | Imported, built by hand or the console, or built before the marker. Usually `hub` was added to an imported cluster's fleet file. | Remove `hub`, `state`, `install` from the fleet file. If lifecycle built it, [annotate the root object](lifecycle.md#abandon). |
+| Guard or any step: "`<Kind> <cluster>` ... not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing" | Imported, or built by hand or the console. Usually `hub` was added to an imported cluster's fleet file. | Remove `hub`, `state`, `install` from the fleet file. |
 | `present-credentials` NonCompliant, template error | Credential Secret missing | Create it. Without `pullSecret` the API rejects the pull secret. |
 | Cluster has no SSH key, no error | `ssh-publickey` missing from the credential | Add it. |
 | `hive`/`siteconfig`: `present-credentials-<cluster>` NonCompliant: `because it is being terminated` | Namespace `<cluster>` from the last destroy is still terminating | Wait until `oc get ns <cluster>` returns NotFound. |
@@ -434,14 +358,3 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 
 ??? failure "Agent: stuck reclaiming"
     After destroy, Agents go to `reclaiming` while they reboot into discovery. One that cannot ends in `UnbindingPendingUserAction`: boot it from the discovery ISO by hand. Agents still holding the `agent.agent-install.openshift.io/ai-deprovision` finalizer block any new cluster that selects them.
-
-## Adding an engine
-
-An engine `<e>` is a component of `lifecycle/`. `templates/policy.yaml` renders whichever component `install.engine` names, so the ApplicationSet and fleet keys do not change.
-
-1. Add `converters/_<e>/`, `_` so the library doesn't discover it as a policy: objects to create, `root.yaml` (the root object by identity alone, for destroy and ownership), and its credentials. `lookup` back every field the engine rejects changes to. End the cleanup converter with `include "lifecycle.cleanupManifests"`.
-2. Add `stack.<e>` to `values.yaml` with `present` and `absent` Policies following the [chains](#policy-chains): each template names its converter with `file:` (`_<e>/root`, or a shared one such as `guard`), and `orderManifests` lists the steps. Set `default.remediationAction: enforce` and every gate to `InformOnly`, which ACM keeps inform under a Policy-level `enforce`. No `pruneObjectBehavior`: it lets a Policy delete a cluster.
-3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and `stack` keys differ ([Rules](validation.md#rules)).
-4. Merge `lifecycle.marker` into the root object's annotations in the cluster converter, and start every enforced converter but `manifests` with `include "lifecycle.refuse"`. Add the engine to `TestOwnership`, a present and an absent fleet file to `tools/validator/testdata/clusters/`, and an example to [Cluster lifecycle](lifecycle.md).
-
-An engine that upgrades from the hub maps `version` onto its objects, like `hypershift`. One that only installs uses `version` at create and leaves upgrades to `upgrade` ([Upgrades](upgrades.md)).

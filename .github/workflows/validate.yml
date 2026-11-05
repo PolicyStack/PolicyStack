@@ -1,7 +1,7 @@
 name: Policy Validate
 
 # Called by ci.yml, and by the PolicyStack-chart PR CI with library-artifact set: every chart then
-# renders the chart under test instead of the published one (docs/workflows.md#policy-validate).
+# renders the chart under test instead of the published one (docs/reference/ci.md#policy-validate).
 on:
   workflow_call:
     inputs:

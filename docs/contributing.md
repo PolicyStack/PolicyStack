@@ -8,7 +8,7 @@ mise install    # every tool at the version CI uses (mise.toml)
 prek install    # optional: run the hooks on each commit
 ```
 
-Before opening a PR, run what CI runs ([CI](workflows.md#ci)):
+Before opening a PR, run what CI runs ([CI](reference/ci.md#ci)):
 
 ```sh
 prek run --all-files
@@ -17,7 +17,7 @@ make -C tools/validator ci
 
 ## Pull requests
 
-- The title is a Conventional Commit ([PR Title](workflows.md#pr-title)). Squash merges make it the commit subject and the release-note line.
+- The title is a Conventional Commit ([PR Title](reference/ci.md#pr-title)). Squash merges make it the commit subject and the release-note line.
 - Mark a breaking change with `!` and the `breaking` label, which lists it first in the release notes: anything that changes element keys, values layout or fleet files for existing users.
 - `ci` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`.
 - Update `docs/` in the same PR. A fix for an incident adds a regression case to the rule's tests.
@@ -31,25 +31,15 @@ gh release create v0.2.0 --target main --generate-notes
 ```
 
 !!! note
-    The tag ruleset lets only maintainers create, move or delete `v*` tags. Fleet files pin these tags ([Revision](applicationset.md#revision)).
-
-## Forks
-
-Your fleet pins your own tags. Fetch upstream without its tags, so a `v0.2.0` from upstream never shadows yours:
-
-```sh
-git remote add upstream https://github.com/PolicyStack/PolicyStack.git
-git config remote.upstream.tagOpt --no-tags
-git fetch upstream
-```
+    The tag ruleset lets only maintainers create, move or delete `v*` tags. Fleet files pin these tags ([Revision](reference/fleet.md#revision)).
 
 ## Chart changes
 
-The policy-library chart lives in [PolicyStack-chart](https://github.com/PolicyStack/PolicyStack-chart). Every element, `lifecycle/` and `tools/sample-element/` pins it.
+The policy-library chart lives in [PolicyStack-chart](https://github.com/PolicyStack/PolicyStack-chart). Every chart in `CHARTS` of `tools/validator/Makefile` pins it: each element, `lifecycle/`, `tools/sample-element/` and the validator's test chart.
 
 === "Minor or patch"
 
-    1. Chart PR. Its `consumers` job runs [Policy Validate](workflows.md#policy-validate) on PolicyStack `main` against the chart under test. It must be green.
+    1. Chart PR. Its `consumers` job runs [Policy Validate](reference/ci.md#policy-validate) on PolicyStack `main` against the chart under test. It must be green.
     2. Merge. chart-releaser publishes `policy-library-<version>`.
     3. Renovate opens one PR that bumps every pin.
     4. PolicyStack `ci` gates it.
@@ -77,45 +67,39 @@ It packages the checkout as each chart's pinned version, runs `validate`, then d
 
 **Rollback.** A chart release is never withdrawn: ship a patch, and exclude the bad version in Renovate. On PolicyStack, revert the Renovate or migration PR, or move a fleet file's `revision` back to the previous tag.
 
-### Migrating to policy-library 4
+## Adding a lifecycle engine
 
-ConfigurationPolicy names don't change (`<policy>-<template>`), so compliance history and anything matching on names hold. Every key change: [Upgrading from 3.x](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#upgrading-from-3x). In PolicyStack, `lifecycle/converters/<engine>/` also moves to `_<engine>/`, with templates named by `file:`.
+An engine `<e>` is a component of `lifecycle/`. `templates/policy.yaml` renders whichever component `install.engine` names, so the ApplicationSet and fleet keys do not change.
 
-Your own elements migrate the same way as upstream's. In a fork:
+1. Add `converters/_<e>/`, `_` so the library doesn't discover it as a policy ([Partials](develop/elements.md#partials-and-file-reuse)): objects to create, `root.yaml` (the root object by identity alone, for destroy and ownership), and its credentials. `lookup` back every field the engine rejects changes to. End the cleanup converter with `include "lifecycle.cleanupManifests"`.
+2. Add `stack.<e>` to `values.yaml` with `present` and `absent` Policies following the [chains](reference/lifecycle.md#policy-chains): each template names its converter with `file:` (`_<e>/root`, or a shared one such as `guard`), and `orderManifests` lists the steps. Set `default.remediationAction: enforce` and every gate to `InformOnly`, which ACM keeps inform under a Policy-level `enforce`. No `pruneObjectBehavior`: it lets a Policy delete a cluster.
+3. Add `<e>` to the `install.engine` enum in `values.schema.json`, with its keys. POLICY090 fails when the enum and `stack` keys differ ([Validator rules](reference/rules.md)).
+4. Merge `lifecycle.marker` into the root object's annotations in the cluster converter, and start every enforced converter but `manifests` with `include "lifecycle.refuse"`. Add the engine to `TestOwnership`, a present and an absent fleet file to `tools/validator/testdata/clusters/` ([Fixtures](develop/validation.md#fixtures)), and an example to [Cluster lifecycle](guides/lifecycle.md). Add the engine to [Pick an engine](guides/lifecycle.md#pick-an-engine) and its tab or column to every table in [Lifecycle keys](reference/lifecycle.md).
 
-1. Merge the upstream release. Upstream elements arrive migrated. For one you changed, take upstream's copy and re-apply your change in the 4.0 shape:
+An engine that upgrades from the hub maps `version` onto its objects, like `hypershift`. One that only installs uses `version` at create and leaves upgrades to `upgrade` ([OpenShift upgrades](guides/upgrades.md)).
+
+## Docs layout
+
+Each page belongs to one section:
+
+| Section | Holds |
+| ------- | ----- |
+| Home (`index.md`) | What PolicyStack is, the diagram, where each section starts |
+| Get started (`start/`) | The path from an empty hub to the first configured cluster, in order |
+| Concepts (`concepts/`) | How PolicyStack works and why. No procedures |
+| Guides (`guides/`) | One operator task per page. Link Reference for key lists |
+| Elements (`elements/`) | One page per `stack/<el>` that needs more than its README. No settings tables |
+| Develop (`develop/`) | Writing, previewing and validating elements |
+| Reference (`reference/`) | Complete key, rule and workflow tables. No narrative |
+| Contributing (`contributing.md`) | Framework maintenance |
+
+- Element READMEs (`stack/*/README.md`) are generated ([Hooks](reference/ci.md#hooks)) and only on GitHub, not the site. An element with a page here sets `home:` in its `Chart.yaml` to the page URL, and its README links it.
+- A new page needs a `nav` entry in `zensical.toml`.
+- A moved page needs a `redirect_maps` entry in `zensical.toml`.
+- Preview:
 
     ```sh
-    git rm -rq stack/<el> && git checkout upstream/main -- stack/<el>
+    pip install -r tools/requirements-docs.txt
+    zensical serve            # live preview, run from the repo root
+    zensical build --strict   # the CI check
     ```
-
-2. Migrate everything still on 3.x: your elements and every values layer. It is idempotent and skips what is already 4.0.
-
-    === "uv"
-
-        ```sh
-        uv run tools/migrate-4.0.py                    # the whole repo
-        uv run tools/migrate-4.0.py stack/<el> values  # or only these paths
-        ```
-
-    === "pip"
-
-        ```sh
-        pip install 'ruamel.yaml>=0.18'
-        python tools/migrate-4.0.py
-        ```
-
-3. Fix each note it prints by hand. Notes cover what it could not convert, such as a `policyRef` naming no policy.
-4. Regenerate the READMEs and run CI locally:
-
-    ```sh
-    python tools/doc-generator.py
-    prek run --all-files
-    make -C tools/validator ci
-    ```
-
-5. Open the PR and read the [Render Diff](workflows.md#render-diff). Expected changes only:
-    - the namespace monitoring ConfigurationPolicy becomes a label on the operator Namespace;
-    - `Policy.spec.remediationAction` appears where it was unset;
-    - gates go from `inform` to `InformOnly`;
-    - a converter with per-object `complianceType` becomes an `object-templates-raw` list.

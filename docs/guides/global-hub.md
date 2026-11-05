@@ -45,7 +45,7 @@ metadata:
 
 ## Layout
 
-Install PolicyStack on the global hub and on every managed hub, each with its own `hubName` ([Install PolicyStack](install.md#install-policystack)). All hubs read the same `fleet/`. A hub's ApplicationSets only see the ManagedClusters it imports, so each fleet file renders Day-2 on one hub and lifecycle on one hub. For a cluster under a default-mode hub those differ: Day-2 renders on the managed hub, lifecycle on the global hub.
+Install PolicyStack on the global hub and on every managed hub, each with its own `hubName` ([Install PolicyStack](../start/install.md#install-policystack)). All hubs read the same `fleet/`. A hub's ApplicationSets only see the ManagedClusters it imports, so each fleet file renders Day-2 on one hub and lifecycle on one hub. For a cluster under a default-mode hub those differ: Day-2 renders on the managed hub, lifecycle on the global hub.
 
 ```text
 fleet/
@@ -78,7 +78,7 @@ fleet/
         ```
 
     !!! danger "The label picks the fleet file"
-        With the label, the global hub reads `fleet/hubs/hub-a.yaml`. Without it, `fleet/hub-a.yaml`. Removing the label deletes the hub's Day-2 Policies ([Removing an element](rollout.md#removing-an-element)).
+        With the label, the global hub reads `fleet/hubs/hub-a.yaml`. Without it, `fleet/hub-a.yaml`. Removing the label deletes the hub's Day-2 Policies ([What deletes an Application](../concepts/removal.md#what-deletes-an-application)).
 
     - Do not name a managed cluster after the hub that manages it. The global hub's Policies for `hub-a` land in namespace `hub-a` on `hub-a`, where a managed cluster `hub-a` would collide.
     - A hub the global hub builds also has `fleet/hub-a.yaml` for its lifecycle keys. After import, its upgrade `version` and `channel` go in `fleet/hubs/hub-a.yaml`.
@@ -92,7 +92,7 @@ fleet/
 
 ## Lifecycle
 
-`policystack-lifecycle` has two generators ([Lifecycle generator](applicationset.md#lifecycle-generator)):
+`policystack-lifecycle` has two generators ([Lifecycle generator](../concepts/architecture.md#lifecycle-generator)):
 
 | Generator | Matches fleet files whose `hub` is | Places the Policy on |
 |---|---|---|
@@ -138,4 +138,4 @@ ACM delivers the Policies to the managed hub, where every lookup and `fromSecret
 - Label a PolicyStack hub `global-hub.open-cluster-management.io/hub-role`. Hub HA copies its ApplicationSets, Applications, Policies and `ArgoCD` CR to the standby.
 - Enable the ACM gitops-addon or Argo CD Agent on a managed hub. They replace `openshift-gitops`, which runs that hub's PolicyStack.
 - Reuse a cluster name across hubs. `fleet/` is shared and migration needs unique names.
-- Migrate a lifecycle-built cluster with `ManagedClusterMigration`. It moves the ManagedCluster, not its Policies or Applications, and `hypershift` clusters cannot migrate. Imported clusters migrate cleanly: the target hub picks up the same `fleet/<cluster>.yaml`. Then re-register them with ACS ([steps 2-3](acs.md#re-register-a-cluster)).
+- Migrate a lifecycle-built cluster with `ManagedClusterMigration`. It moves the ManagedCluster, not its Policies or Applications, and `hypershift` clusters cannot migrate. Imported clusters migrate cleanly: the target hub picks up the same `fleet/<cluster>.yaml`. Then re-register them with ACS ([steps 2-3](../elements/acs.md#re-register-a-cluster)).

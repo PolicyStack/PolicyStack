@@ -3,8 +3,8 @@
 # infra MachineSet creation is off entirely.
 #
 # install is read only by lifecycle/, for a cluster a hub builds with SiteConfig and the assisted
-# installer (docs/lifecycle.md). The fleet file or values/clusters/<cluster>.yaml sets the nodes and
-# the machine network. The hub needs stack.cim.
+# installer (docs/guides/lifecycle.md). The fleet file or values/clusters/<cluster>.yaml sets the
+# nodes and the machine network. The hub needs stack.cim.
 install:
   engine: siteconfig
   credential:

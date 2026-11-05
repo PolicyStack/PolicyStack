@@ -10,7 +10,7 @@ PolicyStack runs on the ACM hub. You install it once per hub with Helm, from [`i
 
 | Placeholder | Meaning | Example |
 |---|---|---|
-| `<hub>` | The hub's name in PolicyStack (`hubName`). Picks `fleet/hubs/<hub>.yaml`. Unique per active hub reading the repo. A DR hub takes over the `hubName` of the hub it replaces ([Hub disaster recovery](lifecycle.md#abandon)). | `acm-dc1` |
+| `<hub>` | The hub's name in PolicyStack (`hubName`). Picks `fleet/hubs/<hub>.yaml`. Unique per active hub reading the repo. A DR hub takes over the `hubName` of the hub it replaces ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)). | `acm-dc1` |
 | `<org>/<fork>` | Your GitHub org and fork of PolicyStack | `acme/policystack` |
 
 ## Prerequisites
@@ -18,7 +18,8 @@ PolicyStack runs on the ACM hub. You install it once per hub with Helm, from [`i
 - `oc`, and `helm` 3.14 or later (3.18 or later for `--take-ownership`).
 - A fork of PolicyStack, cloned locally. Argo CD reads your fleet files and values from it; upstream ships none.
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`.
-- Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18. Argo CD renders with the Helm that GitOps bundles (3.18.4 in 1.18), and the validator evaluates ACM templates with the 2.16 engine. Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](lifecycle.md#prerequisites)).
+- Protect `fleet/` before the first fleet file: whoever merges there builds and destroys clusters ([Protection](../reference/fleet.md#protection)).
+- Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18. Argo CD renders with the Helm that GitOps bundles (3.18.4 in 1.18), and the validator evaluates ACM templates with the 2.16 engine. Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
 
 ```sh
 git clone https://github.com/<org>/<fork>.git && cd <fork>
@@ -68,7 +69,7 @@ oc auth can-i '*' '*' --all-namespaces   # yes
     # argocd.argoproj.io/openshift-gitops condition met
     ```
 
-    These are the same objects the `acm` and `gitops` elements enforce, so [handover](#hand-the-operators-to-policystack) adopts them in place. The chart installs the channel head and refuses `versions` or `upgradeApproval` pins; pin after handover ([Operator upgrades](rollout.md#operator-upgrades)).
+    These are the same objects the `acm` and `gitops` elements enforce, so [handover](#hand-the-operators-to-policystack) adopts them in place. The chart installs the channel head and refuses `versions` or `upgradeApproval` pins; pin after handover ([Operator versions](../guides/operators.md)).
 
     ??? info "Single node or disconnected hub"
         Add a values layer to `helm template` with `-f`:
@@ -88,7 +89,7 @@ oc auth can-i '*' '*' --all-namespaces   # yes
               -f values/acm/<hub>.yaml | oc apply -f - && oc get argocd/openshift-gitops -n openshift-gitops; do sleep 30; done
         ```
 
-        On a disconnected hub, also add the layer that sets `global.catalogSources`, such as `-f values/datacenters/<dc>.yaml` ([Disconnected clusters](disconnected.md)).
+        On a disconnected hub, also add the layer that sets `global.catalogSources`, such as `-f values/datacenters/<dc>.yaml` ([Disconnected clusters](../guides/disconnected.md#the-hub)).
 
 === "Hub that already runs ACM/GitOps"
 
@@ -96,7 +97,7 @@ oc auth can-i '*' '*' --all-namespaces   # yes
 
 ## Install PolicyStack
 
-Creates the ApplicationSets, the `pstack` policy namespace, the cluster import into Argo CD and its RBAC.
+Creates the ApplicationSets, the `pstack` policy namespace, the cluster import into Argo CD and its RBAC ([Install chart](../reference/install.md)).
 
 ```sh
 helm install policystack ./install -n openshift-gitops \
@@ -104,7 +105,7 @@ helm install policystack ./install -n openshift-gitops \
   --description "$(git rev-parse --short HEAD)"
 ```
 
-Both values are required and stored in the release; upgrades reuse them. `--description` records the commit, which [upgrades](#upgrading) compare against.
+Both values are required and stored in the release; upgrades reuse them. `--description` records the commit, which [upgrades](../guides/upgrading.md#install-chart) compare against.
 
 Verify:
 
@@ -117,27 +118,11 @@ oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster
 # one secret per ManagedCluster, including the hub
 ```
 
-| Object | Name | Namespace | Purpose |
-|---|---|---|---|
-| ApplicationSet | `policystack` | `openshift-gitops` | One Application per element per cluster ([Applications](applicationset.md#applications)) |
-| ApplicationSet | `policystack-lifecycle` | `openshift-gitops` | One Application per cluster this hub builds ([Lifecycle generator](applicationset.md#lifecycle-generator)) |
-| Namespace | `pstack` | | Holds the Policies |
-| ManagedClusterSetBinding | `global` | `openshift-gitops`, `pstack` | Lets Placements select every cluster |
-| Placement | `global` | `openshift-gitops` | Every cluster, tolerating `unreachable` and `unavailable` |
-| GitOpsCluster | `argo-acm-importer-global` | `openshift-gitops` | Creates an Argo CD cluster secret per selected cluster |
-| ClusterRole, ClusterRoleBinding | `openshift-gitops-policy-admin` | | Lets the Argo CD application controller manage Policies, PolicySets, Placements and PlacementBindings, the only objects elements render |
-
-!!! note "Not in ACM backup"
-    The ApplicationSets, their Applications, the Placement and the GitOpsCluster carry `velero.io/exclude-from-backup: "true"`. A restored `policystack-lifecycle` on a passive hub would build the old hub's clusters there.
-
-!!! warning "Objects outlive the release"
-    Every object carries `helm.sh/resource-policy: keep`. `helm uninstall policystack` leaves PolicyStack running. To remove it, see [Teardown](#teardown).
-
 If Helm reports an object that already exists, such as a hand-made `global` binding, rerun with `--take-ownership` (Helm 3.18 or later) to adopt it.
 
 ## Add the hub's fleet file
 
-The hub gets Applications only once its fleet file is on the default branch ([The hub](applicationset.md#the-hub)):
+The hub gets Applications only once its fleet file is on the default branch ([The hub](../concepts/architecture.md#the-hub)):
 
 ```yaml
 # fleet/hubs/<hub>.yaml
@@ -148,8 +133,8 @@ valueFiles:  # (2)!
   - acm/<hub>.yaml
 ```
 
-1.  Branch, tag or SHA the hub's Applications render from ([Revision](applicationset.md#revision)).
-2.  Layers under `values/`, lowest precedence first ([Order](values.md#order)). `values/clusters/<hub>.yaml` is always added last.
+1.  Branch, tag or SHA the hub's Applications render from ([Revision](../reference/fleet.md#revision)).
+2.  Layers under `values/`, lowest precedence first ([Order](../concepts/values.md#order)). `values/clusters/<hub>.yaml` is always added last.
 
 Merge it to the default branch. Within about 6 minutes, each element under `stack/` gets an Application named `<element>-<hub>`:
 
@@ -160,7 +145,7 @@ oc get applications.argoproj.io -n openshift-gitops | grep <hub>
 # ...
 ```
 
-An element no layer enables syncs with no resources. Managed clusters follow the same pattern with `fleet/<cluster>.yaml` ([Onboarding a cluster](rollout.md#onboarding-a-cluster)).
+An element no layer enables syncs with no resources. Managed clusters follow the same pattern with `fleet/<cluster>.yaml` ([First cluster](first-cluster.md)).
 
 ## Hand the operators to PolicyStack
 
@@ -220,69 +205,7 @@ stack:
 !!! warning
     Do not run [Install the operators](#install-the-operators) after handover. It resets any channel the hub layer overrides.
 
-ACM and GitOps upgrades now follow the hub's fleet `revision` like any other element ([Operator upgrades](rollout.md#operator-upgrades)).
-
-## Upgrading
-
-| Part | How |
-|---|---|
-| Elements, lifecycle, values | Merge upstream into the fork, then move fleet `revision` pins ([Rolling out changes](rollout.md)) |
-| ACM and GitOps | Through the elements after [handover](#hand-the-operators-to-policystack). Before it, OLM upgrades within the installed channel. |
-| The install chart | `helm upgrade`, below |
-
-??? info "Upgrade the install chart"
-    The ApplicationSets are not pinned per cluster: a change under `install/templates/` reaches every cluster on the hub at once. Upgrade only when the `git diff` below prints changes:
-
-    ```sh
-    helm history policystack -n openshift-gitops   # DESCRIPTION of the deployed revision = <last>
-    git diff <last>..HEAD -- install/
-    ```
-
-    If the deployed revision's DESCRIPTION reads `Rollback to <n>`, use revision `<n>`'s DESCRIPTION as `<last>`.
-
-    ```sh
-    helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values \
-      --description "$(git rev-parse --short HEAD)"
-    ```
-
-    `--reset-then-reuse-values` takes the new chart defaults and keeps `hubName` and `gitRepo`. Roll back with `helm rollback policystack <revision> -n openshift-gitops`.
-
-??? info "From the appset chart"
-    Hubs installed with the old `appset` release and `gitops-prereq/` move over once, with Helm 3.18 or later. `<ns>` is the namespace of the `appset` release.
-
-    1. Check the stored manifest keeps all four objects. The ApplicationSets gained `keep` on 2026-10-13. Below 4, run `helm upgrade appset` once, with its usual values, from a commit before `install/` existed.
-
-        ```sh
-        helm get manifest appset -n <ns> | grep -c 'helm.sh/resource-policy'   # 4
-        ```
-
-    2. Move the release. Reusing the stored values keeps `hubName` exact; a different one renames and recreates every hub Application.
-
-        ```sh
-        helm get values appset -n <ns> -o yaml > appset-values.yaml
-        helm uninstall appset -n <ns>
-        helm install policystack ./install -n openshift-gitops --take-ownership -f appset-values.yaml \
-          --description "$(git rev-parse --short HEAD)"
-        oc get applicationset policystack -n openshift-gitops \
-          -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}'   # policystack
-        ```
-
-        Nothing is deleted. If the old ApplicationSet had `preserveResourcesOnDeletion: true`, its Applications gain the resources finalizer, and an Application left OutOfSync on a disabled element prunes on its next automated sync.
-
-    3. Drop the cluster-admin binding the old install created. Skip this if the `openshift-gitops` instance also syncs Applications outside PolicyStack; they may rely on it.
-
-        ```sh
-        oc auth can-i create policies.policy.open-cluster-management.io -n pstack \
-          --as=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller   # yes
-        oc get clusterrolebinding -o wide | grep 'ClusterRole/cluster-admin' | grep openshift-gitops-argocd-application-controller
-        oc adm policy remove-cluster-role-from-user cluster-admin -z openshift-gitops-argocd-application-controller \
-          -n openshift-gitops --rolebinding-name=<name>   # <name> from the previous command
-        ```
-
-        !!! danger
-            Without `--rolebinding-name`, the last command edits every cluster-admin binding. Never delete `openshift-gitops-policy-admin`: nothing recreates it before the next `helm upgrade`.
-
-    4. Sync the Applications and check they stay Synced.
+ACM and GitOps upgrades now follow the hub's fleet `revision` like any other element ([Operator versions](../guides/operators.md)).
 
 ## Teardown
 
@@ -291,4 +214,6 @@ oc delete applicationset policystack policystack-lifecycle -n openshift-gitops
 ```
 
 !!! danger "Deletes every Policy"
-    This deletes every Application and every Policy they rendered ([Removing an element](rollout.md#removing-an-element)). Clusters this hub built keep running, unmanaged ([Abandon](lifecycle.md#abandon)). Add `--cascade=orphan` to keep the Applications and Policies.
+    This deletes every Application and every Policy they rendered ([Removal and pruning](../concepts/removal.md)). Clusters this hub built keep running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)). Add `--cascade=orphan` to keep the Applications and Policies.
+
+Next: [First cluster](first-cluster.md).

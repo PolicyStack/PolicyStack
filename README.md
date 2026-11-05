@@ -6,7 +6,7 @@ Documentation: https://policystk.io/ (source in [`docs/`](docs/)). Each element'
 
 ## Quick start
 
-From the root of your fork, logged in to the hub as a cluster administrator ([Installation](https://policystk.io/install/)):
+From the root of your fork, logged in to the hub as a cluster administrator ([Installation](https://policystk.io/start/install/)):
 
 1. Install ACM and OpenShift GitOps, unless the hub already runs them:
    ```sh
@@ -21,7 +21,7 @@ From the root of your fork, logged in to the hub as a cluster administrator ([In
      --description "$(git rev-parse --short HEAD)"
    ```
 3. Commit the hub's fleet file, `fleet/hubs/<hub>.yaml`, with `revision: main`.
-4. Commit a fleet file for a managed cluster to the repo's default branch, `fleet/prod-east-1.yaml` for the ManagedCluster `prod-east-1` ([Fleet files](https://policystk.io/applicationset/#fleet-files)):
+4. Commit a fleet file for a managed cluster to the repo's default branch, `fleet/prod-east-1.yaml` for the ManagedCluster `prod-east-1` ([Fleet files](https://policystk.io/reference/fleet/)):
    ```yaml
    revision: main
    valueFiles:
@@ -30,9 +30,9 @@ From the root of your fork, logged in to the hub as a cluster administrator ([In
      - platforms/aws.yaml
    ```
 
-Every element ships disabled except `upgrade`, which acts only on a fleet file's `version` and `channel` ([Upgrades](https://policystk.io/upgrades/)). Enable an element in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystk.io/values/).
+Every element ships disabled except `upgrade`, which acts only on a fleet file's `version` and `channel` ([Upgrades](https://policystk.io/guides/upgrades/)). Enable an element in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystk.io/concepts/values/).
 
-To have the hub build a hosted cluster instead of importing one, meet the [lifecycle prerequisites](https://policystk.io/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
+To have the hub build a hosted cluster instead of importing one, meet the [lifecycle prerequisites](https://policystk.io/guides/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
 ```yaml
 revision: main
 hub: acm-dc1

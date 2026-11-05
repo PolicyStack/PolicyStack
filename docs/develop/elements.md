@@ -41,13 +41,14 @@ exceptions to the [defaults](#what-you-leave-out). The library README lists ever
     make -C tools/validator validate ELEMENT=demo
     ```
 
-    Every [rule](validation.md#rules), this element only. Add it to
-    `tools/validator/testdata/profiles/all-on.yaml`, or CI never evaluates its ACM templates
+    Every [rule](../reference/rules.md), this element only. Add it to
+    `tools/validator/testdata/profiles/all-on.yaml`: `TestProfileCoverage` fails CI until every
+    converter with ACM templates renders under some profile
     ([ACM templates](validation.md#acm-templates)).
 
 6.  **Enable on one cluster.** Set `enabled: true` in `values/clusters/<cluster>.yaml` of a nonprod
     cluster and pin its fleet file to your branch
-    ([Promoting and rolling back](rollout.md#promoting-and-rolling-back)). Read compliance, then widen.
+    ([Promoting and rolling back](../guides/rollout.md#promoting-and-rolling-back)). Read compliance, then widen.
 
 ## Sample element
 
@@ -78,11 +79,11 @@ optional template. `README.md` is [generated](#element-reference).
     --8<-- "tools/sample-element/Chart.yaml"
     ```
 
-- `enabled: false`: a [values layer](values.md) turns the element on.
+- `enabled: false`: a [values layer](../concepts/values.md) turns the element on.
 - `default.remediationAction: inform`: switch to `enforce` once compliance reads clean.
 - `waitForOperator`: the template waits for the CSV to succeed and stays compliant meanwhile.
-- `versions: []`: pin per environment in layers ([Operator upgrades](rollout.md#operator-upgrades)).
-- `alias: stack` puts values under `stack:` and turns on the library [schema](values.md#schema).
+- `versions: []`: pin per environment in layers ([Operator versions](../guides/operators.md)).
+- `alias: stack` puts values under `stack:` and turns on the library [schema](../concepts/values.md#schema).
 - `templates/policy.yaml` is one line, `include "policy-library.render"`. Leave it.
 
 ## What you leave out
@@ -204,7 +205,7 @@ Ship a policy, template or operator with `enabled: false`. A layer turns it on i
 
 - Lowercase kebab-case, directory name equal to chart `name`. The values key is its camelCase.
 - At most 17 characters: `pstack.install-<element>-<cluster>` must fit 63 with a 30-character
-  cluster. Policy name plus element name: 24 at most ([Naming limits](policies.md#naming-limits)).
+  cluster. Policy name plus element name: 24 at most ([Naming limits](../concepts/policies.md#naming-limits)).
 - Not another element's name plus `-`, nor a prefix of one: `gitops` on cluster `dev-c` and
   `gitops-dev` on cluster `c` share release `gitops-dev-c` (POLICY091). `lifecycle` is reserved.
 - Prefix template files with the element (`my-element-instance`). Template names are unique across
@@ -220,15 +221,9 @@ Ship a policy, template or operator with `enabled: false`. A layer turns it on i
 - **One product per element.** Clusters turn an element on as a unit.
 - **Start in `inform`.** Roll out, read compliance, then `enforce`.
 - **Compliance annotations only for controls the element implements.** There is no fallback.
-
-!!! warning "`pruneObjectBehavior` decides whether removal deletes objects"
-    Set it only on templates without dependencies (POLICY033), in its own commit, so it reaches the
-    cluster before the removal
-    ([What happens on the managed cluster](rollout.md#what-happens-on-the-managed-cluster)).
-
-!!! danger "Keep the branch until the pin moves back"
-    A fleet file pinned to a deleted branch freezes the Applications of every cluster
-    ([Revision](applicationset.md#revision)).
+- **`pruneObjectBehavior` in its own commit**, only on templates without dependencies (POLICY033)
+  ([Removal and pruning](../concepts/removal.md#what-happens-on-the-managed-cluster)).
+- **Keep a branch until no fleet file pins it** ([Revision](../reference/fleet.md#revision)).
 
 ## Secrets
 
@@ -267,11 +262,11 @@ python tools/doc-generator.py --check  # report stale ones, write nothing
 | Source | Shown as |
 |---|---|
 | `Chart.yaml` `description` | Lead paragraph |
-| `Chart.yaml` `home` | Guide link, for elements with a page under `docs/` |
+| `Chart.yaml` `home` | Guide link, for elements with a page on the site (`docs/elements/` or a guide) |
 | Comment above `config:` | Settings intro |
 | Comment above a key under `config` | That row's description |
 | `description:` of a policy, template or operator | Policy line or template row |
 | `enabled: false` entries | *Optional pieces* table |
 
-A blank line between a comment and its key keeps the comment out, for maintainer notes. The
-`element-readmes` hook regenerates READMEs and fails CI when one is stale ([Hooks](workflows.md#hooks)).
+A blank line between a comment and its key keeps the comment out, for maintainer notes. CI fails
+on a stale README ([Hooks](../reference/ci.md#hooks)).

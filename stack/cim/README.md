@@ -22,7 +22,7 @@ Under `stack.cim.config`. Maps merge across layers; lists are replaced whole.
 | `storage.database` |  | `10Gi` |
 | `storage.filesystem` |  | `100Gi` |
 | `storage.images` | RHCOS ISO cache: about 2Gi per osImages entry | `50Gi` |
-| `osImages` | RHCOS live ISOs you host, by OpenShift x.y: {version: RHCOS version, url}. Set when disconnected, as it replaces the default list: list every version a siteconfig cluster installs. Mirrors and CAs come from the disconnected element's config (docs/disconnected.md). | `{}` |
+| `osImages` | RHCOS live ISOs you host, by OpenShift x.y: {version: RHCOS version, url}. Set when disconnected, as it replaces the default list: list every version a siteconfig cluster installs. Mirrors and CAs come from the disconnected element's config (docs/guides/disconnected.md). | `{}` |
 
 ## Policies
 

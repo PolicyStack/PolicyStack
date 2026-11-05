@@ -4,7 +4,8 @@ metadata:
   name: policystack-lifecycle
   namespace: openshift-gitops
   # ACM backup restores argoproj.io objects. Restored on a passive hub, this ApplicationSet and its
-  # Applications would rebuild the old hub's clusters there (docs/lifecycle.md).
+  # Applications would rebuild the old hub's clusters there
+  # (docs/guides/lifecycle.md#hub-disaster-recovery).
   labels:
     velero.io/exclude-from-backup: "true"
   annotations:
@@ -18,7 +19,7 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   # Each fleet file renders on exactly one hub: the hub it names, when that hub manages itself, or
   # else that hub's parent, when it is imported into a Multicluster Global Hub in default mode
-  # (docs/global-hub.md). .name is the ManagedCluster the Policies are placed on.
+  # (docs/guides/global-hub.md). .name is the ManagedCluster the Policies are placed on.
   generators:
     - matrix:
         generators:

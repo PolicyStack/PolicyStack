@@ -1,13 +1,13 @@
 # Cluster lifecycle
 
-Add `hub` to a fleet file and that hub builds the cluster. Set `state: absent` and it destroys it. After import, the same fleet file drives Day-2 ([Fleet files](applicationset.md#fleet-files)).
+Add `hub` to a fleet file and that hub builds the cluster. Set `state: absent` and it destroys it. After import, the same fleet file drives Day-2 ([Fleet files](../reference/fleet.md)).
 
 1. ApplicationSet `policystack-lifecycle` creates Application `lifecycle-<cluster>` for each fleet file naming the hub.
 2. It renders the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle) chart into Policy `present-lifecycle-<cluster>`, placed on the hub. For a default-mode Global Hub managed hub, the parent does this ([Global Hub](global-hub.md#lifecycle)).
 3. ACM creates the cluster's objects in order, each step waiting for the last.
-4. ACM imports the finished cluster and the Day-2 ApplicationSet takes over.
+4. ACM imports the finished cluster and the Day-2 ApplicationSet takes over ([Day-2 handoff](../concepts/architecture.md#day-2-handoff)).
 
-The cluster is built when `present-lifecycle-<cluster>` is Compliant. Only ACM and Argo CD run. Every key and object: [Lifecycle reference](lifecycle-reference.md).
+The cluster is built when `present-lifecycle-<cluster>` is Compliant. Only ACM and Argo CD run. Every key and object: [Lifecycle keys](../reference/lifecycle.md).
 
 ## Pick an engine
 
@@ -311,8 +311,8 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
     ```
 
     1.  `username` and `password`, used for every node.
-    2.  Keyed by host name. [All keys](lifecycle-reference.md#install-keys).
-    3.  `idrac-virtualmedia://` for Dell, `redfish-virtualmedia://` otherwise. Other schemes need a provisioning network, which the [`cim`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/cim) default doesn't have, so the schema refuses them.
+    2.  Keyed by host name. [All keys](../reference/lifecycle.md#install-keys).
+    3.  `idrac-virtualmedia://` for Dell, `ilo5-` or `ilo4-virtualmedia://` for HPE, `redfish-virtualmedia://` otherwise ([all variants](../reference/lifecycle.md#install-keys)). Other schemes need a provisioning network, which the [`cim`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/cim) default doesn't have, so the schema refuses them.
     4.  Keep the quotes: an unquoted MAC is not read as a string by YAML.
 
     !!! warning "Fixed after create"
@@ -341,7 +341,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
     ??? info "Image-based install"
         `siteconfig.templates: ibi`. Single node only. Needs the multicluster engine `image-based-install-operator` component, which you enable yourself, and a host preinstalled with a seed image at `version`.
 
-    See [Scaling](lifecycle-reference.md#scaling-siteconfig-workers) to add and remove workers.
+    See [Scaling](#scaling-siteconfig-workers) to add and remove workers.
 
 === "KubeVirt"
 
@@ -447,16 +447,13 @@ Copy one, change names and addresses, merge. [Values](#values) moves shared part
 
 ## Fleet keys
 
-`hub`, `state`, `version`, `channel` and `install` are listed in [Fleet files](applicationset.md#fleet-files). `version` is required, `state` defaults to `present`, and `install` takes the [Install keys](lifecycle-reference.md#install-keys).
+`hub`, `state`, `version`, `channel` and `install` are listed in [Fleet files](../reference/fleet.md); `install` takes the [Install keys](../reference/lifecycle.md#install-keys). Most `install` keys are fixed at create ([Immutable fields](../reference/lifecycle.md#immutable-fields)): changing one turns the Policy NonCompliant and never rebuilds the cluster.
 
-The cluster name is the fleet file name: a DNS label of at most 30 characters, so every element fits (lifecycle alone allows 38, [Naming limits](policies.md#naming-limits)).
-
-!!! warning
-    Most `install` keys are fixed at create ([Immutable fields](lifecycle-reference.md#immutable-fields)). Changing one later turns the Policy NonCompliant. It never rebuilds the cluster.
+The cluster name is the fleet file name: a DNS label of at most 30 characters, so every element fits (lifecycle alone allows 38, [Naming limits](../concepts/policies.md#naming-limits)).
 
 ## Values
 
-Same [values cascade](values.md#order) as Day-2, starting from `lifecycle/values.yaml`. The fleet file's `install` ranks above every layer.
+Same [values cascade](../concepts/values.md#order) as Day-2, starting from `lifecycle/values.yaml`. The fleet file's `install` ranks above every layer.
 
 Shipped layers:
 
@@ -489,7 +486,7 @@ install:
 `version` and `channel` belong only in the fleet file. `values/clusters/<cluster>.yaml` may hold both `install` and `stack`.
 
 !!! warning "Shared layers"
-    Maps merge, lists replace ([Merge rules](values.md#merge-rules)): `installConfig.compute` in the fleet file replaces the layer's list. Changing a fixed-at-create key like `baseDomain` in a layer turns every existing cluster reading it NonCompliant.
+    Maps merge, lists replace ([Merge rules](../concepts/values.md#merge-rules)): `installConfig.compute` in the fleet file replaces the layer's list. Changing a fixed-at-create key like `baseDomain` in a layer turns every existing cluster reading it NonCompliant.
 
 ## Watching a build
 
@@ -505,11 +502,11 @@ oc get applications.argoproj.io lifecycle-<cluster> -n openshift-gitops -o jsonp
 | `siteconfig` | `oc get clusterinstance,bmh,agentclusterinstall,agent -n <cluster>` | 1 h single node |
 | `hypershift` | `oc get hostedcluster,nodepool -n clusters` | |
 
-Every step is in [Policy chains](lifecycle-reference.md#policy-chains).
+Every step is in [Policy chains](../reference/lifecycle.md#policy-chains).
 
 ## Upgrades
 
-Bump `version`, and `channel` on a minor bump ([Upgrades](upgrades.md)):
+Bump `version`, and `channel` on a minor bump ([OpenShift upgrades](upgrades.md)):
 
 ```diff
  # fleet/hcp-kubevirt.yaml
@@ -522,7 +519,7 @@ Bump `version`, and `channel` on a minor bump ([Upgrades](upgrades.md)):
 | Engine | How |
 |---|---|
 | `hive`, `siteconfig` | On the cluster by `upgrade`, like imported clusters. The hub keeps the install release image: Hive rejects changes to it, and the chart reads the `siteconfig` image set back from the live object. |
-| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. A `version` below the control plane's desired version is never applied. NodePools follow once the control plane's newest Completed version is `version`. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Disconnected](disconnected.md)). |
+| `hypershift` | From the hub. With `channel`, waits until `version` is in `status.version.availableUpdates`; without, moves at once. A `version` below the control plane's desired version is never applied. NodePools follow once the control plane's newest Completed version is `version`. `KubeVirt` pools replace VMs; others upgrade in place. Disconnected, `channel` needs `install.hostedCluster.spec.updateService` pointing at your OSUS, or the bump waits forever ([Hosted clusters](disconnected.md#hosted-clusters)). |
 
 During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant until the control plane and every NodePool reach `version`. A held downgrade, such as a reverted bump after the control plane moved, keeps it NonCompliant until the fleet file catches up. `hypershift` and `hive` clusters install from the `-multi` payload, so they are multi-architecture. `siteconfig` installs `-x86_64` and stays single-architecture.
 
@@ -537,6 +534,75 @@ During a `hypershift` upgrade, `present-lifecycle-<cluster>` is NonCompliant unt
             hypershift.openshift.io/force-upgrade-to: quay.io/openshift-release-dev/ocp-release:4.21.2-multi
     ```
 
+## Scaling
+
+Workers change after create through `nodePools` (`hypershift`) and `siteconfig.nodes` (`siteconfig`).
+
+### Removing a NodePool
+
+`musthave` never deletes. Removing an entry only stops managing it. Remove the `nodePools` entry, then:
+
+```sh
+oc delete nodepool <cluster>-<pool> -n clusters
+```
+
+A pool from a shared layer, like `workers` in `platforms/kubevirt.yaml`, cannot be removed from a higher layer (the schema rejects `null`). Scale it down:
+
+```yaml
+install:
+  nodePools:
+    workers:
+      replicas: 0
+```
+
+### Scaling SiteConfig workers
+
+!!! note
+    Red Hat documents this flow for `clusterType: SNO`. On `HighlyAvailable`, SiteConfig accepts the same changes and its sample output shows it, but no doc covers it explicitly.
+
+**Scale out.** Add a host with `role: worker`. It reaches the ClusterInstance once the install completes, so one-master clusters can list workers from the start. The hub needs a valid kubeconfig for the cluster; if the API certificate changed, [update it first](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/). Keep the `bmcCredential` Secret on the hub: without it `credentials` fails and `cluster` never applies the change. `present-ready` stays NonCompliant until the host's Agent reports `Done`, and names the host once its BareMetalHost exists.
+
+**Scale in.** Set `remove: true` on the worker. Masters and arbiters cannot be removed.
+
+```yaml
+install:
+  siteconfig:
+    nodes:
+      w0.bm-ha.dc1.example.com:
+        role: worker
+        bmcAddress: redfish-virtualmedia://10.20.0.24/redfish/v1/Systems/1
+        bootMACAddress: "00:11:22:33:44:04"
+        remove: true
+```
+
+The `cluster` step then runs SiteConfig's documented scale-in, each write gated on the last:
+
+| Step | Written to the node | Waits for |
+|---|---|---|
+| 1 | `extraAnnotations` `remove-agent-and-node-on-delete` | The annotation on the BareMetalHost |
+| 2 | `pruneManifests`: BareMetalHost, InfraEnv, NMStateConfig | BareMetalHost gone, SiteConfig done (`observedGeneration`) |
+| 3 | Node dropped | |
+
+BMAC drains the Node, deprovisions the host and removes the Agent and Node. Follow it with `oc get bmh,agent -n <cluster>`. Once `present-ready` is Compliant, delete the fleet entry. Cleaning is metadata only: data stays on the disks.
+
+| You do | Result |
+|---|---|
+| Delete a live node's entry, or rename it | `cluster` fails with `not install.siteconfig.nodes`: SiteConfig would accept the drop and delete nothing, stranding the BareMetalHost, Agent and Node. |
+| Add a master to a live cluster | `cluster` fails: `is a new master`. |
+| Clear `remove` before step 2 | Scale-in cancelled. |
+| Clear `remove` after step 2 | `cluster` fails: `cannot be cancelled`. |
+| `remove` on a worker still joining | `cluster` fails: `has not finished joining`. Its drain would loop until SiteConfig's 30-minute timeout pauses the ClusterInstance. |
+| `remove` on a worker whose Node you already deleted | Not detected: the hub cannot see spoke Nodes. The drain fails the same way, and the BareMetalHost's drain-status annotation shows `failed to drain node`. |
+
+??? warning "Removing a worker that never joined, or whose Node is gone"
+    Either finish the install, or annotate its BareMetalHost so the drain gives up. BMAC honours this annotation, but no Red Hat doc covers it:
+
+    ```sh
+    oc annotate bmh <host> -n <cluster> bmac.agent-install.openshift.io/drain-timeout=5m
+    ```
+
+    The value is a Go duration, counted from the first drain attempt. If the ClusterInstance has already paused, also remove its paused annotation.
+
 ## Destroy
 
 Set `state: absent` and merge:
@@ -548,7 +614,7 @@ Set `state: absent` and merge:
 +state: absent
 ```
 
-The hub detaches the cluster from ACM, deletes it, waits until it is gone, then deletes its secrets and `install.manifests`. Detaching drops the Day-2 Applications and Policies without pruning the cluster. When the Policy is Compliant, delete the fleet file and `values/clusters/<cluster>.yaml`:
+`hive` and `hypershift`: the hub detaches the cluster from ACM, deletes it, waits until it is gone, then deletes its secrets and `install.manifests`. Detaching drops the Day-2 Applications and Policies without pruning the cluster. `siteconfig` has no detach: the hub deletes the ClusterInstance, SiteConfig deletes the BareMetalHosts and then the ManagedCluster, and the hub deletes Namespace `<cluster>`, the ClusterImageSet and `install.manifests`. When the Policy is Compliant, delete the fleet file and `values/clusters/<cluster>.yaml`:
 
 ```sh
 oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
@@ -558,7 +624,7 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
     Deleting the fleet file before `absent-lifecycle-<cluster>` is Compliant abandons the cluster mid-destroy.
 
 !!! warning "ACS"
-    Before re-creating a cluster under the same name, delete it in ACS ([Re-register a cluster](acs.md#re-register-a-cluster), step 1).
+    Before re-creating a cluster under the same name, delete it in ACS ([Re-register a cluster](../elements/acs.md#re-register-a-cluster), step 1).
 
 | Engine | Left behind |
 |---|---|
@@ -569,23 +635,15 @@ oc get policy -n pstack absent-lifecycle-<cluster>    # Compliant = gone
 
 ## Abandon
 
-Delete the fleet file or its `hub` key: Application `lifecycle-<cluster>` and its Policies go, the cluster keeps running unmanaged. Deleting the ApplicationSets does this for every cluster the hub built; `helm uninstall policystack` keeps them ([Install PolicyStack](install.md#install-policystack)). Restore the file or key with the same `install` to re-adopt.
+Delete the fleet file or its `hub` key: Application `lifecycle-<cluster>` and its Policies go, the cluster keeps running unmanaged. Deleting the ApplicationSets does this for every cluster the hub built; `helm uninstall policystack` keeps them ([Install chart](../reference/install.md)). Restore the file or key with the same `install` to re-adopt.
 
 !!! warning "Changing `hub`"
-    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub, and the new hub builds a second, same-named cluster unless the root object is already there with its [marker](lifecycle-reference.md#ownership). Destroy it on the old hub first. ACS: run steps 2-3 of [Re-register a cluster](acs.md#re-register-a-cluster) after the move.
+    Moving a cluster between hubs is not supported. Changing `hub` abandons it on the old hub, and the new hub builds a second, same-named cluster unless the root object is already there with its [marker](../reference/lifecycle.md#ownership). Destroy it on the old hub first. ACS: run steps 2-3 of [Re-register a cluster](../elements/acs.md#re-register-a-cluster) after the move.
 
-!!! warning "Clusters built before the ownership marker"
-    Lifecycle acts only on a root object carrying `lifecycle.policystk.io/hub` ([Ownership](lifecycle-reference.md#ownership)). A cluster built before the marker existed fails the guard and runs unmanaged, nothing deleted, until annotated once:
+## Hub disaster recovery
 
-    ```sh
-    oc annotate hostedcluster <cluster> -n <install.namespace> lifecycle.policystk.io/hub=<hubName>    # hypershift
-    oc annotate clusterdeployment <cluster> -n <cluster> lifecycle.policystk.io/hub=<hubName>         # hive
-    oc annotate clusterinstance <cluster> -n <cluster> lifecycle.policystk.io/hub=<hubName>           # siteconfig
-    ```
+ACM backup leaves out PolicyStack's ApplicationSets and their Applications (`velero.io/exclude-from-backup`), so a passive hub builds nothing. Do not install PolicyStack on it before takeover. To take over:
 
-??? info "Hub disaster recovery"
-    ACM backup leaves out PolicyStack's ApplicationSets and their Applications (`velero.io/exclude-from-backup`), so a passive hub builds nothing. Do not install PolicyStack on it before takeover. To take over:
-
-    1. Run the ACM activation restore (`veleroManagedClustersBackupName: latest`). ClusterDeployments, ClusterInstances and ManagedClusters come back with their annotations.
-    2. `hypershift`: restore the HostedClusters with the HCP OADP procedure. ACM backup does not include them, and without them the hub builds new, empty control planes.
-    3. [Install PolicyStack](install.md#install-policystack) with the old hub's `hubName`. No fleet edits: the restored root objects carry the marker, so the new hub owns them.
+1. Run the ACM activation restore (`veleroManagedClustersBackupName: latest`). ClusterDeployments, ClusterInstances and ManagedClusters come back with their annotations.
+2. `hypershift`: restore the HostedClusters with the HCP OADP procedure. ACM backup does not include them, and without them the hub builds new, empty control planes.
+3. [Install PolicyStack](../start/install.md#install-policystack) with the old hub's `hubName`. No fleet edits: the restored root objects carry the marker, so the new hub owns them.

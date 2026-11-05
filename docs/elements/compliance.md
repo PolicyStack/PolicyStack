@@ -5,6 +5,9 @@ The [`compliance`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/co
 !!! note "Not reported"
     `MANUAL` results are not findings: the operator can't check them, so review them separately (`oc get ccr -n openshift-compliance -l compliance.openshift.io/check-status=MANUAL`).
 
+!!! warning "Hosted control planes"
+    Red Hat ships the operator on HCP as Technology Preview, with `PLATFORM=HyperShift` and a worker `nodeSelector` this element doesn't set. A guest that can't scan shows NonCompliant in `findings-scan-state`. Leave the element off there.
+
 ## Reading Governance
 
 | Template | NonCompliant means |
@@ -46,23 +49,9 @@ stack:
 
 Keep the floating names. Red Hat [supports only the latest](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-supported-profiles_compliance-operator-supported-profiles) CIS and STIG, a versioned name like `ocp4-stig-v2r3` doesn't freeze its rules, and operator upgrades remove old versions.
 
-The operator version freezes the content, so pin the CSV in the cluster's layer ([Operator upgrades](rollout.md#operator-upgrades)):
+The operator version freezes the content, so pin the CSV in the cluster's layer: `operatorPolicies.compliance.versions` and `subscription.startingCSV`, set to the CSV from `oc get csv -n openshift-compliance` ([Operator versions](../guides/operators.md)).
 
-```yaml
-# values/clusters/prod-east-1.yaml
-stack:
-  compliance:
-    operatorPolicies:
-      compliance:
-        versions:
-          - <installed CSV> # (1)!
-        subscription:
-          startingCSV: <installed CSV>
-```
-
-1.  `oc get csv -n openshift-compliance`
-
-A bump can change results. A rule dropped from content loses its result and remediation, while an applied MachineConfig stays: find leftovers with `oc get mc | grep ^75-`. An `Outdated` remediation keeps its old payload and shows in `remediation-state`. To move one to the new payload, [remove its old one](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-updating_compliance-remediation). It may roll nodes:
+A bump can change results. A rule dropped from content loses its result and remediation, while an applied MachineConfig stays: find leftovers with `oc get mc | grep ^75-`. An `Outdated` remediation keeps its old payload and shows in `remediate-remediation-state`. To move one to the new payload, [remove its old one](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-updating_compliance-remediation). It may roll nodes:
 
 ```sh
 oc -n openshift-compliance patch complianceremediations <name> --type json -p '[{"op":"remove","path":"/spec/outdated"}]'
@@ -112,7 +101,7 @@ stack:
 1.  List the base name. The operator keeps `-1`, `-2` siblings in step. Sibling keys with different values fail the render.
 2.  Reverts it.
 
-Writes wait for the suite to reach `DONE`. A name that doesn't exist is never created. `remediation-state` reports one set to `true` unless its check passes. One set to `false` is ignored, so check the spelling.
+Writes wait for every scan to reach `DONE`. A name that doesn't exist is never created. `remediate-remediation-state` reports one set to `true` unless its check passes. One set to `false` is ignored, so check the spelling.
 
 ### Reverting
 
@@ -122,7 +111,7 @@ Removing an entry doesn't revert anything. It stays applied and shows in `findin
 |---|---|
 | MachineConfig | Deletes it and reboots the pool |
 | Object the operator created | Deletes it |
-| KubeletConfig | Nothing. Status says `NotApplied`, the setting stays, and `remediation-state` stays NonCompliant until you follow [Red Hat's manual removal](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-removing-kubeletconfig_compliance-remediation) and drop the entry. Affected nodes reboot. |
+| KubeletConfig | Nothing. Status says `NotApplied`, the setting stays, and `remediate-remediation-state` stays NonCompliant until you follow [Red Hat's manual removal](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-removing-kubeletconfig_compliance-remediation) and drop the entry. Affected nodes reboot. |
 | Object the operator patched | Nothing, and status says `NotApplied`. Nothing here detects it. |
 
 Deleting a ComplianceRemediation doesn't revert it either. Run a rescan afterwards, since results don't change until then.
@@ -135,7 +124,4 @@ Policies are deleted. The binding, daily scans and applied remediations stay. To
 oc patch scansetting default -n openshift-compliance --type merge -p '{"suspend":true}'
 ```
 
-Deleting the binding (`oc delete ssb stig -n openshift-compliance`) also deletes the results and raw-results PVCs.
-
-!!! warning "Hosted control planes"
-    Red Hat ships the operator on HCP as Technology Preview, with `PLATFORM=HyperShift` and a worker `nodeSelector` this element doesn't set. A guest that can't scan shows NonCompliant in `findings-scan-state`. Leave the element off there.
+Deleting the binding (`oc delete ssb <config.binding> -n openshift-compliance`, default `stig`) also deletes the results and raw-results PVCs.

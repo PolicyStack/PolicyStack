@@ -1,4 +1,4 @@
-# Upgrades
+# OpenShift upgrades
 
 Set `version` in the cluster's fleet file and merge. On a minor bump, change `channel` too.
 
@@ -15,7 +15,7 @@ Set `version` in the cluster's fleet file and merge. On a minor bump, change `ch
 | `version` | OpenShift release `x.y.z` the cluster runs. Unset, nothing upgrades it. Required on a cluster a hub builds. |
 | `channel` | Update channel. Unset, the cluster's channel is left alone. |
 
-Both keys live only in the fleet file (`fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for a hub). The validator rejects them in a values layer (POLICY034), so the clusters a merge upgrades are exactly the fleet files it changes, and the [Render Diff](workflows.md#render-diff) lists each one.
+Both keys live only in the fleet file (`fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for a hub). The validator rejects them in a values layer (POLICY034), so the clusters a merge upgrades are exactly the fleet files it changes, and the [Render Diff](../reference/ci.md#render-diff) lists each one.
 
 !!! note
     `version` must be a full `x.y.z`. Unquoted, `version: 4.20` is the number `4.2`; the validator rejects any value YAML reads as a number (POLICY050).
@@ -51,6 +51,9 @@ Each field has one writer.
 
     An imported hosted cluster is the exception: the element is inert on any HyperShift guest, so PolicyStack does not upgrade it.
 
+??? question "Why not ClusterCurator or TALM?"
+    ClusterCurator runs an upgrade as a one-shot Job: a failure is not retried, and a Policy owning the ClusterCurator cannot tell a finished upgrade from a new one. TALM's ClusterGroupUpgrade is also one-shot and needs its own inform policies. ClusterVersion is declarative, so a Policy can keep enforcing it.
+
 ## upgrade element
 
 Enabled by default. Renders nothing until the fleet file sets `version` or `channel`, or a layer sets `config.upstream`.
@@ -64,6 +67,15 @@ Enabled by default. Renders nothing until the fleet file sets `version` or `chan
 
 - A version the update service does not offer is held at the guard.
 - Downgrades are never attempted.
+
+Watch an upgrade:
+
+```sh
+# on the hub: each template's latest message
+oc get policy -n prod-east-1 pstack.upgrade-upgrade-prod-east-1 \
+  -o jsonpath='{range .status.details[*]}{.templateMeta.name}{": "}{.history[0].message}{"\n"}{end}'
+oc get clusterversion version -o jsonpath='{.status.history[0]}'    # on the cluster
+```
 
 !!! note "Brownfield clusters"
     The CVO ignores `desiredUpdate.version` while `image` is set, and `oc adm upgrade` and the console leave the running image there. The trigger therefore clears `image` and `force`: a pending `oc`/console request that has not started is replaced while the fleet `version` is newer, and a hand-set `force` does not survive.
@@ -80,33 +92,6 @@ stack:
 
 !!! warning
     Removing the key leaves the last URL on the cluster. To go back to the public graph, set `upstream: https://api.openshift.com/api/upgrades_info/v1/graph`. `policies.channel.enabled: false` stops managing `upstream` too.
-
-Watch it:
-
-```sh
-# on the hub: each template's latest message
-oc get policy -n prod-east-1 pstack.upgrade-upgrade-prod-east-1 \
-  -o jsonpath='{range .status.details[*]}{.templateMeta.name}{": "}{.history[0].message}{"\n"}{end}'
-oc get clusterversion version -o jsonpath='{.status.history[0]}'    # on the cluster
-```
-
-??? info "Migrating from `config.targetVersion` / `config.channel`"
-    Both keys are gone; the render fails while any layer sets them. In the commit that bumps `revision`, delete them from the values layer and set `version` and `channel` in the fleet file:
-
-    ```diff
-     # values/clusters/prod-east-1.yaml
-     stack:
-       upgrade:
-    -    config:
-    -      targetVersion: 4.20.12
-    -      channel: stable-4.20
-    ```
-
-    ```diff
-     # fleet/prod-east-1.yaml
-    +version: 4.20.12
-    +channel: stable-4.20
-    ```
 
 ## Pausing
 
@@ -127,6 +112,3 @@ stack:
 2.  Stops managing the channel and upstream.
 
 A hosted cluster is paused by leaving `version` where it is.
-
-??? question "Why not ClusterCurator or TALM?"
-    ClusterCurator runs an upgrade as a one-shot Job: a failure is not retried, and a Policy owning the ClusterCurator cannot tell a finished upgrade from a new one. TALM's ClusterGroupUpgrade is also one-shot and needs its own inform policies. ClusterVersion is declarative, so a Policy can keep enforcing it.

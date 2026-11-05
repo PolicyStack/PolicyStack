@@ -3,7 +3,7 @@
 
 Compliance Operator running STIG scans and applying remediations
 
-Guide: https://policystk.io/compliance/
+Guide: https://policystk.io/elements/compliance/
 
 ```yaml
 stack:

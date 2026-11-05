@@ -1,4 +1,4 @@
-# Policies
+# Policies and placement
 
 Elements render ACM objects with the [policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md) chart. Its README is the field reference. PolicyStack fixes three inputs: the values key, the release name, and the cluster selector.
 
@@ -23,14 +23,14 @@ stack:
 1.  Nothing in the element renders until this is true.
 2.  Turns on policy `addressing`, which the element ships with `enabled: false`. Policies, templates and operators are on unless they set `enabled: false` ([Discovery](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#discovery)).
 
-Charts also read the top-level `policyNamespace`, `selector` and `placement`.
+Charts also read the top-level `policyNamespace`, `selector`, `placement` and `global` ([Global keys](values.md#global-keys)).
 
 !!! note
     In an element's `values.yaml`, a key that doesn't match the chart name renders nothing (POLICY090). In a cascade file, a `stack`, `policies` or `templates` key that names no element, policy or template is reported as POLICY035.
 
 ## Rendered objects
 
-The release name is the Application name, `<element>-<cluster>` ([Applications](applicationset.md#applications)). An element's policies are the directories under `converters/`, the keys of `policies`, and `install` when it has `operatorPolicies`. A policy's templates are the files in its directory and the keys of its `templates`; `_` names are partials, never discovered ([Discovery](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#discovery)):
+The release name is the Application name, `<element>-<cluster>` ([Applications](architecture.md#applications)). An element's policies are the directories under `converters/`, the keys of `policies`, and `install` when it has `operatorPolicies`. A policy's templates are the files in its directory and the keys of its `templates`; `_` names are partials, never discovered ([Discovery](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#discovery)):
 
 ```text
 stack/metallb/                  # excerpt
@@ -47,7 +47,7 @@ Below, `<policy>`, `<template>` and `<set>` are those names, `<key>` an `operato
 
 | Object | Name | Rendered when |
 |---|---|---|
-| `Policy` | `<policy>-<release>` | Enabled, with at least one enabled template. |
+| `Policy` | `<policy>-<release>` | Enabled, with at least one enabled template or operator. |
 | `ConfigurationPolicy` | `<policy>-<template>` | Enabled, and its Policy renders. Embedded in that Policy. |
 | `OperatorPolicy` | `install-<key>` | Enabled. Always in Policy `install`, with `install-<key>-ns` (operator namespace, omitted for `mustnothave`) and `install-<key>-status` (inform check that the CSV reached `Succeeded`). |
 | `PolicySet` | `<set>-<release>` | Enabled, and `policies` is not empty. Members resolve to `<policy>-<release>`. |
@@ -56,7 +56,7 @@ Below, `<policy>`, `<template>` and `<set>` are those names, `<key>` an `operato
 
 Everything except templates lives on the hub in `policyNamespace` (`pstack`, root [`values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/values.yaml)). Templates have no namespace; ACM creates them in the cluster's namespace on the managed cluster.
 
-Render metallb for `nonprod-west-1` from the repo root. `baseline.yaml` stands in for the injected selector ([Validation](validation.md)).
+Render metallb for `nonprod-west-1` from the repo root. `baseline.yaml` stands in for the injected selector ([Validation](../develop/validation.md)).
 
 ```sh
 helm dependency update stack/metallb
@@ -88,7 +88,7 @@ Policy            install-metallb-nonprod-west-1
 
 ## Placement
 
-The injected `selector` ([Injected values](applicationset.md#injected-values)) becomes one `In` expression on the `name` label, so each Placement selects only its own cluster:
+The injected `selector` ([Order](values.md#order)) becomes one `In` expression on the `name` label, so each Placement selects only its own cluster:
 
 ```yaml title="Placement metallb-nonprod-west-1"
 spec:
@@ -109,10 +109,10 @@ spec:
 
 1.  Chart default. Policies stay bound while the cluster is disconnected.
 
-A top-level `placement:` key in any cascade file merges into that spec ([Placement](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#placement)). A Placement only sees ManagedClusterSets bound to its namespace; the install chart binds `global` into `policyNamespace` ([Install PolicyStack](install.md#install-policystack)).
+A top-level `placement:` key in any cascade file merges into that spec ([Placement](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#placement)). A Placement only sees ManagedClusterSets bound to its namespace; the install chart binds `global` into `policyNamespace` ([Install chart](../reference/install.md)).
 
 ??? info "Lifecycle chart"
-    [`lifecycle/`](lifecycle.md) Policies build clusters on a hub, so its `selector` is an `In` expression on the hub's `name` ([Lifecycle generator](applicationset.md#lifecycle-generator)). The `local-cluster` `Exists` default in `lifecycle/values.yaml` only serves `helm lint` and the validator.
+    [`lifecycle/`](../guides/lifecycle.md) Policies build clusters on a hub, so its `selector` is an `In` expression on the hub's `name` ([Lifecycle generator](architecture.md#lifecycle-generator)). The `local-cluster` `Exists` default in `lifecycle/values.yaml` only serves `helm lint` and the validator.
 
     Every lifecycle release lands on the hub, where template names must be unique across all Policies. The chart sets [`suffixTemplateNames`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#stackelement) and templates are named `<policy>-<template>-<cluster>`, such as `present-credentials-hcp-agent`.
 
@@ -136,13 +136,9 @@ Policy, element and cluster names share those 56 characters. Keep policy names s
 | `config` | `pstack.config-metallb-nonprod-west-1` | 36 |
 | `addressing` | `pstack.addressing-metallb-nonprod-west-1` | 40 |
 
-POLICY001 holds `<policyNamespace>.<policy>-<release>`, `<policyNamespace>.<set>-<release>` and every template name to 63 characters ([Rules](validation.md#rules)).
+POLICY001 holds `<policyNamespace>.<policy>-<release>`, `<policyNamespace>.<set>-<release>` and every template name to 63 characters ([Validator rules](../reference/rules.md)).
 
 !!! tip "30-character budget"
-    Every element fits a cluster or hub name of 30 characters; most fit 35. CI checks every policy in each element's `values.yaml`, enabled or not, against fixture cluster `name-budget-30-characters-long`.
+    Every element fits a cluster or hub name of 30 characters; most fit 35. CI renders every fixture, `name-budget-30-characters-long` included, with each `testdata/profiles` file, which turns elements and their optional policies on ([ACM templates](../develop/validation.md#acm-templates)).
 
 Lifecycle: the longest name is `pstack.present-lifecycle-<cluster>`, 25 characters plus the cluster, so cluster names can reach 38. The longest template, `present-credentials-<cluster>`, fits at that length.
-
-## Library reference
-
-Chart README: [Discovery](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#discovery), [Defaults](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#defaults), [Converters](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#converters), [Ordering and dependencies](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#ordering-and-dependencies), [Placement](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#placement).

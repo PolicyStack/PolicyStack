@@ -2,25 +2,31 @@
 
 Central runs on the ACM hub. Every secured cluster, the hub included, registers with one cluster registration secret (CRS) that you generate on the hub, following Red Hat's [CRS procedure](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes/4.11/html/installing/installing-rhacs-on-red-hat-openshift).
 
-```yaml
-# values/acm/<hubName>.yaml
-stack:
-  acs:
-    enabled: true
-    policies:
-      central:
-        enabled: true
-      secured:
-        enabled: true
+=== "Hub (values/acm/<hubName>.yaml)"
 
-# values/environments/<env>.yaml, or any layer every secured cluster reads
-stack:
-  acs:
-    enabled: true
-    policies:
-      secured:
+    ```yaml
+    stack:
+      acs:
         enabled: true
-```
+        policies:
+          central:
+            enabled: true
+          secured:
+            enabled: true
+    ```
+
+=== "Secured clusters (values/environments/<env>.yaml)"
+
+    Or any layer every secured cluster reads.
+
+    ```yaml
+    stack:
+      acs:
+        enabled: true
+        policies:
+          secured:
+            enabled: true
+    ```
 
 ## How it works
 

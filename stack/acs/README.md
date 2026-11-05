@@ -3,7 +3,7 @@
 
 Red Hat Advanced Cluster Security: Central, secured clusters and security policies
 
-Guide: https://policystk.io/acs/
+Guide: https://policystk.io/elements/acs/
 
 ```yaml
 stack:

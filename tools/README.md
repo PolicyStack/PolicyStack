@@ -28,7 +28,7 @@ Copies `tools/sample-element/` to `stack/<name>/`, replacing `my-element` with t
 with its camelCase form, sets the description and generates the README. It prompts for missing
 arguments and refuses a name that is not lowercase kebab-case, is longer than 17 characters
 (POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The new element
-passes the validator and prek as is. See [Workflow](../docs/elements.md#workflow).
+passes the validator and prek as is. See [Workflow](../docs/develop/elements.md#workflow).
 
 ## doc-generator.py
 
@@ -46,7 +46,7 @@ templates, actions, dependencies and converters.
 
 The comment lines directly above a key under `config:`, or above `config:` itself, are its
 description. A blank line ends the block, so a maintainer note separated by one is not rendered.
-Other comments are never rendered. See [Element reference](../docs/elements.md#element-reference).
+Other comments are never rendered. See [Element reference](../docs/develop/elements.md#element-reference).
 
 It fails on a policy-library 3.x `values.yaml` (`policies` list, `configPolicies`); run
 `tools/migrate-4.0.py` first.
@@ -60,13 +60,12 @@ uv run tools/migrate-4.0.py stack/<el> values  # only these paths
 
 Converts elements and values layers from policy-library 3.x to 4.0. Idempotent: skips what is
 already 4.0. Prints what it could not convert; review the result with `git diff` and Render Diff.
-Without uv, `pip install 'ruamel.yaml>=0.18'` first. See
-[Migrating to policy-library 4](../docs/contributing.md#migrating-to-policy-library-4).
+Without uv, `pip install 'ruamel.yaml>=0.18'` first.
 
 ## CI/CD Integration
 
 `ci.yml` runs the generator tests, and its `element-readmes` prek hook regenerates
-`stack/*/README.md`, failing when one is stale. See [docs/workflows.md](../docs/workflows.md#hooks).
+`stack/*/README.md`, failing when one is stale. See [Hooks](../docs/reference/ci.md#hooks).
 
 ## Best Practices
 

@@ -3,7 +3,7 @@
 Run [oc-mirror v2](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/disconnected_environments/mirroring-in-disconnected-environments) yourself. PolicyStack applies its output:
 
 - The [`disconnected`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/disconnected) element applies the mirror sets, catalogs and CA trust.
-- `global.catalogSources` points every operator at the mirrored catalog ([Global keys](values.md#global-keys)).
+- `global.catalogSources` points every operator at the mirrored catalog ([Global keys](../concepts/values.md#global-keys)).
 
 !!! note "Not covered"
     - **Image mirroring.** oc-mirror's job.
@@ -67,7 +67,7 @@ stack:
 5.  Only with `remediations` enabled. Lists replace, so restate the defaults.
 6.  Your OSUS graph. `channel-pin` writes it before the upgrade guard needs `availableUpdates`.
 
-Enable it per cluster ([Values cascade](values.md)):
+Enable it per cluster ([Values cascade](../concepts/values.md)):
 
 ```yaml
 # values/clusters/prod-west-1.yaml
@@ -79,9 +79,23 @@ stack:
 !!! warning "Release signatures"
     Each oc-mirror run adds release signature ConfigMaps to `cluster-resources`. Add them to `clusterResources`, or the cluster rejects that upgrade.
 
+## The hub
+
+The hub needs the mirrored catalogs before PolicyStack runs.
+
+1. Apply oc-mirror's output by hand:
+
+    ```sh
+    oc apply -f working-dir/cluster-resources/
+    ```
+
+2. [Install the operators](../start/install.md#install-the-operators), adding the site layer with `-f values/datacenters/dc2.yaml`.
+
+3. List `datacenters/dc2.yaml` in `fleet/hubs/<hubName>.yaml` and set `stack.disconnected.enabled: true` in `values/clusters/<hubName>.yaml`. The element takes over those objects.
+
 ## What the element applies
 
-Every policy is on; turn one off with `policies.<policy>.enabled: false`. Empty input renders nothing.
+Every policy is on; turn one off with `policies.<policy>.enabled: false`. With empty input, `resources`, `registry-ca` and `trusted-ca` apply nothing; the Policy stays, Compliant.
 
 | Policy | Applies |
 |---|---|
@@ -116,7 +130,7 @@ The `upgrade` element holds a `version` until it shows in `availableUpdates`, so
 
 ## Hosted clusters
 
-The HostedCluster owns mirrors, image config and proxy. Set them in the fleet file; the element keeps only the catalog.
+The HostedCluster owns mirrors, image config and proxy. Set them in the fleet file; the element keeps the catalog and `operatorhub`.
 
 === "Fleet file"
 
@@ -134,7 +148,7 @@ The HostedCluster owns mirrors, image config and proxy. Set them in the fleet fi
     ```
 
     1.  `configuration` (image, proxy) goes here too ([Cluster lifecycle](lifecycle.md)).
-    2.  Hub ConfigMap with key `ca-bundle.crt` in the HostedCluster's namespace. Create it with `install.manifests` ([Install keys](lifecycle-reference.md#install-keys)).
+    2.  Hub ConfigMap with key `ca-bundle.crt` in the HostedCluster's namespace. Create it with `install.manifests` ([Install keys](../reference/lifecycle.md#install-keys)).
     3.  The hosted CVO runs on the hub; use the OSUS Route URL. Without it, a `version` bump with `channel` set is held forever.
 
 === "Cluster values"
@@ -200,22 +214,3 @@ install:
 
 !!! warning "Removing entries"
     The AgentServiceConfig is `musthave`. A removed `osImages` entry, or a `mirrorRegistryRef` once no mirrors remain, stays on it. Remove it with `oc edit agentserviceconfig agent`.
-
-## The hub
-
-The hub needs the mirrored catalogs before PolicyStack runs.
-
-1. Apply oc-mirror's output by hand:
-
-    ```sh
-    oc apply -f working-dir/cluster-resources/
-    ```
-
-2. [Install the operators](install.md#install-the-operators) with the site layer:
-
-    ```sh
-    helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \
-      -f values/datacenters/dc2.yaml | oc apply -f -
-    ```
-
-3. List `datacenters/dc2.yaml` in `fleet/hubs/<hubName>.yaml` and set `stack.disconnected.enabled: true` in `values/clusters/<hubName>.yaml`. The element takes over those objects.

@@ -68,7 +68,8 @@ func (c *FleetPinCheck) Run(ctx Context) []Finding {
 		}
 	}
 	// A cluster file is read by fleet file name, so a misnamed one is skipped. Only a warning: a
-	// tag-pinned cluster's file is committed before its fleet file (docs/rollout.md#onboarding-a-cluster).
+	// tag-pinned cluster's file is committed before its fleet file
+	// (docs/start/first-cluster.md#onboard-the-cluster).
 	if len(ctx.Clusters) == 0 {
 		return out
 	}

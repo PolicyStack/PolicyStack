@@ -1,6 +1,6 @@
 # Values cascade
 
-Each Application renders its element chart with an ordered list of values files picked by the cluster's [fleet file](applicationset.md#fleet-files). Later files win. The list is built in [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
+Each Application renders its element chart with an ordered list of values files picked by the cluster's [fleet file](../reference/fleet.md). Later files win. The list is built in [appset.yaml](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml).
 
 ## Order
 
@@ -27,10 +27,10 @@ Each Application renders its element chart with an ordered list of values files 
       - ../../values/platforms/aws.yaml
       - ../../values/clusters/prod-east-1.yaml  # (4)!
     valuesObject:                               # (5)!
-      channel: "stable-4.20"
-      selectedName: prod-east-1
+      channel: "stable-4.20"                    # (6)!
+      selectedName: prod-east-1                 # (7)!
       selectedId: <clusterID label>
-      selector:                                 # (6)!
+      selector:                                 # (8)!
         matchExpressions:
           name: {key: name, operator: In, values: ["prod-east-1"]}
     ```
@@ -39,12 +39,14 @@ Each Application renders its element chart with an ordered list of values files 
     2.  Repo root, shared by every element. Sets `policyNamespace`.
     3.  One per `valueFiles` entry, in list order. Nothing sorts them.
     4.  Always last. Named after the ManagedCluster.
-    5.  [Injected values](applicationset.md#injected-values). Ranks above every file.
-    6.  Targets this one cluster. For the hub, `values` holds `local-cluster`, not `hubName`.
+    5.  Injected values. Ranks above every file. Nothing else is injected: an element that needs the environment reads a key set in `environments/<env>.yaml`.
+    6.  `version` and `channel`, only when the fleet file sets them.
+    7.  `hubName` on the hub.
+    8.  policy-library turns this into each Placement's selector, so it targets this one cluster ([Placement](policies.md#placement)). On the hub, `values` holds the ManagedCluster name `local-cluster`, not `hubName`.
 
 === "Hub"
 
-    The hub reads `fleet/hubs/<hubName>.yaml`, and `hubName` replaces `local-cluster` in the Application name and cluster values file ([The hub](applicationset.md#the-hub)).
+    The hub reads `fleet/hubs/<hubName>.yaml`, and `hubName` replaces `local-cluster` in the Application name, the cluster values file and `selectedName` ([The hub](architecture.md#the-hub)).
 
     ```yaml
     # Application nfd-acm-dc1
@@ -60,7 +62,25 @@ Each Application renders its element chart with an ordered list of values files 
 
 === "Lifecycle"
 
-    Same files, relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. `valuesObject` holds the fleet file's `hub`, `state`, `version`, `channel` and `install` ([Values](lifecycle.md#values)). Elements ignore `install`, so one cluster values file holds both:
+    Same files, relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>`, `../values/clusters/<cluster>.yaml`. `valuesObject` passes the fleet file's keys instead, so the fleet file's `install` overrides the cascade ([Values](../guides/lifecycle.md#values)):
+
+    ```yaml
+    hub: "acm-dc1"
+    state: "present"   # default
+    version: "4.20.8"  # channel too, when set
+    install: {}        # default
+    selector:
+      matchExpressions:
+        hub: # (1)!
+          key: name
+          operator: In
+          values:
+            - "local-cluster"
+    ```
+
+    1.  The ManagedCluster of the hub running the lifecycle Policies.
+
+    Elements ignore `install`, so one cluster values file holds both:
 
     ```yaml
     # values/clusters/hcp-agent.yaml
@@ -97,7 +117,9 @@ config:
     |---|---|
     | Typo in a `valueFiles` entry | POLICY050 |
     | Entry for a file the cluster's pinned `revision` lacks | POLICY052 |
-    | Cluster values file name differs from the ManagedCluster name | POLICY052 (warning) |
+    | `values/clusters/` file no fleet file reads, such as a misnamed one | POLICY052 (warning) |
+
+    POLICY052 runs only on a fork's `fleet/`. Upstream ships none.
 
 Compare the Application's files with the repo at the cluster's revision:
 
@@ -144,7 +166,7 @@ Maps merge key by key. Lists replace.
 | A template on or off | `stack.gitops.policies.link.templates.argocd-console.enabled` |
 | An operator on or off | `stack.metallb.operatorPolicies.metallb.enabled`. `false` stops managing it; it stays installed |
 | A converter setting | `config`, or `policies.<p>.templates.<t>.config` for one template |
-| One operator field | `stack.metallb.operatorPolicies.metallb.versions`. `versions` is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)) |
+| One operator field | `stack.metallb.operatorPolicies.metallb.versions`. `versions` is a list and replaces ([Operator versions](../guides/operators.md)) |
 
 !!! warning "Never `null`"
     `enabled: null` deletes the key, and the entry falls back to on. Use `false`.
@@ -161,7 +183,7 @@ stack:
 
 Argo CD shows a ComparisonError and does not sync or prune. Every element validates the whole `stack` key, so one typo in a shared layer fails every Application reading it.
 
-The validator's POLICY035 checks every file under `values/` for what the schema misses ([Validation](validation.md)):
+The validator's POLICY035 checks every file under `values/` for what the schema misses ([Validator rules](../reference/rules.md)):
 
 | Mistake | Caught by |
 |---|---|
@@ -182,8 +204,8 @@ The validator's POLICY035 checks every file under `values/` for what the schema 
 
 | Key | Effect |
 |---|---|
-| `remediationAction` | `inform` makes every Policy, lifecycle included, report instead of enforce ([Dry run](rollout.md#dry-run)). `enforce` is rejected. |
-| `catalogSources` | Maps a CatalogSource name to its replacement for every operator ([Disconnected clusters](disconnected.md)) |
+| `remediationAction` | `inform` makes every Policy, lifecycle included, report instead of enforce ([Dry run](../guides/rollout.md#dry-run)). `enforce` is rejected. |
+| `catalogSources` | Maps a CatalogSource name to its replacement for every operator ([Disconnected clusters](../guides/disconnected.md)) |
 
 ```yaml
 global:
@@ -194,7 +216,7 @@ global:
 
 ## Example files
 
-[values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configures the example clusters. Any file under `values/` can be listed. Every element but `upgrade` ships `enabled: false`, so the layer that should run an element turns it on. `upgrade` acts only on the fleet file's `version` and `channel` ([Upgrades](upgrades.md)).
+[values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) configures the example clusters. Any file under `values/` can be listed. Every element but `upgrade` ships `enabled: false`, so the layer that should run an element turns it on. `upgrade` acts only on the fleet file's `version` and `channel` ([OpenShift upgrades](../guides/upgrades.md)).
 
 ??? info "What each example file holds"
     | File | Holds |
@@ -209,11 +231,11 @@ global:
     | `platforms/kubevirt.yaml` | `install` only: `KubeVirt`, 2-node `workers` pool |
     | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
     | `tenants/payments.yaml` | GitOps operator plus a payments team Argo CD |
-    | `acm/acm-dc1.yaml` | Hub ACM and GitOps, commented out ([why](install.md#hand-the-operators-to-policystack)) |
+    | `acm/acm-dc1.yaml` | Hub ACM and GitOps, commented out ([why](../start/install.md#hand-the-operators-to-policystack)) |
     | `clusters/acm-dc1.yaml` | Hub elements, and which are off and why (`cim` for SiteConfig clusters) |
     | `clusters/prod-east-1.yaml` | Infra nodes, machine health, user monitoring |
     | `clusters/hcp-agent.yaml` | `install`: hosted control plane service publishing. `stack`: guest MetalLB pool |
     | `clusters/nonprod-west-1.yaml` | Registry enforcement, MetalLB pool, user monitoring |
     | `clusters/aws-prod.yaml` | ODF to Loki chain. Rename to the real ManagedCluster name first |
 
-    CI renders with the fleet files in `tools/validator/testdata/clusters/`. None lists `payments.yaml` and no cluster is named `aws-prod`, so CI reads those only when a file in `fleet/` uses them.
+    CI renders with the fleet files in `tools/validator/testdata/clusters/`. None lists `payments.yaml` and no cluster is named `aws-prod`, so CI renders those only when a file in `fleet/` lists them. POLICY035 still checks their keys.

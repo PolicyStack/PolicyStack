@@ -1,22 +1,73 @@
-# Architecture
+# ApplicationSets
 
-Two ApplicationSets in `openshift-gitops` on the hub turn [fleet files](../reference/fleet.md) into Argo CD Applications:
+How the hub turns fleet files and `stack/` into Argo CD Applications, and what each Application does. Read it when an Application is missing, has the wrong name, or will not sync. [How PolicyStack works](overview.md) gives the big picture first; [ACM policies in brief](acm.md) covers what happens after the Policies reach `pstack`.
 
-| ApplicationSet | Creates | Template |
+Argo CD deploys only to the hub. Every Application's destination is the hub itself, and everything it syncs is a Policy, Placement or PlacementBinding in `pstack`, the policy namespace the [install chart](../reference/install.md) creates. ACM, not Argo CD, delivers those policies to managed clusters.
+
+## ApplicationSets in brief
+
+An Argo CD **Application** renders one Helm chart from one Git path at one revision and keeps the result applied. An **ApplicationSet** is a template for Applications plus a list of **generators**. Each generator produces sets of parameters, and the ApplicationSet controller creates one Application per parameter set, filling the template with them. It re-runs the generators every 3 minutes. When a parameter set disappears, its Application is deleted.
+
+PolicyStack uses four generator types:
+
+| Generator | Produces one parameter set per | Parameters used here |
 |---|---|---|
-| `policystack` | One Application per element per cluster. Day-2 config. | [`appset.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/appset.yaml) |
-| `policystack-lifecycle` | One Application per fleet file this hub builds ([Cluster lifecycle](../guides/lifecycle.md), [Global Hub](../guides/global-hub.md)). | [`lifecycle.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/install/templates/lifecycle.yaml) |
+| `clusters` | Argo CD cluster secret | `.name` (the ManagedCluster name), `.metadata.labels` |
+| `git` files | YAML file matching a path | Every top-level key of the file, such as `.revision`, `.valueFiles`, `.hub` |
+| `git` directories | Directory matching a path | `.path.path` (`stack/gitops`), `.path.basenameNormalized` (`gitops`) |
+| `matrix` | Combination of its two child generators | Both children's parameters. The second child can use the first's, which is how `stack/*` is read at each cluster's own revision. |
 
-## How a change reaches a cluster
+A `selector` on a generator drops parameter sets that do not match, like a label selector on the parameters.
 
-A commit lands on the revision a cluster pins ([First cluster](../start/first-cluster.md) walks through one). Clusters pinned to other revisions are unaffected. Then:
+`helm install` of the [install chart](../reference/install.md) creates two ApplicationSets in `openshift-gitops`:
 
-1. **Argo CD renders** the element with the cluster's [values cascade](values.md#order) and syncs Policy, PolicySet, Placement and PlacementBinding into `pstack` on the hub.
-2. **ACM delivers.** The [Placement](policies.md#placement) selects only that cluster, and its governance add-on applies the policy: `enforce` changes the cluster, `inform` only reports. Compliance shows on the replicated Policy in the cluster's namespace on the hub.
+| ApplicationSet | Creates | Who needs it |
+|---|---|---|
+| `policystack` | One Application per element per cluster: Day-2 configuration of clusters that already run. | Everyone |
+| `policystack-lifecycle` | One Application per cluster this hub builds, from fleet files with `hub: <hubName>` ([Cluster lifecycle](lifecycle.md)). | Only hubs that build clusters. Fleet files without `hub` never match it. |
+
+## Cluster secrets
+
+The `clusters` generator lists Argo CD cluster secrets: Secrets in `openshift-gitops` labelled `argocd.argoproj.io/secret-type: cluster`. PolicyStack needs one per ManagedCluster only as an entry in that list. Argo CD never connects to the clusters they describe.
+
+The install chart's GitOpsCluster `argo-acm-importer-global` creates them. ACM puts every ManagedCluster, the hub included, in the built-in ManagedClusterSet `global`. The install chart binds that set into `openshift-gitops` with a ManagedClusterSetBinding, because a Placement only sees clusters from sets bound into its own namespace ([ACM policies in brief](acm.md#the-objects)); its Placement `global` there selects every cluster in it. The GitOpsCluster creates one secret per selected cluster and copies the ManagedCluster's labels onto it, so the generators can read `clusterID`, `local-cluster` and the Global Hub `deploy-mode` label.
+
+The Placement tolerates `unreachable` and `unavailable`. Without that, a cluster that loses contact drops out of the Placement, the GitOpsCluster deletes its secret, and the ApplicationSet deletes its Applications and every Policy they rendered ([What deletes an Application](removal.md#what-deletes-an-application)).
 
 ## Generators
 
-`policystack` pairs every cluster secret with its fleet file at `HEAD`, then with every `stack/*` directory at the cluster's `revision`. An element added on a branch reaches only clusters pinned to a revision containing it. Disabled elements still get an Application that renders nothing.
+### `policystack`
+
+For every cluster secret, the `policystack` ApplicationSet:
+
+1. Keeps it only if it has the `clusterID` label. ACM sets that label once the cluster's klusterlet, the ACM agent on the managed cluster, has joined the hub, so clusters still importing are skipped.
+2. Reads the cluster's fleet file from the default branch (`HEAD`). A cluster without a fleet file gets no Applications, and the ApplicationSet reports no error.
+3. Lists every directory under `stack/` at the fleet file's `revision`.
+4. Creates one Application per directory, named `<element>-<cluster>`.
+
+```mermaid
+flowchart LR
+  S["Cluster secret<br>prod-east-1"] --> F["fleet/prod-east-1.yaml<br>at HEAD<br>revision: main"]
+  F --> D["stack/* at main<br>acm, compliance, gitops, ..."]
+  D --> A["acm-prod-east-1<br>compliance-prod-east-1<br>gitops-prod-east-1<br>..."]
+```
+
+The fleet file is read at `HEAD`; everything else at its `revision`. [Fleet files](overview.md#fleet-files) explains why.
+
+The cluster secret decides which fleet file is read:
+
+| Cluster secret | Fleet file |
+|---|---|
+| The hub's own (label `local-cluster`) | `fleet/hubs/<hubName>.yaml` ([The hub](#the-hub)) |
+| A managed hub imported into a Global Hub in `default` mode (label `global-hub.open-cluster-management.io/deploy-mode: default`) | `fleet/hubs/<cluster>.yaml` ([Global Hub](../guides/global-hub.md#layout)) |
+| Any other cluster | `fleet/<cluster>.yaml` |
+
+Without Global Hub, only the first and last rows apply.
+
+Two consequences of generating from directories:
+
+- **An element exists per revision.** An element added on a branch gets Applications only on clusters whose `revision` contains it.
+- **Disabled elements still get an Application.** Generators read files, not merged Helm values, so they cannot tell whether a values layer enabled an element. Every directory under `stack/` gets an Application on every cluster, and a disabled element renders zero objects and shows `Synced` with no resources.
 
 ??? example "`policystack` generators, rendered with `hubName=acm-dc1`"
 
@@ -32,26 +83,38 @@ A commit lands on the revision a cluster pins ([First cluster](../start/first-cl
                           - key: clusterID
                             operator: Exists
                   - git: # (2)!
-                      repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+                      repoURL: 'https://github.com/acme/policystack.git'
                       revision: HEAD
                       pathParamPrefix: fleet # (3)!
                       files:
                       - path: 'fleet/{{if index .metadata.labels "local-cluster"}}hubs/acm-dc1{{else if eq (index .metadata.labels "global-hub.open-cluster-management.io/deploy-mode") "default"}}hubs/{{.name}}{{else}}{{.name}}{{end}}.yaml'
             - git: # (4)!
-                repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+                repoURL: 'https://github.com/acme/policystack.git'
                 revision: '{{.revision}}'
                 directories:
                 - path: 'stack/*'
     ```
 
-    1.  Every cluster secret with `clusterID`. The GitOpsCluster creates one per managed cluster.
-    2.  The cluster's fleet file at `HEAD`. Its keys become parameters. No file, no Applications.
-    3.  Stops the file's `path` from shadowing the element directory's `path` in the matrix.
-    4.  Every `stack/*` directory at the cluster's `revision`. One Application per cluster and directory.
+    1.  Every cluster secret with `clusterID`.
+    2.  The cluster's fleet file at `HEAD`, picked by the table above. Its top-level keys become parameters, such as `{{.revision}}`.
+    3.  Both git generators emit a `path` parameter. This renames the fleet file's to `fleet.path`, so `{{.path.path}}` and `{{.path.basenameNormalized}}` still mean the element directory, which builds the Application name and source path.
+    4.  Every `stack/*` directory at the cluster's `revision`.
 
 ### Lifecycle generator
 
-`policystack-lifecycle` reads fleet files with a `hub` key. Files without `hub` match neither generator, so imported clusters get no lifecycle Application. The cluster secret's `.name` is the ManagedCluster the Policies are placed on.
+Skip this unless the hub builds clusters.
+
+`policystack-lifecycle` reads fleet files that set `hub`, and creates `lifecycle-<cluster>` for each one this hub should build. That Application renders `lifecycle/` at the fleet file's `revision` into Policies that are placed on the **building hub**, not on the new cluster, which does not exist yet. On the hub they create the HostedCluster, ClusterDeployment or ClusterInstance and wait for it ([Cluster lifecycle](lifecycle.md)).
+
+A fleet file with `hub` renders on exactly one hub:
+
+| Fleet file has | Rendered by | Policies placed on |
+|---|---|---|
+| `hub: <this hub's hubName>`, and this hub manages itself (`local-cluster` exists) | This hub | `local-cluster` |
+| `hub: <name>` of a managed hub that this Global Hub imports in `default` mode | The Global Hub | That managed hub ([Global Hub lifecycle](../guides/global-hub.md#lifecycle)) |
+| No `hub` | Nobody. The cluster is imported, not built. | |
+
+A hub whose MultiClusterHub disables self-management has no `local-cluster` secret and builds nothing itself.
 
 ??? example "`policystack-lifecycle` generators, rendered with `hubName=acm-dc1`"
 
@@ -65,7 +128,7 @@ A commit lands on the revision a cluster pins ([First cluster](../start/first-cl
                     - key: local-cluster
                       operator: Exists
             - git: &fleet
-                repoURL: 'https://github.com/PolicyStack/PolicyStack.git'
+                repoURL: 'https://github.com/acme/policystack.git'
                 revision: HEAD
                 files:
                 - path: 'fleet/*.yaml'
@@ -91,83 +154,177 @@ A commit lands on the revision a cluster pins ([First cluster](../start/first-cl
                     global-hub.open-cluster-management.io/deploy-mode: default
     ```
 
-    1.  Fleet files with `hub: acm-dc1`, paired with this hub's own cluster secret. A hub that does not manage itself builds nothing.
-    2.  Argo CD's `*` crosses `/`. This drops `hubs/` and other subdirectories.
-    3.  Fleet files naming a managed hub imported in default mode ([Global Hub](../guides/global-hub.md#lifecycle)). Fleet files come first because Argo CD templates a child generator's fields but not its `selector`.
+    1.  Fleet files with `hub: acm-dc1`, paired with this hub's own cluster secret.
+    2.  Argo CD's `*` crosses `/`. This drops `hubs/` and other subdirectories, so a hub file is never a lifecycle fleet file.
+    3.  Global Hub only: fleet files naming a managed hub imported in `default` mode. Fleet files come first because Argo CD templates a child generator's fields but not its `selector`.
     4.  A `hub` that is not a DNS label matches nothing instead of failing the whole ApplicationSet.
 
 ## Applications
 
 | Field | `policystack` | `policystack-lifecycle` |
 |---|---|---|
-| Name | `<element>-<cluster>`, `<element>-<hubName>` on the hub | `lifecycle-<cluster>` |
-| Source | `stack/<element>` at the cluster's revision | `lifecycle/` at the fleet file's revision |
-| Values | [Cascade](values.md#order) | Same |
-| Destination | Hub, `open-cluster-management` | Same |
-| Sync | Automated, `prune`, `selfHeal`, `allowEmpty`, `RespectIgnoreDifferences=true` | Automated, `prune`, `selfHeal` |
+| Name | `<element>-<cluster>`, `<element>-<hubName>` for the hub | `lifecycle-<cluster>` |
+| Source | `stack/<element>` at the fleet file's `revision` | `lifecycle/` at the fleet file's `revision` |
+| Values files | `values.yaml`, root `values.yaml`, each `valueFiles` entry, `values/clusters/<cluster>.yaml` ([Order](values.md#order)) | Same files |
+| Injected values | `selector` for the cluster, `version`, `channel` | `selector` for the building hub, `hub`, `state`, `install`, `version`, `channel` ([Order](values.md#order)) |
+| Destination | The hub (`https://kubernetes.default.svc`) | Same |
+| Project | `default` | Same |
+| Sync | Automated, `prune`, `selfHeal`, `allowEmpty` | Automated, `prune`, `selfHeal` |
 
-The Application name is the Helm release name, which every object name derives from ([Naming limits](policies.md#naming-limits)). Argo CD deploys only to the hub; ACM delivers policies to clusters ([Placement](policies.md#placement)). Objects land in `policyNamespace`; the destination namespace is unused. `allowEmpty` lets a disabled element prune to zero objects ([Disabling an element](../guides/rollout.md#disabling-an-element)).
+The Application name is also the Helm **release** name. The Policy, Placement and PlacementBinding names include it: Policy `install-gitops-prod-east-1`, Placement and PlacementBinding `gitops-prod-east-1`. ConfigurationPolicy and OperatorPolicy names do not ([Rendered names](elements.md#rendered-names)). Renaming an element, a cluster or `hubName` renames the release, so its Policies are deleted and recreated. Where a template prunes, the objects on the cluster are deleted and recreated too ([Removal and pruning](removal.md#what-happens-on-the-managed-cluster)).
 
-Both ApplicationSets set `preserveResourcesOnDeletion: false`: deleting an Application deletes its hub objects ([Removal and pruning](removal.md)). Deleting a lifecycle Application leaves the cluster running unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+What the sync options do, all on the hub:
 
-!!! note "Deletion is bounded"
-    A failed render prunes nothing (`ComparisonError`). A failed generation deletes nothing. Argo CD only deletes hub objects; ACM then removes policies from the cluster ([What happens on the managed cluster](removal.md#what-happens-on-the-managed-cluster)).
+- **Automated**: every change at the revision syncs without anyone pressing Sync.
+- **`prune`**: an object that drops out of the render, such as a policy you set `enabled: false`, is deleted from `pstack`.
+- **`selfHeal`**: a hand edit to a Policy or Placement in `pstack` is reverted to what Git renders.
+- **`allowEmpty`**: Argo CD normally refuses an automated sync that would leave an Application with no objects. This lets a disabled element prune to zero ([Removal and pruning](removal.md)). Lifecycle Applications leave it off: `lifecycle/` always renders the `present` or `absent` Policy, so an empty render can only be an error, and Argo CD refuses to prune everything.
 
-`copyPolicyMetadata: false` keeps Argo CD tracking metadata off ACM's per-cluster Policy copies, so Argo CD never prunes them.
+The destination namespace, `open-cluster-management`, is unused. Every rendered object sets its own namespace, `policyNamespace` (`pstack`).
 
-### Render cache
+??? example "Application `compliance-prod-east-1`"
 
-Each Application lists what its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). For `compliance-prod-east-1`:
+    ```yaml title="fleet/prod-east-1.yaml"
+    revision: main
+    channel: stable-4.20
+    valueFiles:
+      - environments/prod.yaml
+      - datacenters/dc1.yaml
+      - platforms/aws.yaml
+    ```
 
-```yaml
-argocd.argoproj.io/manifest-generate-paths: '.;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml'
+    renders:
+
+    ```yaml
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: compliance-prod-east-1
+      namespace: openshift-gitops
+      labels:
+        velero.io/exclude-from-backup: "true" # (1)!
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: '.;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml' # (2)!
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io # (3)!
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/acme/policystack.git'
+        targetRevision: main
+        path: stack/compliance
+        helm:
+          ignoreMissingValueFiles: true # (4)!
+          valueFiles:
+            - values.yaml
+            - ../../values.yaml
+            - ../../values/environments/prod.yaml
+            - ../../values/datacenters/dc1.yaml
+            - ../../values/platforms/aws.yaml
+            - ../../values/clusters/prod-east-1.yaml
+          valuesObject:
+            channel: "stable-4.20"
+            selectedName: prod-east-1 # (5)!
+            selectedId: <clusterID>
+            selector: # (6)!
+              matchExpressions:
+                name:
+                  key: name
+                  operator: In
+                  values:
+                    - "prod-east-1"
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: open-cluster-management
+      syncPolicy:
+        syncOptions:
+          - RespectIgnoreDifferences=true # (7)!
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: true
+    ```
+
+    1.  Kept out of ACM backup ([Install chart](../reference/install.md#backup-and-restore)).
+    2.  [Render cache](#render-cache).
+    3.  Added by the ApplicationSet controller because `preserveResourcesOnDeletion` is `false`. Deleting the Application deletes its objects in `pstack`.
+    4.  A listed file that does not exist is skipped without an error ([Missing files](values.md#missing-files)).
+    5.  Injected, but nothing in `stack/` or `lifecycle/` reads `selectedName` or `selectedId`.
+    6.  Becomes the element's single-cluster Placement ([Placement](policies.md#placement)).
+    7.  No effect: no Application sets `ignoreDifferences`.
+
+## When an Application fails
+
+Two different steps can fail, with different blast radius:
+
+| Step | What runs | Typical cause | What you see | Effect |
+|---|---|---|---|---|
+| Generation | The ApplicationSet controller evaluates its generators. | A fleet file that does not parse, lacks `revision`, or pins a revision that does not exist. | `ErrorOccurred` condition on the ApplicationSet | No Application is created, updated or deleted until it is fixed; existing ones keep their Policies ([One bad fleet file stops the hub](overview.md#one-bad-fleet-file-stops-the-hub)). |
+| Render | Argo CD runs `helm template` for one Application. | A values key the schema rejects, or a `policies.<p>` naming a policy that has no converter. | `ComparisonError` on that Application, sync status `Unknown` | That Application neither syncs nor prunes; its Policies stay as they were. A converter error affects one element. A schema error in a layer fails every Application that reads the layer, all elements and `lifecycle-<cluster>` included ([Schema](values.md#schema)). |
+
+A render error carries the Helm message. With `stack.gitops.policies.bogus.enabled: true` in a layer:
+
+```text
+policy-library: policies.bogus has no templates - add converters/bogus/<template>.yaml
 ```
 
-A new commit re-renders only Applications whose listed paths changed. Fleet file changes alter the spec and always re-render.
+```sh
+oc get applicationset policystack -n openshift-gitops \
+  -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].message}'
+oc get application gitops-prod-east-1 -n openshift-gitops \
+  -o jsonpath='{.status.conditions[?(@.type=="ComparisonError")].message}'
+```
+
+The fork's CI renders every element for every fleet file and checks every pin, so both normally fail the PR instead of the hub ([Validation](../develop/validation.md)).
+
+## Deletion
+
+Both ApplicationSets set `preserveResourcesOnDeletion: false`, so each Application gets Argo CD's resources finalizer and deleting it deletes its Policies, Placement and PlacementBinding from `pstack`. Applications are deleted when their generator stops producing them, for example when a fleet file is deleted ([What deletes an Application](removal.md#what-deletes-an-application)). ACM then removes the policies from the cluster; what they created stays unless a template prunes ([What happens on the managed cluster](removal.md#what-happens-on-the-managed-cluster)). No lifecycle template prunes, so deleting `lifecycle-<cluster>` leaves the cluster running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+
+Every Policy sets `copyPolicyMetadata: false`, so Argo CD never treats ACM's replicated copies as its own and never prunes them ([Removal and pruning](removal.md)).
+
+## Render cache
+
+Background; nothing to configure.
+
+Each Application lists the files its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). Paths are relative to the source path, `stack/<element>`: `.` is the element directory (policy-library is pulled from its Helm repo by the exact version in `Chart.yaml`, not read from Git), and `../../` is the repo root. For a new commit, Argo CD compares the changed files with this list, with or without a webhook, and reuses the cached render when none match.
+
+A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-east-1's Applications, and a commit to `stack/compliance/` only the `compliance-*` Applications at that revision. A commit to the root `values.yaml` re-renders all of them. Fleet files are not listed: a fleet change alters the Application spec, which always re-renders.
 
 ## The hub
 
-The hub's ManagedCluster has `local-cluster`, so it reads `fleet/hubs/<hubName>.yaml` ([Hub file](../reference/fleet.md#hub-file)). `hubName` is set once at `helm install`, no default ([Install PolicyStack](../start/install.md#install-policystack)).
-
-`hubName` replaces the cluster name everywhere on the hub:
+ACM manages the hub as a ManagedCluster too, named `local-cluster` by default and labelled `local-cluster`. PolicyStack configures it like any cluster, with one difference: it is known by `hubName`, the name you give it at `helm install` ([Install chart](../reference/install.md)). The secret with the `local-cluster` label switches the generator to the hub's names:
 
 | | Managed cluster | Hub |
 |---|---|---|
-| Applications | `<element>-<cluster>` | `<element>-<hubName>` |
+| Fleet file | `fleet/<cluster>.yaml` | `fleet/hubs/<hubName>.yaml` ([Hub file](../reference/fleet.md#hub-file)) |
 | Cluster values file | `values/clusters/<cluster>.yaml` | `values/clusters/<hubName>.yaml` |
-| `selectedName` | `<cluster>` | `<hubName>` |
+| Applications (releases) | `<element>-<cluster>` | `<element>-<hubName>` |
+| Policies in `pstack` | `<policy>-<element>-<cluster>` | `<policy>-<element>-<hubName>` |
+| Placement selector | `name In [<cluster>]` | `name In [<hub's ManagedCluster name>]`, `local-cluster` by default |
+| Replicated Policies | Namespace `<cluster>` | The hub's ManagedCluster namespace, `local-cluster` by default |
+| Lifecycle fleet files it builds | | Those with `hub: <hubName>` |
 
-!!! warning
-    Changing `hubName` renames the hub's Applications and every object they render.
-
-Every hub reading the repo, DR hubs included, sets its own `hubName`. The chart fails without it rather than apply another hub's config. Check it with `helm get values policystack -n openshift-gitops`.
+For the hub's compliance, run `oc get policies.policy.open-cluster-management.io -n local-cluster` (or the MultiClusterHub's `localClusterName`), not `-n <hubName>`. The ManagedCluster keeps its ACM name; `hubName` changes only what PolicyStack derives from Git.
 
 ??? question "Why not use the cluster name?"
-    Nothing on a hub is stable and unique. Every hub's ManagedCluster defaults to `local-cluster`. ACM's `localClusterName` changes only at install. `clusterID` changes on rebuild. `hubs/` keeps hub files from colliding with a managed cluster of the same name.
+    Nothing on a hub is both stable and unique. Every hub's own ManagedCluster is `local-cluster` unless the MultiClusterHub sets `localClusterName`, so hubs reading one repo would collide. `clusterID` is unique but changes when a hub is rebuilt or replaced, which would rename every hub Application. A name you choose stays put. `fleet/hubs/` keeps hub files apart from a managed cluster that happens to have the same name.
 
-A Global Hub managed hub imported in default mode has no `local-cluster`; the global hub reads its file instead ([Global Hub](../guides/global-hub.md#layout)).
+### Several hubs, one repo
 
-## Day-2 handoff
+Each hub only sees cluster secrets for the ManagedClusters it imports. `fleet/prod-east-1.yaml` therefore renders only on the hub that manages prod-east-1, and a lifecycle fleet file only on the hub its `hub` names. Every active hub needs its own `hubName`, because they all share the name `local-cluster`. Two active hubs with the same `hubName` both read `fleet/hubs/<hubName>.yaml` and both try to build every cluster whose fleet file names that hub.
 
-A cluster the hub builds gets Day-2 config the same way as an imported one:
+A DR hub is the exception: it does not run PolicyStack while passive, and at takeover it is installed with the `hubName` of the hub it replaces, so it reads the same hub file and adopts the restored clusters ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
-1. The ManagedCluster appears. `hypershift`: the hypershift-addon creates it once the HostedCluster is available. `hive`, `siteconfig`: ACM imports the one the chart or SiteConfig created.
-2. It joins `global`, the GitOpsCluster creates its Argo CD secret, and ACM adds the `clusterID` label ([Install chart](../reference/install.md)).
-3. The Day-2 ApplicationSet pairs the secret with the same fleet file and creates `<element>-<cluster>` Applications. It ignores `hub`, `state` and `install`.
+A managed hub imported into a Global Hub in `default` mode has no `local-cluster`. The Global Hub reads `fleet/hubs/<cluster>.yaml` for it and names its Applications `<element>-<cluster>`. Name its ManagedCluster after its `hubName` so both modes read the same file ([Global Hub](../guides/global-hub.md#import-modes)).
 
-Labels in `hostedCluster.metadata.labels` are copied to the ManagedCluster once, at creation.
+### Changing `hubName`
 
-??? info "HyperShift auto-import disabled"
-    Auto-import is on by default. `autoImportDisabled` in the `hypershift-addon-deploy-config` AddOnDeploymentConfig leaves a built cluster without Day-2 until you import it by hand.
+!!! warning
+    The hub's Applications are renamed, so they and their Policies are deleted and recreated under the new name. Fleet files with `hub: <old>` stop matching; their `lifecycle-<cluster>` Applications are deleted and those clusters keep running, unmanaged, until the fleet files name the new hub.
 
-## Terms
+Check the current value with `helm get values policystack -n openshift-gitops`. To change it:
 
-| Term | Meaning |
-|---|---|
-| [Element](../develop/elements.md) | A `stack/<element>/` Helm chart that depends on policy-library. Its `converters/<policy>/<template>.yaml` files and `operatorPolicies` define the policies; values configure them. |
-| [Fleet file](../reference/fleet.md) | `fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for the hub, on the default branch. Sets the revision, the values files and optionally the hub that builds the cluster. |
-| [Hub](#the-hub) | The cluster running ACM and OpenShift GitOps. Holds the ApplicationSets, Applications, Policies and the control planes it builds. ACM manages it as `local-cluster`, so you give it a fleet file too, at `fleet/hubs/<hubName>.yaml`. |
-| [Managed cluster](../start/first-cluster.md) | A cluster ACM manages, imported by hand or built by a hub. The GitOpsCluster imports it into Argo CD; it gets one Application per element once it also has a fleet file. |
-| [Release](#applications) | The Application name, also the Helm release name: `<element>-<cluster>`, or `<element>-<hubName>` on the hub. Policy and Placement names derive from it. |
-| [Revision](../reference/fleet.md#revision) | The branch, tag or SHA in a fleet file. All of the cluster's Applications render from it. |
-| [Values cascade](values.md#order) | The ordered values files Helm gets for one Application. Later files override earlier ones. |
+1. Merge copies of `fleet/hubs/<old>.yaml` and `values/clusters/<old>.yaml` under the new name, and change `hub: <old>` to the new name in lifecycle fleet files.
+2. `helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values --set hubName=<new>`.
+3. Delete the old files.

@@ -14,22 +14,26 @@ nav = [
     { "First cluster" = "start/first-cluster.md" },
   ] },
   { "Concepts" = [
-    { "Architecture" = "concepts/architecture.md" },
+    { "How PolicyStack works" = "concepts/overview.md" },
+    { "ApplicationSets" = "concepts/architecture.md" },
+    { "ACM policies in brief" = "concepts/acm.md" },
+    { "How an element is built" = "concepts/elements.md" },
     { "Values cascade" = "concepts/values.md" },
-    { "Policies and placement" = "concepts/policies.md" },
+    { "Placement and naming" = "concepts/policies.md" },
+    { "Cluster lifecycle" = "concepts/lifecycle.md" },
     { "Removal and pruning" = "concepts/removal.md" },
   ] },
   { "Guides" = [
     { "Rolling out changes" = "guides/rollout.md" },
     { "Operator versions" = "guides/operators.md" },
+    { "Building clusters" = "guides/lifecycle.md" },
     { "OpenShift upgrades" = "guides/upgrades.md" },
-    { "Cluster lifecycle" = "guides/lifecycle.md" },
     { "Disconnected clusters" = "guides/disconnected.md" },
     { "Global Hub" = "guides/global-hub.md" },
     { "Upgrading PolicyStack" = "guides/upgrading.md" },
   ] },
   { "Elements" = [
-    { "Advanced Cluster Security" = "elements/acs.md" },
+    { "ACS" = "elements/acs.md" },
     { "Compliance" = "elements/compliance.md" },
   ] },
   { "Develop" = [
@@ -87,9 +91,9 @@ pymdownx.superfences.custom_fences = [
 [project.plugins.redirects.redirect_maps]
 "acs.md" = "elements/acs.md"
 "applicationset.md" = "concepts/architecture.md"
-"applicationset.md#fleet-files" = "reference/fleet.md"
+"applicationset.md#fleet-files" = "concepts/overview.md#fleet-files"
 "applicationset.md#revision" = "reference/fleet.md#revision"
-"applicationset.md#protection" = "reference/fleet.md#protection"
+"applicationset.md#protection" = "start/install.md#set-up-your-fork"
 "applicationset.md#injected-values" = "concepts/values.md#order"
 "applicationset.md#the-install-chart" = "reference/install.md"
 "compliance.md" = "elements/compliance.md"
@@ -100,7 +104,7 @@ pymdownx.superfences.custom_fences = [
 "install.md#upgrading" = "guides/upgrading.md"
 "lifecycle.md" = "guides/lifecycle.md"
 "lifecycle-reference.md" = "reference/lifecycle.md"
-"lifecycle-reference.md#day-2-handoff" = "concepts/architecture.md#day-2-handoff"
+"lifecycle-reference.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
 "lifecycle-reference.md#removing-a-nodepool" = "guides/lifecycle.md#removing-a-nodepool"
 "lifecycle-reference.md#scaling-siteconfig-workers" = "guides/lifecycle.md#scaling-siteconfig-workers"
 "lifecycle-reference.md#adding-an-engine" = "contributing.md#adding-a-lifecycle-engine"
@@ -114,9 +118,14 @@ pymdownx.superfences.custom_fences = [
 "validation.md#rules" = "reference/rules.md"
 "values.md" = "concepts/values.md"
 "workflows.md" = "reference/ci.md"
-"index.md#how-a-change-reaches-a-cluster" = "concepts/architecture.md#how-a-change-reaches-a-cluster"
-"index.md#terms" = "concepts/architecture.md#terms"
+"index.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
+"index.md#terms" = "concepts/overview.md#glossary"
 "contributing.md#forks" = "guides/upgrading.md#merge-upstream"
+# Sections moved by the docs rewrite.
+"concepts/architecture.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
+"concepts/architecture.md#terms" = "concepts/overview.md#glossary"
+"concepts/architecture.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
+"reference/fleet.md#protection" = "start/install.md#set-up-your-fork"
 
 [project.extra]
 generator = false

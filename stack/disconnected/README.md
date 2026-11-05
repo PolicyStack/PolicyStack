@@ -3,7 +3,7 @@
 
 Mirror registries, mirrored catalogs and CA trust for disconnected clusters
 
-Guide: https://policystk.io/disconnected/
+Guide: https://policystk.io/guides/disconnected/
 
 ```yaml
 stack:

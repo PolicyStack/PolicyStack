@@ -145,7 +145,7 @@ func origin(ctx Context, kind, name, field string) (string, string, sourceloc.Lo
 }
 
 // dryRun reports whether the cascade sets global.remediationAction, which policy-library renders as
-// every Policy's remediationAction in place of its own (docs/rollout.md#dry-run).
+// every Policy's remediationAction in place of its own (docs/guides/rollout.md#dry-run).
 func dryRun(ctx Context) bool {
 	for _, f := range ctx.Cluster.ValueFiles {
 		var v struct {

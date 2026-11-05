@@ -8,15 +8,15 @@ import (
 	"testing"
 )
 
-// TestRulesDocumented: docs/validation.md renders the README rules table, and the table has one row
-// per registered rule ID.
+// TestRulesDocumented: docs/reference/rules.md renders the README rules table, and the table has one
+// row per registered rule ID.
 func TestRulesDocumented(t *testing.T) {
-	doc, err := os.ReadFile("../../../../docs/validation.md")
+	doc, err := os.ReadFile("../../../../docs/reference/rules.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(doc), `--8<-- "tools/validator/README.md:rules"`) {
-		t.Fatal("docs/validation.md does not include the tools/validator/README.md rules section")
+		t.Fatal("docs/reference/rules.md does not include the tools/validator/README.md rules section")
 	}
 	readme, err := os.ReadFile("../../README.md")
 	if err != nil {

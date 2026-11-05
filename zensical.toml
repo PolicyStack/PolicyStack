@@ -8,35 +8,52 @@ repo_name = "PolicyStack/PolicyStack"
 edit_uri = "edit/main/docs/"
 # Zensical does not check nav: a missing target ships as a dead link.
 nav = [
-  { "Overview" = "index.md" },
-  { "Architecture" = [
-    { "Clusters and Applications" = "applicationset.md" },
-    { "Values cascade" = "values.md" },
-    { "Policies" = "policies.md" },
+  { "Home" = "index.md" },
+  { "Get started" = [
+    { "Installation" = "start/install.md" },
+    { "First cluster" = "start/first-cluster.md" },
   ] },
-  { "Operations" = [
-    { "Installation" = "install.md" },
-    { "Rolling out changes" = "rollout.md" },
-    { "Cluster lifecycle" = "lifecycle.md" },
-    { "Lifecycle reference" = "lifecycle-reference.md" },
-    { "Global Hub" = "global-hub.md" },
-    { "Disconnected clusters" = "disconnected.md" },
-    { "Upgrades" = "upgrades.md" },
-    { "Advanced Cluster Security" = "acs.md" },
-    { "Compliance" = "compliance.md" },
+  { "Concepts" = [
+    { "How PolicyStack works" = "concepts/overview.md" },
+    { "ApplicationSets" = "concepts/architecture.md" },
+    { "ACM policies in brief" = "concepts/acm.md" },
+    { "How an element is built" = "concepts/elements.md" },
+    { "Values cascade" = "concepts/values.md" },
+    { "Placement and naming" = "concepts/policies.md" },
+    { "Cluster lifecycle" = "concepts/lifecycle.md" },
+    { "Removal and pruning" = "concepts/removal.md" },
   ] },
-  { "Development" = [
-    { "Writing an element" = "elements.md" },
-    { "Validation" = "validation.md" },
-    { "CI workflows" = "workflows.md" },
-    { "Contributing" = "contributing.md" },
+  { "Guides" = [
+    { "Rolling out changes" = "guides/rollout.md" },
+    { "Operator versions" = "guides/operators.md" },
+    { "Building clusters" = "guides/lifecycle.md" },
+    { "OpenShift upgrades" = "guides/upgrades.md" },
+    { "Disconnected clusters" = "guides/disconnected.md" },
+    { "Global Hub" = "guides/global-hub.md" },
+    { "Upgrading PolicyStack" = "guides/upgrading.md" },
   ] },
+  { "Elements" = [
+    { "ACS" = "elements/acs.md" },
+    { "Compliance" = "elements/compliance.md" },
+  ] },
+  { "Develop" = [
+    { "Writing an element" = "develop/elements.md" },
+    { "Validation" = "develop/validation.md" },
+  ] },
+  { "Reference" = [
+    { "Fleet files" = "reference/fleet.md" },
+    { "Install chart" = "reference/install.md" },
+    { "Lifecycle keys" = "reference/lifecycle.md" },
+    { "Validator rules" = "reference/rules.md" },
+    { "CI workflows" = "reference/ci.md" },
+  ] },
+  { "Contributing" = "contributing.md" },
 ]
 
 [project.theme]
 features = [
   "content.action.edit", "content.code.annotate", "content.code.copy", "content.tabs.link",
-  "navigation.sections",
+  "navigation.sections", "navigation.tabs",
 ]
 
 [[project.theme.palette]]
@@ -52,8 +69,9 @@ toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
 
 # Setting this table replaces Zensical's default extension set. It exists for snippets, which
-# validation.md uses to include the rules table from tools/validator/README.md. highlight values are
-# Zensical's defaults. Run zensical from the repo root: snippet paths resolve against the cwd.
+# reference/rules.md uses to include the rules table from tools/validator/README.md. highlight
+# values are Zensical's defaults. Run zensical from the repo root: snippet paths resolve against
+# the cwd.
 [project.markdown_extensions]
 admonition = {}
 attr_list = {}
@@ -68,6 +86,46 @@ pymdownx.snippets.check_paths = true
 pymdownx.superfences.custom_fences = [
   { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
 ]
+
+# Old flat pages. A page redirect keeps the anchor, so only sections that moved elsewhere need one.
+[project.plugins.redirects.redirect_maps]
+"acs.md" = "elements/acs.md"
+"applicationset.md" = "concepts/architecture.md"
+"applicationset.md#fleet-files" = "concepts/overview.md#fleet-files"
+"applicationset.md#revision" = "reference/fleet.md#revision"
+"applicationset.md#protection" = "start/install.md#set-up-your-fork"
+"applicationset.md#injected-values" = "concepts/values.md#order"
+"applicationset.md#the-install-chart" = "reference/install.md"
+"compliance.md" = "elements/compliance.md"
+"disconnected.md" = "guides/disconnected.md"
+"elements.md" = "develop/elements.md"
+"global-hub.md" = "guides/global-hub.md"
+"install.md" = "start/install.md"
+"install.md#upgrading" = "guides/upgrading.md"
+"lifecycle.md" = "guides/lifecycle.md"
+"lifecycle-reference.md" = "reference/lifecycle.md"
+"lifecycle-reference.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
+"lifecycle-reference.md#removing-a-nodepool" = "guides/lifecycle.md#removing-a-nodepool"
+"lifecycle-reference.md#scaling-siteconfig-workers" = "guides/lifecycle.md#scaling-siteconfig-workers"
+"lifecycle-reference.md#adding-an-engine" = "contributing.md#adding-a-lifecycle-engine"
+"policies.md" = "concepts/policies.md"
+"rollout.md" = "guides/rollout.md"
+"rollout.md#onboarding-a-cluster" = "start/first-cluster.md#onboard-the-cluster"
+"rollout.md#what-happens-on-the-managed-cluster" = "concepts/removal.md#what-happens-on-the-managed-cluster"
+"rollout.md#operator-upgrades" = "guides/operators.md"
+"upgrades.md" = "guides/upgrades.md"
+"validation.md" = "develop/validation.md"
+"validation.md#rules" = "reference/rules.md"
+"values.md" = "concepts/values.md"
+"workflows.md" = "reference/ci.md"
+"index.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
+"index.md#terms" = "concepts/overview.md#glossary"
+"contributing.md#forks" = "guides/upgrading.md#merge-upstream"
+# Sections moved by the docs rewrite.
+"concepts/architecture.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
+"concepts/architecture.md#terms" = "concepts/overview.md#glossary"
+"concepts/architecture.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
+"reference/fleet.md#protection" = "start/install.md#set-up-your-fork"
 
 [project.extra]
 generator = false

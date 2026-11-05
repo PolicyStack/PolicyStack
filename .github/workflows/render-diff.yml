@@ -2,7 +2,7 @@ name: Render Diff
 
 # Comments a table of what each real cluster's rendered Policies gain, lose or change with this PR,
 # with a collapsed diff per cluster. Clusters come from fleet/ only; without fleet files, or when no
-# cluster's render changes, there is no comment. Not a gate. See docs/workflows.md#render-diff.
+# cluster's render changes, there is no comment. Not a gate. See docs/reference/ci.md#render-diff.
 # The render job runs PR code with a read-only token. The comment job runs none and is skipped for
 # fork PRs, whose token is read-only; they get the render job's summary.
 on:

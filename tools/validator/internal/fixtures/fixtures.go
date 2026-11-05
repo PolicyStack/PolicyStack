@@ -98,7 +98,8 @@ func LoadDir(dir string) ([]*Cluster, error) {
 			continue
 		}
 		// A typo would leave the cluster with no hub to build or destroy it. A Global Hub managed hub
-		// can have both files (docs/global-hub.md), so hub naming the cluster itself is checked too.
+		// can have both files (docs/guides/global-hub.md), so hub naming the cluster itself is checked
+		// too.
 		switch {
 		case c.Hub == c.Name:
 			c.Issues = append(c.Issues, Issue{Line: c.hubLine, Message: "hub names the cluster itself: a cluster cannot build itself"})

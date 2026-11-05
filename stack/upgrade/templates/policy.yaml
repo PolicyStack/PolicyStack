@@ -4,7 +4,7 @@ when its input is set, so a cluster with neither gets nothing, not even a Placem
 */ -}}
 {{- $u := .Values.stack.upgrade }}
 {{- if or $u.config.targetVersion $u.config.channel }}
-{{- fail "stack.upgrade.config.targetVersion and config.channel are replaced by the fleet file's version and channel (docs/upgrades.md)" }}
+{{- fail "stack.upgrade.config.targetVersion and config.channel are replaced by the fleet file's version and channel (docs/guides/upgrades.md)" }}
 {{- end }}
 {{- $p := $u.policies }}
 {{- $channel := and (eq (include "policy-library.enabled" $p.channel) "true") (not (and (empty .Values.channel) (empty $u.config.upstream))) }}

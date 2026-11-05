@@ -19,7 +19,7 @@ stack:
 
       # RHCOS live ISOs you host, by OpenShift x.y: {version: RHCOS version, url}. Set when
       # disconnected, as it replaces the default list: list every version a siteconfig cluster installs.
-      # Mirrors and CAs come from the disconnected element's config (docs/disconnected.md).
+      # Mirrors and CAs come from the disconnected element's config (docs/guides/disconnected.md).
       osImages: {}
 
     default:

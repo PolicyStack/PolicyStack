@@ -5,7 +5,8 @@
 #      git mv values/clusters/aws-prod.yaml values/clusters/<that-name>.yaml
 #    The ApplicationSet runs with ignoreMissingValueFiles, so a filename that does not match the
 #    cluster is silently skipped - none of the elements below would turn on and the test would look
-#    like it simply did nothing. Verify with the valueFiles check in docs/values.md (Missing files).
+#    like it simply did nothing. Verify with the valueFiles check in docs/concepts/values.md
+#    (Missing files).
 #
 # Fleet file this cluster needs, fleet/<that-name>.yaml on the default branch:
 #   revision: main             # required; branch, tag or SHA

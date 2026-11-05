@@ -8,7 +8,7 @@ operator defaults.
 {{- range $el := list "gitops" "acm" }}
 {{- with index $.Values.stack $el "operatorPolicies" $el }}
 {{- if or .versions (ne (.upgradeApproval | default "Automatic") "Automatic") }}
-{{- fail (printf "%s: versions and upgradeApproval pins apply only after handover (docs/install.md)" $el) }}
+{{- fail (printf "%s: versions and upgradeApproval pins apply only after handover (docs/start/install.md)" $el) }}
 {{- end }}
 ---
 apiVersion: v1

@@ -3,7 +3,7 @@
 
 Drive and observe OpenShift cluster version upgrades
 
-Guide: https://policystk.io/upgrades/
+Guide: https://policystk.io/guides/upgrades/
 
 ```yaml
 stack:

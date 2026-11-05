@@ -110,7 +110,7 @@ func (c *CRDSchemaCheck) Run(ctx Context) []Finding {
 	}
 	if len(unresolved) > 0 {
 		out = append(out, Finding{RuleID: c.ID(), Severity: SevWarning, Element: el.ChartName,
-			Message: fmt.Sprintf("no CRD for %s: not schema-checked; add it to `make crds` (docs/validation.md#crd-schemas)",
+			Message: fmt.Sprintf("no CRD for %s: not schema-checked; add it to `make crds` (docs/develop/validation.md#crd-schemas)",
 				strings.Join(slices.Sorted(maps.Keys(unresolved)), ", ")),
 			File: el.ValuesFile})
 	}

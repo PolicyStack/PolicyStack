@@ -26,7 +26,7 @@ func (InstallCheck) Phase() Phase { return PhaseRepo }
 
 const (
 	// backupLabel keeps an object out of ACM backup. Restored on a passive hub, an ApplicationSet
-	// would rebuild the old hub's clusters there (docs/lifecycle.md).
+	// would rebuild the old hub's clusters there (docs/guides/lifecycle.md#hub-disaster-recovery).
 	backupLabel = "velero.io/exclude-from-backup"
 	// operatorKinds is what install/operators renders from the acm and gitops values, sorted.
 	operatorKinds = "MultiClusterHub,Namespace,Namespace,OperatorGroup,OperatorGroup,Subscription,Subscription"

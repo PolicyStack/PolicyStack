@@ -162,7 +162,8 @@ func joinFilenames(paths []string) []string {
 	return out
 }
 
-// TestResolve_testdata pins the example fleet files' cascades, the ones docs/values.md shows.
+// TestResolve_testdata pins the example fleet files' cascades, the ones docs/concepts/values.md
+// shows.
 func TestResolve_testdata(t *testing.T) {
 	repo, err := filepath.Abs("../../../..")
 	if err != nil {

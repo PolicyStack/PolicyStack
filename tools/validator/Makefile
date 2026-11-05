@@ -10,7 +10,7 @@ CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(RO
 
 .PHONY: build test lint fmt clean run tidy deps crds validate preview consumers ci
 
-# CRDs POLICY080 validates rendered objects against, at the ACM 2.16 floor (docs/validation.md#crd-schemas).
+# CRDs POLICY080 validates rendered objects against, at the ACM 2.16 floor (docs/develop/validation.md#crd-schemas).
 # Renovate bumps each SHA to its branch head; the branches move with the floor, by hand.
 CRDS := .crds
 # renovate: datasource=git-refs depName=https://github.com/stolostron/governance-policy-propagator branch=release-2.16
@@ -68,7 +68,7 @@ crds:
 # 1. Fixture clusters plus tools/sample-element. POLICY081 runs in pass 2, where every converter
 #    renders. POLICY071 (install/) runs here only.
 # 2. Each profile turns every element and optional template on, tools/sample-element too
-#    (docs/validation.md#acm-templates). In CI, sort -u drops the annotations two profiles both report.
+#    (docs/develop/validation.md#acm-templates). In CI, sort -u drops the annotations two profiles both report.
 # 3. A fork's real fleet, when it has one. Upstream ships none. POLICY052 (fleet pins) runs here
 #    only: the fixtures' revisions are not real pins.
 validate: build crds

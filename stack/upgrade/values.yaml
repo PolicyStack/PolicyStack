@@ -17,7 +17,7 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each
+    # The fleet file's `version` and `channel` drive the upgrade (docs/guides/upgrades.md). Each
     # policy renders only when its input is set; enabled: false pauses it.
     policies:
       # Pin the ClusterVersion channel and upstream; enabled: false pauses both

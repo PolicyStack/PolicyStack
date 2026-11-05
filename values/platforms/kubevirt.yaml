@@ -1,5 +1,5 @@
 # Listed as platforms/kubevirt.yaml by a hosted cluster its hub builds on OpenShift Virtualization.
-# install is read only by lifecycle/ (docs/lifecycle.md).
+# install is read only by lifecycle/ (docs/guides/lifecycle.md).
 install:
   platform: KubeVirt
   credential:

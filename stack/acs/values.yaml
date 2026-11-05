@@ -111,7 +111,7 @@ stack:
       # Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings
       # the declarative auth config, security policies and a check that the hub holds a
       # cluster registration secret (CRS) with over 90 days left; you generate it once, see
-      # docs/acs.md.
+      # docs/elements/acs.md.
       central:
         enabled: false
         description: "Central, its declarative auth config and security policies"
@@ -157,7 +157,7 @@ stack:
             severity: low
 
       # Run the secured-cluster agents here. Usually every cluster, including the hub. A
-      # rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md.
+      # rebuilt, moved or re-created cluster must be re-registered: see docs/elements/acs.md.
       secured:
         enabled: false
         description: "Secured-cluster agents and their TLS material"

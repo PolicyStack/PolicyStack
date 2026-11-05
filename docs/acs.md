@@ -7,16 +7,19 @@ Central runs on the ACM hub. Every secured cluster, the hub included, registers 
 stack:
   acs:
     enabled: true
-    toggles:
-      central: true
-      secured: true
+    policies:
+      central:
+        enabled: true
+      secured:
+        enabled: true
 
 # values/environments/<env>.yaml, or any layer every secured cluster reads
 stack:
   acs:
     enabled: true
-    toggles:
-      secured: true
+    policies:
+      secured:
+        enabled: true
 ```
 
 ## How it works

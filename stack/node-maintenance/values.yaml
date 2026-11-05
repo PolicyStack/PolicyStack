@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -12,25 +14,16 @@ stack:
 
     # Parent policy grouping the Node Maintenance Operator install resources
     policies:
-      - name: install
-        enabled: true
-        namespace: open-cluster-management
+      install:
         description: "Install and manage the Node Maintenance Operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     # OperatorPolicy installing the Node Maintenance Operator subscription
     operatorPolicies:
       node-maintenance:
-        enabled: true
         description: "Node Maintenance Operator (Workload Availability)"
         displayName: "Node Maintenance Operator"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-workload-availability
+        clusterMonitoring: true
         operatorGroup:
           # No targetNamespaces: this operator only advertises AllNamespaces, so an OperatorGroup
           # scoped to its own namespace makes the CSV fail with
@@ -39,25 +32,4 @@ stack:
         subscription:
           channel: stable
           name: node-maintenance-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    # Adds the cluster-monitoring label to the operator namespace
-    configPolicies:
-      - name: node-maintenance-ns-monitoring
-        enabled: true
-        description: "Adds openshift.io/cluster-monitoring label to operator namespace"
-        policyRef: install
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        evaluationInterval:
-          compliant: "10m"
-          noncompliant: "30s"
-        templateNames:
-          - name: ns-monitoring-label
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-workload-availability

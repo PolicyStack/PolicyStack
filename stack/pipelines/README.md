@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-pipelines-<cluster>`: Install and manage the OpenShift Pipelines (Tekton) Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-openshift-pipelines` | enforce | [operator](#operators) `openshift-pipelines-operator-rh` | OpenShift Pipelines (Tekton) |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-openshift-pipelines` | enforce | medium | [operator](#operators) `openshift-pipelines-operator-rh` | OpenShift Pipelines (Tekton) |

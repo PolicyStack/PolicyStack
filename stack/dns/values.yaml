@@ -9,6 +9,8 @@ stack:
         - operator: Exists
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -17,20 +19,8 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      config:
         description: "Cluster DNS node placement"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: tolerations
-        enabled: true
-        description: "DNS daemonset tolerations"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: dns-tolerations
+        templates:
+          tolerations:
+            description: "DNS daemonset tolerations"

@@ -1,0 +1,45 @@
+{{- /* Pin the cluster GitopsService onto infra nodes. */ -}}
+{{- $cfg := .Config }}
+apiVersion: pipelines.openshift.io/v1alpha1
+kind: GitopsService
+metadata:
+  name: cluster
+  namespace: {{ $cfg.gitopsNamespace }}
+spec:
+  runOnInfra: true
+  tolerations:
+    - key: node-role.kubernetes.io/{{ .Config.role }}
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/{{ .Config.role }}
+      effect: NoExecute
+---
+{{- /* Pin the default IngressController onto infra nodes. */}}
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: default
+  namespace: openshift-ingress-operator
+spec:
+  nodePlacement:
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/{{ .Config.role }}: ""
+    tolerations:
+      - key: node-role.kubernetes.io/{{ .Config.role }}
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/{{ .Config.role }}
+        effect: NoExecute
+---
+{{- /* Pin the internal image registry onto infra nodes. */}}
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/{{ .Config.role }}: ""
+  tolerations:
+    - key: node-role.kubernetes.io/{{ .Config.role }}
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/{{ .Config.role }}
+      effect: NoExecute

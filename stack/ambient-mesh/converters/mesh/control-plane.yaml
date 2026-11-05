@@ -1,0 +1,48 @@
+{{- /* Istio CNI in ambient mode. */ -}}
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: {{ .Config.istioVersion | quote }}
+  profile: ambient
+  namespace: istio-cni
+  values:
+    cni:
+      ambient:
+        reconcileIptablesOnStartup: true
+---
+{{- /* Mesh control plane (ambient profile), exporting traces to the OTel collector. */}}
+{{- $cfg := .Config }}
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: {{ $cfg.istioVersion | quote }}
+  namespace: istio-system
+  profile: ambient
+  updateStrategy:
+    type: InPlace
+  values:
+    global:
+      platform: openshift
+    meshConfig:
+      enableTracing: {{ $cfg.tracing.enabled }}
+      extensionProviders:
+        - name: otel
+          opentelemetry:
+            port: 4317
+            service: {{ $cfg.tracing.collectorService }}
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+      resources:
+        requests: {{ toYaml $cfg.pilotRequests | nindent 10 }}
+---
+apiVersion: sailoperator.io/v1alpha1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  profile: ambient
+  namespace: ztunnel

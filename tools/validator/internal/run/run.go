@@ -17,7 +17,9 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v3"
+	sigsyaml "sigs.k8s.io/yaml"
 
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/acmtemplates"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
@@ -52,6 +54,13 @@ type Options struct {
 	// BaseBranch is the branch the checked-out HEAD lands on, such as a PR's base branch. POLICY052
 	// resolves a revision naming it to HEAD.
 	BaseBranch string
+	// Element, when set, checks and renders only the chart of that name, and keeps only its findings
+	// from the repo-wide checks, which still see every element. Cluster, when set, renders only the
+	// fleet file of that name.
+	Element, Cluster string
+	// Evaluate also writes, beside each render in RenderDir, <chart>.evaluated.yaml: the objects its
+	// ConfigurationPolicies apply, ACM templates resolved as POLICY081 does.
+	Evaluate bool
 }
 
 // Result aggregates the run output.
@@ -96,6 +105,15 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	// The chart and repo phases check each lifecycle component like any element.
 	all := append(slices.Clip(elements), lifecycle...)
+	selected := all
+	if opts.Element != "" {
+		named := func(el *chart.Element) bool { return el.ChartName != opts.Element }
+		elements, lifecycle = slices.DeleteFunc(slices.Clone(elements), named), slices.DeleteFunc(slices.Clone(lifecycle), named)
+		selected = slices.DeleteFunc(slices.Clone(all), named)
+		if len(selected) == 0 {
+			return Result{}, fmt.Errorf("--element %s: no such chart", opts.Element)
+		}
+	}
 
 	clusters, err := fixtures.LoadDir(opts.FixturesDir)
 	if err != nil {
@@ -103,6 +121,13 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	if len(clusters) == 0 {
 		opts.Logger.Warn("no fixture clusters found", "fixtures-dir", opts.FixturesDir)
+	}
+	renderFor := clusters
+	if opts.Cluster != "" {
+		renderFor = slices.DeleteFunc(slices.Clone(clusters), func(cl *fixtures.Cluster) bool { return cl.Name != opts.Cluster })
+		if len(renderFor) == 0 {
+			return Result{}, fmt.Errorf("--cluster %s: no such fleet file in %s", opts.Cluster, opts.FixturesDir)
+		}
 	}
 
 	runner := render.New(opts.HelmBin)
@@ -134,17 +159,25 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	// fail on a missing charts/policy-library-*.tgz. A failed fetch is a RENDER000, once per chart,
 	// and the chart is not rendered: Helm renders any archive in charts/ with the dependency's name,
 	// whatever its version.
-	for _, el := range all {
+	for _, el := range selected {
 		if err := runner.EnsureDeps(ctx, el.Dir); err != nil && !skipped("RENDER000", opts) {
 			addFindings([]checks.Finding{*depsFinding(el, err)})
 		}
 	}
 
-	// Phase 1: chart-wide checks (per element).
+	// A 3.x chart is only rendered and reported by POLICY031: every other check reads the 4.0 model.
+	v3 := map[string]bool{}
 	for _, el := range all {
+		if el.Values != nil && el.Values.Component != nil && el.Values.Component.V3 {
+			v3[el.ChartName] = true
+		}
+	}
+
+	// Phase 1: chart-wide checks (per element).
+	for _, el := range selected {
 		c := checks.Context{Element: el, Logger: opts.Logger}
 		for _, ck := range enabled {
-			if ck.Phase() != checks.PhaseChart {
+			if ck.Phase() != checks.PhaseChart || v3[el.ChartName] && ck.ID() != "POLICY031" {
 				continue
 			}
 			addFindings(ck.Run(c))
@@ -152,7 +185,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 
 	// Phase 2: per-cluster checks. One helm template per (element, fixture), run in parallel.
-	pairs := buildPairs(elements, lifecycle, clusters)
+	pairs := buildPairs(elements, lifecycle, renderFor)
 
 	// Rendered parent policy names per (namespace, cluster), for cross-element POLICY002.
 	type clusterKey struct {
@@ -181,11 +214,18 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 					mu.Unlock()
 				}
 			}
+			if opts.RenderDir != "" && opts.Evaluate && renderFinding == nil {
+				if err := writeEvaluated(opts, p, c.Rendered); err != nil {
+					mu.Lock()
+					writeErrs = append(writeErrs, err)
+					mu.Unlock()
+				}
+			}
 			if renderFinding != nil && !skipped("RENDER000", opts) {
 				addFindings([]checks.Finding{*renderFinding})
 			}
 			for _, ck := range enabled {
-				if ck.Phase() != checks.PhaseCluster {
+				if ck.Phase() != checks.PhaseCluster || v3[p.el.ChartName] {
 					continue
 				}
 				fs := ck.Run(c)
@@ -265,7 +305,10 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		if ck.Phase() != checks.PhaseRepo {
 			continue
 		}
-		addFindings(ck.Run(repoCtx))
+		fs := slices.DeleteFunc(ck.Run(repoCtx), func(f checks.Finding) bool {
+			return v3[f.Element] || opts.Element != "" && f.Element != opts.Element
+		})
+		addFindings(fs)
 	}
 
 	res.Findings = dedupe(res.Findings)
@@ -430,15 +473,58 @@ func writeRender(opts Options, p pair, out []byte, failed *checks.Finding) error
 	if len(bytes.TrimSpace(out)) == 0 {
 		return nil
 	}
-	rel, err := filepath.Rel(fx, p.cl.SourceFile)
+	path, err := renderPath(opts, p)
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(opts.RenderDir, strings.TrimSuffix(rel, ".yaml"), p.el.ChartName+".yaml")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 	return os.WriteFile(path, out, 0o644)
+}
+
+// renderPath is where writeRender writes p's render.
+func renderPath(opts Options, p pair) (string, error) {
+	rel, err := filepath.Rel(filepath.Clean(opts.FixturesDir), p.cl.SourceFile)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(opts.RenderDir, strings.TrimSuffix(rel, ".yaml"), p.el.ChartName+".yaml"), nil
+}
+
+// writeEvaluated writes, beside p's render, the objects its ConfigurationPolicies apply for p's
+// cluster, each headed by a comment naming its ConfigurationPolicy, after any template that fails as
+// a # POLICY081 comment. An object looking up one the cluster lacks is written as rendered. A
+// render with no ConfigurationPolicy writes nothing.
+func writeEvaluated(opts Options, p pair, rendered []byte) error {
+	objects, failures, err := acmtemplates.Resolve(rendered, p.cl.Name)
+	if err != nil || len(objects)+len(failures) == 0 {
+		return err
+	}
+	var b bytes.Buffer
+	for _, f := range failures {
+		fmt.Fprintf(&b, "# POLICY081 %s: %s\n", f.ConfigPolicy, strings.ReplaceAll(f.Err, "\n", " "))
+	}
+	for _, o := range objects {
+		note := ""
+		if o.Missing {
+			note = ", looks up an object the cluster lacks: as rendered"
+		}
+		if o.Definition == nil {
+			fmt.Fprintf(&b, "---\n# %s: object-templates-raw looks up an object the cluster lacks: see the rendered Policy\n", o.ConfigPolicy)
+			continue
+		}
+		y, err := sigsyaml.JSONToYAML(o.Definition)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(&b, "---\n# %s (%s%s)\n%s", o.ConfigPolicy, o.ComplianceType, note, y)
+	}
+	path, err := renderPath(opts, p)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(strings.TrimSuffix(path, ".yaml")+".evaluated.yaml", b.Bytes(), 0o644)
 }
 
 // depsFinding is the RENDER000 for a chart whose dependencies were not fetched. It has no

@@ -6,9 +6,9 @@ import (
 )
 
 func TestPolicy037_ProtectedObjects(t *testing.T) {
-	const values = "stack:\n  myElement:\n    enabled: true\n    policies:\n      - name: a\n    configPolicies:\n" +
-		"      - name: x\n        policyRef: a\n" + // line 7
-		"    operatorPolicies:\n      op:\n        policyRef: a\n" // line 11
+	const values = "stack:\n  myElement:\n    enabled: true\n    policies:\n      a:\n        templates:\n" +
+		"          x: {}\n" + // line 7
+		"    operatorPolicies:\n      op: {}\n" // line 9
 	// objects renders an object-templates spec under action.
 	objects := func(action string, ots ...string) string {
 		return "          remediationAction: " + action + "\n          object-templates:\n            - " + strings.Join(ots, "\n            - ") + "\n"
@@ -18,7 +18,7 @@ func TestPolicy037_ProtectedObjects(t *testing.T) {
 			", metadata: {namespace: '" + ns + "', name: '" + name + "'}}}"
 	}
 	x := func(spec string) string { return policyDoc("a", "", template("ConfigurationPolicy", "a-x", "", spec)) }
-	const msg = `configPolicies[0] "x": `
+	const msg = `policies.a.templates.x: `
 	cases := []struct {
 		name, rendered string
 		want           []want
@@ -27,9 +27,9 @@ func TestPolicy037_ProtectedObjects(t *testing.T) {
 		{"user-ca-bundle mustonlyhave", x(objects("enforce", ot("mustonlyhave", "v1", "ConfigMap", "openshift-config", "user-ca-bundle"))),
 			[]want{{SevError, msg + "mustonlyhave ConfigMap openshift-config/user-ca-bundle, which OpenShift owns: enforced, it replaces or deletes platform state. Use musthave, or InformOnly for a gate", inValues, 7}}},
 		// regression: dd0df35, mustnothave on an operator's namespace, which other operators share.
-		{"operator namespace mustnothave", policyDoc("a", "  remediationAction: enforce\n",
-			template("ConfigurationPolicy", "a-op-ns", "", objects("inform", ot("mustnothave", "v1", "Namespace", "", "openshift-gitops-operator")))),
-			[]want{{SevError, "operatorPolicies.op: mustnothave Namespace openshift-gitops-operator, which OpenShift owns", inValues, 11}}},
+		{"operator namespace mustnothave", policyDoc("install", "  remediationAction: enforce\n",
+			template("ConfigurationPolicy", "install-op-ns", "", objects("inform", ot("mustnothave", "v1", "Namespace", "", "openshift-gitops-operator")))),
+			[]want{{SevError, "operatorPolicies.op: mustnothave Namespace openshift-gitops-operator, which OpenShift owns", inValues, 9}}},
 		{"inform counts", x(objects("inform", ot("MustNotHave", "config.openshift.io/v1", "ClusterVersion", "", "version"))),
 			[]want{{SevError, msg + "MustNotHave ClusterVersion version", inValues, 7}}},
 		{"every protected object", x(objects("enforce",

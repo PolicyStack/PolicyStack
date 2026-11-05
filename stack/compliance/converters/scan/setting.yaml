@@ -1,0 +1,64 @@
+{{- /* Default ScanSetting. Raw result storage is optional and its class varies per cluster. */ -}}
+{{- $cfg := .Config }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ScanSetting
+    metadata:
+      name: default
+      namespace: {{ .Config.namespace }}
+    rawResultStorage:
+      enabled: {{ $cfg.rawResultStorage.enabled }}
+      {{- with $cfg.rawResultStorage.storageClass }}
+      storageClassName: {{ . }}
+      {{- end }}
+{{- /* Lets the remediation aggregator patch ComplianceRemediation objects. */}}
+- complianceType: musthave
+  objectDefinition:
+    kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: compliance-operator-agg-patch-role
+      namespace: {{ .Config.namespace }}
+    rules:
+      - apiGroups:
+          - compliance.openshift.io
+        resources:
+          - complianceremediations
+          - complianceremediations/status
+        verbs: [create, get, update, patch, delete]
+- complianceType: musthave
+  objectDefinition:
+    kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: compliance-operator-agg-patch-rolebinding
+      namespace: {{ .Config.namespace }}
+    subjects:
+      - kind: ServiceAccount
+        name: remediation-aggregator
+        namespace: {{ .Config.namespace }}
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: compliance-operator-agg-patch-role
+{{- /* Binds the configured profiles to the ScanSetting. The binding starts the scan. */}}
+{{- /* musthave would merge lists and keep a removed profile bound */}}
+- complianceType: mustonlyhave
+  metadataComplianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ScanSettingBinding
+    metadata:
+      name: {{ .Config.binding }}
+      namespace: {{ .Config.namespace }}
+    profiles:
+      {{- range $p := $cfg.profiles }}
+      - apiGroup: compliance.openshift.io/v1alpha1
+        kind: Profile
+        name: {{ $p }}
+      {{- end }}
+    settingsRef:
+      apiGroup: compliance.openshift.io/v1alpha1
+      kind: ScanSetting
+      name: default

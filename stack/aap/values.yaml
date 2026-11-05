@@ -2,15 +2,6 @@ stack:
   aap:
     enabled: false
 
-    toggles:
-      # Request a NooBaa bucket from ODF and wire it up as hub content storage.
-      # Requires odf on the same cluster.
-      storage: false
-      # Give AAP the cluster service CA and trusted CA bundle
-      certs: false
-      # Publish an OpenShift console link to AAP
-      link: true
-
     config:
       # Redis topology: standalone or cluster
       redisMode: standalone
@@ -32,7 +23,7 @@ stack:
         disabled: false
         # Hub content storage
         storage:
-          # none, file (RWX PVC), or s3 (NooBaa bucket via the storage toggle)
+          # none, file (RWX PVC), or s3 (NooBaa bucket via the storage policy)
           type: none
           # PVC size when type is file
           size: 10Gi
@@ -42,6 +33,8 @@ stack:
       customCaBundle: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -50,62 +43,56 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the Ansible Automation Platform operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      - name: certs
-        enabled: true
+      # Give AAP the cluster service CA and trusted CA bundle
+      certs:
+        enabled: false
         description: "CA bundle for AAP"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          ca-bundle:
+            description: "Service CA and trusted CA bundle for AAP"
 
-      # NooBaa-backed object storage for Automation Hub content. The bucket comes
-      # from ODF, so this waits for the storage cluster to be usable.
-      - name: storage
-        enabled: true
+      # NooBaa bucket from ODF wired up as hub content storage. Requires odf on the
+      # same cluster and waits for its storage cluster to be usable.
+      storage:
+        enabled: false
         description: "Object storage for Automation Hub content"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
           - name: ready
             element: odf
+        templates:
+          bucket:
+            description: "NooBaa bucket and the S3 secret AAP consumes"
 
-      - name: instance
-        enabled: true
+      instance:
         description: "Deploy the AnsibleAutomationPlatform instance"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          platform:
+            description: "AnsibleAutomationPlatform instance"
+            complianceType: mustonlyhave
+            waitForOperator: aap
 
-      - name: link
-        enabled: true
+      # Publish an OpenShift console link to AAP
+      link:
         description: "Console link to AAP"
-        remediationAction: enforce
         severity: low
-        disabled: false
         dependencies:
           - name: instance
+        templates:
+          aap-console:
+            description: "AAP console link"
 
     operatorPolicies:
       aap:
-        enabled: true
         description: "Ansible Automation Platform operator"
         displayName: "Ansible Automation Platform"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: ansible-automation-platform
         operatorGroup:
           name: ansible-automation-platform
@@ -114,76 +101,4 @@ stack:
         subscription:
           channel: stable-2.7
           name: ansible-automation-platform-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: ca-bundle
-        enabled: true
-        description: "Service CA and trusted CA bundle for AAP"
-        policyRef: certs
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: aap-service-ca
-          - name: aap-trusted-ca
-          - name: aap-ca-bundle
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: ansible-automation-platform
-          serviceCaName: aap-service-ca
-          trustedCaName: aap-trusted-ca
-          caBundleSecret: user-ca-bundle
-
-      - name: bucket
-        enabled: true
-        description: "NooBaa bucket and the S3 secret AAP consumes"
-        policyRef: storage
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: aap-bucketclaim
-          - name: aap-s3-secret
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: ansible-automation-platform
-          bucketName: aap-bucket-odf
-          bucketStorageClass: openshift-storage.noobaa.io
-          s3Secret: s3-aap-odf
-
-      - name: platform
-        enabled: true
-        description: "AnsibleAutomationPlatform instance"
-        policyRef: instance
-        complianceType: mustonlyhave
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: aap
-        ignorePending: true
-        templateNames:
-          - name: aap-instance
-        enableTemplateParameters: true
-        templateParameters:
-          name: aap
-          namespace: ansible-automation-platform
-          s3Secret: s3-aap-odf
-          caBundleSecret: user-ca-bundle
-
-      - name: aap-console
-        enabled: true
-        description: "AAP console link"
-        policyRef: link
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: aap-console-link
-        enableTemplateParameters: true
-        templateParameters:
-          name: aap
-          namespace: ansible-automation-platform
-          imageUrl: https://www.ansible.com/hubfs/Ansible_AutomationPlatform_icon.svg

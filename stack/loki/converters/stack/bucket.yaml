@@ -1,0 +1,26 @@
+{{- /* NooBaa bucket from ODF, used as LokiStack's object store. */ -}}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: loki-bucket-odf
+  namespace: openshift-logging
+spec:
+  generateBucketName: loki-bucket-odf
+  storageClassName: openshift-storage.noobaa.io
+---
+{{- /*
+Reshapes the ObjectBucketClaim's generated Secret and ConfigMap into the s3 secret LokiStack expects.
+The OBC controller creates both on the managed cluster, so these reads stay ACM templating.
+*/}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: logging-loki-odf
+  namespace: openshift-logging
+type: Opaque
+stringData:
+  access_key_id: '{{ "{{" }} fromSecret "openshift-logging" "loki-bucket-odf" "AWS_ACCESS_KEY_ID" | base64dec {{ "}}" }}'
+  access_key_secret: '{{ "{{" }} fromSecret "openshift-logging" "loki-bucket-odf" "AWS_SECRET_ACCESS_KEY" | base64dec {{ "}}" }}'
+  bucketnames: '{{ "{{" }} fromConfigMap "openshift-logging" "loki-bucket-odf" "BUCKET_NAME" {{ "}}" }}'
+  region: '{{ "{{" }} fromConfigMap "openshift-logging" "loki-bucket-odf" "BUCKET_REGION" {{ "}}" }}'
+  endpoint: 'https://{{ "{{" }} fromConfigMap "openshift-logging" "loki-bucket-odf" "BUCKET_HOST" {{ "}}" }}:{{ "{{" }} fromConfigMap "openshift-logging" "loki-bucket-odf" "BUCKET_PORT" {{ "}}" }}'

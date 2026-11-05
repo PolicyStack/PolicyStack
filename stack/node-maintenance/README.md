@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,7 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-node-maintenance-<cluster>`: Install and manage the Node Maintenance Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-node-maintenance-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to operator namespace |
-| `install-node-maintenance` | enforce | [operator](#operators) `node-maintenance-operator` | Node Maintenance Operator (Workload Availability) |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-node-maintenance` | enforce | medium | [operator](#operators) `node-maintenance-operator` | Node Maintenance Operator (Workload Availability) |

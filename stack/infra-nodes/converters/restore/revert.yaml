@@ -1,0 +1,32 @@
+{{- /*
+Move the platform components back off infra nodes.
+
+ACM does not revert objects when a policy is removed, so disabling the `workloads` policy leaves the
+infra placement in place. This reverses it: each object is read on the managed cluster and only its
+placement fields are cleared.
+*/ -}}
+{{- $cfg := .Config }}
+{{- $policies := .Values.stack.infraNodes.policies }}
+{{- if and (include "policy-library.enabled" $policies.workloads) (include "policy-library.enabled" $policies.restore) }}
+  {{- fail "stack.infraNodes.policies.workloads and .restore are opposites - enabling both makes two policies fight over the same objects. Disable workloads before enabling restore." }}
+{{- end }}
+{{ "{{" }}- $gitops := (lookup "pipelines.openshift.io/v1alpha1" "GitopsService" "{{ $cfg.gitopsNamespace }}" "cluster") | default dict {{ "}}" }}
+{{ "{{" }}- if $gitops {{ "}}" }}
+{{ "{{" }}- $spec := set (unset ($gitops.spec | default dict) "tolerations") "runOnInfra" false {{ "}}" }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    {{ "{{" }} (set (unset $gitops "status") "spec" $spec) | toYaml | autoindent {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $ic := (lookup "operator.openshift.io/v1" "IngressController" "openshift-ingress-operator" "default") | default dict {{ "}}" }}
+{{ "{{" }}- if $ic {{ "}}" }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    {{ "{{" }} (set (unset $ic "status") "spec" (unset ($ic.spec | default dict) "nodePlacement")) | toYaml | autoindent {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $reg := (lookup "imageregistry.operator.openshift.io/v1" "Config" "" "cluster") | default dict {{ "}}" }}
+{{ "{{" }}- if $reg {{ "}}" }}
+{{ "{{" }}- $regSpec := unset (unset ($reg.spec | default dict) "nodeSelector") "tolerations" {{ "}}" }}
+- complianceType: mustonlyhave
+  objectDefinition:
+    {{ "{{" }} (set (unset $reg "status") "spec" $regSpec) | toYaml | autoindent {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

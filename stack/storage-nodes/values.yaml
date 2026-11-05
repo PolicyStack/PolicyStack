@@ -2,19 +2,13 @@ stack:
   storageNodes:
     enabled: false
 
-    # Exactly one platform toggle should be on. Set these in values/platforms/<p>.yaml
-    # and select the file with a platform.<N> config entry in the fleet file.
-    toggles:
-      # Create storage MachineSets by cloning the worker MachineSet (AWS)
-      aws: false
-      # Clone each worker MachineSet per vSphere failure domain
-      vmware: false
-      # Label existing nodes as storage nodes (no MachineSets on bare metal)
-      baremetal: false
-      # Report NonCompliant until the storage nodes are ready
-      ready: true
-
     config:
+      # Node role: names the MachineSets
+      role: storage
+      # Labels set on storage nodes
+      nodeLabels:
+        node-role.kubernetes.io/infra: ""
+        cluster.ocs.openshift.io/openshift-storage: ""
       # Storage nodes per zone. ODF expects three for a supported topology.
       replicas: 3
       # AWS availability zones. Empty uses the zone of the cloned worker MachineSet.
@@ -34,6 +28,8 @@ stack:
       nodes: []
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -41,113 +37,47 @@ stack:
       standards:
         - NIST SP 800-53
 
+    # Exactly one platform policy should be enabled. Set it in values/platforms/<p>.yaml,
+    # listed in the cluster's fleet file.
     policies:
-      - name: aws
-        enabled: true
+      # Create storage MachineSets by cloning the worker MachineSet (AWS)
+      aws:
+        enabled: false
         description: "Storage MachineSets on AWS"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          storage-machinesets:
+            description: "Storage MachineSets cloned from the worker MachineSet"
 
-      - name: vmware
-        enabled: true
+      # Clone each worker MachineSet per vSphere failure domain
+      vmware:
+        enabled: false
         description: "Storage MachineSets on vSphere"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          storage-machinesets:
+            description: "Storage MachineSets per vSphere failure domain"
 
-      - name: baremetal
-        enabled: true
+      # Label existing nodes as storage nodes (no MachineSets on bare metal)
+      baremetal:
+        enabled: false
         description: "Storage node labels on bare metal"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
+        templates:
+          labels:
+            description: "Storage node labels"
 
-      # odf and local-storage depend on this
-      # policy by name, so it is the readiness gate for the whole storage stack.
-      - name: ready
-        enabled: true
+      # Report NonCompliant until the storage nodes are ready. odf and local-storage
+      # depend on this policy by name, so it is the readiness gate for the whole storage
+      # stack.
+      ready:
         description: "Reports NonCompliant until the storage nodes are ready"
         remediationAction: inform
-        severity: medium
-        disabled: false
+        templates:
+          storage-replicas:
+            description: "Storage MachineSet readiness"
+            remediationAction: InformOnly
 
-    configPolicies:
-      - name: storage-machinesets
-        enabled: true
-        description: "Storage MachineSets cloned from the worker MachineSet"
-        policyRef: aws
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-aws
-        enableTemplateParameters: true
-        templateParameters: &storageParams
-          role: storage
-          namespace: openshift-machine-api
-          nodeLabels:
-            node-role.kubernetes.io/infra: ""
-            cluster.ocs.openshift.io/openshift-storage: ""
-
-      - name: storage-machinesets
-        enabled: true
-        description: "Storage MachineSets per vSphere failure domain"
-        policyRef: vmware
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-vmware
-        enableTemplateParameters: true
-        templateParameters: *storageParams
-
-      - name: labels
-        enabled: true
-        description: "Storage node labels"
-        policyRef: baremetal
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: storage-label-nodes
-        enableTemplateParameters: true
-        templateParameters: *storageParams
-
-      - name: storage-replicas
-        enabled: true
-        description: "Storage MachineSet readiness"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: machineset-ready
-        enableTemplateParameters: true
-        templateParameters: *storageParams
-
-      # Readiness for the label-existing-nodes path, where no storage MachineSets
-      # exist and machineset-ready would report Compliant with nothing checked.
-      # Asserts that config.replicas nodes carry the storage label.
-      - name: labeled-nodes
-        enabled: true
-        description: "config.replicas nodes are designated for storage"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: labeled-nodes-ready
-        enableTemplateParameters: true
-        templateParameters:
-          role: storage
-          namespace: openshift-machine-api
-          readyLabel: cluster.ocs.openshift.io/openshift-storage
-          nodeLabels:
-            node-role.kubernetes.io/infra: ""
-            cluster.ocs.openshift.io/openshift-storage: ""
+          # Readiness for the label-existing-nodes path, where no storage MachineSets
+          # exist and storage-replicas would report Compliant with nothing checked.
+          # Asserts that config.replicas nodes carry the storage label.
+          labeled-nodes:
+            description: "config.replicas nodes are designated for storage"
+            remediationAction: InformOnly

@@ -17,11 +17,16 @@ install:
 
 stack:
   infraNodes:
-    toggles:
-      aws: false
-      vmware: false
+    policies:
+      aws:
+        enabled: false
+      vmware:
+        enabled: false
   storageNodes:
-    toggles:
-      aws: false
-      vmware: false
-      baremetal: true
+    policies:
+      aws:
+        enabled: false
+      vmware:
+        enabled: false
+      baremetal:
+        enabled: true

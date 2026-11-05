@@ -1,0 +1,13 @@
+{{- /* Lists every result of a waived rule, so its current status stays visible. Never a violation. */ -}}
+{{ "{{" }}- $waived := {{ include "compliance.waivedRules" . }} {{ "}}" }}
+{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
+{{ "{{" }}- if has (dig "metadata" "annotations" "compliance.openshift.io/rule" "" .) $waived {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceCheckResult
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ .Config.namespace }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

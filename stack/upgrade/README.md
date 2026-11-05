@@ -11,17 +11,6 @@ stack:
     enabled: true
 ```
 
-## Toggles
-
-The fleet file's `version` and `channel` drive the upgrade (docs/upgrades.md). Each policy renders only when its input is set; turning a toggle off pauses it.
-
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `channel` | Pin the ClusterVersion channel and upstream; off pauses both | `true` | Policy [`channel`](#policy-channel) |
-| `upgrade` | Drive the cluster to the fleet file's version, and report on progress | `true` | Policy [`upgrade`](#policy-upgrade) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
-
 ## Settings
 
 Upgrade graph
@@ -42,16 +31,16 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `channel-upgrade-<cluster>`: Pin the cluster upgrade channel.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `channel-pin` | enforce | [channel](converters/channel.yaml) | ClusterVersion channel |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `channel-pin` | enforce | medium | [pin](converters/channel/pin.yaml) | ClusterVersion channel |
 
 ### Policy `upgrade`
 
 `upgrade-upgrade-<cluster>`: Drive the cluster to the target version and report on progress.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `upgrade-guard` | inform (always) |  | [upgrade-allowed](converters/upgrade-allowed.yaml) (mustnothave) | Target version reachability |
-| `upgrade-trigger` | enforce | `upgrade-guard`<br>compliant while pending | [clusterversion](converters/clusterversion.yaml) | ClusterVersion desiredUpdate |
-| `upgrade-progress` | inform (always) | `upgrade-trigger`<br>compliant while pending | [upgrade-status](converters/upgrade-status.yaml) (mustnothave) | Upgrade completion |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `upgrade-guard` | inform (always) | high |  | [guard](converters/upgrade/guard.yaml) (mustnothave) | Target version reachability |
+| `upgrade-progress` | inform (always) | medium | `upgrade-trigger`<br>compliant while pending | [progress](converters/upgrade/progress.yaml) (mustnothave) | Upgrade completion |
+| `upgrade-trigger` | enforce | high | `upgrade-guard`<br>compliant while pending | [trigger](converters/upgrade/trigger.yaml) | ClusterVersion desiredUpdate |

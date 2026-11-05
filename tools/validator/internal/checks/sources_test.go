@@ -16,13 +16,8 @@ func TestPolicy038_CatalogSources(t *testing.T) {
 stack:
   myElement:
     enabled: true
-    policies:
-      - name: install
-        enabled: true
     operatorPolicies:
       my-op:
-        enabled: true
-        policyRef: install
         subscription:
           name: my-op
           source: `+source+`
@@ -33,11 +28,12 @@ stack:
 		want                []string // "<file>:<line>", file "values" or "layer"
 	}{
 		{name: "default catalog", source: "redhat-operators"},
+		{name: "unset is redhat-operators", source: ""},
 		{name: "certified", source: "certified-operators"},
 		{name: "templated", source: `'{{ "{{hub" }} .ManagedClusterName {{ "hub}}" }}'`},
-		{name: "regression: 929c474", source: "redhat-operator-index", want: []string{"values:14"}},
+		{name: "regression: 929c474", source: "redhat-operator-index", want: []string{"values:9"}},
 		{name: "declared by a layer", source: "my-catalog", layer: "global:\n  catalogSources:\n    my-catalog: cs-my-catalog\n"},
-		{name: "a mapped name is not a source", source: "cs-my-catalog", layer: "global:\n  catalogSources:\n    my-catalog: cs-my-catalog\n", want: []string{"values:14"}},
+		{name: "a mapped name is not a source", source: "cs-my-catalog", layer: "global:\n  catalogSources:\n    my-catalog: cs-my-catalog\n", want: []string{"values:9"}},
 		{
 			name: "layer override", source: "redhat-operators",
 			layer: "stack:\n  myElement:\n    operatorPolicies:\n      my-op:\n        subscription:\n          source: community-operator\n",

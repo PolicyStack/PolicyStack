@@ -23,6 +23,8 @@ stack:
       osImages: {}
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CM Configuration Management
       controls:
@@ -33,76 +35,32 @@ stack:
     # No pruneObjectBehavior: deleting the AgentServiceConfig deletes the assisted-service volumes,
     # and deleting Provisioning removes metal3.
     policies:
-      - name: hub
-        enabled: true
+      hub:
         description: "Provisioning, AgentServiceConfig and the SiteConfig component"
-        remediationAction: enforce
-        severity: high
-        disabled: false
+        templates:
+          # Watch BareMetalHosts in every namespace. A hub without the CR gets one with no provisioning
+          # network; an existing CR keeps its network settings.
+          cim-provisioning:
+            description: "Provisioning provisioning-configuration"
+
+          # Renders nothing unless the hub's layers set stack.disconnected.config mirrors or trustedCA
+          cim-mirror:
+            description: "Mirror registries and OS image CA for the assisted service"
+
+          cim-agent:
+            description: "AgentServiceConfig agent"
+
+          cim-siteconfig:
+            description: "MultiClusterHub siteconfig component"
 
       # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
-      - name: ready
-        enabled: true
+      ready:
         description: "Reports NonCompliant until metal3, the assisted service and SiteConfig run"
+        remediationAction: inform
         severity: medium
-        disabled: false
         dependencies:
           - name: hub
-
-    configPolicies:
-      # Watch BareMetalHosts in every namespace. A hub without the CR gets one with no provisioning
-      # network; an existing CR keeps its network settings.
-      - name: cim-provisioning
-        enabled: true
-        description: "Provisioning provisioning-configuration"
-        policyRef: hub
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: cim-provisioning
-
-      # Renders nothing unless the hub's layers set stack.disconnected.config mirrors or trustedCA
-      - name: cim-mirror
-        enabled: true
-        description: "Mirror registries and OS image CA for the assisted service"
-        policyRef: hub
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: cim-mirror
-
-      - name: cim-agent
-        enabled: true
-        description: "AgentServiceConfig agent"
-        policyRef: hub
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        templateNames:
-          - name: cim-agent
-
-      - name: cim-siteconfig
-        enabled: true
-        description: "MultiClusterHub siteconfig component"
-        policyRef: hub
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: cim-siteconfig
-
-      - name: cim-health
-        enabled: true
-        description: "metal3, the AgentServiceConfig and the SiteConfig controller"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: cim-health
+        templates:
+          cim-health:
+            description: "metal3, the AgentServiceConfig and the SiteConfig controller"
+            remediationAction: InformOnly

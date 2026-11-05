@@ -77,6 +77,13 @@ func TestPolicy071_Install(t *testing.T) {
 			want: []string{"hubName is not required"},
 		},
 		{
+			name: "operators take policy-library's defaults",
+			mutate: func(t *testing.T, root string) {
+				write(t, filepath.Join(root, "stack/gitops/values.yaml"),
+					"stack:\n  gitops:\n    operatorPolicies:\n      gitops:\n        namespace: openshift-gitops-operator\n        subscription: {name: openshift-gitops-operator, channel: latest}\n")
+			},
+		},
+		{
 			name: "operators render without the gitops values",
 			mutate: func(t *testing.T, root string) {
 				write(t, filepath.Join(root, "stack/gitops/values.yaml"), "stack: {}\n")

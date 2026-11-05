@@ -1,0 +1,23 @@
+{{- /*
+Sets spec.apply from config.remediations. Only touches objects that exist, because enforcing a
+missing name would create an empty remediation that ACM reports as Compliant. remediation-state
+reports the missing names.
+*/ -}}
+{{ include "compliance.scansDone" . }}
+{{ "{{" }}- if $done {{ "}}" }}
+{{- range $name, $apply := .Config.remediations }}
+{{- if kindIs "bool" $apply }}
+{{ "{{" }}- if lookup "compliance.openshift.io/v1alpha1" "ComplianceRemediation" "{{ $.Config.namespace }}" "{{ $name }}" {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceRemediation
+    metadata:
+      name: {{ $name }}
+      namespace: {{ $.Config.namespace }}
+    spec:
+      apply: {{ $apply }}
+{{ "{{" }}- end {{ "}}" }}
+{{- end }}
+{{- end }}
+{{ "{{" }}- end {{ "}}" }}

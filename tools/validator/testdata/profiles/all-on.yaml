@@ -1,32 +1,45 @@
-# POLICY081 coverage: every element and toggle on, so CI evaluates every converter's ACM
-# templates. A new element or toggle goes here; TestProfileCoverage fails until it does.
+# POLICY081 coverage: every element and policy on, so CI evaluates every converter's ACM
+# templates. A new element or enabled: false entry goes here; TestProfileCoverage fails until it does.
 stack:
   acm:
     enabled: true
-    toggles:
-      observability: true
-      search: true
-      addons: true
+    policies:
+      observability:
+        enabled: true
+      search:
+        enabled: true
+      addons:
+        enabled: true
   acs:
     enabled: true
-    toggles:
-      central: true
-      secured: true
-      console: true
+    policies:
+      central:
+        enabled: true
+        templates:
+          console:
+            enabled: true
+      secured:
+        enabled: true
   cim:
     enabled: true
   aap:
     enabled: true
-    toggles:
-      storage: true
-      certs: true
-      link: true
+    policies:
+      storage:
+        enabled: true
+      certs:
+        enabled: true
+      link:
+        enabled: true
   certManager:
     enabled: true
-    toggles:
-      ca: true
-      api-cert: true
-      ingress-cert: true
+    policies:
+      ca:
+        enabled: true
+      api-cert:
+        enabled: true
+      ingress-cert:
+        enabled: true
   coo:
     enabled: true
   developerHub:
@@ -41,39 +54,52 @@ stack:
       teams: {dev: {}}
   infraNodes:
     enabled: true
-    toggles:
-      mcp: true
-      config: true
-      aws: true
-      vmware: true
-      ready: true
-      workloads: true
-      restore: false
+    policies:
+      mcp:
+        enabled: true
+      config:
+        enabled: true
+      aws:
+        enabled: true
+      vmware:
+        enabled: true
+      ready:
+        enabled: true
+      workloads:
+        enabled: true
+      restore:
+        enabled: false
   kiali:
     enabled: true
   localStorage:
     enabled: true
   loki:
     enabled: true
-    toggles:
-      forwarder: true
-      observability-ui: true
+    policies:
+      forwarder:
+        enabled: true
+      observability-ui:
+        enabled: true
   lvm:
     enabled: true
   machineHealth:
     enabled: true
   remediations:
     enabled: true
-    toggles:
-      registries: true
-      samples: true
+    policies:
+      registries:
+        enabled: true
+      samples:
+        enabled: true
   masterNodes:
     enabled: true
   metallb:
     enabled: true
-    toggles:
-      quota: true
-      addressing: true
+    policies:
+      quota:
+        enabled: true
+      addressing:
+        enabled: true
     config:
       ipAddressPools: {internal: {addresses: [192.168.100.1-192.168.100.20]}}
       l2Advertisements: {internal: {ipAddressPools: [internal]}}
@@ -83,8 +109,9 @@ stack:
     enabled: true
   nmstate:
     enabled: true
-    toggles:
-      nncp: true
+    policies:
+      nncp:
+        enabled: true
     config:
       networking:
         interfaces:
@@ -100,56 +127,75 @@ stack:
     enabled: true
   compliance:
     enabled: true
-    toggles:
-      remediate: true
+    policies:
+      remediate:
+        enabled: true
   odf:
     enabled: true
-    toggles:
-      noobaa-pvpool: true
-      pdb-alert: true
+    policies:
+      config:
+        templates:
+          noobaa-pvpool:
+            enabled: true
+          pdb-alert:
+            enabled: true
   dns:
     enabled: true
   gitops:
     enabled: true
-    toggles:
-      instance: true
-      ca-bundle: true
-      link: true
+    policies:
+      instance:
+        enabled: true
+        templates:
+          ca-bundle:
+            enabled: true
+      link:
+        enabled: true
   imageRegistry:
     enabled: true
-    toggles:
-      pvc: true
-      s3: true
+    policies:
+      pvc:
+        enabled: true
+      s3:
+        enabled: true
   logging:
     enabled: true
   pipelines:
     enabled: true
   upgrade:
     enabled: true
-    toggles:
-      channel: true
-      upgrade: true
+    policies:
+      channel:
+        enabled: true
+      upgrade:
+        enabled: true
   virtualization:
     enabled: true
   opentelemetry:
     enabled: true
   quay:
     enabled: true
-    toggles:
-      configure: true
+    policies:
+      configure:
+        enabled: true
   ambientMesh:
     enabled: true
-    toggles:
-      tracing: true
+    policies:
+      tracing:
+        enabled: true
   servicemesh:
     enabled: true
   storageNodes:
     enabled: true
-    toggles:
-      aws: true
-      vmware: true
-      baremetal: true
-      ready: true
+    policies:
+      aws:
+        enabled: true
+      vmware:
+        enabled: true
+      baremetal:
+        enabled: true
+      ready:
+        enabled: true
   tempo:
     enabled: true
   artifactSigner:
@@ -158,10 +204,13 @@ stack:
     enabled: true
   workerNodes:
     enabled: true
-    toggles:
-      config: true
-      machines: true
-      ready: true
+    policies:
+      config:
+        enabled: true
+      machines:
+        enabled: true
+      ready:
+        enabled: true
   partitioning:
     enabled: true
     config:
@@ -169,11 +218,15 @@ stack:
       isolatedCpus: 2-31
   disconnected:
     enabled: true
-    toggles:
-      resources: true
-      registry-ca: true
-      trusted-ca: true
-      operatorhub: true
+    policies:
+      resources:
+        enabled: true
+      registry-ca:
+        enabled: true
+      trusted-ca:
+        enabled: true
+      operatorhub:
+        enabled: true
     config:
       clusterResources:
         - apiVersion: operators.coreos.com/v1alpha1
@@ -190,3 +243,8 @@ stack:
   # tools/sample-element, rendered with --include-sample-element
   myElement:
     enabled: true
+    policies:
+      install:
+        templates:
+          my-element-netpol:
+            enabled: true

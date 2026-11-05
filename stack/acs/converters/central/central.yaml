@@ -1,0 +1,65 @@
+{{- /* Declarative auth provider config, mounted by Central. */ -}}
+{{- $auth := .Config.auth }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acs-declarative-configs
+  namespace: stackrox
+data:
+  auth-provider.yaml: |
+    name: OpenShift
+    minimumRole: {{ $auth.minimumRole | quote }}
+    openshift:
+      enable: true
+    groups:
+      - key: groups
+        value: {{ $auth.adminGroup | quote }}
+        role: Admin
+---
+{{- /*
+The Central CR, rendered entirely from values (no hub-side ConfigMap lookup).
+*/}}
+{{- $cfg := .Config }}
+apiVersion: platform.stackrox.io/v1alpha1
+kind: Central
+metadata:
+  name: stackrox-central-services
+  namespace: stackrox
+spec:
+  egress:
+    connectivityPolicy: {{ $cfg.egressConnectivity }}
+  central:
+    exposure:
+      route:
+        enabled: true
+      loadBalancer:
+        enabled: false
+        port: 443
+      nodePort:
+        enabled: false
+    persistence:
+      persistentVolumeClaim:
+        claimName: stackrox-db
+    {{- if $cfg.auth.provider }}
+    declarativeConfiguration:
+      configMaps:
+        - name: acs-declarative-configs
+    {{- end }}
+  scanner:
+    analyzer:
+      scaling:
+        autoScaling: Enabled
+        minReplicas: {{ $cfg.scanner.minReplicas }}
+        maxReplicas: {{ $cfg.scanner.maxReplicas }}
+        replicas: {{ $cfg.scanner.replicas }}
+  scannerV4:
+    scannerComponent: {{ $cfg.scannerV4 }}
+  {{- with $cfg.networkPolicies }}
+  network:
+    policies: {{ . }}
+  {{- end }}
+  {{- if not (kindIs "invalid" $cfg.monitoring) }}
+  monitoring:
+    openshift:
+      enabled: {{ $cfg.monitoring }}
+  {{- end }}

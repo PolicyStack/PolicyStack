@@ -118,50 +118,38 @@ func (c *CRDSchemaCheck) Run(ctx Context) []Finding {
 }
 
 // entry names the entry of comp, el's component, that renders the object kind/name for release,
-// and returns its path under stack.<key>, or nil when no entry does.
-func entry(comp *chart.Component, el *chart.Element, release, kind, name string) (string, []string) {
-	suffix, _ := strings.CutPrefix(release, el.ChartName+"-")
-	// Template objects are named <policyRef>-<name>, plus the release suffix under suffixTemplateNames.
-	sub := func(ref, n string) bool { b := ref + "-" + n; return name == b || name == b+"-"+suffix }
+// and returns its path under stack.<key> and, for a template, its converters. The path is nil when
+// no entry does.
+func entry(comp *chart.Component, el *chart.Element, release, kind, name string) (string, []string, []string) {
 	switch kind {
 	case "Policy":
-		for i, p := range comp.Policies {
-			if p.Name+"-"+release == name {
-				return fmt.Sprintf("policies[%d] %q", i, p.Name), []string{"policies", strconv.Itoa(i)}
-			}
+		if p := comp.Policies[strings.TrimSuffix(name, "-"+release)]; p != nil {
+			return strings.Join(p.Path, "."), p.Path, nil
 		}
 	case "PolicySet":
 		for i, p := range comp.PolicySets {
 			if p.Name+"-"+release == name {
-				return fmt.Sprintf("policySets[%d] %q", i, p.Name), []string{"policySets", strconv.Itoa(i)}
+				return fmt.Sprintf("policySets[%d] %q", i, p.Name), []string{"policySets", strconv.Itoa(i)}, nil
 			}
 		}
-	case "ConfigurationPolicy":
-		for i, p := range comp.ConfigPolicies {
-			if sub(p.PolicyRef, p.Name) {
-				return fmt.Sprintf("configPolicies[%d] %q", i, p.Name), []string{"configPolicies", strconv.Itoa(i)}
-			}
-		}
-		// An operator policy's namespace and status templates.
-		for _, s := range []string{"-ns", "-status"} {
-			if n, ok := strings.CutSuffix(name, s); ok {
-				return entry(comp, el, release, "OperatorPolicy", n)
-			}
-		}
-	case "OperatorPolicy":
-		for k, p := range comp.OperatorPolicies.Sorted() {
-			if sub(p.PolicyRef, k) {
-				return "operatorPolicies." + k, []string{"operatorPolicies", k}
-			}
-		}
-	case "CertificatePolicy":
-		for i, p := range comp.CertificatePolicies {
-			if sub(p.PolicyRef, p.Name) {
-				return fmt.Sprintf("certificatePolicies[%d] %q", i, p.Name), []string{"certificatePolicies", strconv.Itoa(i)}
-			}
+	default:
+		if s := renders(comp, el, release, kind, name); s != nil {
+			return s.Where(), s.Path, s.Files
 		}
 	}
-	return "", nil
+	return "", nil, nil
+}
+
+// renders returns the policy-template of comp rendered as the object kind/name for release, nil when
+// none is. Template objects carry the release's cluster suffix under suffixTemplateNames.
+func renders(comp *chart.Component, el *chart.Element, release, kind, name string) *chart.SubPolicy {
+	suffix, _ := strings.CutPrefix(release, el.ChartName+"-")
+	for _, s := range comp.SubPolicies() {
+		if s.Kind == kind && (name == s.Name || name == s.Name+"-"+suffix) {
+			return &s
+		}
+	}
+	return nil
 }
 
 // leafField matches the last field name of the path an error starts with.

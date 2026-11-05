@@ -18,6 +18,8 @@ stack:
       evictionMemory: 500Mi
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -26,25 +28,8 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      config:
         description: "Control-plane kubelet configuration"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: master-kubelet
-        enabled: true
-        description: "KubeletConfig for the master pool"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # podsPerCore is derived from the node's real CPU count on the managed cluster
-        rawTemplate: true
-        templateNames:
-          - name: node-kubelet-config
-        enableTemplateParameters: true
-        templateParameters:
-          role: master
+        templates:
+          master-kubelet:
+            description: "KubeletConfig for the master pool"

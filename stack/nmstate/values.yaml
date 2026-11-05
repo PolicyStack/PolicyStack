@@ -2,12 +2,6 @@ stack:
   nmstate:
     enabled: false
 
-    # NNCP generation is opt-in: the operator and its CR are useful on their own,
-    # and node network topology is highly cluster-specific.
-    toggles:
-      # Generate NodeNetworkConfigurationPolicies from config.networking below
-      nncp: false
-
     # Node network topology. All NNCP generator input lives here so the topology is
     # reviewable in git.
     config:
@@ -30,6 +24,8 @@ stack:
       hosts: {}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -38,51 +34,45 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the Kubernetes NMState operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      - name: config
-        enabled: true
+      config:
         description: "Deploy the NMState instance"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          nmstate-instance:
+            description: "NMState instance"
+            waitForOperator: nmstate
 
-      - name: ready
-        enabled: true
+      ready:
         description: "Reports NonCompliant until the nmstate webhook is Available"
         # A status can only be observed, so this policy never enforces
         remediationAction: inform
-        severity: medium
-        disabled: false
         dependencies:
           - name: config
+        templates:
+          webhook:
+            description: "nmstate webhook readiness"
 
-      - name: nncp
-        enabled: true
+      # Generate NodeNetworkConfigurationPolicies from config.networking. Opt-in: the
+      # operator and its CR are useful on their own, and node network topology is highly
+      # cluster-specific.
+      nncp:
+        enabled: false
         description: "Node network configuration policies"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         # NNCPs are rejected by admission until the webhook is up
         dependencies:
           - name: ready
+        templates:
+          policies:
+            description: "Generated NodeNetworkConfigurationPolicies"
 
     operatorPolicies:
       nmstate:
-        enabled: true
         description: "Kubernetes NMState operator"
         displayName: "Kubernetes NMState Operator"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-nmstate
         operatorGroup:
           name: openshift-nmstate
@@ -91,48 +81,4 @@ stack:
         subscription:
           channel: stable
           name: kubernetes-nmstate-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: nmstate-instance
-        enabled: true
-        description: "NMState instance"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: nmstate
-        ignorePending: true
-        templateNames:
-          - name: nmstate-cr
-        enableTemplateParameters: true
-        templateParameters:
-          name: nmstate
-
-      - name: webhook
-        enabled: true
-        description: "nmstate webhook readiness"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: webhook-ready
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-nmstate
-
-      - name: policies
-        enabled: true
-        description: "Generated NodeNetworkConfigurationPolicies"
-        policyRef: nncp
-        complianceType: mustonlyhave
-        remediationAction: enforce
-        severity: medium
-        # The number of NNCPs depends on how many interfaces/hosts are configured
-        rawTemplate: true
-        templateNames:
-          - name: nncp

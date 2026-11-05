@@ -9,15 +9,6 @@ stack:
     enabled: true
 ```
 
-## Toggles
-
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `registries` | Restrict the registries the cluster may pull and import from | `true` | Policy [`registries`](#policy-registries) |
-| `samples` | Remove the Samples Operator and its imagestreams | `true` | Policy [`samples`](#policy-samples) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
-
 ## Settings
 
 Under `stack.remediations.config`. Maps merge across layers; lists are replaced whole.
@@ -58,14 +49,14 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SI-7 Software,
 
 `registries-remediations-<cluster>`: Restrict image registries the cluster may use.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `registries-allowlist` | enforce | [allowed-image-registries](converters/allowed-image-registries.yaml) | Image registry allowlist |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `registries-allowlist` | enforce | high | [allowlist](converters/registries/allowlist.yaml) | Image registry allowlist |
 
 ### Policy `samples`
 
 `samples-remediations-<cluster>`: Remove the Samples Operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `samples-operator` | enforce | [remove-samples-operator](converters/remove-samples-operator.yaml) | Samples Operator management state |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `samples-operator` | enforce | low | [operator](converters/samples/operator.yaml) | Samples Operator management state |

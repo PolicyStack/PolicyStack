@@ -9,16 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Optional components. Each depends on a different element, so each has its own toggle.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `forwarder` | Forward cluster logs into Loki. Requires the logging element. | `false` | Policy [`forwarder`](#policy-forwarder) |
-| `observability-ui` | Add the Logging view to the console. Requires the coo element. | `false` | Policy [`observability-ui`](#policy-observability-ui) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`forwarder`](#policy-forwarder) | Forward cluster logs into Loki | `policies.forwarder.enabled: true` |
+| Policy [`observability-ui`](#policy-observability-ui) | Logging view in the OpenShift console | `policies.observability-ui.enabled: true` |
 
 ## Settings
 
@@ -47,7 +45,7 @@ Under `stack.loki.config`. Maps merge across layers; lists are replaced whole.
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -59,37 +57,37 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: AU-6 Audit Review, Analysis, and Reporting, AU-9 Protection of Audit Information. Categories: AU Audit and Accountability.
 
+### Policy `forwarder`
+
+`forwarder-loki-<cluster>`: Forward cluster logs into Loki. Depends on `stack-loki-<cluster>`, `install-logging-<cluster>`. Off by default; turn on with `policies.forwarder.enabled: true`.
+
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `forwarder-clusterlogforwarder` | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder](converters/forwarder/clusterlogforwarder.yaml) | ClusterLogForwarder |
+| `forwarder-collector` | enforce | medium |  | [collector](converters/forwarder/collector.yaml) | Collector ServiceAccount |
+| `forwarder-collector-rbac` | enforce | medium |  | [collector-rbac](converters/forwarder/collector-rbac.yaml) | Collector ClusterRoleBindings |
+
 ### Policy `install`
 
 `install-loki-<cluster>`: Install and manage the Loki operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-loki` | enforce | [operator](#operators) `loki-operator` | Loki operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-loki` | enforce | medium | [operator](#operators) `loki-operator` | Loki operator |
+
+### Policy `observability-ui`
+
+`observability-ui-loki-<cluster>`: Logging view in the OpenShift console. Depends on `forwarder-loki-<cluster>`, `install-coo-<cluster>`. Off by default; turn on with `policies.observability-ui.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `observability-ui-uiplugin` | enforce | low | [uiplugin](converters/observability-ui/uiplugin.yaml) | Console logging UI plugin |
 
 ### Policy `stack`
 
 `stack-loki-<cluster>`: Deploy the LokiStack and its object storage. Depends on `install-loki-<cluster>`, `ready-odf-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `stack-bucket` | enforce |  | [loki-bucketclaim](converters/loki-bucketclaim.yaml)<br>[loki-bucket-secret](converters/loki-bucket-secret.yaml) | Object storage bucket and the secret LokiStack reads it through |
-| `stack-lokistack` | enforce | `install-loki-status`<br>`stack-bucket`<br>compliant while pending | [loki-stack](converters/loki-stack.yaml) | LokiStack |
-
-### Policy `forwarder`
-
-`forwarder-loki-<cluster>`: Forward cluster logs into Loki. Depends on `stack-loki-<cluster>`, `install-logging-<cluster>`. Off by default; turn on with toggle `forwarder`.
-
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `forwarder-collector` | enforce |  | [collector-sa](converters/collector-sa.yaml) | Collector ServiceAccount |
-| `forwarder-collector-rbac` | enforce |  | [collector-rbac](converters/collector-rbac.yaml) | Collector ClusterRoleBindings |
-| `forwarder-clusterlogforwarder` | enforce | `forwarder-collector-rbac`<br>compliant while pending | [log-forwarder](converters/log-forwarder.yaml) | ClusterLogForwarder |
-
-### Policy `observability-ui`
-
-`observability-ui-loki-<cluster>`: Logging view in the OpenShift console. Depends on `forwarder-loki-<cluster>`, `install-coo-<cluster>`. Off by default; turn on with toggle `observability-ui`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `observability-ui-uiplugin` | enforce | [logging-ui-plugin](converters/logging-ui-plugin.yaml) | Console logging UI plugin |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `stack-bucket` | enforce | medium |  | [bucket](converters/stack/bucket.yaml) | Object storage bucket and the secret LokiStack reads it through |
+| `stack-lokistack` | enforce | medium | `install-loki-status`<br>`stack-bucket`<br>compliant while pending | [lokistack](converters/stack/lokistack.yaml) | LokiStack |

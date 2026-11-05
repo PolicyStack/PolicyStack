@@ -95,13 +95,14 @@ A waiver covers every role and profile on the cluster. To limit it to some clust
 
 ## Remediations
 
-Off until you turn on `toggles.remediate`. `remediations` keys are ComplianceRemediation names. Applying one can reboot nodes.
+Off until you turn on policy `remediate`. `remediations` keys are ComplianceRemediation names. Applying one can reboot nodes.
 
 ```yaml
 stack:
   compliance:
-    toggles:
-      remediate: true
+    policies:
+      remediate:
+        enabled: true
     config:
       remediations:
         ocp4-stig-api-server-encryption-provider-cipher: true # (1)!
@@ -115,7 +116,7 @@ Writes wait for the suite to reach `DONE`. A name that doesn't exist is never cr
 
 ### Reverting
 
-Removing an entry doesn't revert anything. It stays applied and shows in `findings-drift`. Set it to `false`, and remove the entry once the state is `NotApplied`. Turning the toggle off stops managing `apply` and reverts nothing.
+Removing an entry doesn't revert anything. It stays applied and shows in `findings-drift`. Set it to `false`, and remove the entry once the state is `NotApplied`. Turning `remediate` off stops managing `spec.apply` and reverts nothing.
 
 | Remediation | `false` does |
 |---|---|

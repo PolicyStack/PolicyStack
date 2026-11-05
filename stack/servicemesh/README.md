@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-servicemesh-<cluster>`: Install and manage Red Hat OpenShift Service Mesh 3.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-servicemesh3` | enforce | [operator](#operators) `servicemeshoperator3` | Red Hat OpenShift Service Mesh 3 operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-servicemesh3` | enforce | medium | [operator](#operators) `servicemeshoperator3` | Red Hat OpenShift Service Mesh 3 operator |

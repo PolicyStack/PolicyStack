@@ -23,66 +23,29 @@ type DependencyCheck struct{}
 func (DependencyCheck) ID() string   { return "POLICY011" }
 func (DependencyCheck) Phase() Phase { return PhaseRepo }
 
-// elementIndex is the resolved view of one element used for lookups.
+// elementIndex is the resolved view of one element used for lookups. Every entry counts, enabled or
+// not, since a values layer may turn it on.
 type elementIndex struct {
 	el *chart.Element
-	// policyEnabled[name] is the policy's effective enabled state.
-	policyEnabled map[string]bool
-	// policyRenders[name] reports whether the chart emits the Policy. Policies with no enabled
-	// sub-policy are not rendered.
+	// policyRenders[name] reports whether the chart emits the Policy, which needs a template or an
+	// operator. Every policy of the element is a key.
 	policyRenders map[string]bool
-	// subPolicies["<policyRef>/<name>"] is the kind of that sub-policy.
+	// subPolicies[metadata.name] is the kind of that policy-template.
 	subPolicies map[string]string
-	// operators[key] is an operatorPolicy's owning policy.
-	operators map[string]string
-	// policyToggled[name] reports whether a policy's enablement is toggle-governed.
-	policyToggled map[string]bool
 }
 
 func indexElement(el *chart.Element) *elementIndex {
-	ix := &elementIndex{
-		el:            el,
-		policyEnabled: map[string]bool{},
-		policyRenders: map[string]bool{},
-		subPolicies:   map[string]string{},
-		operators:     map[string]string{},
-		policyToggled: map[string]bool{},
-	}
+	ix := &elementIndex{el: el, policyRenders: map[string]bool{}, subPolicies: map[string]string{}}
 	comp := el.Values.Component
 	if comp == nil {
 		return ix
 	}
-	for _, p := range comp.Policies {
-		if p.Name != "" {
-			ix.policyEnabled[p.Name] = comp.CouldBeEnabled(p.Name, p.Enabled)
-			ix.policyToggled[p.Name] = comp.IsToggled(p.Name)
-		}
+	for name := range comp.Policies {
+		ix.policyRenders[name] = false
 	}
-	mark := func(ref, name, kind string) {
-		if ref == "" || name == "" {
-			return
-		}
-		ix.subPolicies[ref+"/"+name] = kind
-		ix.policyRenders[ref] = true
-	}
-	for _, p := range comp.ConfigPolicies {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			mark(p.PolicyRef, p.Name, "ConfigurationPolicy")
-		}
-	}
-	for _, p := range comp.OperatorPolicies {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			mark(p.PolicyRef, p.Name, "OperatorPolicy")
-			ix.operators[p.Name] = p.PolicyRef
-			// Operator policies also render <policyRef>-<name>-ns and -status ConfigurationPolicies.
-			ix.subPolicies[p.PolicyRef+"/"+p.Name+"-ns"] = "ConfigurationPolicy"
-			ix.subPolicies[p.PolicyRef+"/"+p.Name+"-status"] = "ConfigurationPolicy"
-		}
-	}
-	for _, p := range comp.CertificatePolicies {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			mark(p.PolicyRef, p.Name, "CertificatePolicy")
-		}
+	for _, s := range comp.SubPolicies() {
+		ix.subPolicies[s.Name] = s.Kind
+		ix.policyRenders[s.Policy] = true
 	}
 	return ix
 }
@@ -126,49 +89,39 @@ func (c *DependencyCheck) checkElement(ix *elementIndex, all map[string]*element
 		})
 	}
 
-	// policies[].dependencies default to kind Policy.
-	for i, p := range comp.Policies {
-		if !comp.CouldBeEnabled(p.Name, p.Enabled) {
-			continue
-		}
+	// policies.<p>.dependencies default to kind Policy.
+	for _, p := range comp.Policies.Sorted() {
 		for j, d := range p.Dependencies {
-			path := []string{"policies", strconv.Itoa(i), "dependencies", strconv.Itoa(j), "name"}
-			out = append(out, c.checkDep(ix, all, d, "Policy", p.Name, fmt.Sprintf("policies[%d] %q", i, p.Name), path)...)
+			path := append(slices.Clone(p.Path), "dependencies", strconv.Itoa(j), "name")
+			out = append(out, c.checkDep(ix, all, d, "Policy", p.Name, strings.Join(p.Path, "."), path)...)
 		}
 	}
 
 	// *.extraDependencies default to kind ConfigurationPolicy; waitForOperator names operatorPolicies keys.
 	type sub struct {
-		where string   // configPolicies[0] "name" or operatorPolicies.<key>
-		path  []string // list, index or operatorPolicies, key
+		path  []string // the entry under stack.<key>
 		ref   string
 		extra []chart.DepEntry
-		wait  chart.WaitForOperator
+		wait  chart.StringList
 	}
 	var subs []sub
-	for i, p := range comp.ConfigPolicies {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{fmt.Sprintf("configPolicies[%d] %q", i, p.Name), []string{"configPolicies", strconv.Itoa(i)}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
+	for _, p := range comp.Policies.Sorted() {
+		for _, t := range p.Templates.Sorted() {
+			subs = append(subs, sub{t.Path, p.Name, t.ExtraDependencies, t.WaitForOperator})
 		}
 	}
-	for k, p := range comp.OperatorPolicies.Sorted() {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{"operatorPolicies." + k, []string{"operatorPolicies", k}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
-		}
-	}
-	for i, p := range comp.CertificatePolicies {
-		if comp.CouldBeEnabled(p.Name, p.Enabled) {
-			subs = append(subs, sub{fmt.Sprintf("certificatePolicies[%d] %q", i, p.Name), []string{"certificatePolicies", strconv.Itoa(i)}, p.PolicyRef, p.ExtraDependencies, p.WaitForOperator})
-		}
+	for k, op := range comp.OperatorPolicies.Sorted() {
+		subs = append(subs, sub{[]string{"operatorPolicies", k}, "install", op.ExtraDependencies, op.WaitForOperator})
 	}
 	for _, s := range subs {
+		where := strings.Join(s.path, ".")
 		for j, d := range s.extra {
 			path := append(slices.Clone(s.path), "extraDependencies", strconv.Itoa(j), "name")
-			out = append(out, c.checkDep(ix, all, d, "ConfigurationPolicy", s.ref, s.where, path)...)
+			out = append(out, c.checkDep(ix, all, d, "ConfigurationPolicy", s.ref, where, path)...)
 		}
 		for _, op := range s.wait {
-			if _, ok := ix.operators[op]; !ok {
-				add(fmt.Sprintf("%s: waitForOperator %q matches no enabled operatorPolicies.%s", s.where, op, op),
+			if _, ok := comp.OperatorPolicies[op]; !ok {
+				add(fmt.Sprintf("%s: waitForOperator %q matches no operatorPolicies.%s", where, op, op),
 					append(slices.Clone(s.path), "waitForOperator")...)
 			}
 		}
@@ -211,9 +164,9 @@ func (c *DependencyCheck) checkDep(ix *elementIndex, all map[string]*elementInde
 		if ref == "" {
 			ref = owner
 		}
-		got, ok := ix.subPolicies[ref+"/"+d.Name]
+		got, ok := ix.subPolicies[ref+"-"+d.Name]
 		if !ok {
-			add(fmt.Sprintf("%s: dependency %q resolves to %q, which no enabled configPolicies/operatorPolicies/certificatePolicies entry declares under policy %q", where, d.Name, ref+"-"+d.Name, ref))
+			add(fmt.Sprintf("%s: dependency %q resolves to %q, which no template or operator of policy %q renders", where, d.Name, ref+"-"+d.Name, ref))
 			return out
 		}
 		if got != kind {
@@ -237,21 +190,17 @@ func (c *DependencyCheck) checkDep(ix *elementIndex, all map[string]*elementInde
 		}
 		target = t
 	}
-	enabled, exists := target.policyEnabled[d.Name]
+	renders, exists := target.policyRenders[d.Name]
 	scope := "this element"
 	if d.Element != "" {
 		scope = fmt.Sprintf("element %q", d.Element)
 	}
 	if !exists {
-		add(fmt.Sprintf("%s: dependency %q is not defined in policies[] of %s", where, d.Name, scope))
+		add(fmt.Sprintf("%s: dependency %q is not a policy of %s", where, d.Name, scope))
 		return out
 	}
-	if !enabled && !target.policyToggled[d.Name] {
-		add(fmt.Sprintf("%s: dependency %q exists in %s but is disabled, so the Policy is never created", where, d.Name, scope))
-		return out
-	}
-	if !target.policyRenders[d.Name] {
-		add(fmt.Sprintf("%s: dependency %q in %s has no enabled sub-policy attached, so policy-library never emits a Policy for it and this dependency can never be satisfied", where, d.Name, scope))
+	if !renders {
+		add(fmt.Sprintf("%s: dependency %q in %s has no template or operator, so policy-library never emits a Policy for it and this dependency can never be satisfied", where, d.Name, scope))
 	}
 	return out
 }

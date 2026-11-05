@@ -1,13 +1,18 @@
 package acmtemplates
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"sigs.k8s.io/yaml"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 )
 
 const marker = "lifecycle.policystk.io/hub"
@@ -99,29 +104,40 @@ func TestOwnership(t *testing.T) {
 	}
 }
 
-// TestEnforceIsRaw: only a raw template can refuse, so every enforced lifecycle step is one.
+// TestEnforceIsRaw: only a raw template can refuse, so every lifecycle step the render enforces is
+// object-templates-raw, for every hub-built fixture.
 func TestEnforceIsRaw(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join(repoRoot, "lifecycle/values.yaml"))
+	clusters, err := fixtures.LoadDir(filepath.Join(repoRoot, "tools/validator/testdata/clusters"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var v struct {
-		Stack map[string]struct {
-			ConfigPolicies []struct {
-				Name              string `json:"name"`
-				PolicyRef         string `json:"policyRef"`
-				RemediationAction string `json:"remediationAction"`
-				RawTemplate       bool   `json:"rawTemplate"`
-			} `json:"configPolicies"`
-		} `json:"stack"`
-	}
-	if err := yaml.Unmarshal(b, &v); err != nil {
-		t.Fatal(err)
-	}
-	for engine, s := range v.Stack {
-		for _, cp := range s.ConfigPolicies {
-			if cp.RemediationAction == "enforce" && !cp.RawTemplate {
-				t.Errorf("%s %s-%s is enforced without rawTemplate", engine, cp.PolicyRef, cp.Name)
+	for _, c := range clusters {
+		if c.Hub == "" {
+			continue
+		}
+		release, files := lifecycleFiles(t, c.Name)
+		dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(helmTemplate(t, filepath.Join(repoRoot, "lifecycle"), release, files)), 4096)
+		for {
+			var p policy
+			if err := dec.Decode(&p); err == io.EOF {
+				break
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			for _, pt := range p.Spec.PolicyTemplates {
+				var cp struct {
+					Kind     string `json:"kind"`
+					Metadata struct {
+						Name string `json:"name"`
+					} `json:"metadata"`
+					Spec struct {
+						RemediationAction string `json:"remediationAction"`
+						Raw               string `json:"object-templates-raw"`
+					} `json:"spec"`
+				}
+				if json.Unmarshal(pt.ObjectDefinition, &cp) == nil && cp.Kind == "ConfigurationPolicy" && cp.Spec.RemediationAction == "enforce" && cp.Spec.Raw == "" {
+					t.Errorf("%s: %s is enforced without object-templates-raw", c.Name, cp.Metadata.Name)
+				}
 			}
 		}
 	}
@@ -130,27 +146,18 @@ func TestEnforceIsRaw(t *testing.T) {
 // TestGatesInformOnly: every lifecycle, upgrade and storage-nodes template that is not enforced is
 // InformOnly, so a Policy-level enforce cannot turn a gate into a write or delete.
 func TestGatesInformOnly(t *testing.T) {
-	for _, f := range []string{"lifecycle/values.yaml", "stack/upgrade/values.yaml", "stack/storage-nodes/values.yaml"} {
-		b, err := os.ReadFile(filepath.Join(repoRoot, f))
+	for _, dir := range []string{"lifecycle", "stack/upgrade", "stack/storage-nodes"} {
+		el, err := chart.Load(filepath.Join(repoRoot, dir), "policy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		var v struct {
-			Stack map[string]struct {
-				ConfigPolicies []struct {
-					Name              string `json:"name"`
-					PolicyRef         string `json:"policyRef"`
-					RemediationAction string `json:"remediationAction"`
-				} `json:"configPolicies"`
-			} `json:"stack"`
-		}
-		if err := yaml.Unmarshal(b, &v); err != nil {
-			t.Fatal(err)
-		}
-		for key, s := range v.Stack {
-			for _, cp := range s.ConfigPolicies {
-				if cp.RemediationAction != "enforce" && cp.RemediationAction != "InformOnly" {
-					t.Errorf("%s %s %s-%s: remediationAction %q, want enforce or InformOnly", f, key, cp.PolicyRef, cp.Name, cp.RemediationAction)
+		for _, nc := range el.Components {
+			c := nc.Component
+			for _, p := range c.Policies.Sorted() {
+				for _, tpl := range p.Templates.Sorted() {
+					if a := c.TemplateAction(p, tpl); a != "enforce" && a != "InformOnly" {
+						t.Errorf("%s %s %s-%s: remediationAction %q, want enforce or InformOnly", dir, nc.Key, p.Name, tpl.Name, a)
+					}
 				}
 			}
 		}

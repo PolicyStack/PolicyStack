@@ -16,7 +16,7 @@ func TestPolicy052_FleetPins(t *testing.T) {
 	testenv.Git(t, dir, "update-ref", "refs/remotes/origin/main", v1)
 	testenv.Commit(t, dir, "stack/openshift-upgrade/templates/_helpers.tpl")
 	testenv.Git(t, dir, "tag", "v1.1.0")
-	head := testenv.Commit(t, dir, "values/platforms/kubevirt.yaml", "lifecycle/converters/hypershift/ready.yaml",
+	head := testenv.Commit(t, dir, "values/platforms/kubevirt.yaml", "lifecycle/converters/_hypershift/root.yaml",
 		"stack/upgrade/templates/_helpers.tpl")
 
 	for _, tc := range []struct {
@@ -42,7 +42,7 @@ func TestPolicy052_FleetPins(t *testing.T) {
 		{
 			name: "hub and version need lifecycle and an upgrade element",
 			cl:   fixtures.Cluster{Revision: "v1.0.0", Hub: "acm-dc1", Version: "4.20.8"},
-			want: []string{`revision "v1.0.0" has no lifecycle/converters/hypershift/, which hub needs; an upgrade element reading version and channel`},
+			want: []string{`revision "v1.0.0" has no lifecycle/converters/_hypershift/, which hub needs; an upgrade element reading version and channel`},
 		},
 		{name: "upgrade element under its former name", cl: fixtures.Cluster{Revision: "v1.1.0", Channel: "stable-4.20"}},
 		{name: "hub at HEAD", cl: fixtures.Cluster{Revision: head, Hub: "acm-dc1", Version: "4.20.8"}},

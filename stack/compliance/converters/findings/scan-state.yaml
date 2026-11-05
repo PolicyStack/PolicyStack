@@ -1,0 +1,53 @@
+{{- /*
+The scan produced usable, current results. Findings live in their own templates.
+
+Reads live scans, because suite status keeps entries of deleted scans. A rescan keeps the previous
+results, so a scan in progress is not a violation. The Healthy phase does not exist: asserting it
+reports a scan that failed, examined nothing, or has not started in 48 hours (a cordoned node stops
+rescans silently; the default schedule is daily). ACM never writes status.
+*/ -}}
+{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceScan" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
+{{ "{{" }}- $bad := and (eq (dig "status" "phase" "" .) "DONE") (has (dig "status" "result" "" .) (list "ERROR" "NOT-AVAILABLE" "NOT-APPLICABLE")) {{ "}}" }}
+{{ "{{" }}- with (dig "status" "startTimestamp" "" .) {{ "}}" }}
+{{ "{{" }}- if gt (sub (now).Unix (toDate "2006-01-02T15:04:05Z07:00" .).Unix) 172800 {{ "}}" }}
+{{ "{{" }}- $bad = true {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if $bad {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceScan
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ .Config.namespace }}
+    status:
+      phase: Healthy
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceSuite
+    metadata:
+      name: {{ .Config.binding }}
+      namespace: {{ .Config.namespace }}
+{{ "{{" }}- if not (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceCheckResult
+    metadata:
+      namespace: {{ .Config.namespace }}
+      labels:
+        compliance.openshift.io/suite: {{ .Config.binding }}
+{{ "{{" }}- end {{ "}}" }}
+{{- range $p := .Config.profiles }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: Profile
+    metadata:
+      name: {{ $p }}
+      namespace: {{ $.Config.namespace }}
+{{- end }}

@@ -3,6 +3,8 @@ stack:
     enabled: false
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -11,23 +13,14 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage Kiali Operator provided by Red Hat"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
     operatorPolicies:
       kiali:
-        enabled: true
         description: "Kiali service mesh observability console"
         # Must match the CSV displayName so the generated status check can find it
         displayName: "Kiali Operator"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-operators
         operatorGroup:
           # Reuse the namespace's existing cluster-scoped OperatorGroup; a second one breaks OLM
@@ -35,7 +28,4 @@ stack:
         subscription:
           channel: stable
           name: kiali-ossm
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []

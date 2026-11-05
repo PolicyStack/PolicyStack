@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 
@@ -19,16 +20,15 @@ var (
 	layerRootKeys   = []string{"policyNamespace", "stack", "global", "placement", "install", "version", "channel"}
 	layerGlobalKeys = []string{"remediationAction", "catalogSources"}
 	componentKeys   = []string{
-		"enabled", "default", "toggles", "config", "policies", "configPolicies", "operatorPolicies",
-		"certificatePolicies", "policySets", "orderPolicies", "orderManifests", "suffixTemplateNames",
+		"enabled", "default", "config", "policies", "operatorPolicies", "policySets", "suffixTemplateNames",
 		"usePolicySetsPlacements", "disablePlacements",
 	}
 )
 
 // LayerKeyCheck (POLICY035) reports keys in a values layer that nothing reads: an unknown top-level
 // or global key, a stack key that names no element, an element key policy-library does not accept, a
-// toggle that names no entry of its element, and a config key the element's values.yaml does not
-// define. Helm merges them without complaint and the setting silently has no effect. An unknown
+// policies key that names no policy of its element, a templates key that names no template of its
+// policy and sets no file, and a config key the element's values.yaml does not define. Helm merges them without complaint and the setting silently has no effect. An unknown
 // element key fails the schema instead, but RENDER000 reports it once per element at the element's
 // values.yaml, not at the layer. It runs on every layer file, used by a fleet file or not.
 type LayerKeyCheck struct{}
@@ -83,7 +83,7 @@ func (c *LayerKeyCheck) Run(ctx Context) []Finding {
 			continue
 		}
 		for i := 0; i+1 < len(stack.Content); i += 2 {
-			key, comp := stack.Content[i], stack.Content[i+1]
+			key := stack.Content[i]
 			el, ok := elements[key.Value]
 			if !ok {
 				add(key, "", fmt.Sprintf("stack.%s names no element", key.Value))
@@ -92,9 +92,16 @@ func (c *LayerKeyCheck) Run(ctx Context) []Finding {
 			unknown([]string{"stack", key.Value}, componentKeys, func(k string) string {
 				return fmt.Sprintf("stack.%s.%s is not a policy-library component key", key.Value, k)
 			}, el.ChartName)
-			unknown([]string{"stack", key.Value, "toggles"}, entryNames(el, comp), func(k string) string {
-				return fmt.Sprintf("stack.%s.toggles.%s names no entry of the element", key.Value, k)
+			pols := el.Values.Component.Policies
+			unknown([]string{"stack", key.Value, "policies"}, slices.Collect(maps.Keys(pols)), func(k string) string {
+				return fmt.Sprintf("stack.%s.policies.%s names no policy of the element", key.Value, k)
 			}, el.ChartName)
+			for name, p := range pols.Sorted() {
+				path := []string{"stack", key.Value, "policies", name, "templates"}
+				unknown(path, append(slices.Collect(maps.Keys(p.Templates)), filed(sourceloc.FindNode(&doc, path...))...), func(k string) string {
+					return fmt.Sprintf("stack.%s.policies.%s.templates.%s names no template of the policy: add converters/%s/%s.yaml or set file", key.Value, name, k, name, k)
+				}, el.ChartName)
+			}
 			unknown([]string{"stack", key.Value, "config"}, configKeys(el), func(k string) string {
 				return fmt.Sprintf("stack.%s.config.%s is not in the element's values.yaml", key.Value, k)
 			}, el.ChartName)
@@ -103,43 +110,27 @@ func (c *LayerKeyCheck) Run(ctx Context) []Finding {
 	return out
 }
 
-// entryNames returns the names a toggle can switch: the element's entries plus any the layer itself
-// declares, since a layer may restate a list.
-func entryNames(el *chart.Element, layer *yaml.Node) []string {
-	var names []string
-	add := func(c *chart.Component) {
-		if c == nil {
-			return
-		}
-		for _, p := range c.Policies {
-			names = append(names, p.Name)
-		}
-		for _, p := range c.ConfigPolicies {
-			names = append(names, p.Name)
-		}
-		for k := range c.OperatorPolicies {
-			names = append(names, k)
-		}
-		for _, p := range c.CertificatePolicies {
-			names = append(names, p.Name)
-		}
-		for _, p := range c.PolicySets {
-			names = append(names, p.Name)
+// filed returns the keys of a templates map whose entry sets file: a layer may add such a template.
+func filed(templates *yaml.Node) []string {
+	var out []string
+	if templates == nil || templates.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(templates.Content); i += 2 {
+		if sourceloc.FindNode(templates.Content[i+1], "file") != nil {
+			out = append(out, templates.Content[i].Value)
 		}
 	}
-	if el.Values != nil {
-		add(el.Values.Component)
-	}
-	var own chart.Component
-	if layer.Decode(&own) == nil {
-		add(&own)
-	}
-	return names
+	return out
 }
 
 // configKeys returns the top-level config keys in the element's values.yaml.
 func configKeys(el *chart.Element) []string {
-	n := sourceloc.FindNode(el.ValuesDoc, "stack", el.StackKey, "config")
+	return mapKeys(sourceloc.FindNode(el.ValuesDoc, "stack", el.StackKey, "config"))
+}
+
+// mapKeys returns the keys of a mapping node, nil for any other node.
+func mapKeys(n *yaml.Node) []string {
 	if n == nil || n.Kind != yaml.MappingNode {
 		return nil
 	}

@@ -1,0 +1,18 @@
+{{- /*
+Inform-only readiness gate: the LVMCluster must report Ready. Status can only be observed, so this
+policy informs while the element's other policies enforce.
+*/ -}}
+{{- $cfg := .Config }}
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: lvmcluster
+  namespace: openshift-storage
+status:
+  ready: true
+  state: Ready
+  deviceClassStatuses:
+    - name: {{ $cfg.deviceClassName }}
+      nodeStatus:
+        - name: {{ $cfg.deviceClassName }}
+          status: Ready

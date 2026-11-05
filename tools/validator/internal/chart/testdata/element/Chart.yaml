@@ -1,0 +1,10 @@
+apiVersion: v2
+name: conformance
+description: Fixture for TestConformance, which compares chart.Load with what policy-library renders.
+type: application
+version: 0.1.0
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "4.0.0"
+    repository: "https://policystack.github.io/PolicyStack-chart"

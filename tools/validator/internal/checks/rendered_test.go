@@ -82,7 +82,7 @@ func assertFindings(t *testing.T, id string, ctx Context, got []Finding, want []
 // TestRenderedInvalid: every render-phase rule reports an undecodable render once and skips an empty one.
 func TestRenderedInvalid(t *testing.T) {
 	el := loadElement(t, "stack:\n  myElement: {}\n", "", nil)
-	for _, c := range []Check{&NameLengthCheck{}, &PruneCheck{}, &RemediationCheck{}, &ProtectedObjectCheck{}, &EmptyPolicyCheck{}} {
+	for _, c := range []Check{&NameLengthCheck{}, &PruneCheck{}, &ProtectedObjectCheck{}, &EmptyPolicyCheck{}} {
 		if got := c.Run(renderCtx(t, el, "\n---\n")); len(got) != 0 {
 			t.Errorf("%s: empty render got %+v", c.ID(), got)
 		}

@@ -1,0 +1,74 @@
+{{- /*
+Resolves the secured policy's hub templates. Without it the propagator limits hub lookups to the
+policy namespace, and the CRS and Central's Route live in hubNamespace.
+*/ -}}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: acs-hub-templates
+      namespace: {{ .Values.policyNamespace }}
+{{- /*
+Only what the secured policy's hub templates read; the propagator watches each by name. Enforced
+mustonlyhave, so the old init-bundle grants are removed, not kept.
+*/}}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      name: acs-hub-templates
+      namespace: stackrox
+    rules:
+      - apiGroups: [""]
+        resources: [secrets]
+        resourceNames: [cluster-registration-secret]
+        verbs: [get, list, watch]
+      - apiGroups: [route.openshift.io]
+        resources: [routes]
+        resourceNames: [central]
+        verbs: [get, list, watch]
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: acs-hub-templates
+      namespace: stackrox
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: acs-hub-templates
+    subjects:
+      - kind: ServiceAccount
+        name: acs-hub-templates
+        namespace: {{ .Values.policyNamespace }}
+{{- /*
+.ManagedClusterLabels in the secured policy makes the propagator read each target's ManagedCluster
+as this ServiceAccount. Cluster-scoped and one per secured cluster, so no resourceNames.
+*/}}
+- complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: acs-hub-templates
+    rules:
+      - apiGroups: [cluster.open-cluster-management.io]
+        resources: [managedclusters]
+        verbs: [get, list, watch]
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: acs-hub-templates
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: acs-hub-templates
+    subjects:
+      - kind: ServiceAccount
+        name: acs-hub-templates
+        namespace: {{ .Values.policyNamespace }}

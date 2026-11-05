@@ -1,0 +1,13 @@
+{{- /* The MultiClusterHub. The conditionals below are resolved by Helm from values. */ -}}
+{{- $cfg := .Config }}
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  namespace: open-cluster-management
+spec:
+  availabilityConfig: {{ $cfg.availabilityConfig }}
+  {{- if not $cfg.selfManaged }}
+  # The hub does not manage itself; no local-cluster is created
+  disableHubSelfManagement: true
+  {{- end }}

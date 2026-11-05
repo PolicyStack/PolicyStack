@@ -36,6 +36,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `config-partitioning-<cluster>`: Workload partitioning PerformanceProfile.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-performance-profile` | enforce | [performance-profile](converters/performance-profile.yaml) | PerformanceProfile for workload partitioning |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-performance-profile` | enforce | medium | [performance-profile](converters/config/performance-profile.yaml) | PerformanceProfile for workload partitioning |

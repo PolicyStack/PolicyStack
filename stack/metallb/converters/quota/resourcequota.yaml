@@ -1,0 +1,11 @@
+{{- /* Optional resource ceiling for the metallb namespace. */ -}}
+{{- $q := .Config.quota }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: metallb-quota
+  namespace: metallb-system
+spec:
+  hard:
+    cpu: {{ $q.cpu | quote }}
+    memory: {{ $q.memory | quote }}

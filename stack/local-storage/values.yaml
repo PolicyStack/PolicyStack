@@ -20,6 +20,8 @@ stack:
       nodeSelectorKey: cluster.ocs.openshift.io/openshift-storage
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CP Contingency Planning
       controls:
@@ -28,35 +30,26 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the Local Storage operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
       # Claiming disks only makes sense once the storage nodes exist, so this waits
       # on the storage-nodes element on the same cluster.
-      - name: volumes
-        enabled: true
+      volumes:
         description: "Claim local disks on the storage nodes"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
           - name: ready
             element: storage-nodes
+        templates:
+          volumeset:
+            description: "LocalVolumeSet claiming node-local disks"
+            waitForOperator: local-storage
 
     operatorPolicies:
       local-storage:
-        enabled: true
         description: "Local Storage operator"
         displayName: "Local Storage"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-local-storage
         operatorGroup:
           name: openshift-local-storage
@@ -65,24 +58,4 @@ stack:
         subscription:
           channel: stable
           name: local-storage-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: volumeset
-        enabled: true
-        description: "LocalVolumeSet claiming node-local disks"
-        policyRef: volumes
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: local-storage
-        ignorePending: true
-        templateNames:
-          - name: local-volume-set
-        enableTemplateParameters: true
-        templateParameters:
-          name: nvme-localvolumeset
-          namespace: openshift-local-storage

@@ -9,15 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `ca` | Cluster CA issuer. On by default; it is the cluster's default TLS issuer. | `true` | Policy [`ca`](#policy-ca) |
-| `api-cert` | Replace the external API serving cert (api.&lt;domain>). Additive and SNI-matched. | `false` | Policy [`api-cert`](#policy-api-cert) |
-| `ingress-cert` | Replace the default Ingress wildcard cert (*.apps.&lt;domain>). Higher blast radius. | `false` | Policy [`ingress-cert`](#policy-ingress-cert) |
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`api-cert`](#policy-api-cert) | cert-manager-managed API server serving certificate | `policies.api-cert.enabled: true` |
+| Policy [`ingress-cert`](#policy-ingress-cert) | cert-manager-managed default Ingress wildcard certificate | `policies.ingress-cert.enabled: true` |
 
 ## Settings
 
@@ -45,7 +44,7 @@ Under `stack.certManager.config`. Maps merge across layers; lists are replaced w
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -57,37 +56,36 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SC-12 Cryptographic Key Establishment and Management. Categories: CM Configuration Management, SC System and Communications Protection.
 
-### Policy `install`
+### Policy `api-cert`
 
-`install-cert-manager-<cluster>`: Install and manage the cert-manager Operator.
+`api-cert-cert-manager-<cluster>`: cert-manager-managed API server serving certificate. Depends on `ca-cert-manager-<cluster>`. Off by default; turn on with `policies.api-cert.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-cert-manager-ns-monitoring` | enforce | [ns-monitoring-label](converters/ns-monitoring-label.yaml) | Adds openshift.io/cluster-monitoring label to operator namespace |
-| `install-cert-manager` | enforce | [operator](#operators) `openshift-cert-manager-operator` | cert-manager Operator (Red Hat build) |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `api-cert-api-certificate` | enforce | medium | [api-certificate](converters/api-cert/api-certificate.yaml) | API server serving certificate (additive, SNI-matched) |
+| `api-cert-api-ready` | inform (always) | medium | [api-ready](converters/api-cert/api-ready.yaml) | Reports NonCompliant while the API certificate is not Ready |
 
 ### Policy `ca`
 
 `ca-cert-manager-<cluster>`: Cluster CA ClusterIssuer used as the default TLS issuer. Depends on `install-cert-manager-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ca-ca-issuer` | enforce | [ca-issuer](converters/ca-issuer.yaml) | Cluster CA Certificate and ClusterIssuer |
-
-### Policy `api-cert`
-
-`api-cert-cert-manager-<cluster>`: cert-manager-managed API server serving certificate. Depends on `ca-cert-manager-<cluster>`. Off by default; turn on with toggle `api-cert`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `api-cert-api-certificate` | enforce | [api-certificate](converters/api-certificate.yaml) | API server serving certificate (additive, SNI-matched) |
-| `api-cert-api-ready` | inform | [api-cert-ready](converters/api-cert-ready.yaml) | Reports NonCompliant while the API certificate is not Ready |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ca-ca-issuer` | enforce | medium | [ca-issuer](converters/ca/ca-issuer.yaml) | Cluster CA Certificate and ClusterIssuer |
 
 ### Policy `ingress-cert`
 
-`ingress-cert-cert-manager-<cluster>`: cert-manager-managed default Ingress wildcard certificate. Depends on `ca-cert-manager-<cluster>`. Off by default; turn on with toggle `ingress-cert`.
+`ingress-cert-cert-manager-<cluster>`: cert-manager-managed default Ingress wildcard certificate. Depends on `ca-cert-manager-<cluster>`. Off by default; turn on with `policies.ingress-cert.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ingress-cert-ingress-certificate` | enforce | [ingress-certificate](converters/ingress-certificate.yaml) | Default Ingress wildcard certificate (replaces *.apps) |
-| `ingress-cert-ingress-ready` | inform | [ingress-cert-ready](converters/ingress-cert-ready.yaml) | Reports NonCompliant while the Ingress certificate is not Ready |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ingress-cert-ingress-certificate` | enforce | medium | [ingress-certificate](converters/ingress-cert/ingress-certificate.yaml) | Default Ingress wildcard certificate (replaces *.apps) |
+| `ingress-cert-ingress-ready` | inform (always) | medium | [ingress-ready](converters/ingress-cert/ingress-ready.yaml) | Reports NonCompliant while the Ingress certificate is not Ready |
+
+### Policy `install`
+
+`install-cert-manager-<cluster>`: Install and manage the cert-manager Operator.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-cert-manager` | enforce | medium | [operator](#operators) `openshift-cert-manager-operator` | cert-manager Operator (Red Hat build) |

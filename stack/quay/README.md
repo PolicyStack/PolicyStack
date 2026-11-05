@@ -9,15 +9,13 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-The bootstrap Job is opinionated (it creates an initial user, org and repo), so it is opt-in separately from the registry deployment. The Job verifies Quay's route against the default ingress certificate and the cluster trust bundle.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `configure` | Run the one-shot bootstrap Job and publish the console link | `false` | Policy [`configure`](#policy-configure) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`configure`](#policy-configure) | Bootstrap the registry and publish its console link | `policies.configure.enabled: true` |
 
 ## Settings
 
@@ -51,7 +49,7 @@ Under `stack.quay.config`. Maps merge across layers; lists are replaced whole.
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -63,26 +61,26 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
+### Policy `configure`
 
-`install-quay-<cluster>`: Install and manage the Quay operator.
+`configure-quay-<cluster>`: Bootstrap the registry and publish its console link. Depends on `deploy-quay-<cluster>`. Off by default; turn on with `policies.configure.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-quay` | enforce | [operator](#operators) `quay-operator` | Red Hat Quay operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `configure-bootstrap` | enforce | low | [bootstrap](converters/configure/bootstrap.yaml) | Bootstrap Job, its RBAC and CA bundles, and the console link |
 
 ### Policy `deploy`
 
 `deploy-quay-<cluster>`: Deploy the Quay registry. Depends on `install-quay-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `deploy-registry` | enforce | medium | `install-quay-status`<br>compliant while pending | [registry](converters/deploy/registry.yaml) | Quay namespace, config bundle and QuayRegistry |
+
+### Policy `install`
+
+`install-quay-<cluster>`: Install and manage the Quay operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `deploy-registry` | enforce | `install-quay-status`<br>compliant while pending | [quay-namespace](converters/quay-namespace.yaml)<br>[quay-config-bundle](converters/quay-config-bundle.yaml)<br>[quay-registry](converters/quay-registry.yaml) | Quay namespace, config bundle and QuayRegistry |
-
-### Policy `configure`
-
-`configure-quay-<cluster>`: Bootstrap the registry and publish its console link. Depends on `deploy-quay-<cluster>`. Off by default; turn on with toggle `configure`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `configure-bootstrap` | enforce | [quay-bootstrap-sa](converters/quay-bootstrap-sa.yaml)<br>[quay-bootstrap-role](converters/quay-bootstrap-role.yaml)<br>[quay-bootstrap-rolebinding](converters/quay-bootstrap-rolebinding.yaml)<br>[quay-trusted-ca](converters/quay-trusted-ca.yaml)<br>[quay-ingress-ca](converters/quay-ingress-ca.yaml)<br>[quay-bootstrap-job](converters/quay-bootstrap-job.yaml)<br>[quay-host-configmap](converters/quay-host-configmap.yaml)<br>[quay-console-link](converters/quay-console-link.yaml) | Bootstrap Job, its RBAC and CA bundles, and the console link |
+| `install-quay` | enforce | medium | [operator](#operators) `quay-operator` | Red Hat Quay operator |

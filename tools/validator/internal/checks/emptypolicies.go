@@ -1,11 +1,8 @@
 package checks
 
 import (
-	"fmt"
-	"strconv"
+	"cmp"
 	"strings"
-
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
 // EmptyPolicyCheck (POLICY082) reports a rendered Policy that checks nothing: every template is a
@@ -43,19 +40,12 @@ func (c *EmptyPolicyCheck) Run(ctx Context) []Finding {
 		if !empty {
 			continue
 		}
-		where, loc := fmt.Sprintf("Policy %q", p.Metadata.Name), sourceloc.Loc{}
-		for i, pol := range el.Values.Component.Policies {
-			if pol.Name+"-"+ctx.Cluster.ReleaseName == p.Metadata.Name {
-				where = fmt.Sprintf("policies[%d] %q", i, pol.Name)
-				loc = sourceloc.Find(el.ValuesDoc, "stack", el.StackKey, "policies", strconv.Itoa(i), "name")
-				break
-			}
-		}
+		where, file, loc := origin(ctx, p.Kind, p.Metadata.Name, "name")
 		out = append(out, Finding{
 			RuleID: c.ID(), Severity: SevError,
 			Element: el.ChartName, Cluster: ctx.Cluster.ClusterName,
-			Message: where + " checks nothing: every ConfigurationPolicy has no objects and there is no OperatorPolicy or CertificatePolicy, so ACM reports it Compliant: set the element's input or turn the toggle off",
-			File:    el.ValuesFile, Line: loc.Line, Col: loc.Col,
+			Message: where + " checks nothing: every ConfigurationPolicy has no objects and there is no OperatorPolicy or CertificatePolicy, so ACM reports it Compliant: set the element's input or set enabled: false",
+			File:    cmp.Or(file, el.ValuesFile), Line: loc.Line, Col: loc.Col,
 		})
 	}
 	return out

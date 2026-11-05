@@ -13,14 +13,16 @@ stack:
   # Enforces the dc2 registry allowlist. Images from any registry not on that list stop pulling.
   remediations:
     enabled: true
-    toggles:
-      registries: true
+    policies:
+      registries:
+        enabled: true
 
   # Load balancer addresses are per cluster: two clusters sharing a range would hand out the same IPs.
   metallb:
     enabled: true
-    toggles:
-      addressing: true
+    policies:
+      addressing:
+        enabled: true
     config:
       ipAddressPools:
         services:

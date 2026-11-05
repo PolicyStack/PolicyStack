@@ -22,6 +22,8 @@ stack:
       hugepages: {}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -30,23 +32,8 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      config:
         description: "Workload partitioning PerformanceProfile"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: performance-profile
-        enabled: true
-        description: "PerformanceProfile for workload partitioning"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: performance-profile
-        enableTemplateParameters: true
-        templateParameters:
-          name: workload-partitioning
+        templates:
+          performance-profile:
+            description: "PerformanceProfile for workload partitioning"

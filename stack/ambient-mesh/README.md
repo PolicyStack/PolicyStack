@@ -9,15 +9,13 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Tracing is a large add-on (Tempo plus an ODF bucket), so it is toggled separately from the mesh.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `tracing` | Deploy Tempo and wire the mesh and Kiali to it. Requires ODF on the same cluster. | `false` | Policy [`tracing`](#policy-tracing) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`tracing`](#policy-tracing) | Tempo tracing backend for the mesh | `policies.tracing.enabled: true` |
 
 ## Settings
 
@@ -30,7 +28,7 @@ Under `stack.ambientMesh.config`. Maps merge across layers; lists are replaced w
 | `pilotRequests.cpu` |  | `100m` |
 | `pilotRequests.memory` |  | `256Mi` |
 | `tracing` |  |  |
-| `tracing.enabled` | Export mesh traces and show them in Kiali. Keep in step with the tracing toggle. | `false` |
+| `tracing.enabled` | Export mesh traces and show them in Kiali. Keep in step with `policies.tracing.enabled`. | `false` |
 | `tracing.collectorService` | OTel collector the mesh exports spans to | `otel-collector.istio-system.svc.cluster.local` |
 | `tracing.tempoQueryUrl` | Tempo query frontend Kiali reads traces from | `http://tempo-servicemesh-query-frontend.tracing-system.svc.cluster.local:3200` |
 
@@ -44,17 +42,17 @@ Standards: NIST SP 800-53. Controls: SC-8 Transmission Confidentiality and Integ
 
 `mesh-ambient-mesh-<cluster>`: Service Mesh 3 control plane, CNI and ztunnel. Depends on `install-servicemesh-<cluster>`, `install-kiali-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `mesh-namespaces` | enforce |  | [namespace-istio-system](converters/namespace-istio-system.yaml)<br>[namespace-istio-cni](converters/namespace-istio-cni.yaml)<br>[namespace-ztunnel](converters/namespace-ztunnel.yaml)<br>[network-cluster](converters/network-cluster.yaml) | Mesh namespaces |
-| `mesh-control-plane` | enforce | `mesh-namespaces`<br>compliant while pending | [istiocni-default](converters/istiocni-default.yaml)<br>[istio-default](converters/istio-default.yaml)<br>[ztunnel-default](converters/ztunnel-default.yaml) | IstioCNI, Istio and ztunnel |
-| `mesh-observability` | enforce | `mesh-control-plane`<br>compliant while pending | [kiali](converters/kiali.yaml)<br>[telemetry-enable-prometheus-metrics](converters/telemetry-enable-prometheus-metrics.yaml)<br>[servicemonitor-istiod-monitor](converters/servicemonitor-istiod-monitor.yaml)<br>[podmonitor-istio-ztunnel-monitor](converters/podmonitor-istio-ztunnel-monitor.yaml)<br>[clusterrolebinding-kiali-monitoring-rbac](converters/clusterrolebinding-kiali-monitoring-rbac.yaml)<br>[opentelemetrycollector-otel](converters/opentelemetrycollector-otel.yaml) | Kiali, telemetry and monitors |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `mesh-control-plane` | enforce | medium | `mesh-namespaces`<br>compliant while pending | [control-plane](converters/mesh/control-plane.yaml) | IstioCNI, Istio and ztunnel |
+| `mesh-namespaces` | enforce | medium |  | [namespaces](converters/mesh/namespaces.yaml) | Mesh namespaces |
+| `mesh-observability` | enforce | medium | `mesh-control-plane`<br>compliant while pending | [observability](converters/mesh/observability.yaml) | Kiali, telemetry and monitors |
 
 ### Policy `tracing`
 
-`tracing-ambient-mesh-<cluster>`: Tempo tracing backend for the mesh. Depends on `mesh-ambient-mesh-<cluster>`, `install-tempo-<cluster>`, `install-opentelemetry-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with toggle `tracing`.
+`tracing-ambient-mesh-<cluster>`: Tempo tracing backend for the mesh. Depends on `mesh-ambient-mesh-<cluster>`, `install-tempo-<cluster>`, `install-opentelemetry-<cluster>`, `ready-odf-<cluster>`. Off by default; turn on with `policies.tracing.enabled: true`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `tracing-tempo-storage` | enforce |  | [namespace-tracing-system](converters/namespace-tracing-system.yaml)<br>[objectbucketclaim-tempo-bucket-odf](converters/objectbucketclaim-tempo-bucket-odf.yaml)<br>[secret-tempo-s3-secret](converters/secret-tempo-s3-secret.yaml)<br>[configmap-tempo-s3-ca-bundle](converters/configmap-tempo-s3-ca-bundle.yaml) | Tempo namespace, bucket and credentials |
-| `tracing-tempostack` | enforce | `tracing-tempo-storage`<br>compliant while pending | [tempostack-tempo-servicemesh](converters/tempostack-tempo-servicemesh.yaml) | TempoStack |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `tracing-tempo-storage` | enforce | medium |  | [tempo-storage](converters/tracing/tempo-storage.yaml) | Tempo namespace, bucket and credentials |
+| `tracing-tempostack` | enforce | medium | `tracing-tempo-storage`<br>compliant while pending | [tempostack](converters/tracing/tempostack.yaml) | TempoStack |

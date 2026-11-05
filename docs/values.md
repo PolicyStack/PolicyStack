@@ -72,9 +72,11 @@ Merged `stack.infraNodes` for `prod-east-1`, trimmed:
 
 ```yaml
 enabled: true                 # clusters/prod-east-1.yaml
-toggles:
-  aws: true                   # platforms/aws.yaml
-  workloads: false            # element default
+policies:
+  aws:
+    enabled: true             # platforms/aws.yaml, default false
+  workloads:
+    enabled: false            # element default
 config:
   replicas: 1                 # clusters/prod-east-1.yaml, default 3
   zones:                      # clusters/prod-east-1.yaml, replaces default []
@@ -134,13 +136,18 @@ Maps merge key by key. Lists replace.
             - image-registry.openshift-image-registry.svc:5000
     ```
 
-`policies` and `configPolicies` are lists. Change them through maps instead:
+`policies`, their `templates` and `operatorPolicies` are maps, so a layer sets one key of one entry. Every entry is on unless it sets `enabled: false`:
 
 | Change | Key |
 |---|---|
-| One policy on or off | [`toggles`](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#toggles), e.g. `stack.remediations.toggles.registries` |
-| A converter setting | `config` ([Conventions](elements.md#conventions)) |
+| A policy on or off | `stack.remediations.policies.registries.enabled` |
+| A template on or off | `stack.gitops.policies.link.templates.argocd-console.enabled` |
+| An operator on or off | `stack.metallb.operatorPolicies.metallb.enabled`. `false` stops managing it; it stays installed |
+| A converter setting | `config`, or `policies.<p>.templates.<t>.config` for one template |
 | One operator field | `stack.metallb.operatorPolicies.metallb.versions`. `versions` is a list and replaces ([Operator upgrades](rollout.md#operator-upgrades)) |
+
+!!! warning "Never `null`"
+    `enabled: null` deletes the key, and the entry falls back to on. Use `false`.
 
 ## Schema
 
@@ -162,7 +169,7 @@ The validator's POLICY035 checks every file under `values/` for what the schema 
 | Wrong type in an element | schema |
 | Unknown top-level or `global` key | POLICY035 |
 | Unknown element (`stack.certManagr`) | POLICY035 |
-| Toggle that names no entry | POLICY035 |
+| `policies` or `templates` key that names nothing in the element | render, POLICY035 |
 | Top-level `config` key absent from the element's `values.yaml` | POLICY035 |
 | Deeper `config` keys | nothing |
 
@@ -196,9 +203,9 @@ global:
     | `environments/nonprod.yaml` | Nothing |
     | `datacenters/dc1.yaml` | `install.baseDomain` |
     | `datacenters/dc2.yaml` | Registry allowlist through the dc2 mirror |
-    | `platforms/aws.yaml` | Node toggles: clone the worker MachineSet. `install`: Hive |
-    | `platforms/vmware.yaml` | Node toggles: clone each MachineSet per failure domain. `install`: Hive |
-    | `platforms/baremetal.yaml` | Node toggles: no MachineSets, label nodes. `install`: SiteConfig |
+    | `platforms/aws.yaml` | Node policies: clone the worker MachineSet. `install`: Hive |
+    | `platforms/vmware.yaml` | Node policies: clone each MachineSet per failure domain. `install`: Hive |
+    | `platforms/baremetal.yaml` | Node policies: no MachineSets, label nodes. `install`: SiteConfig |
     | `platforms/kubevirt.yaml` | `install` only: `KubeVirt`, 2-node `workers` pool |
     | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
     | `tenants/payments.yaml` | GitOps operator plus a payments team Argo CD |

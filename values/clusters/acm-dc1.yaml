@@ -41,7 +41,7 @@ stack:
 # No object storage (3-node compact, no spare disks):
 #   storageNodes, localStorage, odf - nothing to back Ceph with.
 #   loki, imageRegistry (s3 mode), ambientMesh (tracing) and the ACM
-#   observability toggle all depend on odf's `ready` policy, so enabling any of
+#   observability policy all depend on odf's `ready` policy, so enabling any of
 #   them now would leave a Policy sitting Pending forever.
 #
 # No default StorageClass:

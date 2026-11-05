@@ -34,6 +34,6 @@ Standards: NIST SP 800-53. Controls: CM-6 Configuration Settings. Categories: CM
 
 `config-master-nodes-<cluster>`: Control-plane kubelet configuration.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-master-kubelet` | enforce | [node-kubelet-config](converters/node-kubelet-config.yaml) | KubeletConfig for the master pool |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-master-kubelet` | enforce | medium | [master-kubelet](converters/config/master-kubelet.yaml) | KubeletConfig for the master pool |

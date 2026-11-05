@@ -501,9 +501,14 @@ func TestComplianceStructure(t *testing.T) {
 		t.Error("scan-state must not set a customMessage")
 	}
 
-	// musthave would merge lists and keep a removed profile bound.
+	// musthave would merge lists and keep a removed profile bound. The template renders either field.
 	found := false
 	entries, _, _ := unstructured.NestedSlice(tmpls["scan-setting"], "spec", "object-templates")
+	if raw, ok, _ := unstructured.NestedString(tmpls["scan-setting"], "spec", "object-templates-raw"); ok {
+		if err := yaml.Unmarshal([]byte(raw), &entries); err != nil {
+			t.Fatalf("scan-setting object-templates-raw: %v", err)
+		}
+	}
 	for _, e := range entries {
 		entry := e.(map[string]any)
 		if nestedString(entry, "objectDefinition", "kind") != "ScanSettingBinding" {

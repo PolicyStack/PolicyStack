@@ -9,18 +9,15 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Exactly one platform toggle should be on. Set these in values/platforms/&lt;p>.yaml and select the file with a platform.&lt;N> config entry in the fleet file.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `aws` | Create storage MachineSets by cloning the worker MachineSet (AWS) | `false` | Policy [`aws`](#policy-aws) |
-| `vmware` | Clone each worker MachineSet per vSphere failure domain | `false` | Policy [`vmware`](#policy-vmware) |
-| `baremetal` | Label existing nodes as storage nodes (no MachineSets on bare metal) | `false` | Policy [`baremetal`](#policy-baremetal) |
-| `ready` | Report NonCompliant until the storage nodes are ready | `true` | Policy [`ready`](#policy-ready) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`aws`](#policy-aws) | Storage MachineSets on AWS | `policies.aws.enabled: true` |
+| Policy [`baremetal`](#policy-baremetal) | Storage node labels on bare metal | `policies.baremetal.enabled: true` |
+| Policy [`vmware`](#policy-vmware) | Storage MachineSets on vSphere | `policies.vmware.enabled: true` |
 
 ## Settings
 
@@ -28,6 +25,10 @@ Under `stack.storageNodes.config`. Maps merge across layers; lists are replaced 
 
 | Key | Description | Default |
 |---|---|---|
+| `role` | Node role: names the MachineSets | `storage` |
+| `nodeLabels` | Labels set on storage nodes |  |
+| `nodeLabels.node-role.kubernetes.io/infra` |  | `''` |
+| `nodeLabels.cluster.ocs.openshift.io/openshift-storage` |  | `''` |
 | `replicas` | Storage nodes per zone. ODF expects three for a supported topology. | `3` |
 | `zones` | AWS availability zones. Empty uses the zone of the cloned worker MachineSet. | `[]` |
 | `instanceType` | AWS instance type. Empty inherits from the worker MachineSet. | `''` |
@@ -45,33 +46,33 @@ Standards: NIST SP 800-53. Controls: CM-6 Configuration Settings. Categories: CM
 
 ### Policy `aws`
 
-`aws-storage-nodes-<cluster>`: Storage MachineSets on AWS. Off by default; turn on with toggle `aws`.
+`aws-storage-nodes-<cluster>`: Storage MachineSets on AWS. Off by default; turn on with `policies.aws.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `aws-storage-machinesets` | enforce | [machineset-aws](converters/machineset-aws.yaml) | Storage MachineSets cloned from the worker MachineSet |
-
-### Policy `vmware`
-
-`vmware-storage-nodes-<cluster>`: Storage MachineSets on vSphere. Off by default; turn on with toggle `vmware`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `vmware-storage-machinesets` | enforce | [machineset-vmware](converters/machineset-vmware.yaml) | Storage MachineSets per vSphere failure domain |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `aws-storage-machinesets` | enforce | medium | [storage-machinesets](converters/aws/storage-machinesets.yaml) | Storage MachineSets cloned from the worker MachineSet |
 
 ### Policy `baremetal`
 
-`baremetal-storage-nodes-<cluster>`: Storage node labels on bare metal. Off by default; turn on with toggle `baremetal`.
+`baremetal-storage-nodes-<cluster>`: Storage node labels on bare metal. Off by default; turn on with `policies.baremetal.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `baremetal-labels` | enforce | [storage-label-nodes](converters/storage-label-nodes.yaml) | Storage node labels |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `baremetal-labels` | enforce | medium | [labels](converters/baremetal/labels.yaml) | Storage node labels |
 
 ### Policy `ready`
 
 `ready-storage-nodes-<cluster>`: Reports NonCompliant until the storage nodes are ready.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-storage-replicas` | inform (always) | [machineset-ready](converters/machineset-ready.yaml) | Storage MachineSet readiness |
-| `ready-labeled-nodes` | inform (always) | [labeled-nodes-ready](converters/labeled-nodes-ready.yaml) (mustnothave) | config.replicas nodes are designated for storage |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-labeled-nodes` | inform (always) | medium | [labeled-nodes](converters/ready/labeled-nodes.yaml) (mustnothave) | config.replicas nodes are designated for storage |
+| `ready-storage-replicas` | inform (always) | medium | [storage-replicas](converters/ready/storage-replicas.yaml) | Storage MachineSet readiness |
+
+### Policy `vmware`
+
+`vmware-storage-nodes-<cluster>`: Storage MachineSets on vSphere. Off by default; turn on with `policies.vmware.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `vmware-storage-machinesets` | enforce | medium | [storage-machinesets](converters/vmware/storage-machinesets.yaml) | Storage MachineSets per vSphere failure domain |

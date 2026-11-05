@@ -22,23 +22,19 @@ func TestPolicy035_LayerKeys(t *testing.T) {
 stack:
   myElement:
     enabled: false
-    toggles:
-      cm: true
     config:
       data: {}
       mode: a
     policies:
-      - name: install
-        enabled: true
-    configPolicies:
-      - name: cm
-        enabled: true
-        policyRef: install
+      extra:
+        enabled: false
+        templates:
+          cm:
+            file: _shared/cm
     operatorPolicies:
       my-op:
-        enabled: true
-        policyRef: install
-`, "", nil)
+        subscription: {name: my-op}
+`, "", []string{"config/cm.yaml", "_shared/cm.yaml"})
 	bare := loadElement(t, `
 stack:
   bare:
@@ -63,7 +59,16 @@ install: {engine: hive}
 stack:
   myElement:
     enabled: true
-    toggles: {install: true, cm: false, my-op: true}
+    policies:
+      install: {disabled: true}
+      config:
+        enabled: false
+        templates:
+          cm: {enabled: true}
+          added: {file: _shared/cm}
+      extra: {enabled: true}
+    operatorPolicies:
+      my-op: {enabled: false}
     config:
       data: {k: v}
       mode: b
@@ -80,8 +85,11 @@ stack:
   myElemnt:
     enabled: true
   myElement:
-    toggles:
-      confg: true
+    policies:
+      confg: {enabled: true}
+      config:
+        templates:
+          cn: {enabled: false}
     config:
       dta: {}
   bare:
@@ -92,11 +100,12 @@ stack:
 				`top-level key "stak" is read by nothing`,
 				`global.remediationActon is read by nothing`,
 				`stack.myElemnt names no element`,
-				`stack.myElement.toggles.confg names no entry of the element`,
+				`stack.myElement.policies.confg names no policy of the element`,
+				`stack.myElement.policies.config.templates.cn names no template of the policy: add converters/config/cn.yaml or set file`,
 				`stack.myElement.config.dta is not in the element's values.yaml`,
 				`stack.bare.config.anything is not in the element's values.yaml`,
 			},
-			lines: []int{1, 3, 5, 9, 11, 14},
+			lines: []int{1, 3, 5, 9, 12, 14, 17},
 		},
 		{
 			name: "every component key is accepted",
@@ -104,15 +113,10 @@ stack:
   myElement:
     enabled: true
     default: {categories: [CM]}
-    toggles: {}
     config: {}
-    policies: []
-    configPolicies: []
+    policies: {}
     operatorPolicies: {}
-    certificatePolicies: []
     policySets: []
-    orderPolicies: true
-    orderManifests: true
     suffixTemplateNames: true
     usePolicySetsPlacements: false
     disablePlacements: false
@@ -130,14 +134,14 @@ stack:
 			lines: []int{5},
 		},
 		{
-			name: "a toggle may name an entry the layer itself declares",
+			name: "3.x keys are reported at the layer",
 			layer: `stack:
   myElement:
     toggles: {extra: true}
-    configPolicies:
-      - name: extra
-        policyRef: install
+    configPolicies: []
 `,
+			want:  []string{`stack.myElement.toggles is not a policy-library component key`, `stack.myElement.configPolicies is not a policy-library component key`},
+			lines: []int{3, 4},
 		},
 		{
 			name:  "invalid YAML is left to RENDER000",
@@ -170,19 +174,29 @@ stack:
 	}
 }
 
-// TestComponentKeys compares componentKeys with definitions.component in each vendored
-// policy-library archive. The archives are gitignored, so it skips when none is fetched.
+// TestComponentKeys compares componentKeys with definitions.component in the policy-library archive
+// each element pins. The archives are gitignored, so it skips when none is fetched.
 func TestComponentKeys(t *testing.T) {
-	archives, _ := filepath.Glob("../../../../stack/*/charts/policy-library-*.tgz")
-	if len(archives) == 0 {
-		testenv.Skip(t, "no policy-library archive under stack/*/charts")
-	}
+	charts, _ := filepath.Glob("../../../../stack/*/Chart.yaml")
 	seen := map[string]bool{}
-	for _, a := range archives {
-		if seen[filepath.Base(a)] {
-			continue
+	var archives []string
+	for _, c := range charts {
+		el, err := chart.Load(filepath.Dir(c), "policy")
+		if err != nil {
+			t.Fatal(err)
 		}
-		seen[filepath.Base(a)] = true
+		for _, d := range el.Dependencies {
+			a := filepath.Join(el.Dir, "charts", "policy-library-"+d.Version+".tgz")
+			if _, err := os.Stat(a); d.Name == "policy-library" && err == nil && !seen[filepath.Base(a)] {
+				seen[filepath.Base(a)] = true
+				archives = append(archives, a)
+			}
+		}
+	}
+	if len(archives) == 0 {
+		testenv.Skip(t, "no pinned policy-library archive under stack/*/charts")
+	}
+	for _, a := range archives {
 		var schema struct {
 			Definitions struct {
 				Component struct {

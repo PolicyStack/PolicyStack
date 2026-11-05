@@ -2,14 +2,6 @@ stack:
   gitops:
     enabled: false
 
-    toggles:
-      # Deploy the platform ArgoCD instance. Disable to install only the operator.
-      instance: true
-      # Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA
-      ca-bundle: true
-      # Publish a console link to ArgoCD
-      link: true
-
     config:
       # Namespace the platform ArgoCD instance runs in
       namespace: openshift-gitops
@@ -55,6 +47,8 @@ stack:
           limits: {cpu: 500m, memory: 256Mi}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
       controls:
@@ -63,90 +57,41 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the OpenShift GitOps operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      - name: instance
-        enabled: true
+      # Deploy the platform ArgoCD instance. Disable to install only the operator.
+      instance:
         description: "Platform ArgoCD instance"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          # Mount the cluster's trusted CA bundle into the repo server, so it trusts Git and Helm servers signed by the proxy's trustedCA
+          ca-bundle:
+            description: "Trusted CA bundle for ArgoCD"
 
-      - name: link
-        enabled: true
+          argocd:
+            description: "ArgoCD instance"
+            waitForOperator: gitops
+
+      # Publish a console link to ArgoCD
+      link:
         description: "Console link to ArgoCD"
-        remediationAction: enforce
         severity: low
-        disabled: false
         dependencies:
           - name: instance
+        templates:
+          argocd-console:
+            description: "ArgoCD console link"
+            config:
+              consoleText: Red Hat OpenShift GitOps
 
     operatorPolicies:
       gitops:
-        enabled: true
         description: "OpenShift GitOps operator"
         displayName: "Red Hat OpenShift GitOps"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-gitops-operator
-        operatorGroup:
-          name: openshift-gitops-operator
         subscription:
           channel: latest
           name: openshift-gitops-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: ca-bundle
-        enabled: true
-        description: "Trusted CA bundle for ArgoCD"
-        policyRef: instance
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: gitops-ca-bundle
-        enableTemplateParameters: true
-        templateParameters: &gitopsParams
-          argoName: openshift-gitops
-          caBundleName: gitops-cluster-ca-bundle
-          consoleText: Red Hat OpenShift GitOps
-          imageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg
-
-      - name: argocd
-        enabled: true
-        description: "ArgoCD instance"
-        policyRef: instance
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        waitForOperator: gitops
-        ignorePending: true
-        templateNames:
-          - name: argocd-instance
-        enableTemplateParameters: true
-        templateParameters: *gitopsParams
-
-      - name: argocd-console
-        enabled: true
-        description: "ArgoCD console link"
-        policyRef: link
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: gitops-console-link
-        enableTemplateParameters: true
-        templateParameters: *gitopsParams

@@ -2,72 +2,32 @@ stack:
   myElement:
     enabled: false
 
-    toggles:
-      # Apply the ConfigMap configured below
-      config: true
-
-    # Settings the converters read.
-    config:
-      # ConfigMap data, e.g. {logLevel: info}
-      data: {}
-
     default:
-      categories:
-        - CM Configuration Management
-      controls:
-        - CM-2 Baseline Configuration
-      standards:
-        - NIST SP 800-53
+      remediationAction: inform
+      severity: medium
+
+    # Settings the converters read as `.Config`.
+    config:
+      # Log level the operator reads from its ConfigMap
+      logLevel: info
 
     policies:
-      - name: install
-        enabled: true
-        description: "Install the operator"
-        remediationAction: inform
-        severity: medium
-        disabled: false
-
-      - name: config
-        enabled: true
-        description: "Configure the operator"
-        remediationAction: inform
-        severity: medium
-        disabled: false
-        # ACM holds this policy Pending until install is compliant
-        dependencies:
-          - name: install
+      install:
+        description: "Install and configure the example operator"
+        templates:
+          my-element-instance:
+            description: "Operator configuration"
+            waitForOperator: my-element
+          my-element-netpol:
+            enabled: false
+            description: "Allow ingress from the same namespace only"
 
     operatorPolicies:
       my-element:
-        enabled: true
-        description: "Example operator"
         displayName: "Example Operator"
-        policyRef: install
-        severity: medium
-        remediationAction: inform
-        complianceType: musthave
         namespace: my-element
-        operatorGroup:
-          name: my-element
         subscription:
-          channel: stable
           name: my-element-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
-        # Allowed CSV names; empty allows whatever the channel offers
+          channel: stable
+        # Allowed CSV names, pinned per layer; empty follows the channel
         versions: []
-
-    configPolicies:
-      - name: my-element-config
-        enabled: true
-        description: "Example ConfigMap"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        # Wait for the operator's CSV, and stay compliant while waiting
-        waitForOperator: my-element
-        ignorePending: true
-        templateNames:
-          - name: my-element-configmap

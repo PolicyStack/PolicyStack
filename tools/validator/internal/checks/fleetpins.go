@@ -49,8 +49,8 @@ func (c *FleetPinCheck) Run(ctx Context) []Finding {
 		if !has("stack") {
 			needs = append(needs, "stack/")
 		}
-		if cl.Hub != "" && !has("lifecycle/converters/hypershift") {
-			needs = append(needs, "lifecycle/converters/hypershift/, which hub needs")
+		if cl.Hub != "" && !has("lifecycle/converters/_hypershift", "lifecycle/converters/hypershift") {
+			needs = append(needs, "lifecycle/converters/_hypershift/, which hub needs")
 		}
 		if (cl.Version != "" || cl.Channel != "") && !has(upgradeHelpers...) {
 			needs = append(needs, "an upgrade element reading version and channel")

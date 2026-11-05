@@ -1,0 +1,15 @@
+{{- $o := .Config.observability }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $o.namespace }}
+---
+{{- /* NooBaa bucket from ODF, used as Thanos long-term metric storage. */}}
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: {{ $o.bucket }}
+  namespace: {{ $o.namespace }}
+spec:
+  generateBucketName: {{ $o.bucket }}
+  storageClassName: {{ $o.bucketStorageClass }}

@@ -9,16 +9,14 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Enable only one storage backend. `pvc` needs an RWX StorageClass; `s3` needs ODF's NooBaa gateway on the same cluster.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `pvc` | Back the registry with an RWX PersistentVolumeClaim | `false` | Policy [`pvc`](#policy-pvc) |
-| `s3` | Back the registry with a NooBaa bucket from ODF | `false` | Policy [`s3`](#policy-s3) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`pvc`](#policy-pvc) | PVC-backed registry storage | `policies.pvc.enabled: true` |
+| Policy [`s3`](#policy-s3) | S3-backed registry storage from ODF | `policies.s3.enabled: true` |
 
 ## Settings
 
@@ -26,7 +24,7 @@ Under `stack.imageRegistry.config`. Maps merge across layers; lists are replaced
 
 | Key | Description | Default |
 |---|---|---|
-| `storageType` | Must match the toggle you enabled above: pvc or s3 | `s3` |
+| `storageType` | Must match the policy you enabled below: pvc or s3 | `s3` |
 | `managementState` | Managed, Unmanaged or Removed | `Managed` |
 | `replicas` | Registry replicas. Use at least 2 with RWX or S3 storage. | `2` |
 | `rolloutStrategy` | RollingUpdate is only safe with RWX or S3; use Recreate with RWO | `RollingUpdate` |
@@ -45,28 +43,28 @@ Under `stack.imageRegistry.config`. Maps merge across layers; lists are replaced
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `pvc`
-
-`pvc-image-registry-<cluster>`: PVC-backed registry storage. Off by default; turn on with toggle `pvc`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `pvc-claim` | enforce | [registry-pvc](converters/registry-pvc.yaml) | Registry PVC |
-
-### Policy `s3`
-
-`s3-image-registry-<cluster>`: S3-backed registry storage from ODF. Depends on `ready-odf-<cluster>`. Off by default; turn on with toggle `s3`.
-
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `s3-bucket` | enforce |  | [registry-bucket](converters/registry-bucket.yaml) | Registry bucket |
-| `s3-bucket-ready` | inform |  | [registry-bucket-ready](converters/registry-bucket-ready.yaml) | Registry bucket is provisioned |
-| `s3-credentials` | enforce | `s3-bucket-ready`<br>compliant while pending | [registry-s3-secret](converters/registry-s3-secret.yaml) | Registry S3 credentials and trust bundle |
-
 ### Policy `config`
 
 `config-image-registry-<cluster>`: Point the registry at its storage and enable it.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-registry` | enforce | [registry-config](converters/registry-config.yaml) | Image registry configuration |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-registry` | enforce | medium | [registry](converters/config/registry.yaml) | Image registry configuration |
+
+### Policy `pvc`
+
+`pvc-image-registry-<cluster>`: PVC-backed registry storage. Off by default; turn on with `policies.pvc.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `pvc-claim` | enforce | medium | [claim](converters/pvc/claim.yaml) | Registry PVC |
+
+### Policy `s3`
+
+`s3-image-registry-<cluster>`: S3-backed registry storage from ODF. Depends on `ready-odf-<cluster>`. Off by default; turn on with `policies.s3.enabled: true`.
+
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `s3-bucket` | enforce | medium |  | [bucket](converters/s3/bucket.yaml) | Registry bucket |
+| `s3-bucket-ready` | inform (always) | medium |  | [bucket-ready](converters/s3/bucket-ready.yaml) | Registry bucket is provisioned |
+| `s3-credentials` | enforce | medium | `s3-bucket-ready`<br>compliant while pending | [credentials](converters/s3/credentials.yaml) | Registry S3 credentials and trust bundle |

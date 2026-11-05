@@ -1,8 +1,0 @@
-{{- /* One object per converter. Site data comes from config, not hard-coded values. */ -}}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-element
-  namespace: my-element
-data:
-  {{- toYaml .Values.stack.myElement.config.data | nindent 2 }}

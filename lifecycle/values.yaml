@@ -93,12 +93,12 @@ selector:
 stack:
   hypershift:
     enabled: true
-    # Each template waits for the one before it in the same Policy
-    orderManifests: true
     # Every release lands on the hub, so template names carry the cluster name
     suffixTemplateNames: true
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CM Configuration Management
       controls:
@@ -109,150 +109,90 @@ stack:
     # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
-      - name: present
-        enabled: true
+      present:
         description: "Create and reconcile the hosted cluster"
-        severity: high
-        disabled: false
+        # Each template waits for the one before it
+        orderManifests: [guard, credentials, manifests, cluster, ready]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
-      - name: absent
-        enabled: true
+          credentials:
+            description: "Pull secret, SSH key and etcd encryption key"
+            file: _hypershift/credentials
+
+          manifests:
+            description: "Extra hub objects from install.manifests"
+            file: manifests
+            severity: medium
+
+          cluster:
+            description: "HostedCluster and NodePools"
+            file: _hypershift/hostedcluster
+
+          # An enforced create is Compliant once the API accepts it, so gate on the rollout finishing
+          ready:
+            description: "Wait for the control plane and every NodePool to reach version"
+            file: _hypershift/ready
+            remediationAction: InformOnly
+            severity: medium
+            customMessage:
+              noncompliant: "Waiting for the control plane and every NodePool to reach version"
+
+      absent:
         description: "Detach, then destroy the hosted cluster"
-        severity: high
-        disabled: false
+        orderManifests: [guard, detach, detached, destroy, destroyed, cleanup]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
 
-    configPolicies:
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
+          # Detach first, so the hosted klusterlet cleans up while the control plane is still up
+          detach:
+            description: "Delete the ManagedCluster"
+            file: detach
 
-      - name: credentials
-        enabled: true
-        description: "Pull secret, SSH key and etcd encryption key"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: hypershift/credentials
+          # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
+          detached:
+            description: "Wait for the ManagedCluster to be gone"
+            file: managedcluster
+            remediationAction: InformOnly
+            complianceType: mustnothave
+            customMessage:
+              noncompliant: "Waiting for the ManagedCluster to be deleted"
 
-      - name: manifests
-        enabled: true
-        description: "Extra hub objects from install.manifests"
-        policyRef: present
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: manifests
+          destroy:
+            description: "Delete the HostedCluster"
+            file: destroy
 
-      - name: cluster
-        enabled: true
-        description: "HostedCluster and NodePools"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: hypershift/hostedcluster
+          destroyed:
+            description: "Wait for the HostedCluster to be gone"
+            file: _hypershift/root
+            remediationAction: InformOnly
+            complianceType: mustnothave
+            customMessage:
+              noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
 
-      # An enforced create is Compliant once the API accepts it, so gate on the rollout finishing
-      - name: ready
-        enabled: true
-        description: "Wait for the control plane and every NodePool to reach version"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: hypershift/ready
-        customMessage:
-          noncompliant: "Waiting for the control plane and every NodePool to reach version"
-
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: absent
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
-
-      # Detach first, so the hosted klusterlet cleans up while the control plane is still up
-      - name: detach
-        enabled: true
-        description: "Delete the ManagedCluster"
-        policyRef: absent
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: detach
-
-      # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
-      - name: detached
-        enabled: true
-        description: "Wait for the ManagedCluster to be gone"
-        policyRef: absent
-        remediationAction: InformOnly
-        complianceType: mustnothave
-        severity: high
-        templateNames:
-          - name: managedcluster
-        customMessage:
-          noncompliant: "Waiting for the ManagedCluster to be deleted"
-
-      - name: destroy
-        enabled: true
-        description: "Delete the HostedCluster"
-        policyRef: absent
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: destroy
-
-      - name: destroyed
-        enabled: true
-        description: "Wait for the HostedCluster to be gone"
-        policyRef: absent
-        remediationAction: InformOnly
-        complianceType: mustnothave
-        severity: high
-        templateNames:
-          - name: hypershift/root
-        customMessage:
-          noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
-
-      - name: cleanup
-        enabled: true
-        description: "Delete the copied secrets and install.manifests"
-        policyRef: absent
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: hypershift/cleanup
+          cleanup:
+            description: "Delete the copied secrets and install.manifests"
+            file: _hypershift/cleanup
+            severity: medium
 
   hive:
     enabled: true
-    # Each template waits for the one before it in the same Policy
-    orderManifests: true
     # Every release lands on the hub, so template names carry the cluster name
     suffixTemplateNames: true
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CM Configuration Management
       controls:
@@ -263,149 +203,90 @@ stack:
     # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
-      - name: present
-        enabled: true
+      present:
         description: "Install the cluster with Hive"
-        severity: high
-        disabled: false
+        # Each template waits for the one before it
+        orderManifests: [guard, credentials, manifests, cluster, ready]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
-      - name: absent
-        enabled: true
+          credentials:
+            description: "Namespace, pull secret, cloud credentials and install-config"
+            file: _hive/credentials
+
+          manifests:
+            description: "Extra hub objects from install.manifests"
+            file: manifests
+            severity: medium
+
+          cluster:
+            description: "ClusterDeployment, ManagedCluster and KlusterletAddonConfig"
+            file: _hive/clusterdeployment
+
+          # An enforced create is Compliant once the API accepts it, so gate on the install finishing
+          ready:
+            description: "Wait for Hive to install the cluster"
+            file: _hive/installed
+            remediationAction: InformOnly
+            severity: medium
+            customMessage:
+              noncompliant: "Waiting for Hive to install the cluster"
+
+      absent:
         description: "Detach, then deprovision the cluster"
-        severity: high
-        disabled: false
+        orderManifests: [guard, detach, detached, destroy, destroyed, cleanup]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
 
-    configPolicies:
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
+          # Detach first, so the klusterlet cleans up while the cluster is still up
+          detach:
+            description: "Delete the ManagedCluster"
+            file: detach
 
-      - name: credentials
-        enabled: true
-        description: "Namespace, pull secret, cloud credentials and install-config"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: hive/credentials
+          # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
+          detached:
+            description: "Wait for the ManagedCluster to be gone"
+            file: managedcluster
+            remediationAction: InformOnly
+            complianceType: mustnothave
+            customMessage:
+              noncompliant: "Waiting for the ManagedCluster to be deleted"
 
-      - name: manifests
-        enabled: true
-        description: "Extra hub objects from install.manifests"
-        policyRef: present
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: manifests
+          destroy:
+            description: "Delete the ClusterDeployment"
+            file: destroy
 
-      - name: cluster
-        enabled: true
-        description: "ClusterDeployment, ManagedCluster and KlusterletAddonConfig"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: hive/clusterdeployment
+          destroyed:
+            description: "Wait for Hive to deprovision the cluster"
+            file: _hive/root
+            remediationAction: InformOnly
+            complianceType: mustnothave
+            customMessage:
+              noncompliant: "Waiting for Hive to deprovision the cluster"
 
-      # An enforced create is Compliant once the API accepts it, so gate on the install finishing
-      - name: ready
-        enabled: true
-        description: "Wait for Hive to install the cluster"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: medium
-        templateNames:
-          - name: hive/installed
-        customMessage:
-          noncompliant: "Waiting for Hive to install the cluster"
-
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: absent
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to detach it"
-
-      # Detach first, so the klusterlet cleans up while the cluster is still up
-      - name: detach
-        enabled: true
-        description: "Delete the ManagedCluster"
-        policyRef: absent
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: detach
-
-      # An enforced delete is Compliant once the API accepts it, so gate on the object being gone
-      - name: detached
-        enabled: true
-        description: "Wait for the ManagedCluster to be gone"
-        policyRef: absent
-        remediationAction: InformOnly
-        complianceType: mustnothave
-        severity: high
-        templateNames:
-          - name: managedcluster
-        customMessage:
-          noncompliant: "Waiting for the ManagedCluster to be deleted"
-
-      - name: destroy
-        enabled: true
-        description: "Delete the ClusterDeployment"
-        policyRef: absent
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: destroy
-
-      - name: destroyed
-        enabled: true
-        description: "Wait for Hive to deprovision the cluster"
-        policyRef: absent
-        remediationAction: InformOnly
-        complianceType: mustnothave
-        severity: high
-        templateNames:
-          - name: hive/root
-        customMessage:
-          noncompliant: "Waiting for Hive to deprovision the cluster"
-
-      - name: cleanup
-        enabled: true
-        description: "Delete Namespace <cluster> and install.manifests"
-        policyRef: absent
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: hive/cleanup
+          cleanup:
+            description: "Delete Namespace <cluster> and install.manifests"
+            file: _hive/cleanup
+            severity: medium
 
   siteconfig:
     enabled: true
-    # Each template waits for the one before it in the same Policy
-    orderManifests: true
     # Every release lands on the hub, so template names carry the cluster name
     suffixTemplateNames: true
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CM Configuration Management
       controls:
@@ -416,116 +297,66 @@ stack:
     # Gates are InformOnly: ACM keeps them inform even under a Policy-level enforce.
     # No pruneObjectBehavior: deleting a Policy must never delete a cluster.
     policies:
-      - name: present
-        enabled: true
+      present:
         description: "Install the cluster with SiteConfig"
-        severity: high
-        disabled: false
+        # Each template waits for the one before it
+        orderManifests: [guard, credentials, manifests, cluster, ready]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
 
-      - name: absent
-        enabled: true
+          credentials:
+            description: "Namespace, pull secret and BMC secret"
+            file: _siteconfig/credentials
+
+          manifests:
+            description: "Extra hub objects from install.manifests"
+            file: manifests
+            severity: medium
+
+          cluster:
+            description: "ClusterImageSet and ClusterInstance"
+            file: _siteconfig/clusterinstance
+
+          # An enforced create is Compliant once the API accepts it, so gate on the install finishing
+          ready:
+            description: "Wait for SiteConfig to install the cluster"
+            file: _siteconfig/ready
+            remediationAction: InformOnly
+            severity: medium
+            customMessage:
+              noncompliant: "Waiting for the ClusterInstance to report Provisioned and its nodes to join or leave: {{ .DefaultMessage }}"
+
+      absent:
         description: "Delete the ClusterInstance and what it rendered"
-        severity: high
-        disabled: false
+        orderManifests: [guard, destroy, destroyed, cleanup]
+        templates:
+          guard:
+            description: "Refuse a same-named object lifecycle did not build"
+            file: guard
+            remediationAction: InformOnly
+            customMessage:
+              noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to destroy it"
 
-    configPolicies:
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to build it"
+          # No detach: the ClusterInstance renders and owns the ManagedCluster, and deletes it after the
+          # BareMetalHosts. SiteConfig would re-create a ManagedCluster deleted on its own.
+          destroy:
+            description: "Delete the ClusterInstance"
+            file: destroy
 
-      - name: credentials
-        enabled: true
-        description: "Namespace, pull secret and BMC secret"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: siteconfig/credentials
+          destroyed:
+            description: "Wait for SiteConfig to delete what it rendered"
+            file: _siteconfig/root
+            remediationAction: InformOnly
+            complianceType: mustnothave
+            customMessage:
+              noncompliant: "Waiting for SiteConfig to delete the BareMetalHosts, ManagedCluster and install objects"
 
-      - name: manifests
-        enabled: true
-        description: "Extra hub objects from install.manifests"
-        policyRef: present
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: manifests
-
-      - name: cluster
-        enabled: true
-        description: "ClusterImageSet and ClusterInstance"
-        policyRef: present
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: siteconfig/clusterinstance
-
-      # An enforced create is Compliant once the API accepts it, so gate on the install finishing
-      - name: ready
-        enabled: true
-        description: "Wait for SiteConfig to install the cluster"
-        policyRef: present
-        remediationAction: InformOnly
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: siteconfig/ready
-        customMessage:
-          noncompliant: "Waiting for the ClusterInstance to report Provisioned and its nodes to join or leave: {{ .DefaultMessage }}"
-
-      - name: guard
-        enabled: true
-        description: "Refuse a same-named object lifecycle did not build"
-        policyRef: absent
-        remediationAction: InformOnly
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: guard
-        customMessage:
-          noncompliant: "{{ .DefaultMessage }}: not built by lifecycle (no lifecycle.policystk.io/hub annotation); refusing to destroy it"
-
-      # No detach: the ClusterInstance renders and owns the ManagedCluster, and deletes it after the
-      # BareMetalHosts. SiteConfig would re-create a ManagedCluster deleted on its own.
-      - name: destroy
-        enabled: true
-        description: "Delete the ClusterInstance"
-        policyRef: absent
-        remediationAction: enforce
-        severity: high
-        rawTemplate: true
-        templateNames:
-          - name: destroy
-
-      - name: destroyed
-        enabled: true
-        description: "Wait for SiteConfig to delete what it rendered"
-        policyRef: absent
-        remediationAction: InformOnly
-        complianceType: mustnothave
-        severity: high
-        templateNames:
-          - name: siteconfig/root
-        customMessage:
-          noncompliant: "Waiting for SiteConfig to delete the BareMetalHosts, ManagedCluster and install objects"
-
-      - name: cleanup
-        enabled: true
-        description: "Delete Namespace <cluster>, ClusterImageSet lifecycle-<cluster> and install.manifests"
-        policyRef: absent
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: siteconfig/cleanup
+          cleanup:
+            description: "Delete Namespace <cluster>, ClusterImageSet lifecycle-<cluster> and install.manifests"
+            file: _siteconfig/cleanup
+            severity: medium

@@ -151,6 +151,11 @@ a: {{ $cfg.x }}
 			want:      []string{"1:38 fstype"},
 		},
 		{
+			name:      ".Config, from $ and bound",
+			converter: "{{- $c := .Config }}\nx: {{ $c.fsytpe }}{{ .Config.fstype }}{{ $.Config.dta }}{{ with .Config.data }}{{ .Config }}{{ end }}\n",
+			want:      []string{"2:10 fsytpe", "2:51 dta"},
+		},
+		{
 			name:      "unparsable converter is left to RENDER000",
 			converter: "x: {{ .Values.stack.myElement.config.typo }\n",
 		},
@@ -169,7 +174,7 @@ a: {{ $cfg.x }}
 			var want []string
 			for _, w := range tt.want {
 				pos, key, _ := strings.Cut(w, " ")
-				want = append(want, fmt.Sprintf("%s reads stack.myElement.config.%s, which is not in the element's values.yaml", pos, key))
+				want = append(want, fmt.Sprintf("%s reads config key %s, which is not in stack.myElement.config of the element's values.yaml or the config of a template rendering it", pos, key))
 			}
 			if !slices.Equal(got, want) {
 				t.Errorf("got %q, want %q", got, want)
@@ -208,6 +213,58 @@ stack:
 	}
 	if want := []string{"a 1:57", "b 1:87"}; !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestPolicy022_TemplateConfig: a template's config adds to the keys its converters may read through
+// .Config, and only theirs; a partial no template renders may read any template's. A converter only a
+// sibling lifecycle engine renders is that engine's to check.
+func TestPolicy022_TemplateConfig(t *testing.T) {
+	const schema = `{"properties":{"install":{"properties":{"engine":{"enum":["a","b"]}}}}}`
+	el := loadElement(t, `
+stack:
+  a:
+    config: {x: 1}
+    policies:
+      p:
+        templates:
+          t:
+            config: {name: n}
+          shared:
+            file: _a/shared
+  b:
+    config: {y: 1}
+`, "apiVersion: v2\nname: lifecycle\nversion: 0.1.0\n", nil)
+	writeConverters(t, el, map[string]string{
+		"p/t.yaml":       "{{ .Config.name }}{{ .Config.x }}{{ .Values.stack.a.config.name }}\n",
+		"_part.yaml":     "{{ .Config.name }}{{ .Values.stack.a.config.name }}\n",
+		"p/u.yaml":       "{{ .Config.name }}\n",
+		"_a/shared.yaml": "{{ .Config.x }}{{ .Config.z }}\n",
+		"_unused.yaml":   "{{ .Config.z }}\n",
+	})
+	dir := filepath.Dir(el.ValuesFile)
+	if err := os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(schema), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	comps, err := chart.LoadComponents(dir, "policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, el := range comps {
+		for _, f := range (&ConfigReadCheck{}).Run(Context{Element: el}) {
+			rel, _ := filepath.Rel(el.ConvertersDir, f.File)
+			got = append(got, fmt.Sprintf("%s %s:%d:%d %s", el.StackKey, rel, f.Line, f.Col, strings.Fields(f.Message)[3]))
+		}
+	}
+	slices.Sort(got)
+	// p/t.yaml and p/u.yaml are discovered for both engines.
+	want := []string{
+		"a _a/shared.yaml:1:27 z,", "a _part.yaml:1:45 name,", "a _unused.yaml:1:12 z,", "a p/t.yaml:1:60 name,", "a p/u.yaml:1:12 name,",
+		"b _part.yaml:1:12 name,", "b _unused.yaml:1:12 z,", "b p/t.yaml:1:12 name,", "b p/t.yaml:1:30 x,", "b p/u.yaml:1:12 name,",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
 	}
 }
 

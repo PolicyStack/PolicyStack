@@ -45,14 +45,14 @@ Standards: NIST SP 800-53. Controls: AU-6 Audit Review, Analysis, and Reporting.
 
 `config-user-monitoring-<cluster>`: Enable and configure User Workload Monitoring.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-enable` | enforce | [uwm-enable](converters/uwm-enable.yaml) | Enable UWM and write its configuration |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-enable` | enforce | medium | [enable](converters/config/enable.yaml) | Enable UWM and write its configuration |
 
 ### Policy `ready`
 
 `ready-user-monitoring-<cluster>`: Reports NonCompliant until the UWM StatefulSets are ready. Depends on `config-user-monitoring-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-statefulsets` | inform | [uwm-ready](converters/uwm-ready.yaml) | UWM StatefulSet readiness |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-statefulsets` | inform | medium | [statefulsets](converters/ready/statefulsets.yaml) | UWM StatefulSet readiness |

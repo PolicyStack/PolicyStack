@@ -2,14 +2,6 @@ stack:
   certManager:
     enabled: false
 
-    toggles:
-      # Cluster CA issuer. On by default; it is the cluster's default TLS issuer.
-      ca: true
-      # Replace the external API serving cert (api.<domain>). Additive and SNI-matched.
-      api-cert: false
-      # Replace the default Ingress wildcard cert (*.apps.<domain>). Higher blast radius.
-      ingress-cert: false
-
     config:
       # Name of the CA Certificate and the ClusterIssuer that signs from it
       caName: policystack-ca
@@ -45,6 +37,8 @@ stack:
         issuer: {}
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CM Configuration Management
         - SC System and Communications Protection
@@ -54,59 +48,64 @@ stack:
       standards:
         - NIST SP 800-53
 
-    # Parent policies. Each sub-feature is its own policy so it can be ordered and
-    # toggled independently.
+    # Each sub-feature is its own policy so it can be ordered and enabled independently.
     policies:
       # Install and manage the cert-manager Operator
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the cert-manager Operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
-      # Cluster CA issuer, signing every certificate below
-      - name: ca
-        enabled: true
+      # Cluster CA issuer, signing every certificate below. On by default; it is the
+      # cluster's default TLS issuer.
+      ca:
         description: "Cluster CA ClusterIssuer used as the default TLS issuer"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         # The CRDs must exist before any cert-manager resource can be applied
         dependencies:
           - name: install
+        templates:
+          # The CA Certificate and ClusterIssuer, plus a self-signed root when no
+          # external signer is configured
+          ca-issuer:
+            description: "Cluster CA Certificate and ClusterIssuer"
 
-      # cert-manager-managed serving certificate for the external API endpoint
-      - name: api-cert
-        enabled: true
+      # Replace the external API serving cert (api.<domain>). Additive and SNI-matched.
+      api-cert:
+        enabled: false
         description: "cert-manager-managed API server serving certificate"
-        # No Policy-level remediationAction: it would override the inform gate below.
-        severity: medium
-        disabled: false
         dependencies:
           - name: ca
+        templates:
+          # API serving certificate, and the APIServer patch once it is Ready
+          api-certificate:
+            description: "API server serving certificate (additive, SNI-matched)"
 
-      # cert-manager-managed default Ingress wildcard certificate
-      - name: ingress-cert
-        enabled: true
+          # Inform-only readiness signal for the API certificate
+          api-ready:
+            description: "Reports NonCompliant while the API certificate is not Ready"
+            remediationAction: InformOnly
+
+      # Replace the default Ingress wildcard cert (*.apps.<domain>). Higher blast radius.
+      ingress-cert:
+        enabled: false
         description: "cert-manager-managed default Ingress wildcard certificate"
-        # No Policy-level remediationAction: it would override the inform gate below.
-        severity: medium
-        disabled: false
         dependencies:
           - name: ca
+        templates:
+          # Ingress wildcard certificate, and the IngressController patch once Ready
+          ingress-certificate:
+            description: "Default Ingress wildcard certificate (replaces *.apps)"
+
+          # Inform-only readiness signal for the Ingress certificate
+          ingress-ready:
+            description: "Reports NonCompliant while the Ingress certificate is not Ready"
+            remediationAction: InformOnly
 
     # OperatorPolicy installing the cert-manager subscription
     operatorPolicies:
       cert-manager:
-        enabled: true
         description: "cert-manager Operator (Red Hat build)"
         displayName: "cert-manager Operator for Red Hat OpenShift"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: cert-manager-operator
+        clusterMonitoring: true
         operatorGroup:
           name: cert-manager-operator-group
           targetNamespaces:
@@ -114,102 +113,4 @@ stack:
         subscription:
           channel: stable-v1
           name: openshift-cert-manager-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      # Adds the cluster-monitoring label to the operator namespace
-      - name: cert-manager-ns-monitoring
-        enabled: true
-        description: "Adds openshift.io/cluster-monitoring label to operator namespace"
-        policyRef: install
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        evaluationInterval:
-          compliant: "10m"
-          noncompliant: "30s"
-        templateNames:
-          - name: ns-monitoring-label
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: cert-manager-operator
-
-      # The CA Certificate and ClusterIssuer, plus a self-signed root when no
-      # external signer is configured
-      - name: ca-issuer
-        enabled: true
-        description: "Cluster CA Certificate and ClusterIssuer"
-        policyRef: ca
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Object count varies with whether a self-signed root is needed
-        rawTemplate: true
-        templateNames:
-          - name: ca-issuer
-        enableTemplateParameters: true
-        templateParameters:
-          caName: policystack-ca
-          # cert-manager's cluster-resource-namespace; the CA secret must live here
-          caNamespace: cert-manager
-
-      # API serving certificate, and the APIServer patch once it is Ready
-      - name: api-certificate
-        enabled: true
-        description: "API server serving certificate (additive, SNI-matched)"
-        policyRef: api-cert
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: api-certificate
-        enableTemplateParameters: true
-        templateParameters:
-          certName: cert-manager-api-cert
-
-      # Inform-only readiness signal for the API certificate
-      - name: api-ready
-        enabled: true
-        description: "Reports NonCompliant while the API certificate is not Ready"
-        policyRef: api-cert
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: api-cert-ready
-        enableTemplateParameters: true
-        templateParameters:
-          certName: cert-manager-api-cert
-
-      # Ingress wildcard certificate, and the IngressController patch once Ready
-      - name: ingress-certificate
-        enabled: true
-        description: "Default Ingress wildcard certificate (replaces *.apps)"
-        policyRef: ingress-cert
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: ingress-certificate
-        enableTemplateParameters: true
-        templateParameters:
-          certName: cert-manager-ingress-cert
-
-      # Inform-only readiness signal for the Ingress certificate
-      - name: ingress-ready
-        enabled: true
-        description: "Reports NonCompliant while the Ingress certificate is not Ready"
-        policyRef: ingress-cert
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: ingress-cert-ready
-        enableTemplateParameters: true
-        templateParameters:
-          certName: cert-manager-ingress-cert

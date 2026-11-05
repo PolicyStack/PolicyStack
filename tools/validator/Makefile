@@ -1,13 +1,14 @@
 BINARY := bin/policystack-validator
 PKG := ./cmd/policystack-validator
 ROOT := ../..
-# validate runs from the repo root, where CI annotations and --extra-values paths resolve.
-VALIDATOR := $(abspath $(BINARY)) --repo-root . $(if $(CI),--github)
+# validate runs from the repo root, where CI annotations and --extra-values paths resolve. ELEMENT
+# limits validate and preview to one chart.
+VALIDATOR := $(abspath $(BINARY)) --repo-root . $(if $(CI),--github) $(if $(ELEMENT),--element $(ELEMENT))
 BASELINE := tools/validator/testdata/baseline.yaml
-# Every chart that depends on policy-library.
-CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(ROOT)/lifecycle $(ROOT)/tools/sample-element
+# Every chart that depends on policy-library, TestConformance's fixture included.
+CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(ROOT)/lifecycle $(ROOT)/tools/sample-element internal/chart/testdata/element
 
-.PHONY: build test lint fmt clean run tidy deps crds validate consumers ci
+.PHONY: build test lint fmt clean run tidy deps crds validate preview consumers ci
 
 # CRDs POLICY080 validates rendered objects against, at the ACM 2.16 floor (docs/validation.md#crd-schemas).
 # Renovate bumps each SHA to its branch head; the branches move with the floor, by hand.
@@ -66,7 +67,7 @@ crds:
 # Three passes, all run, any failure fails:
 # 1. Fixture clusters plus tools/sample-element. POLICY081 runs in pass 2, where every converter
 #    renders. POLICY071 (install/) runs here only.
-# 2. Each profile turns every element and toggle on, tools/sample-element too
+# 2. Each profile turns every element and optional template on, tools/sample-element too
 #    (docs/validation.md#acm-templates). In CI, sort -u drops the annotations two profiles both report.
 # 3. A fork's real fleet, when it has one. Upstream ships none. POLICY052 (fleet pins) runs here
 #    only: the fixtures' revisions are not real pins.
@@ -81,6 +82,22 @@ validate: build crds
 	if [ -n "$$(ls fleet/*.yaml fleet/hubs/*.yaml 2>/dev/null)" ]; then \
 	  $(VALIDATOR) --fixtures-dir fleet --extra-values $(BASELINE) --skip POLICY071 || failed=1; \
 	fi; \
+	exit $$failed
+
+# Renders ELEMENT, turned on, for CLUSTER (default every fixture) into a new directory, or PREVIEW
+# (relative to tools/validator): <fleet file>/<element>.yaml holds the Policies and
+# <element>.evaluated.yaml the objects ACM applies on an empty cluster, ACM templates resolved.
+# Prints both when CLUSTER is set.
+preview: build
+	@test -n "$(ELEMENT)" || { echo "usage: make preview ELEMENT=<element> [CLUSTER=<fleet file>]"; exit 2; }
+	@dir=$${PREVIEW:-$$(mktemp -d)} && mkdir -p "$$dir" && dir=$$(cd "$$dir" && pwd) && \
+	enable=$$(mktemp) && trap 'rm -f "$$enable"' EXIT && \
+	key=$$(echo "$(ELEMENT)" | awk -F- '{printf "%s", $$1; for (i = 2; i <= NF; i++) printf "%s", toupper(substr($$i, 1, 1)) substr($$i, 2)}') && \
+	printf 'stack:\n  %s:\n    enabled: true\n' "$$key" > "$$enable" && \
+	cd $(ROOT) && failed=0; \
+	$(VALIDATOR) --extra-values "$(BASELINE),$$enable" --include-sample-element $(if $(CLUSTER),--cluster $(CLUSTER)) \
+	  --only RENDER000,POLICY081 --render-dir "$$dir" --evaluate || failed=1; \
+	find "$$dir" -name '*.yaml' | sort | $(if $(CLUSTER),xargs tail -n +1,cat); \
 	exit $$failed
 
 # Renders every chart against the policy-library chart directory in LIBRARY, packaged as the chart's

@@ -9,13 +9,18 @@ import (
 	"slices"
 	"strings"
 	"text/template/parse"
+
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
 // ConfigReadCheck (POLICY022) reports a converter reading a top-level config key the element's
 // values.yaml does not define: Helm renders it as null without complaint. It recognises
-// `.Values.stack.<el>.config.<key>`, the same from `$`, and `$v.<key>` where `$v` is bound to
-// `.Values.stack.<el>.config` in scope. Only Helm actions are read, so an escaped ACM template, text
-// to Helm, is skipped. Each lifecycle component checks reads of its own stack key.
+// `.Config.<key>`, `.Values.stack.<el>.config.<key>`, both from `$`, and `$v.<key>` where `$v` is
+// bound to either in scope. Both read stack.<el>.config; .Config also holds the config of the
+// templates rendering the converter, or, in a partial no template renders, of any template. Only
+// Helm actions are read, so an escaped ACM template, text to Helm, is skipped. Each lifecycle
+// component checks its own config.
 type ConfigReadCheck struct{}
 
 func (ConfigReadCheck) ID() string   { return "POLICY022" }
@@ -26,7 +31,7 @@ func (c *ConfigReadCheck) Run(ctx Context) []Finding {
 	if el == nil || el.StackKey == "" {
 		return nil
 	}
-	keys := configKeys(el)
+	elementKeys := configKeys(el)
 	var out []Finding
 	converters := os.DirFS(el.ConvertersDir)
 	_ = fs.WalkDir(converters, ".", func(rel string, d fs.DirEntry, err error) error {
@@ -39,8 +44,21 @@ func (c *ConfigReadCheck) Run(ctx Context) []Finding {
 		}
 		path := filepath.Join(el.ConvertersDir, rel)
 		text := string(data)
+		conv := strings.TrimSuffix(filepath.ToSlash(rel), ".yaml")
+		own, rendered := templateConfigKeys(el, el.Values.Component, conv)
+		// A converter only a sibling lifecycle engine renders reads that engine's .Config.
+		if !rendered && slices.ContainsFunc(el.Components, func(nc chart.NamedComponent) bool {
+			_, ok := templateConfigKeys(el, nc.Component, conv)
+			return ok
+		}) {
+			return nil
+		}
+		// A partial pulled in with tpl gets the including template's .Config.
+		if !rendered && partial(filepath.ToSlash(rel)) {
+			own = allTemplateConfigKeys(el)
+		}
 		for _, r := range configReadsIn(path, text, el.StackKey) {
-			if slices.Contains(keys, r.key) {
+			if slices.Contains(elementKeys, r.key) || r.dot && slices.Contains(own, r.key) {
 				continue
 			}
 			before := text[:r.pos]
@@ -48,7 +66,7 @@ func (c *ConfigReadCheck) Run(ctx Context) []Finding {
 				RuleID:   c.ID(),
 				Severity: SevError,
 				Element:  el.ChartName,
-				Message:  fmt.Sprintf("reads stack.%s.config.%s, which is not in the element's values.yaml", el.StackKey, r.key),
+				Message:  fmt.Sprintf("reads config key %s, which is not in stack.%s.config of the element's values.yaml or the config of a template rendering it", r.key, el.StackKey),
 				File:     path,
 				Line:     1 + strings.Count(before, "\n"),
 				Col:      r.pos - strings.LastIndex(before, "\n"),
@@ -59,10 +77,39 @@ func (c *ConfigReadCheck) Run(ctx Context) []Finding {
 	return out
 }
 
-// configRead is a read of a top-level config key, pos its byte offset in the converter.
+// templateConfigKeys returns the top-level keys of templates.<t>.config in values.yaml for each
+// template of comp rendering converter, a path under converters/ without .yaml, and whether any does.
+func templateConfigKeys(el *chart.Element, comp *chart.Component, converter string) ([]string, bool) {
+	var out []string
+	rendered := false
+	for _, s := range comp.SubPolicies() {
+		if slices.Contains(s.Files, converter) {
+			rendered = true
+			out = append(out, subPolicyConfigKeys(el, s)...)
+		}
+	}
+	return out, rendered
+}
+
+// allTemplateConfigKeys returns the top-level keys of every templates.<t>.config of el's component.
+func allTemplateConfigKeys(el *chart.Element) []string {
+	var out []string
+	for _, s := range el.Values.Component.SubPolicies() {
+		out = append(out, subPolicyConfigKeys(el, s)...)
+	}
+	return out
+}
+
+func subPolicyConfigKeys(el *chart.Element, s chart.SubPolicy) []string {
+	return mapKeys(sourceloc.FindNode(el.ValuesDoc, slices.Concat([]string{"stack", el.StackKey}, s.Path, []string{"config"})...))
+}
+
+// configRead is a read of a top-level config key, pos its byte offset in the converter. dot is set
+// for a .Config read, which also sees template config.
 type configRead struct {
 	pos int
 	key string
+	dot bool
 }
 
 // configReadsIn returns the reads of stack.<stackKey>.config keys in a converter. A converter that
@@ -76,7 +123,7 @@ func configReadsIn(name, text, stackKey string) []configRead {
 	}
 	w := configWalker{stackKey: stackKey}
 	for _, name := range slices.Sorted(maps.Keys(trees)) {
-		w.walk(trees[name].Root, map[string]bool{})
+		w.walk(trees[name].Root, map[string]int{})
 	}
 	return w.reads
 }
@@ -86,9 +133,9 @@ type configWalker struct {
 	reads    []configRead
 }
 
-// walk records the config reads under n. vars holds, per variable in scope, whether it is bound
-// to the config; a block's declarations go into a copy.
-func (w *configWalker) walk(n parse.Node, vars map[string]bool) {
+// walk records the config reads under n. vars holds, per variable in scope, the prefix length of
+// the config it is bound to, 0 for none; a block's declarations go into a copy.
+func (w *configWalker) walk(n parse.Node, vars map[string]int) {
 	switch n := n.(type) {
 	case *parse.ListNode:
 		if n == nil {
@@ -116,7 +163,10 @@ func (w *configWalker) walk(n parse.Node, vars map[string]bool) {
 				w.walk(arg, vars)
 			}
 		}
-		bound := len(n.Cmds) == 1 && len(n.Cmds[0].Args) == 1 && w.isConfig(n.Cmds[0].Args[0])
+		bound := 0
+		if len(n.Cmds) == 1 && len(n.Cmds[0].Args) == 1 {
+			bound = w.config(n.Cmds[0].Args[0])
+		}
 		for _, v := range n.Decl {
 			vars[v.Ident[0]] = bound
 		}
@@ -128,49 +178,67 @@ func (w *configWalker) walk(n parse.Node, vars map[string]bool) {
 		switch {
 		case n.Ident[0] == "$":
 			w.read(n.Pos, n.Ident[1:], 0)
-		case vars[n.Ident[0]] && len(n.Ident) > 1:
-			w.reads = append(w.reads, configRead{pos: int(n.Pos) + 1, key: n.Ident[1]})
+		case vars[n.Ident[0]] > 0 && len(n.Ident) > 1:
+			w.reads = append(w.reads, configRead{pos: int(n.Pos) + 1, key: n.Ident[1], dot: vars[n.Ident[0]] == 1})
 		}
 	}
 }
 
 // branch walks an if, with or range. Range declarations bind elements, never the config.
-func (w *configWalker) branch(n *parse.BranchNode, vars map[string]bool, isRange bool) {
+func (w *configWalker) branch(n *parse.BranchNode, vars map[string]int, isRange bool) {
 	inner := maps.Clone(vars)
 	w.walk(n.Pipe, inner)
 	if isRange {
 		for _, v := range n.Pipe.Decl {
-			inner[v.Ident[0]] = false
+			inner[v.Ident[0]] = 0
 		}
 	}
 	w.walk(n.List, inner)
 	w.walk(n.ElseList, inner)
 }
 
-// isConfig reports whether n is `.Values.stack.<stackKey>.config` or the same from `$`.
-func (w *configWalker) isConfig(n parse.Node) bool {
+// config returns the prefix length when n is the config, from `.` or `$`, else 0.
+func (w *configWalker) config(n parse.Node) int {
 	switch n := n.(type) {
 	case *parse.FieldNode:
 		return w.configChain(n.Ident)
 	case *parse.VariableNode:
-		return n.Ident[0] == "$" && w.configChain(n.Ident[1:])
+		if n.Ident[0] == "$" {
+			return w.configChain(n.Ident[1:])
+		}
 	}
-	return false
+	return 0
 }
 
-func (w *configWalker) configChain(ident []string) bool {
-	return slices.Equal(ident, []string{"Values", "stack", w.stackKey, "config"})
+func (w *configWalker) configChain(ident []string) int {
+	if n := w.prefix(ident); n == len(ident) {
+		return n
+	}
+	return 0
 }
 
-// read records the key a Values.stack.<stackKey>.config.<key> chain reads. pos is where
-// ident[from]'s dot starts: parse positions a chain at its second link.
+// prefix returns how many links at the start of ident name the config: 1 for Config, 4 for
+// Values.stack.<stackKey>.config, else 0.
+func (w *configWalker) prefix(ident []string) int {
+	switch {
+	case len(ident) > 0 && ident[0] == "Config":
+		return 1
+	case len(ident) >= 4 && slices.Equal(ident[:4], []string{"Values", "stack", w.stackKey, "config"}):
+		return 4
+	}
+	return 0
+}
+
+// read records the key a config chain reads. pos is where ident[from]'s dot starts: parse positions
+// a chain at its second link.
 func (w *configWalker) read(pos parse.Pos, ident []string, from int) {
-	if len(ident) < 5 || !w.configChain(ident[:4]) {
+	n := w.prefix(ident)
+	if n == 0 || len(ident) <= n {
 		return
 	}
 	p := int(pos)
-	for _, id := range ident[from:4] {
+	for _, id := range ident[from:n] {
 		p += len(id) + 1
 	}
-	w.reads = append(w.reads, configRead{pos: p + 1, key: ident[4]})
+	w.reads = append(w.reads, configRead{pos: p + 1, key: ident[n], dot: n == 1})
 }

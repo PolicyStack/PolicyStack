@@ -27,6 +27,7 @@ import (
 	fakedynamic "k8s.io/client-go/dynamic/fake"
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/klog"
+	"sigs.k8s.io/yaml"
 )
 
 func init() {
@@ -155,6 +156,7 @@ type configPolicy struct {
 		NamespaceSelector json.RawMessage `json:"namespaceSelector"`
 		Raw               string          `json:"object-templates-raw"`
 		ObjectTemplates   []struct {
+			ComplianceType   string          `json:"complianceType"`
 			ObjectSelector   json.RawMessage `json:"objectSelector"`
 			ObjectDefinition json.RawMessage `json:"objectDefinition"`
 		} `json:"object-templates"`
@@ -166,19 +168,37 @@ const disableTemplates = "policy.open-cluster-management.io/disable-templates"
 // hubTemplate matches a hub template, which a missing hub object leaves unresolved.
 var hubTemplate = regexp.MustCompile(`(?s)\{\{hub.*?hub\}\}`)
 
+// Object is an object a ConfigurationPolicy applies, its ACM templates resolved.
+type Object struct {
+	ConfigPolicy   string // metadata.name of the ConfigurationPolicy
+	ComplianceType string
+	Definition     json.RawMessage
+	// Missing reports a template that looks up an object the empty cluster lacks. Definition is then
+	// as rendered, or nil for object-templates-raw.
+	Missing bool
+}
+
 // Evaluate resolves every templated ConfigurationPolicy in rendered, the Policies Helm rendered for
 // cluster, against an empty fake cluster plus hubObjects on the hub. A missing object is not a
 // failure: lookups of objects that other policies or operators create are normal on a real
 // cluster, so evaluation stops there.
 func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
+	_, out, err := Resolve(rendered, cluster)
+	return out, err
+}
+
+// Resolve is Evaluate that also returns the objects every ConfigurationPolicy in rendered applies,
+// as ACM resolves them. An object template that fails is left out.
+func Resolve(rendered []byte, cluster string) ([]Object, []Failure, error) {
 	hub, err := NewResolver(templates.Config{AdditionalIndentation: 8, DisabledFunctions: []string{}, StartDelim: "{{hub", StopDelim: "hub}}"}, hubObjects...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	managed, err := NewResolver(templates.Config{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	var objects []Object
 	var out []Failure
 	dec := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rendered), 4096)
 	for {
@@ -186,7 +206,7 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 		if err := dec.Decode(&p); err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if disabled, _ := strconv.ParseBool(p.Metadata.Annotations[disableTemplates]); p.Kind != "Policy" || disabled {
 			continue
@@ -201,6 +221,12 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 			managedDisabled, _ := strconv.ParseBool(cp.Metadata.Annotations[disableTemplates])
 			fail := func(i int, hub bool, err string) {
 				out = append(out, Failure{ConfigPolicy: cp.Metadata.Name, Template: i, Hub: hub, Err: err})
+			}
+			apply := func(complianceType string, od json.RawMessage) {
+				objects = append(objects, Object{cp.Metadata.Name, complianceType, od, false})
+			}
+			missing := func(complianceType string, od json.RawMessage) {
+				objects = append(objects, Object{cp.Metadata.Name, complianceType, od, true})
 			}
 
 			// The propagator, per policy-template, with lookups restricted to the policy namespace
@@ -235,24 +261,29 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 					continue
 				}
 			}
-			if managedDisabled {
-				continue
-			}
-
 			// The config-policy-controller: object-templates-raw whole, with no context.
-			if raw := []byte(cp.Spec.Raw); templates.HasTemplate(raw, "", true) {
-				opts := managedOpts
-				opts.InputIsYAML = true
-				res, err := managed.ResolveTemplate(raw, nil, &opts)
-				if err != nil {
-					if !apierrors.IsNotFound(err) {
-						fail(-1, false, short(err))
-					}
-					continue
-				}
+			if raw := []byte(cp.Spec.Raw); len(bytes.TrimSpace(raw)) > 0 {
 				var ots []struct {
 					ComplianceType   string          `json:"complianceType"`
 					ObjectDefinition json.RawMessage `json:"objectDefinition"`
+				}
+				if managedDisabled || !templates.HasTemplate(raw, "", true) {
+					if err := yaml.Unmarshal(raw, &ots); err == nil {
+						for _, ot := range ots {
+							apply(ot.ComplianceType, ot.ObjectDefinition)
+						}
+					}
+					continue
+				}
+				opts := managedOpts
+				opts.InputIsYAML = true
+				res, err := managed.ResolveTemplate(raw, nil, &opts)
+				if apierrors.IsNotFound(err) {
+					missing("", nil)
+					continue
+				} else if err != nil {
+					fail(-1, false, short(err))
+					continue
 				}
 				if err := json.Unmarshal(res.ResolvedJSON, &ots); err != nil {
 					fail(-1, false, "resolves to something other than a list of object templates")
@@ -263,13 +294,15 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 						fail(-1, false, cmp.Or(msg, "resolves to an object template without complianceType"))
 						break
 					}
+					apply(ot.ComplianceType, ot.ObjectDefinition)
 				}
 				continue
 			}
 
 			// Each object-templates entry separately, with skipObject.
 			for i, ot := range cp.Spec.ObjectTemplates {
-				if !templates.HasTemplate(ot.ObjectDefinition, "", true) {
+				if managedDisabled || !templates.HasTemplate(ot.ObjectDefinition, "", true) {
+					apply(ot.ComplianceType, ot.ObjectDefinition)
 					continue
 				}
 				skipped := false
@@ -293,17 +326,21 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 				res, err := managed.ResolveTemplate(ot.ObjectDefinition, ctx, &opts)
 				switch {
 				case skipped:
-				case err != nil && !apierrors.IsNotFound(err):
+				case apierrors.IsNotFound(err):
+					missing(ot.ComplianceType, ot.ObjectDefinition)
+				case err != nil:
 					fail(i, false, short(err))
 				case err == nil:
 					if msg := checkObject(res.ResolvedJSON); msg != "" {
 						fail(i, false, msg)
+					} else {
+						apply(ot.ComplianceType, res.ResolvedJSON)
 					}
 				}
 			}
 		}
 	}
-	return out, nil
+	return objects, out, nil
 }
 
 // objectContext is the config-policy-controller's context for an object-templates entry whose

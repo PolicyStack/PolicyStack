@@ -74,6 +74,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `teams-team-gitops-<cluster>`: Per-team ArgoCD instances. Depends on `install-gitops-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `teams-instances` | enforce | [team-argocd](converters/team-argocd.yaml) | Namespace and ArgoCD instance per team |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `teams-instances` | enforce | medium | [instances](converters/teams/instances.yaml) | Namespace and ArgoCD instance per team |

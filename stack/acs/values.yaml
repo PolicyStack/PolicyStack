@@ -2,20 +2,6 @@ stack:
   acs:
     enabled: false
 
-    # Which ACS role this cluster plays, set by the values cascade. Turn `central`
-    # on in values/acm/*.yaml and `secured` on wherever ACS agents should run.
-    toggles:
-      # Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings
-      # the declarative auth config, security policies and a check that the hub holds a
-      # cluster registration secret (CRS) with over 90 days left; you generate it once, see
-      # docs/acs.md.
-      central: false
-      # Run the secured-cluster agents here. Usually every cluster, including the hub. A
-      # rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md.
-      secured: false
-      # Publish a console link to Central. Only meaningful where Central runs.
-      console: true
-
     config:
       # Scanner V4 component state: Enabled, Default or Disabled
       scannerV4: Enabled
@@ -56,54 +42,56 @@ stack:
         no-privilege-escalation:
           policyName: No Privilege Escalation
           categories:
-          - Privileges
+            - Privileges
           severity: HIGH_SEVERITY
           disabled: false
           lifecycleStages:
-          - DEPLOY
+            - DEPLOY
           policySections:
-          - sectionName: Rule 1
-            policyGroups:
-            - fieldName: Allow Privilege Escalation
-              values:
-              - value: 'true'
+            - sectionName: Rule 1
+              policyGroups:
+                - fieldName: Allow Privilege Escalation
+                  values:
+                    - value: 'true'
           enforcementActions: []
         no-root-user-containers:
           policyName: No Root User Containers
           categories:
-          - Privileges
+            - Privileges
           severity: HIGH_SEVERITY
           disabled: false
           lifecycleStages:
-          - DEPLOY
+            - DEPLOY
           policySections:
-          - sectionName: Rule 1
-            policyGroups:
-            - fieldName: Image User
-              values:
-              - value: '0'
-              - value: root
+            - sectionName: Rule 1
+              policyGroups:
+                - fieldName: Image User
+                  values:
+                    - value: '0'
+                    - value: root
           enforcementActions: []
         no-shell-spawning:
           policyName: No Shell Spawning at Runtime
           categories:
-          - System Modification
+            - System Modification
           severity: HIGH_SEVERITY
           disabled: false
           lifecycleStages:
-          - RUNTIME
+            - RUNTIME
           eventSource: DEPLOYMENT_EVENT
           policySections:
-          - sectionName: Rule 1
-            policyGroups:
-            - fieldName: Process Name
-              values:
-              - value: /bin/sh
-              - value: /bin/bash
-              - value: /bin/dash
+            - sectionName: Rule 1
+              policyGroups:
+                - fieldName: Process Name
+                  values:
+                    - value: /bin/sh
+                    - value: /bin/bash
+                    - value: /bin/dash
           enforcementActions: []
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - SI System and Information Integrity
         - CM Configuration Management
@@ -113,194 +101,98 @@ stack:
       standards:
         - NIST SP 800-53
 
+    # `central` and `secured` pick the ACS role this cluster plays. Turn `central` on
+    # in values/acm/*.yaml and `secured` on wherever ACS agents should run.
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the ACS operator"
-        remediationAction: enforce
         severity: medium
-        disabled: false
 
-      - name: central
-        enabled: true
+      # Run Central here (the ACS hub). Only on the ACM hub itself, once per hub. Also brings
+      # the declarative auth config, security policies and a check that the hub holds a
+      # cluster registration secret (CRS) with over 90 days left; you generate it once, see
+      # docs/acs.md.
+      central:
+        enabled: false
         description: "Central, its declarative auth config and security policies"
-        # No Policy-level remediationAction: it would override the inform gates below.
-        severity: high
-        disabled: false
         dependencies:
           - name: install
+        templates:
+          # Central itself, plus the config it reads at startup
+          central:
+            description: "Central and its declarative configuration"
+            file:
+              - _shared/acs-namespace
+              - central/central
+            waitForOperator: acs
 
-      - name: secured
-        enabled: true
+          central-ready:
+            description: "Central readiness"
+            remediationAction: InformOnly
+            severity: medium
+
+          policies:
+            description: "SecurityPolicy objects"
+            severity: medium
+            extraDependencies:
+              - name: central-ready
+            ignorePending: true
+
+          crs-ready:
+            description: "The hub holds a CRS with over 90 days left"
+            remediationAction: InformOnly
+            severity: medium
+            # Polls instead of watching: the expiry check compares against now
+            evaluationInterval:
+              compliant: 24h
+              noncompliant: 10m
+
+          # Lets the secured policy's hub templates read the CRS, Central's Route and ManagedCluster labels
+          hub-access:
+            description: "ServiceAccount and RBAC for the secured policy's hub templates"
+
+          # Publish a console link to Central. Only meaningful where Central runs.
+          console:
+            description: "Console link to Central"
+            severity: low
+
+      # Run the secured-cluster agents here. Usually every cluster, including the hub. A
+      # rebuilt, moved or re-created cluster must be re-registered: see docs/acs.md.
+      secured:
+        enabled: false
         description: "Secured-cluster agents and their TLS material"
-        # No Policy-level remediationAction: it would override the inform gate below.
-        severity: high
-        disabled: false
         dependencies:
           - name: install
         # The hub templates read hubNamespace, outside the policy namespace. The central
         # policy's hub-access creates this ServiceAccount; keep the two names in sync.
         hubTemplateOptions:
           serviceAccountName: acs-hub-templates
+        templates:
+          # The CRS copied down from the hub, then the SecuredCluster itself
+          tls:
+            description: "Cluster registration secret from the hub"
+            file:
+              - _shared/acs-namespace
+              - secured/tls
+
+          agents:
+            description: "SecuredCluster agents"
+            waitForOperator: acs
+            # The CRS must exist before sensor can register
+            extraDependencies:
+              - name: tls
+
+          agents-ready:
+            description: "SecuredCluster readiness"
+            remediationAction: InformOnly
+            severity: medium
 
     operatorPolicies:
       acs:
-        enabled: true
         description: "Advanced Cluster Security operator"
         displayName: "Advanced Cluster Security for Kubernetes"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: rhacs-operator
-        operatorGroup:
-          name: rhacs-operator
         subscription:
           channel: stable
           name: rhacs-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      # Central itself, plus the config it reads at startup
-      - name: central
-        enabled: true
-        description: "Central and its declarative configuration"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        waitForOperator: acs
-        ignorePending: true
-        templateNames:
-          - name: acs-namespace
-          - name: acs-declarative-config
-          - name: acs-central
-        enableTemplateParameters: true
-        templateParameters: &acsParams
-          namespace: stackrox
-          hubNamespace: stackrox
-          hubServiceAccount: acs-hub-templates
-          centralName: stackrox-central-services
-          securedName: stackrox-secured-cluster-services
-          declarativeConfigMap: acs-declarative-configs
-          dbClaimName: stackrox-db
-          imageUrl: https://upload.wikimedia.org/wikipedia/commons/3/3a/OpenShift-LogoType.svg
-
-      - name: central-ready
-        enabled: true
-        description: "Central readiness"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: acs-central-ready
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: policies
-        enabled: true
-        description: "SecurityPolicy objects"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # One object per entry in config.securityPolicies
-        rawTemplate: true
-        extraDependencies:
-          - name: central-ready
-        ignorePending: true
-        templateNames:
-          - name: acs-security-policies
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: crs-ready
-        enabled: true
-        description: "The hub holds a CRS with over 90 days left"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        # Polls instead of watching: the expiry check compares against now
-        evaluationInterval:
-          compliant: 24h
-          noncompliant: 10m
-        templateNames:
-          - name: acs-crs-ready
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      # Lets the secured policy's hub templates read the CRS and Central's Route
-      - name: hub-access
-        enabled: true
-        description: "ServiceAccount and RBAC for the secured policy's hub templates"
-        policyRef: central
-        remediationAction: enforce
-        severity: high
-        templateNames:
-          - name: acs-hub-sa
-          - name: acs-hub-role
-            complianceType: mustonlyhave
-          - name: acs-hub-rolebinding
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      # The CRS copied down from the hub, then the SecuredCluster itself
-      - name: tls
-        enabled: true
-        description: "Cluster registration secret from the hub"
-        policyRef: secured
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        templateNames:
-          - name: acs-namespace
-          - name: acs-sync-crs
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: agents
-        enabled: true
-        description: "SecuredCluster agents"
-        policyRef: secured
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        waitForOperator: acs
-        # The CRS must exist before sensor can register
-        extraDependencies:
-          - name: tls
-        ignorePending: true
-        templateNames:
-          - name: acs-secured-cluster
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: agents-ready
-        enabled: true
-        description: "SecuredCluster readiness"
-        policyRef: secured
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: acs-secured-ready
-          - name: acs-sensor-ready
-        enableTemplateParameters: true
-        templateParameters: *acsParams
-
-      - name: console
-        enabled: true
-        description: "Console link to Central"
-        policyRef: central
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: acs-console-link
-        enableTemplateParameters: true
-        templateParameters: *acsParams

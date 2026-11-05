@@ -1,15 +1,12 @@
 package checks
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
-// DeadKeyCheck (POLICY031) reports values keys that policy-library never reads. `helm template`
-// succeeds either way: an element using `enable:` renders nothing, and one using `defaultPolicy:`
-// loses its compliance annotations.
+// DeadKeyCheck (POLICY031) reports values keys that policy-library never reads, and the 3.x element
+// shape. An element using `enable:` renders nothing, and one using `defaultPolicy:` loses its
+// compliance annotations.
 type DeadKeyCheck struct{}
 
 func (DeadKeyCheck) ID() string   { return "POLICY031" }
@@ -42,23 +39,11 @@ func (c *DeadKeyCheck) Run(ctx Context) []Finding {
 	if comp.LegacyOperatorPolicies {
 		add(SevError, legacyOperatorPolicies, "operatorPolicies")
 	}
-	if comp.Default != nil {
-		// policy-library consumes only categories/controls/standards from `default`.
-		if comp.Default.Severity != "" {
-			add(SevWarning, "`default.severity` is not consumed by policy-library; set severity on each policy instead", "default", "severity")
-		}
-		if comp.Default.RemediationAction != "" {
-			add(SevWarning, "`default.remediationAction` is not consumed by policy-library; set remediationAction on each policy instead", "default", "remediationAction")
-		}
-		if comp.Default.Disabled != nil {
-			add(SevWarning, "`default.disabled` is not consumed by policy-library; set disabled on each policy instead", "default", "disabled")
-		}
+	if comp.V3 {
+		add(SevError, "policies, configPolicies and toggles have the policy-library 3.x shape, which 4.x rejects: run tools/migrate-4.0.py", "policies")
 	}
-	for i, p := range comp.ConfigPolicies {
-		if p.RawTemplate && len(p.TemplateNames) != 1 {
-			add(SevError, fmt.Sprintf("configPolicies[%d] %q: rawTemplate maps to the single-valued object-templates-raw field, so it needs exactly one templateNames entry (got %d)", i, p.Name, len(p.TemplateNames)),
-				"configPolicies", strconv.Itoa(i), "rawTemplate")
-		}
+	if comp.Default != nil && comp.Default.Disabled != nil {
+		add(SevWarning, "`default.disabled` is not consumed by policy-library; set disabled on each policy instead", "default", "disabled")
 	}
 	return out
 }

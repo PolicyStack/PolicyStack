@@ -11,7 +11,7 @@ stack:
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -27,6 +27,6 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `install-tempo-<cluster>`: Install and manage Red Hat build of Tempo.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-tempo` | enforce | [operator](#operators) `tempo-product` | Red Hat build of Tempo for distributed tracing storage |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-tempo` | enforce | medium | [operator](#operators) `tempo-product` | Red Hat build of Tempo for distributed tracing storage |

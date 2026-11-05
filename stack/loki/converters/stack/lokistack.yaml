@@ -1,0 +1,32 @@
+{{- /* The LokiStack. Sizing and storage class are the values that differ per cluster. */ -}}
+{{- $cfg := .Config }}
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: logging-lokistack
+  namespace: openshift-logging
+spec:
+  size: {{ $cfg.size }}
+  storageClassName: {{ $cfg.storageClass }}
+  managementState: Managed
+  hashRing:
+    type: memberlist
+  limits:
+    global:
+      ingestion:
+        ingestionRate: {{ $cfg.ingestionRate }}
+        ingestionBurstSize: {{ $cfg.ingestionBurstSize }}
+      queries:
+        queryTimeout: {{ $cfg.queryTimeout }}
+  storage:
+    schemas:
+      - version: v13
+        effectiveDate: '{{ $cfg.schemaEffectiveDate }}'
+    secret:
+      name: logging-loki-odf
+      type: s3
+    tls:
+      caName: openshift-service-ca.crt
+      caKey: service-ca.crt
+  tenants:
+    mode: openshift-logging

@@ -1,123 +1,110 @@
 package checks
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
+	"slices"
 	"strings"
-
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/sourceloc"
 )
 
-// MissingConverterCheck (POLICY020) flags every templateNames[].name that
-// has no matching converters/<name>.yaml on disk.
-type MissingConverterCheck struct{}
-
-func (MissingConverterCheck) ID() string   { return "POLICY020" }
-func (MissingConverterCheck) Phase() Phase { return PhaseChart }
-
-func (c *MissingConverterCheck) Run(ctx Context) []Finding {
-	if ctx.Element == nil || ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
-		return nil
-	}
-	actual := actualConverters(ctx.Element.ConvertersDir)
-
-	var out []Finding
-	for i, cp := range ctx.Element.Values.Component.ConfigPolicies {
-		for j, tn := range cp.TemplateNames {
-			if tn.Name == "" {
-				continue
-			}
-			if _, ok := actual[tn.Name]; ok {
-				continue
-			}
-			loc := sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey,
-				"configPolicies", strconv.Itoa(i), "templateNames", strconv.Itoa(j), "name")
-			// Fall back to the templateNames node itself for bare-string form.
-			if loc.Line == 0 {
-				loc = sourceloc.Find(ctx.Element.ValuesDoc, "stack", ctx.Element.StackKey,
-					"configPolicies", strconv.Itoa(i), "templateNames", strconv.Itoa(j))
-			}
-			out = append(out, Finding{
-				RuleID:   c.ID(),
-				Severity: SevError,
-				Element:  ctx.Element.ChartName,
-				Message: fmt.Sprintf("configPolicies[%d] %q references templateNames[%d] %q but converters/%s.yaml does not exist",
-					i, cp.Name, j, tn.Name, tn.Name),
-				File: ctx.Element.ValuesFile,
-				Line: loc.Line, Col: loc.Col,
-			})
-		}
-	}
-	return out
-}
-
-// UnusedConverterCheck (POLICY021) warns when no templateNames[].name
-// references a converter file. Unused files do not break rendering.
+// UnusedConverterCheck (POLICY021) warns about a converter file policy-library never renders: a .yml
+// file, or a .yaml file no template renders, such as a top-level file no templates.<t>.file names
+// or converters/<p>/<t>.yaml replaced by a file: of its own. A partial, a path with a segment
+// starting with _, also counts as used when another chart file names it, as lifecycle's
+// templates/_helpers.tpl reads converters/_<engine>/root.yaml.
 type UnusedConverterCheck struct{}
 
 func (UnusedConverterCheck) ID() string   { return "POLICY021" }
 func (UnusedConverterCheck) Phase() Phase { return PhaseChart }
 
 func (c *UnusedConverterCheck) Run(ctx Context) []Finding {
-	if ctx.Element == nil || ctx.Element.Values == nil || ctx.Element.Values.Component == nil {
+	el := ctx.Element
+	if el == nil || el.Values == nil || el.Values.Component == nil {
 		return nil
 	}
-	actual := actualConverters(ctx.Element.ConvertersDir)
-	if len(actual) == 0 {
-		return nil
-	}
-
-	// Every component's references count: the lifecycle chart's engines share converters/.
-	referenced := map[string]struct{}{}
-	for _, nc := range ctx.Element.Components {
-		for _, cp := range nc.Component.ConfigPolicies {
-			for _, tn := range cp.TemplateNames {
-				if tn.Name != "" {
-					referenced[tn.Name] = struct{}{}
-				}
+	// Every component's templates count: the lifecycle chart's engines share converters/.
+	used := map[string]bool{}
+	for _, nc := range el.Components {
+		for _, s := range nc.Component.SubPolicies() {
+			for _, f := range s.Files {
+				used[f+".yaml"] = true
 			}
 		}
 	}
-
-	var unused []string
-	for name := range actual {
-		if _, ok := referenced[name]; !ok {
-			unused = append(unused, name)
-		}
+	text := map[string][]byte{} // the chart's templates and converters, which may read a partial
+	chartFS := os.DirFS(el.Dir)
+	for _, dir := range []string{"templates", "converters"} {
+		_ = fs.WalkDir(chartFS, dir, func(path string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() {
+				if data, err := fs.ReadFile(chartFS, path); err == nil {
+					text[filepath.Join(el.Dir, path)] = data
+				}
+			}
+			return nil
+		})
 	}
-	sort.Strings(unused)
+
 	var out []Finding
-	for _, name := range unused {
+	for _, rel := range converterFiles(el.ConvertersDir) {
+		why := ""
+		switch {
+		case strings.HasSuffix(rel, ".yml"):
+			why = "policy-library renders only .yaml converters"
+		case used[rel]:
+			continue
+		case partial(rel):
+			if readBy(text, filepath.Join(el.ConvertersDir, rel)) {
+				continue
+			}
+			why = "no templates.<t>.file names this partial and no chart file reads it"
+		default:
+			why = "it is not converters/<policy>/<template>.yaml of a template and no templates.<t>.file names it"
+		}
 		out = append(out, Finding{
 			RuleID:   c.ID(),
 			Severity: SevWarning,
-			Element:  ctx.Element.ChartName,
-			Message:  fmt.Sprintf("converters/%s.yaml is not referenced by any templateNames[].name", name),
-			File:     filepath.Join(ctx.Element.ConvertersDir, name+".yaml"),
+			Element:  el.ChartName,
+			Message:  fmt.Sprintf("converters/%s is never rendered: %s", rel, why),
+			File:     filepath.Join(el.ConvertersDir, rel),
 			Line:     1,
 		})
 	}
 	return out
 }
 
-// actualConverters keys every converter under dir by its path relative to dir, without extension,
-// as templateNames reference it: converters/hypershift/ready.yaml is "hypershift/ready".
-func actualConverters(dir string) map[string]struct{} {
-	out := map[string]struct{}{}
+// readBy reports whether a file in text other than path names path's base name.
+func readBy(text map[string][]byte, path string) bool {
+	name := []byte(filepath.Base(path))
+	for p, data := range text {
+		if p != path && bytes.Contains(data, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// converterFiles returns every .yaml and .yml file under dir, by slash path relative to dir, sorted.
+func converterFiles(dir string) []string {
+	var out []string
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		rel, _ := filepath.Rel(dir, path)
-		for _, ext := range []string{".yaml", ".yml"} {
-			if name, ok := strings.CutSuffix(filepath.ToSlash(rel), ext); ok {
-				out[name] = struct{}{}
-			}
+		if ext := filepath.Ext(path); ext == ".yaml" || ext == ".yml" {
+			rel, _ := filepath.Rel(dir, path)
+			out = append(out, filepath.ToSlash(rel))
 		}
 		return nil
 	})
+	slices.Sort(out)
 	return out
+}
+
+// partial reports a converter path with a segment starting with _, which policy-library never
+// discovers.
+func partial(rel string) bool {
+	return slices.ContainsFunc(strings.Split(rel, "/"), func(s string) bool { return strings.HasPrefix(s, "_") })
 }

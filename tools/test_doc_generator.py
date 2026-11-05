@@ -18,14 +18,15 @@ BASE = """
 stack:
   el:
     enabled: false
+    default:
+      remediationAction: enforce
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install the operator"
-        remediationAction: enforce
-      - name: config
-        enabled: true
+      config:
         description: "Configure it"
+        remediationAction: inform
+        severity: high
         dependencies:
           - name: install
           - name: ready
@@ -33,45 +34,44 @@ stack:
           - name: other-x
             release: other-x
             compliance: NonCompliant
+        templates:
+          el-config:
+            description: "Example ConfigMap"
+            remediationAction: enforce
+            waitForOperator: el
+          el-ready:
+            remediationAction: InformOnly
+            severity: critical
+            extraDependencies:
+              - name: el-config
+              - name: raw-name
+                raw: true
     operatorPolicies:
       el:
-        enabled: true
         description: "Example operator"
-        policyRef: install
         namespace: el-ns
-        subscription: {name: el-operator, channel: stable, source: redhat-operators}
-        upgradeApproval: Automatic
+        subscription: {name: el-operator, channel: stable}
         versions: []
-    configPolicies:
-      - name: el-config
-        enabled: true
-        description: "Example ConfigMap"
-        policyRef: config
-        remediationAction: enforce
-        waitForOperator: el
-        ignorePending: true
-        templateNames:
-          - name: el-configmap
-          - name: el-role
-            complianceType: mustonlyhave
-      - name: el-ready
-        enabled: true
-        policyRef: config
-        remediationAction: InformOnly
-        extraDependencies:
-          - name: el-config
-          - name: raw-name
-            raw: true
 """
 
+CONVERTERS = {
+    "config/el-config.yaml": "kind: ConfigMap\n",
+    "config/el-ready.yaml": "kind: ConfigMap\n",
+    "config/_partial.yaml": "kind: Partial\n",
+    "_shared/x.yaml": "kind: Shared\n",
+}
 
-def element_dir(root, values, chart=None, name="el"):
+
+def element_dir(root, values, chart=None, name="el", converters=None):
     path = Path(root) / name
     path.mkdir()
     (path / "values.yaml").write_text(textwrap.dedent(values))
     (path / "Chart.yaml").write_text(
         textwrap.dedent(chart or f"name: {name}\ndescription: An element\n")
     )
+    for file, text in (CONVERTERS if converters is None else converters).items():
+        (path / "converters" / file).parent.mkdir(parents=True, exist_ok=True)
+        (path / "converters" / file).write_text(text)
     return path
 
 
@@ -81,8 +81,10 @@ class Fixture(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
 
-    def render(self, values=BASE, chart=None):
-        return doc_generator.generate(element_dir(self.root, values, chart))
+    def render(self, values=BASE, chart=None, converters=None):
+        return doc_generator.generate(
+            element_dir(self.root, values, chart, converters=converters)
+        )
 
     def fresh(self, values):
         """Render a second element in its own directory."""
@@ -221,73 +223,132 @@ class RenderTest(Fixture):
             md,
         )
         self.assertIn("`install-el-status`<br>compliant while pending", md)
-        self.assertIn("`config-el-config`<br>`raw-name`", md)
+        self.assertIn("`config-el-config`<br>`raw-name` |", md)
 
-    def test_actions(self):
+    def test_ignore_pending_override(self):
+        md = self.render(
+            BASE.replace(
+                "waitForOperator: el",
+                "waitForOperator: el\n            ignorePending: false",
+            )
+        )
+        self.assertIn("| `install-el-status` |", md)
+        self.assertNotIn("compliant while pending", md)
+
+    def test_discovery(self):
         md = self.render()
-        self.assertIn("| `config-el-config` | enforce |", md)
-        self.assertIn("| `config-el-ready` | inform (always) |", md)
-        # The operator inherits the Policy's action.
-        self.assertIn("| `install-el` | enforce |", md)
+        self.assertIn("| `config-el-config` | inform | high | `install-el-status`", md)
+        self.assertIn("[el-ready](converters/config/el-ready.yaml)", md)
+        # _ files and directories are partials, never templates or policies.
+        self.assertNotIn("partial", md)
+        self.assertNotIn("_shared", md)
 
-    def test_policy_action_overrides_template(self):
+    def test_discovered_only_policy(self):
+        md = self.render(converters={**CONVERTERS, "extra/thing.yaml": "kind: X\n"})
+        self.assertIn("### Policy `extra`\n\n`extra-el-<cluster>`\n", md)
+        self.assertIn("| `extra-thing` | enforce | low |", md)
+
+    def test_file_reuse(self):
         md = self.render(
             BASE.replace(
-                'description: "Configure it"',
-                'description: "Configure it"\n        remediationAction: inform',
-            )
+                "          el-ready:\n",
+                "          el-ready:\n            file: [config/el-config, _shared/x]\n",
+            ),
+            converters={
+                "config/el-config.yaml": "kind: A\n",
+                "_shared/x.yaml": "kind: B\n",
+            },
         )
-        self.assertIn("| `config-el-config` | inform |", md)
-        self.assertIn("| `config-el-ready` | inform (always) |", md)
+        self.assertIn(
+            "[el-config](converters/config/el-config.yaml)<br>[x](converters/_shared/x.yaml)",
+            md,
+        )
 
-    def test_template_default_action(self):
+    def test_template_without_file_rejected(self):
+        with self.assertRaisesRegex(
+            ValueError, "policies.config.templates.el-ready has no file"
+        ):
+            self.render(converters={"config/el-config.yaml": "kind: A\n"})
+
+    def test_policy_without_templates_rejected(self):
+        with self.assertRaisesRegex(ValueError, "policies.ghost has no templates"):
+            self.render(
+                BASE.replace("    policies:\n", "    policies:\n      ghost: {}\n")
+            )
+
+    def test_order_manifests(self):
         md = self.render(
             BASE.replace(
-                "        remediationAction: enforce\n        waitForOperator",
-                "        waitForOperator",
+                "        severity: high\n",
+                "        severity: high\n        orderManifests: [el-ready]\n",
             )
         )
-        self.assertIn("| `config-el-config` | inform |", md)
+        self.assertIn("Applies `el-ready` first, in order, then the rest.", md)
+        self.assertLess(md.index("`config-el-ready`"), md.index("`config-el-config`"))
+        with self.assertRaisesRegex(ValueError, "orderManifests names"):
+            self.fresh(
+                BASE.replace(
+                    "severity: high\n",
+                    "severity: high\n        orderManifests: [nope]\n",
+                )
+            )
+
+    def test_defaults_chain(self):
+        md = self.render()
+        # Template InformOnly; otherwise the Policy action, then default.remediationAction.
+        self.assertIn("| `config-el-config` | inform | high |", md)
+        self.assertIn("| `config-el-ready` | inform (always) | critical |", md)
+        self.assertIn("| `install-el` | enforce | low |", md)
+        md = self.fresh(
+            BASE.replace(
+                "    default:\n      remediationAction: enforce\n",
+                "    default:\n      severity: medium\n",
+            )
+        )
+        self.assertIn("| `install-el` | inform | medium |", md)
+
+    def test_operators_in_install(self):
+        # No converters and no policies key: the operator alone makes Policy install.
+        values = (
+            BASE[: BASE.index("    policies:")]
+            + BASE[BASE.index("    operatorPolicies:") :]
+        )
+        md = self.render(values, converters={})
+        self.assertIn("### Policy `install`\n\n`install-el-<cluster>`\n", md)
+        self.assertIn(
+            "| `install-el` | enforce | low | [operator](#operators) `el-operator` | Example operator |",
+            md,
+        )
+        self.assertNotIn("### Policy `config`", md)
 
     def test_renders_compliance_type(self):
-        md = self.render()
-        self.assertIn(
-            "[el-configmap](converters/el-configmap.yaml)<br>[el-role](converters/el-role.yaml) (mustonlyhave)",
-            md,
-        )
-        self.assertIn("[operator](#operators) `el-operator`", md)
-
-    def test_raw_converter_compliance_types(self):
-        values = BASE.replace(
-            "        templateNames:\n          - name: el-configmap",
-            "        rawTemplate: true\n        complianceType: mustonlyhave\n"
-            "        templateNames:\n          - name: el-configmap",
-        )
-        path = element_dir(self.root, values)
-        (path / "converters").mkdir()
-        (path / "converters" / "el-configmap.yaml").write_text(
-            "- complianceType: musthave\n- complianceType: mustnothave\n- complianceType: 'mustonlyhave'\n"
-        )
-        md = doc_generator.generate(path)
-        self.assertIn(
-            "[el-configmap](converters/el-configmap.yaml) (mustnothave, mustonlyhave)",
-            md,
-        )
-        # The entry's complianceType does not apply to raw converters.
-        self.assertIn("[el-role](converters/el-role.yaml) | Example ConfigMap", md)
-
-    def test_policy_anchor_unique(self):
         md = self.render(
-            BASE.replace("- name: install", "- name: el")
-            .replace("policyRef: install", "policyRef: el")
-            .replace(
-                "    enabled: false\n",
-                "    enabled: false\n    toggles:\n      el: true\n",
-                1,
+            BASE.replace(
+                "          el-ready:\n",
+                "          el-ready:\n            complianceType: mustonlyhave\n",
             )
         )
-        self.assertIn("Policy [`el`](#policy-el)", md)
-        self.assertIn("### Policy `el`", md)
+        self.assertIn("[el-ready](converters/config/el-ready.yaml) (mustonlyhave)", md)
+        self.assertIn("[el-config](converters/config/el-config.yaml) |", md)
+
+    def test_raw_converter_compliance_types(self):
+        md = self.render(
+            BASE.replace(
+                "          el-ready:\n",
+                "          el-ready:\n            complianceType: mustonlyhave\n",
+            ),
+            converters={
+                **CONVERTERS,
+                "config/el-ready.yaml": "{{- range .Config.x }}\n- complianceType: musthave\n"
+                "- complianceType: mustnothave\n- complianceType: 'mustonlyhave'\n{{- end }}\n",
+                "config/el-config.yaml": "kind: A\n---\nkind: B\n",
+            },
+        )
+        self.assertIn(
+            "[el-ready](converters/config/el-ready.yaml) (mustnothave, mustonlyhave)",
+            md,
+        )
+        self.assertIn("[el-config](converters/config/el-config.yaml) |", md)
 
     def test_operators_table(self):
         md = self.render()
@@ -297,134 +358,97 @@ class RenderTest(Fixture):
         )
         md = self.fresh(
             BASE.replace(
-                "upgradeApproval: Automatic\n        versions: []",
+                "versions: []",
                 "upgradeApproval: None\n        versions: [el.v1, el.v2]",
             )
         )
         self.assertIn("| `el.v1`<br>`el.v2`, None approval |", md)
 
-    def test_no_toggles_or_settings_sections_when_absent(self):
+    def test_no_optional_or_settings_sections_when_absent(self):
         md = self.render()
-        self.assertNotIn("## Toggles", md)
+        self.assertNotIn("## Optional pieces", md)
         self.assertNotIn("## Settings", md)
 
     def test_compliance_line(self):
         md = self.render(
             BASE.replace(
-                "    enabled: false\n",
-                "    enabled: false\n    default:\n"
-                "      standards: [NIST SP 800-53]\n      controls: [CM-2 Baseline]\n",
+                "    default:\n",
+                "    default:\n      standards: [NIST SP 800-53]\n      controls: [CM-2 Baseline]\n",
                 1,
             )
         )
         self.assertIn("Standards: NIST SP 800-53. Controls: CM-2 Baseline.", md)
 
-    def test_operator_policies_list_rejected(self):
-        values = "stack:\n  el:\n    operatorPolicies:\n      - name: x\n"
-        with self.assertRaisesRegex(TypeError, "operatorPolicies must be a map"):
-            self.render(values)
-
-    def test_unknown_policy_ref_rejected(self):
-        with self.assertRaisesRegex(ValueError, "policyRef 'nope'"):
-            self.render(
-                BASE.replace(
-                    "policyRef: config\n        remediationAction: enforce",
-                    "policyRef: nope\n        remediationAction: enforce",
-                )
-            )
+    def test_pre_4_shape_rejected(self):
+        for values in (
+            "stack:\n  el:\n    operatorPolicies:\n      - name: x\n",
+            "stack:\n  el:\n    policies:\n      - name: x\n",
+            "stack:\n  el:\n    configPolicies: []\n",
+        ):
+            with self.assertRaisesRegex(TypeError, "policy-library 4.0"):
+                self.fresh(values)
 
     def test_element_without_stack_key(self):
         self.assertIsNone(self.render("stack:\n  other: {enabled: true}\n"))
 
 
-TOGGLED = BASE.replace(
-    "    enabled: false\n",
-    """    enabled: false
-    # Pick what runs here
-    toggles:
-      # Configure the operator
-      config: false
-      # The ready check
-      el-ready: true
-      # Turn on both a Policy and its same-name template
-      install: true
+OPTIONAL = (
+    BASE.replace(
+        """      config:
+        description: "Configure it"
 """,
-    1,
+        """      config:
+        description: "Configure it"
+        enabled: false
+""",
+    )
+    .replace(
+        "            severity: critical\n",
+        "            severity: critical\n            enabled: false\n",
+    )
+    .replace(
+        '        description: "Example operator"\n',
+        '        description: "Example operator"\n        enabled: false\n',
+    )
 )
 
 
-class TogglesTest(Fixture):
+class OptionalTest(Fixture):
     def test_section(self):
-        md = self.render(TOGGLED)
-        self.assertIn("## Toggles\n\nPick what runs here\n", md)
-        self.assertIn(
-            "| `config` | Configure the operator | `false` | Policy [`config`](#policy-config) |",
-            md,
-        )
-        self.assertIn(
-            "| `el-ready` | The ready check | `true` | config `config-el-ready` (needs `config`) |",
-            md,
-        )
+        md = self.render(OPTIONAL)
+        self.assertIn("## Optional pieces\n\nShipped with `enabled: false`.", md)
+        for row in [
+            "| Policy [`config`](#policy-config) | Configure it | `policies.config.enabled: true` |",
+            (
+                "| template `config-el-ready` (needs Policy `config`) |  | "
+                "`policies.config.templates.el-ready.enabled: true` |"
+            ),
+            "| operator `install-el` | Example operator | `operatorPolicies.el.enabled: true` |",
+        ]:
+            self.assertIn(row, md)
 
-    def test_same_name_template_covered_by_policy(self):
-        md = self.render(TOGGLED.replace("- name: el-config", "- name: config"))
-        self.assertIn(
-            "| `config` | Configure the operator | `false` | Policy [`config`](#policy-config) |",
-            md,
-        )
-        self.assertNotIn("(off, toggle `config`)", md)
-
-    def test_policy_and_template_state(self):
-        md = self.render(TOGGLED)
-        self.assertIn("Off by default; turn on with toggle `config`.", md)
-        md = self.fresh(TOGGLED.replace("el-ready: true", "el-ready: false"))
-        self.assertIn("`config-el-ready` (off, toggle `el-ready`)", md)
-
-    def test_same_name_template_off_while_policy_on(self):
+    def test_comment_describes_entry(self):
         md = self.render(
-            BASE.replace("- name: el-ready", "- name: config")
-            .replace(
-                "remediationAction: InformOnly",
-                "remediationAction: InformOnly\n        enabled: false",
-                1,
-            )
-            .replace(
-                "      - name: config\n        enabled: true\n        policyRef: config",
-                "      - name: config\n        enabled: false\n        policyRef: config",
+            OPTIONAL.replace(
+                "          el-ready:\n",
+                "          # The ready check\n          el-ready:\n",
             )
         )
-        self.assertIn("`config-config` (off, toggle `config`)", md)
+        self.assertIn("(needs Policy `config`) | The ready check |", md)
 
-    def test_policy_without_templates_on(self):
-        md = self.render(
-            BASE.replace(
-                "    enabled: false\n",
-                "    enabled: false\n    toggles:\n"
-                "      el-config: false\n      el-ready: false\n",
-                1,
-            )
+    def test_state(self):
+        md = self.render(OPTIONAL)
+        self.assertIn(
+            "Off by default; turn on with `policies.config.enabled: true`.", md
         )
+        self.assertIn("| `config-el-ready` (off) |", md)
+        self.assertIn("| `install-el` (off) |", md)
         self.assertIn("Renders nothing by default: every template is off.", md)
 
-    def test_null_toggle_is_absent(self):
-        md = self.render(
-            BASE.replace(
-                "    enabled: false\n",
-                "    enabled: false\n    toggles:\n      config: null\n",
-                1,
-            )
-        )
+    def test_null_enabled_is_on(self):
+        md = self.render(OPTIONAL.replace("enabled: false", "enabled: null"))
+        self.assertNotIn("## Optional pieces", md)
         self.assertNotIn("Off by default", md)
-
-    def test_unmatched_toggle_rejected(self):
-        with self.assertRaisesRegex(ValueError, "toggle 'ghost' matches no entry"):
-            self.render(
-                BASE.replace(
-                    "    enabled: false\n",
-                    "    enabled: false\n    toggles:\n      ghost: true\n",
-                    1,
-                )
-            )
 
 
 SETTINGS = BASE.replace(

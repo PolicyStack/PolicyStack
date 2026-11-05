@@ -9,21 +9,16 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-Enable only one platform toggle (aws or vmware). Set it in values/platforms/&lt;platform>.yaml, selected by a platform.&lt;N> config entry in the cluster's fleet file.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `mcp` | MachineConfigPool for the infra role | `true` | Policy [`mcp`](#policy-mcp) |
-| `config` | Kubelet configuration for the infra pool | `true` | Policy [`config`](#policy-config) |
-| `aws` | Create infra MachineSets by cloning the worker MachineSet (AWS) | `false` | Policy [`aws`](#policy-aws) |
-| `vmware` | Clone each worker MachineSet per vSphere failure domain | `false` | Policy [`vmware`](#policy-vmware) |
-| `ready` | Report NonCompliant until the infra nodes are ready | `true` | Policy [`ready`](#policy-ready) |
-| `workloads` | Move gitops, ingress, image registry and monitoring onto infra nodes | `false` | Policy [`workloads`](#policy-workloads) |
-| `restore` | Move the `workloads` components back off infra nodes. Disabling `workloads` stops enforcement but does not revert placement. Enable this to revert, then disable it once the components have moved. | `false` | Policy [`restore`](#policy-restore) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`aws`](#policy-aws) | Infra MachineSets on AWS | `policies.aws.enabled: true` |
+| Policy [`restore`](#policy-restore) | Move platform components back off infra nodes | `policies.restore.enabled: true` |
+| Policy [`vmware`](#policy-vmware) | Infra MachineSets on vSphere | `policies.vmware.enabled: true` |
+| Policy [`workloads`](#policy-workloads) | Move platform components onto infra nodes | `policies.workloads.enabled: true` |
 
 ## Settings
 
@@ -31,6 +26,9 @@ Under `stack.infraNodes.config`. Maps merge across layers; lists are replaced wh
 
 | Key | Description | Default |
 |---|---|---|
+| `role` | Node role: names the MachineConfigPool, MachineSets, node label and taints | `infra` |
+| `nodeLabels` | Labels set on new infra nodes |  |
+| `nodeLabels.node-role.kubernetes.io/infra` |  | `''` |
 | `replicas` | Infra nodes per zone | `3` |
 | `zones` | AWS availability zones. Empty uses the zone of the cloned worker MachineSet. | `[]` |
 | `instanceType` | AWS instance type. Empty inherits from the worker MachineSet. | `''` |
@@ -52,59 +50,59 @@ Under `stack.infraNodes.config`. Maps merge across layers; lists are replaced wh
 
 Standards: NIST SP 800-53. Controls: CM-6 Configuration Settings. Categories: CM Configuration Management.
 
-### Policy `mcp`
+### Policy `aws`
 
-`mcp-infra-nodes-<cluster>`: MachineConfigPool for infra nodes.
+`aws-infra-nodes-<cluster>`: Infra MachineSets on AWS. Depends on `mcp-infra-nodes-<cluster>`. Off by default; turn on with `policies.aws.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `mcp-pool` | enforce | [infra-mcp](converters/infra-mcp.yaml) | Infra MachineConfigPool |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `aws-infra-machinesets` | enforce | medium | [infra-machinesets](converters/aws/infra-machinesets.yaml) | Infra MachineSets cloned from the worker MachineSet |
 
 ### Policy `config`
 
 `config-infra-nodes-<cluster>`: Infra kubelet configuration. Depends on `mcp-infra-nodes-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `config-infra-kubelet` | enforce | [node-kubelet-config](converters/node-kubelet-config.yaml) | KubeletConfig for the infra pool |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `config-infra-kubelet` | enforce | medium | [infra-kubelet](converters/config/infra-kubelet.yaml) | KubeletConfig for the infra pool |
 
-### Policy `aws`
+### Policy `mcp`
 
-`aws-infra-nodes-<cluster>`: Infra MachineSets on AWS. Depends on `mcp-infra-nodes-<cluster>`. Off by default; turn on with toggle `aws`.
+`mcp-infra-nodes-<cluster>`: MachineConfigPool for infra nodes.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `aws-infra-machinesets` | enforce | [machineset-aws](converters/machineset-aws.yaml) | Infra MachineSets cloned from the worker MachineSet |
-
-### Policy `vmware`
-
-`vmware-infra-nodes-<cluster>`: Infra MachineSets on vSphere. Depends on `mcp-infra-nodes-<cluster>`. Off by default; turn on with toggle `vmware`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `vmware-infra-machinesets` | enforce | [machineset-vmware](converters/machineset-vmware.yaml) | Infra MachineSets per vSphere failure domain |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `mcp-pool` | enforce | medium | [pool](converters/mcp/pool.yaml) | Infra MachineConfigPool |
 
 ### Policy `ready`
 
 `ready-infra-nodes-<cluster>`: Reports NonCompliant until the infra nodes are ready.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-infra-replicas` | inform | [machineset-ready](converters/machineset-ready.yaml) | Infra MachineSet readiness |
-
-### Policy `workloads`
-
-`workloads-infra-nodes-<cluster>`: Move platform components onto infra nodes. Depends on `ready-infra-nodes-<cluster>`. Off by default; turn on with toggle `workloads`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `workloads-components` | enforce | [infra-gitops](converters/infra-gitops.yaml)<br>[infra-ingress](converters/infra-ingress.yaml)<br>[infra-registry](converters/infra-registry.yaml) | Gitops, ingress and image registry pinned to infra |
-| `workloads-monitoring` | enforce | [infra-monitoring](converters/infra-monitoring.yaml) | Monitoring stack pinned to infra |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-infra-replicas` | inform | medium | [infra-replicas](converters/ready/infra-replicas.yaml) | Infra MachineSet readiness |
 
 ### Policy `restore`
 
-`restore-infra-nodes-<cluster>`: Move platform components back off infra nodes. Off by default; turn on with toggle `restore`.
+`restore-infra-nodes-<cluster>`: Move platform components back off infra nodes. Off by default; turn on with `policies.restore.enabled: true`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `restore-revert` | enforce | [infra-restore](converters/infra-restore.yaml) (mustonlyhave) | Platform components moved back off infra |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `restore-revert` | enforce | medium | [revert](converters/restore/revert.yaml) (mustonlyhave) | Platform components moved back off infra |
+
+### Policy `vmware`
+
+`vmware-infra-nodes-<cluster>`: Infra MachineSets on vSphere. Depends on `mcp-infra-nodes-<cluster>`. Off by default; turn on with `policies.vmware.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `vmware-infra-machinesets` | enforce | medium | [infra-machinesets](converters/vmware/infra-machinesets.yaml) | Infra MachineSets per vSphere failure domain |
+
+### Policy `workloads`
+
+`workloads-infra-nodes-<cluster>`: Move platform components onto infra nodes. Depends on `ready-infra-nodes-<cluster>`. Off by default; turn on with `policies.workloads.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `workloads-components` | enforce | medium | [components](converters/workloads/components.yaml) | Gitops, ingress and image registry pinned to infra |
+| `workloads-monitoring` | enforce | medium | [monitoring](converters/workloads/monitoring.yaml) | Monitoring stack pinned to infra |

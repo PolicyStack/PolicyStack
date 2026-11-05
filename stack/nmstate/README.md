@@ -9,15 +9,13 @@ stack:
     enabled: true
 ```
 
-## Toggles
+## Optional pieces
 
-NNCP generation is opt-in: the operator and its CR are useful on their own, and node network topology is highly cluster-specific.
+Shipped with `enabled: false`. Turn one on in a values layer.
 
-| Toggle | Description | Default | Controls |
-|---|---|---|---|
-| `nncp` | Generate NodeNetworkConfigurationPolicies from config.networking below | `false` | Policy [`nncp`](#policy-nncp) |
-
-A toggle overrides `enabled` on every entry with that name; turning a Policy off removes everything in it.
+| Entry | Description | Turn on with |
+|---|---|---|
+| Policy [`nncp`](#policy-nncp) | Node network configuration policies | `policies.nncp.enabled: true` |
 
 ## Settings
 
@@ -38,7 +36,7 @@ Under `stack.nmstate.config`. Maps merge across layers; lists are replaced whole
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -50,34 +48,34 @@ Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<k
 
 Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM Configuration Management.
 
-### Policy `install`
-
-`install-nmstate-<cluster>`: Install and manage the Kubernetes NMState operator.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-nmstate` | enforce | [operator](#operators) `kubernetes-nmstate-operator` | Kubernetes NMState operator |
-
 ### Policy `config`
 
 `config-nmstate-<cluster>`: Deploy the NMState instance. Depends on `install-nmstate-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `config-nmstate-instance` | enforce | medium | `install-nmstate-status`<br>compliant while pending | [nmstate-instance](converters/config/nmstate-instance.yaml) | NMState instance |
+
+### Policy `install`
+
+`install-nmstate-<cluster>`: Install and manage the Kubernetes NMState operator.
+
+| Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `config-nmstate-instance` | enforce | `install-nmstate-status`<br>compliant while pending | [nmstate-cr](converters/nmstate-cr.yaml) | NMState instance |
+| `install-nmstate` | enforce | medium | [operator](#operators) `kubernetes-nmstate-operator` | Kubernetes NMState operator |
+
+### Policy `nncp`
+
+`nncp-nmstate-<cluster>`: Node network configuration policies. Depends on `ready-nmstate-<cluster>`. Off by default; turn on with `policies.nncp.enabled: true`.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `nncp-policies` | enforce | medium | [policies](converters/nncp/policies.yaml) (mustonlyhave) | Generated NodeNetworkConfigurationPolicies |
 
 ### Policy `ready`
 
 `ready-nmstate-<cluster>`: Reports NonCompliant until the nmstate webhook is Available. Depends on `config-nmstate-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-webhook` | inform | [webhook-ready](converters/webhook-ready.yaml) | nmstate webhook readiness |
-
-### Policy `nncp`
-
-`nncp-nmstate-<cluster>`: Node network configuration policies. Depends on `ready-nmstate-<cluster>`. Off by default; turn on with toggle `nncp`.
-
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `nncp-policies` | enforce | [nncp](converters/nncp.yaml) (mustonlyhave) | Generated NodeNetworkConfigurationPolicies |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-webhook` | inform | medium | [webhook](converters/ready/webhook.yaml) | nmstate webhook readiness |

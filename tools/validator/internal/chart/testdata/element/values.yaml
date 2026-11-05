@@ -1,0 +1,55 @@
+policyNamespace: policy
+selector:
+  matchExpressions: []
+stack:
+  conformance:
+    enabled: true
+    default:
+      remediationAction: enforce
+      severity: medium
+    config:
+      operandImage: registry.example.com/operand:v1
+      maps: {a: x}
+    policies:
+      install:
+        templates:
+          instance:
+            waitForOperator: my-operator
+      config:
+        remediationAction: inform
+        orderManifests: [rawlist]
+        templates:
+          multi:
+            severity: high
+          rawlist:
+            ignorePending: false
+            waitForOperator: my-operator
+          reused:
+            file: _shared/configmap
+            config: {name: reused}
+          pair:
+            file: [_shared/configmap, gates/version]
+            config: {name: pair}
+          off:
+            enabled: false
+            file: _shared/configmap
+      gates:
+        templates:
+          version:
+            remediationAction: InformOnly
+            complianceType: mustnothave
+      unused:
+        enabled: false
+        templates:
+          cm:
+            file: _shared/configmap
+            config: {name: unused}
+    operatorPolicies:
+      my-operator:
+        namespace: my-operator
+        clusterMonitoring: true
+        subscription: {name: my-operator, channel: stable}
+      other-operator:
+        enabled: false
+        namespace: other
+        subscription: {name: other, channel: stable}

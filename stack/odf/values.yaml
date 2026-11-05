@@ -2,13 +2,9 @@ stack:
   odf:
     enabled: false
 
-    toggles:
-      # PV-pool backing store for NooBaa. Not needed when fronting a cloud object store.
-      noobaa-pvpool: false
-      # Suppress the permanent NooBaa PodDisruptionBudgetAtLimit alert
-      pdb-alert: true
-
     config:
+      # StorageCluster name. ODF names its StorageClasses after it.
+      name: ocs-storagecluster
       # balanced, lean or performance
       resourceProfile: balanced
       # StorageClass marked default cluster-wide. Every other class is marked non-default.
@@ -44,7 +40,7 @@ stack:
       network:
         # Encrypt Ceph in-cluster traffic
         encryptionEnabled: true
-      # NooBaa PV-pool sizing, used when the noobaa-pvpool toggle is on
+      # NooBaa PV-pool sizing, used when the noobaa-pvpool template is enabled
       noobaa:
         numVolumes: 1
         volumeSize: 500Gi
@@ -56,6 +52,8 @@ stack:
           memory: 4000Mi
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CP Contingency Planning
         - SC System and Communications Protection
@@ -66,31 +64,27 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: install
-        enabled: true
+      install:
         description: "Install and manage the ODF operator"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
 
       # The StorageCluster waits for dedicated storage nodes so OSDs land on them.
       # Requires the storage-nodes element enabled on this cluster; the dependency
-      # below is satisfied only by a rendered policy. Dependencies have no toggle: to
+      # below is satisfied only by a rendered policy. Dependencies have no switch: to
       # run ODF without dedicated storage nodes, drop that dependency in your values.
-      - name: cluster
-        enabled: true
+      cluster:
         description: "Deploy the StorageCluster"
-        remediationAction: enforce
         severity: high
-        disabled: false
         dependencies:
           - name: install
           # Cross-element: the storage-nodes element on this same cluster
           - name: ready
             element: storage-nodes
+        templates:
+          storagecluster:
+            description: "StorageCluster and Ceph CSI placement"
+            waitForOperator: odf
 
-      - name: ready
-        enabled: true
+      ready:
         description: "Reports NonCompliant until ODF has published its StorageClasses"
         # Other elements depend on this policy by name; it is the "storage is usable" contract.
         # It asserts StorageClasses, not StorageCluster conditions: every StorageCluster
@@ -98,40 +92,49 @@ stack:
         # dependent policy into Pending. The `health` policy reports live health; nothing
         # depends on it.
         remediationAction: inform
-        severity: medium
-        disabled: false
         dependencies:
           - name: cluster
+        templates:
+          available:
+            description: "ODF StorageClasses exist"
 
       # Live StorageCluster health, split out of `ready` so that its flapping cannot
       # pause the five elements that depend on `ready`. Nothing depends on this one.
-      - name: health
-        enabled: true
+      health:
         description: "Reports live StorageCluster health"
         remediationAction: inform
-        severity: medium
-        disabled: false
         dependencies:
           - name: ready
+        templates:
+          conditions:
+            description: "StorageCluster reports Available and not Degraded"
 
-      - name: config
-        enabled: true
+      config:
         description: "Default StorageClass, console plugin and NooBaa tuning"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
         dependencies:
           - name: ready
+        templates:
+          storageclass:
+            description: "Default StorageClass selection"
+
+          console:
+            description: "ODF console plugin"
+            severity: low
+
+          # PV-pool backing store for NooBaa. Not needed when fronting a cloud object store.
+          noobaa-pvpool:
+            enabled: false
+            description: "NooBaa PV-pool backing store"
+
+          # Suppress the permanent NooBaa PodDisruptionBudgetAtLimit alert
+          pdb-alert:
+            description: "Suppress the NooBaa PDB alert"
+            severity: low
 
     operatorPolicies:
       odf:
-        enabled: true
         description: "OpenShift Data Foundation operator"
         displayName: "OpenShift Data Foundation"
-        policyRef: install
-        severity: medium
-        remediationAction: enforce
-        complianceType: musthave
         namespace: openshift-storage
         operatorGroup:
           name: openshift-storage-operatorgroup
@@ -140,99 +143,4 @@ stack:
         subscription:
           channel: stable-4.20
           name: odf-operator
-          source: redhat-operators
-          sourceNamespace: openshift-marketplace
-        upgradeApproval: Automatic
         versions: []
-
-    configPolicies:
-      - name: storagecluster
-        enabled: true
-        description: "StorageCluster and Ceph CSI placement"
-        policyRef: cluster
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        waitForOperator: odf
-        ignorePending: true
-        templateNames:
-          - name: storage-cluster
-        enableTemplateParameters: true
-        templateParameters: &odfParams
-          name: ocs-storagecluster
-          namespace: openshift-storage
-
-      - name: available
-        enabled: true
-        description: "ODF StorageClasses exist"
-        policyRef: ready
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        rawTemplate: true
-        templateNames:
-          - name: storage-cluster-ready
-        enableTemplateParameters: true
-        templateParameters: *odfParams
-
-      - name: conditions
-        enabled: true
-        description: "StorageCluster reports Available and not Degraded"
-        policyRef: health
-        complianceType: musthave
-        remediationAction: inform
-        severity: medium
-        templateNames:
-          - name: storage-cluster-health
-        enableTemplateParameters: true
-        templateParameters: *odfParams
-
-      - name: storageclass
-        enabled: true
-        description: "Default StorageClass selection"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # One object per StorageClass the cluster has
-        rawTemplate: true
-        templateNames:
-          - name: default-storageclass
-        enableTemplateParameters: true
-        templateParameters: *odfParams
-
-      - name: console
-        enabled: true
-        description: "ODF console plugin"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: odf-console-plugin
-        enableTemplateParameters: true
-        templateParameters: *odfParams
-
-      - name: noobaa-pvpool
-        enabled: true
-        description: "NooBaa PV-pool backing store"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        templateNames:
-          - name: noobaa-backing-store
-        enableTemplateParameters: true
-        templateParameters: *odfParams
-
-      - name: pdb-alert
-        enabled: true
-        description: "Suppress the NooBaa PDB alert"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: noobaa-pdb-alert
-        enableTemplateParameters: true
-        templateParameters: *odfParams

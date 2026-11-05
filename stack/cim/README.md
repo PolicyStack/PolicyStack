@@ -34,17 +34,17 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 `hub-cim-<cluster>`: Provisioning, AgentServiceConfig and the SiteConfig component.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `hub-cim-provisioning` | enforce | [cim-provisioning](converters/cim-provisioning.yaml) | Provisioning provisioning-configuration |
-| `hub-cim-mirror` | enforce | [cim-mirror](converters/cim-mirror.yaml) (mustonlyhave) | Mirror registries and OS image CA for the assisted service |
-| `hub-cim-agent` | enforce | [cim-agent](converters/cim-agent.yaml) | AgentServiceConfig agent |
-| `hub-cim-siteconfig` | enforce | [cim-siteconfig](converters/cim-siteconfig.yaml) | MultiClusterHub siteconfig component |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `hub-cim-agent` | enforce | high | [cim-agent](converters/hub/cim-agent.yaml) | AgentServiceConfig agent |
+| `hub-cim-mirror` | enforce | high | [cim-mirror](converters/hub/cim-mirror.yaml) (mustonlyhave) | Mirror registries and OS image CA for the assisted service |
+| `hub-cim-provisioning` | enforce | high | [cim-provisioning](converters/hub/cim-provisioning.yaml) | Provisioning provisioning-configuration |
+| `hub-cim-siteconfig` | enforce | high | [cim-siteconfig](converters/hub/cim-siteconfig.yaml) | MultiClusterHub siteconfig component |
 
 ### Policy `ready`
 
 `ready-cim-<cluster>`: Reports NonCompliant until metal3, the assisted service and SiteConfig run. Depends on `hub-cim-<cluster>`.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `ready-cim-health` | inform (always) | [cim-health](converters/cim-health.yaml) | metal3, the AgentServiceConfig and the SiteConfig controller |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `ready-cim-health` | inform (always) | medium | [cim-health](converters/ready/cim-health.yaml) | metal3, the AgentServiceConfig and the SiteConfig controller |

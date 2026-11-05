@@ -2,12 +2,6 @@ stack:
   remediations:
     enabled: false
 
-    toggles:
-      # Restrict the registries the cluster may pull and import from
-      registries: true
-      # Remove the Samples Operator and its imagestreams
-      samples: true
-
     config:
       # Registries permitted for `oc import-image`
       allowedRegistriesForImport:
@@ -22,6 +16,8 @@ stack:
         - image-registry.openshift-image-registry.svc:5000
 
     default:
+      remediationAction: enforce
+      severity: high
       categories:
         - CM Configuration Management
         - SI System and Information Integrity
@@ -32,37 +28,17 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: registries
-        enabled: true
+      # Restrict the registries the cluster may pull and import from
+      registries:
         description: "Restrict image registries the cluster may use"
-        remediationAction: enforce
-        severity: high
-        disabled: false
+        templates:
+          allowlist:
+            description: "Image registry allowlist"
 
-      - name: samples
-        enabled: true
+      # Remove the Samples Operator and its imagestreams
+      samples:
         description: "Remove the Samples Operator"
-        remediationAction: enforce
         severity: low
-        disabled: false
-
-    configPolicies:
-      - name: allowlist
-        enabled: true
-        description: "Image registry allowlist"
-        policyRef: registries
-        complianceType: musthave
-        remediationAction: enforce
-        severity: high
-        templateNames:
-          - name: allowed-image-registries
-
-      - name: operator
-        enabled: true
-        description: "Samples Operator management state"
-        policyRef: samples
-        complianceType: musthave
-        remediationAction: enforce
-        severity: low
-        templateNames:
-          - name: remove-samples-operator
+        templates:
+          operator:
+            description: "Samples Operator management state"

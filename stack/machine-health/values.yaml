@@ -25,6 +25,8 @@ stack:
         nodeStartupTimeout: 10m
 
     default:
+      remediationAction: enforce
+      severity: medium
       categories:
         - CP Contingency Planning
       controls:
@@ -33,25 +35,8 @@ stack:
         - NIST SP 800-53
 
     policies:
-      - name: config
-        enabled: true
+      config:
         description: "MachineHealthChecks per MachineSet"
-        remediationAction: enforce
-        severity: medium
-        disabled: false
-
-    configPolicies:
-      - name: checks
-        enabled: true
-        description: "One MachineHealthCheck per discovered MachineSet"
-        policyRef: config
-        complianceType: musthave
-        remediationAction: enforce
-        severity: medium
-        # Object count depends on how many MachineSets the cluster has
-        rawTemplate: true
-        templateNames:
-          - name: machine-health-checks
-        enableTemplateParameters: true
-        templateParameters:
-          namespace: openshift-machine-api
+        templates:
+          checks:
+            description: "One MachineHealthCheck per discovered MachineSet"

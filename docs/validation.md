@@ -14,9 +14,22 @@ make -C tools/validator ci # (1)!
 
 1.  `lint`, `test` and `validate`. With `CI` set, findings print as GitHub annotations.
 
+While writing an element, run it alone ([Workflow](elements.md#workflow)):
+
+```sh
+make -C tools/validator preview ELEMENT=metallb CLUSTER=nonprod-west-1 # (1)!
+make -C tools/validator validate ELEMENT=metallb # (2)!
+```
+
+1.  Renders the element turned on and prints `metallb.yaml`, the Policies, and
+    `metallb.evaluated.yaml`, the objects ACM would apply with ACM templates resolved on an empty
+    cluster. Without `CLUSTER`, every fixture is rendered into a temporary directory, or `PREVIEW=<dir>` (relative to `tools/validator`).
+2.  `validate` for one chart. Repo-wide rules such as POLICY091 still read every element.
+
 | Target | Runs |
 | ------ | ---- |
-| `validate` | Builds, fetches the CRDs (`crds`), then three passes: the fixtures plus `tools/sample-element/` with POLICY081 skipped; every rule once per file in `testdata/profiles/`, sample element included ([ACM templates](#acm-templates)); `fleet/` when it has files. POLICY071 runs in the first pass only, POLICY052 in the last only |
+| `validate [ELEMENT=<chart>]` | Builds, fetches the CRDs (`crds`), then three passes: the fixtures plus `tools/sample-element/` with POLICY081 skipped; every rule once per file in `testdata/profiles/`, sample element included ([ACM templates](#acm-templates)); `fleet/` when it has files. POLICY071 runs in the first pass only, POLICY052 in the last only |
+| `preview ELEMENT=<chart> [CLUSTER=<fleet file>]` | Renders the chart turned on with `--render-dir` and `--evaluate`, running only RENDER000 and POLICY081 |
 | `crds` | Downloads the [CRD schemas](#crd-schemas) into `tools/validator/.crds/` when a pin changed |
 | `test` | `crds`, then `go test -race ./...`. Tests that need Helm, the CRDs or a fetched policy-library skip without them, and fail under `CI`. A rule ID missing from the [Rules](#rules) table fails |
 | `lint` | golangci-lint (`.golangci.yml`, gofmt and goimports included; `make fmt` fixes formatting), `go mod tidy -diff`, `go tool govulncheck` |
@@ -63,9 +76,9 @@ file name is the cluster name: `hubs/acm-dc1.yaml` renders as `acm-dc1` and read
 ## Output
 
 ```text
-error POLICY020 [metallb] configPolicies[0] "metallb-instance" references templateNames[0] "metallb-crd" but converters/metallb-crd.yaml does not exist
-    at /path/to/policystack/stack/metallb/values.yaml:107:19
-warning POLICY021 [metallb] converters/metallb-cr.yaml is not referenced by any templateNames[].name
+error POLICY022 [metallb] reads config key pools, which is not in stack.metallb.config of the element's values.yaml or the config of a template rendering it
+    at /path/to/policystack/stack/metallb/converters/addressing/pools.yaml:1:30
+warning POLICY021 [metallb] converters/metallb-cr.yaml is never rendered: it is not converters/<policy>/<template>.yaml of a template and no templates.<t>.file names it
     at /path/to/policystack/stack/metallb/converters/metallb-cr.yaml:1
 
 1 error(s), 1 warning(s)
@@ -81,6 +94,9 @@ A clean run prints `ok: no findings`. Findings on rendered output also name the 
 
 | Flag | Effect |
 | ---- | ------ |
+| `--element` | Check and render one chart, by chart name. Repo-wide rules still read every element and report only this one |
+| `--cluster` | Render one fleet file, by cluster name |
+| `--evaluate` | With `--render-dir`, also write `<chart>.evaluated.yaml`: the objects each ConfigurationPolicy applies, ACM templates resolved as POLICY081 does |
 | `--only` / `--skip` | Comma-separated rule IDs to run / skip |
 | `--severity warning` | Fail on warnings too |
 | `--github` | GitHub Actions annotations |
@@ -112,26 +128,31 @@ A missing object is not a failure: on a real cluster another policy or operator 
 Evaluation stops there, so branches that need existing objects are parsed but not run. Guard such
 lookups with `dig` and `skipObject`:
 
-```yaml title="stack/acs/converters/acs-console-link.yaml"
-href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "{{ .Parameters.namespace }}" "central").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
+```yaml title="stack/acs/converters/central/console.yaml"
+href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "stackrox" "central").spec.host {{ "}}" }}{{ "{{" }} skipObject (not $host) {{ "}}" }}https://{{ "{{" }} $host {{ "}}" }}'
 ```
 
 !!! tip "Looking up a new kind"
     Add it to `kinds` in `tools/validator/internal/acmtemplates/acmtemplates.go`.
 
-Fixtures leave most elements off, so CI evaluates against `tools/validator/testdata/profiles`, which turn every element and toggle on. Add a
-new element or toggle to `all-on.yaml`, or to `variants.yaml` if it conflicts with one there.
+Fixtures leave most elements off, so CI evaluates against `tools/validator/testdata/profiles`, which
+turn every element and optional piece on. Add a new element, and each `enabled: false` policy,
+template or operator, to `all-on.yaml`, or to `variants.yaml` if it conflicts with one there.
 `TestProfileCoverage` fails until every converter with ACM templates renders under some profile.
 
 ```yaml title="tools/validator/testdata/profiles/all-on.yaml"
 stack:
   acs:
     enabled: true
-    toggles:
-      console: true
+    policies:
+      central:
+        enabled: true
+        templates:
+          console:
+            enabled: true
 ```
 
-Every rule runs on the profiles, so a toggle needs its input map there too, or
+Every rule runs on the profiles, so an optional piece needs its input map there too, or
 POLICY082 fails its empty Policy. A change to a lifecycle converter's ACM template needs a test
 case in `tools/validator/internal/acmtemplates`, which resolves them against fake hub objects.
 
@@ -160,12 +181,11 @@ Makefile. The run logs how many objects were validated.
 
 ## Rendered output
 
-POLICY001, POLICY033, POLICY036, POLICY037, POLICY080 and POLICY082 read what Helm rendered from the
-whole cascade, so a values layer that renames an entry, restates a `remediationAction` or adds a
-template is checked like the element's `values.yaml`. A finding points at the entry in the last
-cascade file that defines it, since Helm replaces lists whole, or at a later file that sets the field
-on a map entry such as `operatorPolicies.<key>`. With no entry rendering the object, it points at the
-fleet file (POLICY080: the element's `values.yaml`).
+POLICY001, POLICY033, POLICY037, POLICY080 and POLICY082 read what Helm rendered from the whole
+cascade, so a values layer that enables a template or changes an action is checked like the
+element's `values.yaml`. A finding points at the last cascade file that sets the field on the entry,
+else the file defining the entry, else the template's converter. With no entry rendering the object,
+it points at the fleet file (POLICY080: the element's `values.yaml`).
 
 !!! warning "POLICY037: destructive templates on platform objects"
     `mustonlyhave` and `mustnothave` on the objects in the [Rules](#rules) table replace or delete
@@ -183,5 +203,12 @@ fleet file (POLICY080: the element's `values.yaml`).
     opt-out is `--skip POLICY037`.
 
 ## Rules
+
+!!! info "policy-library 4 rule changes"
+    Removed: POLICY010 (`policyRef`), POLICY020 (missing `templateNames` converter) and POLICY036
+    (template action mismatch). Discovery and the `InformOnly`-only template action make them
+    impossible. Reworked: POLICY021 reports orphan files, POLICY022 reads `.Config`, POLICY030 checks
+    the 4.0 keys, POLICY031 flags the 3.x shape, POLICY035 checks `policies`/`templates` layer keys,
+    POLICY038 defaults `source` to `redhat-operators`, POLICY052 accepts `_hypershift/`.
 
 --8<-- "tools/validator/README.md:rules"

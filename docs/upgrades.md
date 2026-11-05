@@ -79,7 +79,7 @@ stack:
 ```
 
 !!! warning
-    Removing the key leaves the last URL on the cluster. To go back to the public graph, set `upstream: https://api.openshift.com/api/upgrades_info/v1/graph`. `toggles.channel` gates `upstream` too.
+    Removing the key leaves the last URL on the cluster. To go back to the public graph, set `upstream: https://api.openshift.com/api/upgrades_info/v1/graph`. `policies.channel.enabled: false` stops managing `upstream` too.
 
 Watch it:
 
@@ -110,15 +110,17 @@ oc get clusterversion version -o jsonpath='{.status.history[0]}'    # on the clu
 
 ## Pausing
 
-Turn a toggle off in any layer the cluster reads:
+Turn a policy off in any layer the cluster reads:
 
 ```yaml
 # values/clusters/prod-east-1.yaml
 stack:
   upgrade:
-    toggles:
-      upgrade: false # (1)!
-      channel: false # (2)!
+    policies:
+      upgrade:
+        enabled: false # (1)!
+      channel:
+        enabled: false # (2)!
 ```
 
 1.  Deletes `upgrade-upgrade-<cluster>`. An update already started on the cluster keeps running.

@@ -5,6 +5,8 @@ its two Policies renders.
 */ -}}
 {{- if .Values.hub }}
 {{- $engine := .Values.install.engine }}
-{{- $_ := set (index .Values.stack $engine) "toggles" (dict "present" (eq .Values.state "present") "absent" (eq .Values.state "absent")) }}
+{{- $policies := (index .Values.stack $engine).policies }}
+{{- $_ := set $policies.present "enabled" (eq .Values.state "present") }}
+{{- $_ = set $policies.absent "enabled" (eq .Values.state "absent") }}
 {{- include "policy-library.render" (merge (dict "component" $engine) .) }}
 {{- end }}

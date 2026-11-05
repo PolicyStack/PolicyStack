@@ -26,7 +26,7 @@ Under `stack.localStorage.config`. Maps merge across layers; lists are replaced 
 
 ## Operators
 
-Each also renders `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
+Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.
 
 | Operator policy | Package | Channel | Source | Namespace | Versions |
 |---|---|---|---|---|---|
@@ -42,14 +42,14 @@ Standards: NIST SP 800-53. Controls: CP-9 System Backup. Categories: CP Continge
 
 `install-local-storage-<cluster>`: Install and manage the Local Storage operator.
 
-| Template | Action | Renders | Description |
-|---|---|---|---|
-| `install-local-storage` | enforce | [operator](#operators) `local-storage-operator` | Local Storage operator |
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `install-local-storage` | enforce | medium | [operator](#operators) `local-storage-operator` | Local Storage operator |
 
 ### Policy `volumes`
 
 `volumes-local-storage-<cluster>`: Claim local disks on the storage nodes. Depends on `install-local-storage-<cluster>`, `ready-storage-nodes-<cluster>`.
 
-| Template | Action | Waits for | Renders | Description |
-|---|---|---|---|---|
-| `volumes-volumeset` | enforce | `install-local-storage-status`<br>compliant while pending | [local-volume-set](converters/local-volume-set.yaml) | LocalVolumeSet claiming node-local disks |
+| Template | Action | Severity | Waits for | Renders | Description |
+|---|---|---|---|---|---|
+| `volumes-volumeset` | enforce | medium | `install-local-storage-status`<br>compliant while pending | [volumeset](converters/volumes/volumeset.yaml) | LocalVolumeSet claiming node-local disks |

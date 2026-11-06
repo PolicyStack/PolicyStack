@@ -182,8 +182,8 @@ The order and commands: [Framework updates](../guides/upgrading.md#framework-upd
 - **Fleet keys and injected values:** only added within a major. A new fleet key is optional, and
   leaving it out keeps the old behaviour.
 
-The previous framework major gets security fixes for 6 months after the next major is released.
-Other fixes land only in the latest minor.
+Fixes, security fixes included, land only in the latest minor. Older minors and majors get no
+backports: to get a fix, update.
 
 ## Policy names
 

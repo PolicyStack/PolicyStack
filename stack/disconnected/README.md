@@ -5,6 +5,8 @@ Mirror registries, mirrored catalogs and CA trust for disconnected clusters
 
 Guide: https://policystk.io/guides/disconnected/
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   disconnected:

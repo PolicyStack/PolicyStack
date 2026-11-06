@@ -3,6 +3,8 @@
 
 Teaching example that tools/create-element.sh copies.
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   myElement:

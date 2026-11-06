@@ -179,3 +179,29 @@ tests:
           value:
             - base-test
             - certs-test
+
+  # policystack.libraryMajors: the library majors the hub's install chart supports
+  # (install/templates/_helpers.tpl). The fail cases are in fail_test.yaml.
+  - it: renders when policystack.libraryMajors lists the library's major
+    set:
+      policystack.libraryMajors: [3, 4]
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 6
+
+  - it: compares majors given as strings
+    set:
+      policystack.libraryMajors: ["4"]
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 6
+
+  - it: checks nothing when policystack.libraryMajors is empty
+    set:
+      policystack.libraryMajors: []
+    asserts:
+      - notFailedTemplate: {}
+      - hasDocuments:
+          count: 6

@@ -3,6 +3,8 @@
 
 Ansible Automation Platform: controller, hub, EDA and Lightspeed
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   aap:

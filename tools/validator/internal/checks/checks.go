@@ -82,7 +82,10 @@ type Check interface {
 	Run(Context) []Finding
 }
 
-// All returns the registered checks in stable order.
+// All returns the registered checks in stable order. A new rule, or a new error in a rule, that can
+// fail a repository that passes today ships as SevWarning for one framework minor, then SevError;
+// one preventing an outage or a security problem may be SevError at once. IDs are never reused
+// (docs/contributing.md#validator-rules).
 func All() []Check {
 	return []Check{
 		&NameLengthCheck{},      // POLICY001
@@ -99,11 +102,13 @@ func All() []Check {
 		&LayerKeyCheck{},        // POLICY035
 		&ProtectedObjectCheck{}, // POLICY037
 		&SourceCheck{},          // POLICY038
+		&DeprecatedKeyCheck{},   // POLICY039
 		&PolicySetCheck{},       // POLICY040
 		&LabelCheck{},           // POLICY050
 		&BareMetalCheck{},       // POLICY051
 		&FleetPinCheck{},        // POLICY052 (Root, Branch set by run.buildRegistry)
 		&PinningCheck{},         // POLICY060
+		&AnswersCheck{},         // POLICY061 (Root set by run.buildRegistry)
 		&LintCheck{},            // POLICY070 (Runner set by run.buildRegistry)
 		&InstallCheck{},         // POLICY071 (Runner, Root set by run.buildRegistry)
 		&CRDSchemaCheck{},       // POLICY080 (CRDs set by run.buildRegistry)
@@ -111,6 +116,7 @@ func All() []Check {
 		&EmptyPolicyCheck{},     // POLICY082
 		&CamelCaseCheck{},       // POLICY090
 		&ElementNameCheck{},     // POLICY091
+		&DeprecationCheck{},     // POLICY092
 		&RenderCheck{},          // RENDER000
 	}
 }

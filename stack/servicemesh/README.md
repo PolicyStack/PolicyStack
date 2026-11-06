@@ -3,6 +3,8 @@
 
 Red Hat OpenShift Service Mesh 3 operator
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   servicemesh:

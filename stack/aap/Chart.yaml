@@ -4,6 +4,8 @@ description: "Ansible Automation Platform: controller, hub, EDA and Lightspeed"
 type: application
 version: 0.1.0
 appVersion: "1.16.0"
+annotations:
+  policystk.io/stability: preview
 dependencies:
   - name: policy-library
     alias: stack

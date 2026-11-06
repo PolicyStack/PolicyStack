@@ -2,6 +2,8 @@ package cascade
 
 import (
 	"bytes"
+	"maps"
+	"os"
 	"os/exec"
 	"path"
 	"slices"
@@ -9,6 +11,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 	"gopkg.in/yaml.v3"
@@ -17,7 +20,8 @@ import (
 
 // TestTemplatePatch renders the install chart, evaluates each ApplicationSet's templatePatch as
 // Argo CD does, and checks that manifest-generate-paths covers every values file the
-// Application reads and the policy-library chart in lib/.
+// Application reads and the policy-library chart in lib/, that valuesObject injects exactly the
+// documented root keys, and that policystack.libraryMajors lists lib/policy-library's major.
 func TestTemplatePatch(t *testing.T) {
 	helm := testenv.Helm(t)
 	out, err := exec.CommandContext(t.Context(), helm, "template", "ci", "../../../../install",
@@ -45,6 +49,19 @@ func TestTemplatePatch(t *testing.T) {
 		}
 	}
 
+	data, err := os.ReadFile("../../../../lib/policy-library/Chart.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lib struct{ Version string }
+	if err := yaml.Unmarshal(data, &lib); err != nil {
+		t.Fatal(err)
+	}
+	libVersion, err := semver.StrictNewVersion(lib.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	stack := map[string]any{"path": "stack/acm", "basenameNormalized": "acm"}
 	fleet := []any{"environments/prod.yaml", "datacenters/dc1.yaml"}
 	for _, tc := range []struct {
@@ -52,6 +69,7 @@ func TestTemplatePatch(t *testing.T) {
 		dir          string // the Application's source path
 		params       map[string]any
 		want         string
+		keys         []string // valuesObject root keys, sorted
 	}{
 		{
 			name:   "spoke",
@@ -62,6 +80,7 @@ func TestTemplatePatch(t *testing.T) {
 				"metadata": map[string]any{"labels": map[string]string{"clusterID": "id"}},
 			},
 			want: ".;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/prod-east-1.yaml",
+			keys: []string{"policystack", "selector"},
 		},
 		{
 			name:   "hub",
@@ -72,6 +91,7 @@ func TestTemplatePatch(t *testing.T) {
 				"metadata": map[string]any{"labels": map[string]string{"clusterID": "id", "local-cluster": "true"}},
 			},
 			want: ".;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/acm-dc1.yaml",
+			keys: []string{"policystack", "selector", "version"},
 		},
 		{
 			name:   "global hub default mode, no valueFiles",
@@ -84,6 +104,7 @@ func TestTemplatePatch(t *testing.T) {
 				}},
 			},
 			want: ".;../../lib;../../values.yaml;../../values/clusters/mh1.yaml",
+			keys: []string{"policystack", "selector"},
 		},
 		{
 			name:   "lifecycle",
@@ -94,6 +115,7 @@ func TestTemplatePatch(t *testing.T) {
 				"path": map[string]any{"path": "fleet", "filename": "hcp-kubevirt.yaml"},
 			},
 			want: ".;../lib;../values.yaml;../values/environments/prod.yaml;../values/datacenters/dc1.yaml;../values/clusters/hcp-kubevirt.yaml",
+			keys: []string{"hub", "install", "policystack", "selector", "state", "version"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -113,7 +135,8 @@ func TestTemplatePatch(t *testing.T) {
 				Spec struct {
 					Source struct {
 						Helm struct {
-							ValueFiles []string `yaml:"valueFiles"`
+							ValueFiles   []string       `yaml:"valueFiles"`
+							ValuesObject map[string]any `yaml:"valuesObject"`
 						} `yaml:"helm"`
 					} `yaml:"source"`
 				} `yaml:"spec"`
@@ -136,6 +159,16 @@ func TestTemplatePatch(t *testing.T) {
 				if f != "values.yaml" && !slices.Contains(paths, f) {
 					t.Errorf("valueFiles entry %s is not in manifest-generate-paths %q", f, got)
 				}
+			}
+			values := app.Spec.Source.Helm.ValuesObject
+			if keys := slices.Sorted(maps.Keys(values)); !slices.Equal(keys, tc.keys) {
+				t.Errorf("valuesObject keys = %q, want %q", keys, tc.keys)
+			}
+			// policy-library fails the render when its own major is not listed.
+			ps, _ := values["policystack"].(map[string]any)
+			majors, _ := ps["libraryMajors"].([]any)
+			if !slices.Contains(majors, any(int(libVersion.Major()))) {
+				t.Errorf("policystack.libraryMajors = %v, want it to list lib/policy-library's major %d (install/templates/_helpers.tpl)", majors, libVersion.Major())
 			}
 		})
 	}

@@ -36,6 +36,12 @@ element needs a library feature added in 4.N, raise the floor to `^4.N.0`
     isn't kebab-case, is over 17 characters or collides with another element (POLICY091); see
     [Naming](#naming) for why.
 
+    In upstream PolicyStack (where `.release-please/` exists) it also adds copier's answers
+    template, so adopters can copy the element from the next release
+    ([Releases](../contributing.md#releases)). In your own repository it doesn't: the element is
+    local, and copier never touches it. Either way the element starts as
+    `policystk.io/stability: preview` ([Versions and deprecation](#versions-and-deprecation)).
+
     The copy is a working example: operator `demo` points at package `demo-operator`,
     which doesn't exist, and `converters/install/demo-instance.yaml` is a sample ConfigMap. Replace
     or delete both in steps 2 and 3.
@@ -154,8 +160,8 @@ element needs a library feature added in 4.N, raise the floor to `^4.N.0`
     `demo.evaluated.yaml`, the objects ACM would apply after resolving ACM templates on an empty
     cluster.
 
-    - `CLUSTER` names a fixture, a made-up fleet file in `tools/validator/testdata/clusters/`.
-      Preview can't render your own clusters; a PR's Render Diff does (step 10). Without `CLUSTER`
+    - `CLUSTER` names a fixture, a made-up fleet file in `tools/validator/testdata/clusters/`. In
+      your repository, which has no fixtures, it names one of your fleet files instead. Without `CLUSTER`
       every fixture renders and only the file paths print. Output goes to a new temporary
       directory, which is left in place; `PREVIEW=<dir>` (relative to `tools/validator`) writes it
       there instead.
@@ -164,23 +170,23 @@ element needs a library feature added in 4.N, raise the floor to `^4.N.0`
 
     What the two files show and their limits: [Preview](validation.md#preview).
 
-7.  **Add it to the test profile.** Fixtures leave a new element off, so CI renders it only under
-    `tools/validator/testdata/profiles/`. Add it to `all-on.yaml` under its values key, with every
-    entry it ships `enabled: false` turned on, and a sample entry for any `config` map those entries
-    range over (an empty map fails POLICY082, see [Converter shapes](#converter-shapes)). Otherwise
-    CI never evaluates their ACM templates, and `TestProfileCoverage` fails for any converter that
-    has some. Settings that conflict with one already in `all-on.yaml` go in `variants.yaml`
-    ([Profiles](validation.md#profiles)).
+    !!! note "Step 7 is upstream only"
+        copier leaves the fixtures and `tools/validator/testdata/inputs.yaml` out of your
+        repository, so there `preview` renders your fleet files and there is no all-on run. Go
+        from step 6 to step 8.
 
-    ```yaml title="tools/validator/testdata/profiles/all-on.yaml"
+7.  **Give the all-on run its inputs.** Fixtures leave a new element off, so CI renders it only in
+    the all-on run, which turns it and every entry it ships `enabled: false` on by itself
+    ([Profiles](validation.md#profiles)). If one of those entries ranges over a `config` map, add a
+    sample entry for it to `tools/validator/testdata/inputs.yaml` under the element's values key:
+    an empty map fails POLICY082 ([Converter shapes](#converter-shapes)). Settings that conflict
+    with the all-on run go in `tools/validator/testdata/profiles/variants.yaml`.
+
+    ```yaml title="tools/validator/testdata/inputs.yaml"
     stack:
       demo:               # the values key: cert-manager would be certManager
-        enabled: true
-        policies:
-          install:
-            templates:
-              demo-netpol:
-                enabled: true
+        config:
+          hosts: {example: {address: 10.0.0.1}}
     ```
 
 8.  **Validate.**
@@ -531,6 +537,67 @@ characters ([Naming limits](../concepts/policies.md#naming-limits)).
   cluster never sees prune and deletes nothing. Never on a template with dependencies (POLICY033,
   [why](../concepts/removal.md#setting-prune)).
 
+## Versions and deprecation
+
+Upstream elements have no version of their own. Each release tag `vX.Y.Z` holds the framework and
+every element, and an adopter's answers file records the tag an element was copied from
+([Releases](../contributing.md#releases)). `Chart.yaml` `version` stays `0.1.0`: Argo CD renders
+elements from a Git path and never packages them, and nothing reads an element's own version
+(policy-library reads only its own).
+
+How far an element can be relied on is its stability, `stable` or `preview`, a `Chart.yaml`
+annotation that the generated README shows. What each value promises and which elements are stable:
+[Element stability](../reference/compatibility.md#element-stability).
+
+```yaml title="stack/odf/Chart.yaml"
+annotations:
+  policystk.io/stability: preview
+```
+
+`create-element.sh` writes `preview`. Any other value fails the README generator. In your
+repository, an element you wrote may keep the annotation, change it or drop it.
+
+### Deprecating a key or an element
+
+To retire a values key, keep it in the element's `values.yaml`, still working, and end the comment
+above it with one line in exactly this form:
+
+```yaml title="stack/metallb/values.yaml"
+    config:
+      # Address pools by name.
+      # Deprecated: use config.ipAddressPools; removed in 2.0.0
+      pools: {}
+```
+
+The comment is the key's description, so the element README shows it. The validator warns
+(POLICY039) on every values layer and fleet file that sets the key, naming the replacement and the
+version, and keeps accepting the key (POLICY035) until it is gone. A `Deprecated:` line in any other
+form is reported at the `values.yaml`. Remove the key no earlier than that major, and at least one
+minor and 90 days after the release that deprecated it. `lifecycle/values.yaml` keys work the same
+way, with a framework version.
+
+To retire an element, set `deprecated: true` in its `Chart.yaml` and keep it working until a major
+removes it. The validator warns (POLICY092) on every values file that turns it on. Never rename an
+element directory: a rename deletes and recreates every Policy it renders. Add the new element and
+deprecate the old one.
+
+### Eject or contribute
+
+An element copied from upstream is tracked: its `.copier-answers.yml` names the release, and
+`copier update` merges each upstream release you take with your edits
+([Element updates](../guides/upgrading.md#element-updates)).
+
+- **Change it through values** when you can. Every `config` key, policy, template and operator can be
+  set or turned off from a layer, and layers never conflict with updates.
+- **Contribute** a change every adopter needs: a fix, a missing `config` key, a new converter. Once
+  it is released, the element update brings it back to you, and the element stays supported
+  ([Contributing](../contributing.md)).
+- **Eject** when your copy has diverged for good: `git rm stack/<element>/.copier-answers.yml`. The
+  element is then yours like one you wrote; no updates arrive, and upstream no longer supports it
+  ([Tiers](../reference/compatibility.md#tiers)).
+
+An element you write with `create-element.sh` has no answers file, so copier never touches it.
+
 ## Element reference
 
 `stack/<element>/README.md` is generated from `Chart.yaml`, `values.yaml` and `converters/`. Don't
@@ -547,6 +614,7 @@ python tools/doc-generator.py --check           # report stale ones, write nothi
 |---|---|
 | `Chart.yaml` `description` | Lead paragraph |
 | `Chart.yaml` `home` | Link at the top of the README. Set it to the element's page on the docs site if it has one; leave it out otherwise |
+| `Chart.yaml` annotation `policystk.io/stability` | `Stability:` line under the lead paragraph, linking [Element stability](../reference/compatibility.md#element-stability). Left out when the annotation is absent |
 | Comment above `config:` | Settings intro |
 | Comment above a key under `config` | That row's description |
 | `description:` of a policy, template or operator | Policy line or template row |

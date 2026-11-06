@@ -21,9 +21,9 @@ A common setup: nonprod pins `main`, prod pins tags, and a fleet PR promotes pro
     Operators left on `versions: []` upgrade whenever their channel ships a new CSV ([Operator versions](operators.md)). The fleet keys `version` and `channel` apply when the fleet file merges, whatever the pin ([OpenShift upgrades](upgrades.md)).
 
 !!! warning "A branch pin bypasses `fleet/` review"
-    Protecting `fleet/` ([Set up your fork](../start/install.md#set-up-your-fork)) only gates pin moves. A cluster with `revision: main` takes every merge to `stack/`, `values/` and `values.yaml` without a `fleet/` reviewer. That includes `install` keys that resize hub-built clusters, or that the engine refuses, which then blocks that cluster's later changes ([Immutable fields](../concepts/lifecycle.md#immutable-fields)). Pin production to tags, or also require review on `values/` and `stack/`.
+    Protecting `fleet/` ([Protect the repository](../start/install.md#protect-the-repository)) only gates pin moves. A cluster with `revision: main` takes every merge to `stack/`, `values/` and `values.yaml` without a `fleet/` reviewer. That includes `install` keys that resize hub-built clusters, or that the engine refuses, which then blocks that cluster's later changes ([Immutable fields](../concepts/lifecycle.md#immutable-fields)). Pin production to tags, or also require review on `values/` and `stack/`.
 
-Tags are yours to create: Argo CD reads only your fork, and upstream's tags are deliberately not fetched into it ([Merge upstream](upgrading.md#merge-upstream)). Tag the commit you want to release:
+Tags are yours to create: Argo CD reads only your repository, and copier copies none of upstream's tags into it. Tag the commit you want to release:
 
 ```sh
 git tag v1.5.0 <sha>
@@ -43,8 +43,8 @@ No comment means no fleet cluster changes, but only if the **Render diff** check
 - the render job failed: the comment job depends on it, so check the run;
 - the PR touches none of `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/` (`install/` is never rendered, see [Upgrading PolicyStack](upgrading.md#install-chart));
 - the PR targets a branch other than the default branch;
-- your fork has no fleet files yet;
-- the PR comes from another repository, such as a contributor's fork of your fork: its result goes to the run's job summary instead.
+- your repository has no fleet files yet;
+- the PR comes from another repository, such as a personal fork of your repository: its result goes to the run's job summary instead.
 
 ## Promoting and rolling back
 
@@ -119,7 +119,7 @@ How you get the key to the cluster depends on its pin:
 
 ## Disabling an element
 
-Set `enabled: false` in a layer listed after every layer that enables the element ([Order](../concepts/values.md#order)). `values/clusters/<cluster>.yaml` is always last, so it can turn off anything for one cluster. `environments/prod.yaml` enables `dns`; to turn it off on `prod-east-1`:
+Set `enabled: false` in a layer listed after every layer that enables the element ([Order](../concepts/values.md#order)). `values/clusters/<cluster>.yaml` is always last, so it can turn off anything for one cluster. Upstream's example `environments/prod.yaml` enables `dns`; to turn it off on `prod-east-1`:
 
 ```yaml
 # values/clusters/prod-east-1.yaml

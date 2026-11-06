@@ -3,6 +3,8 @@
 
 cert-manager Operator (Red Hat build) for X.509 certificate lifecycle management
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   certManager:

@@ -4,6 +4,8 @@ description: LVM Storage operator providing local storage via LVM
 type: application
 version: 0.1.0
 appVersion: "1.16.0"
+annotations:
+  policystk.io/stability: preview
 dependencies:
   - name: policy-library
     alias: stack

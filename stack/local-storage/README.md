@@ -3,6 +3,8 @@
 
 Local Storage operator exposing node-local disks as PVs
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   localStorage:

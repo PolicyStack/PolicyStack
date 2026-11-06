@@ -3,6 +3,8 @@
 
 OpenShift Virtualization (KubeVirt) for running VMs on OpenShift
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   virtualization:

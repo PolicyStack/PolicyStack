@@ -1,32 +1,33 @@
 # How PolicyStack works
 
-The rest of the docs assume you know what is in your fork, what PolicyStack creates on the hub, how a commit reaches a cluster, how fleet files work, what your fork's CI checks, and the terms below. Read this page before Installation.
+The rest of the docs assume you know what is in your repository, what PolicyStack creates on the hub, how a commit reaches a cluster, how fleet files work, what your repository's CI checks, and the terms below. Read this page before Installation.
 
 ## The repository
 
-You fork PolicyStack and pass the fork's URL as `gitRepo` when you install the chart on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one fork; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)). The repository holds three kinds of content:
+You create your own repository from upstream PolicyStack with copier and pass its URL as `gitRepo` when you install the chart on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one repository; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)).
 
-| Path | What it is | Who changes it |
-|---|---|---|
-| `install/` | The Helm chart you run once per hub. It creates the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace and RBAC ([Install chart](../reference/install.md)). | Upstream |
-| `install/operators/` | Renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet ([Installation](../start/install.md)). | Upstream |
-| `lifecycle/` | The chart that builds and destroys clusters ([Cluster lifecycle](lifecycle.md)). | Upstream |
-| `lib/` | policy-library, the Helm library chart every element and `lifecycle/` renders through, and its tests ([How an element is built](elements.md)). | Upstream |
-| `tools/` | The validator, the sample element and the README generator. | Upstream |
-| `.github/` | CI workflows and `CODEOWNERS`. | Upstream |
-| `docs/` | This site. | Upstream |
-| `stack/<element>/` | One element per product. | Upstream ships them as a starting point; you add, change or delete them |
-| `fleet/` | One fleet file per cluster. Upstream ships none. | You |
-| `values/` | Values layers, such as `environments/prod.yaml` or `clusters/<cluster>.yaml`. Upstream ships examples here. | You |
-| `values.yaml` | Values every cluster gets. It sets `policyNamespace: pstack`, the namespace the install chart creates. Leave it: changing it renames, so deletes and recreates, every Policy ([Where Policies live](policies.md#where-policies-live)). | You |
+copier copies two kinds of things from upstream release tags, each recorded in a `.copier-answers.yml`: the framework, once, at the repository root, and each element you want, into `stack/<element>/`. Everything else is yours. Each path belongs to one owner:
 
-You take upstream's changes by merging upstream ([Upgrading PolicyStack](../guides/upgrading.md#merge-upstream)). Once you change an element, upstream's later changes to it merge into yours, as conflicts where both touched the same lines; review them on each upstream merge.
+| Path | What it is | Owner | Updated by |
+|---|---|---|---|
+| `install/` | The Helm chart you run once per hub. It creates the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace and RBAC ([Install chart](../reference/install.md)). `install/operators/` renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet. | Framework | A framework update. Don't edit. |
+| `lifecycle/` | The chart that builds and destroys clusters ([Cluster lifecycle](lifecycle.md)). | Framework | Same |
+| `lib/` | policy-library, the Helm library chart every element and `lifecycle/` renders through ([How an element is built](elements.md)). | Framework | Same |
+| `tools/` | The validator, the sample element, `create-element.sh` and the README generator. | Framework | Same |
+| `.github/workflows/`, `.pre-commit-config.yaml`, `mise.toml` | CI workflows, lint hooks and pinned tool versions ([CI workflows](../reference/ci.md)). | Framework | Same |
+| `/.copier-answers.yml` | The framework release you have, such as `_commit: v1.2.0`. | copier | A framework update. Never edit by hand. |
+| `stack/<element>/` with a `.copier-answers.yml` | A tracked element, copied from a release tag `vX.Y.Z` no newer than the framework's. | Upstream, until you edit it | An element update, which merges upstream's changes with your edits. |
+| `stack/<element>/` without one | An element you wrote, or one you ejected from tracking. | You | You |
+| `fleet/` | One fleet file per cluster. | You | You |
+| `values/` | Values layers, such as `environments/prod.yaml` or `clusters/<cluster>.yaml`. | You | You |
+| `values.yaml` | Values every cluster gets. It holds only `policyNamespace: pstack`, the namespace the install chart creates. Don't edit it: changing that key renames, so deletes and recreates, every Policy ([Where Policies live](policies.md#where-policies-live)), and fleet-wide settings go in a layer ([Order](values.md#order)). | Framework | A framework update |
+| `.github/CODEOWNERS`, `README.md` | Reviewers, your own notes. | You | You |
+
+You take updates by hand: `copier update` merges a newer release of the framework or of one element into a branch, you open it as a PR, and the merge reaches clusters like any other ([Upgrading PolicyStack](../guides/upgrading.md)). Upstream promises compatibility only for the framework and for elements you haven't edited ([Compatibility](../reference/compatibility.md)). Settings belong in `values/`: an element you edit is yours to merge on every update.
 
 Every element ships with `enabled: false` except `upgrade`, which renders nothing until a fleet file sets `version` or `channel`, or a layer sets `stack.upgrade.config.upstream`. Then it enforces them on merge: `version` starts an OpenShift upgrade ([OpenShift upgrades](../guides/upgrades.md)). A cluster gets nothing from an element until a values layer it reads sets `stack.<elementKey>.enabled: true`, where the key is the element name in camelCase: `cert-manager` reads `stack.certManager` ([How an element is built](elements.md)).
 
-The example layers under `values/` turn elements on, and they enforce as soon as the PR that lists the layer merges ([Example files](values.md#example-files)). Read a layer before listing it, or start with a [dry run](../guides/rollout.md#dry-run).
-
-A cluster always reads the `values/clusters/` file matching its name, without listing it. Upstream ships examples there, such as `acm-dc1.yaml` and `prod-east-1.yaml`, so delete or rewrite them before you name a cluster or hub after one.
+A layer that turns elements on enforces them as soon as the PR that lists the layer merges. Read a layer before listing it, or start with a [dry run](../guides/rollout.md#dry-run). A cluster always reads the `values/clusters/` file matching its name, without listing it.
 
 ## What lives on the hub
 
@@ -132,19 +133,19 @@ A fleet file change lands within about 6 minutes: the ApplicationSet re-reads Gi
 
     `policystack-lifecycle` parses every `fleet/*.yaml` (not `fleet/hubs/`) before it filters by hub, so one unparseable fleet file stops lifecycle on every hub reading the repository, and a fleet file naming this hub that lacks `revision` stops it on this hub. A `revision` that doesn't exist breaks only that cluster's `lifecycle-<cluster>` render.
 
-The fork's CI rejects these before merge ([Your fork's CI](#your-forks-ci)). It can't catch a pinned branch deleted after merge, so pin tags, commit SHAs or protected branches. Fleet keys, quoting rules and revision forms are in [Fleet files](../reference/fleet.md).
+Your repository's CI rejects these before merge ([Your repository's CI](#your-repositorys-ci)). It can't catch a pinned branch deleted after merge, so pin tags, commit SHAs or protected branches. Fleet keys, quoting rules and revision forms are in [Fleet files](../reference/fleet.md).
 
-## Your fork's CI
+## Your repository's CI
 
 On every pull request, the CI workflow runs Policy Validate, the [validator](../develop/validation.md), which renders every element the way the ApplicationSet does and checks the result ([Validator rules](../reference/rules.md), [CI workflows](../reference/ci.md)).
 
 | Check | Catches | Blocks merge |
 |---|---|---|
-| `ci` | Policy Validate: invalid fleet files (POLICY050), pins that don't resolve or lack a file the fleet file uses (POLICY052), values keys nothing reads (POLICY035), render errors (RENDER000). Also fails if the lint hooks or the docs build fail. | Once a ruleset requires it |
+| `ci` | Policy Validate: invalid fleet files (POLICY050), pins that don't resolve, lack a file the fleet file uses or are on a framework major the hubs can't render (POLICY052), values keys nothing reads (POLICY035), render errors (RENDER000). Also fails if the lint hooks fail. | Once a ruleset requires it |
 | `pr-title` | PR titles that aren't Conventional Commits, such as `feat: enable metallb on prod-east-1` | Once a ruleset requires it |
 | Render Diff | Nothing; comments each fleet cluster's Policy changes, rendering each cluster at its own revision before and after the merge | Never |
 
-Actions are off in a new fork and nothing is required until you add a ruleset: [Set up your fork](../start/install.md#set-up-your-fork).
+Nothing is required until you add a ruleset: [Protect the repository](../start/install.md#protect-the-repository).
 
 ## Words with more than one meaning
 
@@ -177,6 +178,7 @@ Actions are off in a new fork and nothing is required until you add a ruleset: [
 
 | Term | Meaning |
 |---|---|
+| Answers file | `.copier-answers.yml`, at the repository root for the framework and in each tracked `stack/<element>/`. Records the upstream release tag copier copied ([The repository](#the-repository)). |
 | Application | An Argo CD object that renders one source with Helm and syncs the result. PolicyStack creates `<element>-<cluster>` and `lifecycle-<cluster>`, all with the hub as destination ([ApplicationSets](architecture.md)). |
 | ApplicationSet | An Argo CD object that creates Applications from generators, here from cluster secrets, fleet files and `stack/*` directories ([ApplicationSets](architecture.md)). |
 | Cluster secret | An Argo CD Secret registering a cluster. The GitOpsCluster creates one per ManagedCluster so the ApplicationSets can list them ([ApplicationSets](architecture.md)). |
@@ -187,6 +189,7 @@ Actions are off in a new fork and nothing is required until you add a ruleset: [
 | `enforce`, `inform` | A Policy's remediation action. `enforce` changes the cluster to match; `inform` only reports. Every shipped element enforces by default ([ACM policies in brief](acm.md)). |
 | Engine | How a hub builds a cluster: `hypershift` (hosted control plane on the hub), `hive` (installer on AWS, GCP, Azure or vSphere) or `siteconfig` (bare metal) ([Cluster lifecycle](lifecycle.md)). |
 | Fleet file | `fleet/<cluster>.yaml`, or `fleet/hubs/<hubName>.yaml` for the hub, on the default branch. Enrolls the cluster and sets its revision and layers ([Fleet files](#fleet-files)). |
+| Framework | Everything in your repository that comes from upstream except the elements: `install/`, `lifecycle/`, `lib/`, `tools/`, the CI workflows. Versioned `vX.Y.Z` ([Compatibility](../reference/compatibility.md)). |
 | GitOpsCluster | ACM object that creates an Argo CD cluster secret per ManagedCluster; PolicyStack's is `argo-acm-importer-global` ([ApplicationSets](architecture.md)). |
 | Governance add-on | ACM's policy controllers on each managed cluster. They pull its replicated Policies, apply or check them, and report status ([ACM policies in brief](acm.md)). |
 | `hubName` | See [Words with more than one meaning](#words-with-more-than-one-meaning). |

@@ -10,18 +10,15 @@ import (
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
-// testCRDs returns the CRDs make crds fetches into .crds/, loaded once.
-var testCRDs = sync.OnceValues(func() (CRDs, error) { return LoadCRDs("../../.crds") })
+// testCRDs returns the committed CRDs in crds/, loaded once.
+var testCRDs = sync.OnceValues(func() (CRDs, error) { return LoadCRDs("../../crds") })
 
 func crds(t *testing.T) CRDs {
 	t.Helper()
 	c, err := testCRDs()
-	if errors.Is(err, fs.ErrNotExist) {
-		testenv.Skip(t, "no CRDs: run make crds")
-	} else if err != nil {
+	if err != nil {
 		t.Fatal(err)
 	}
 	return c

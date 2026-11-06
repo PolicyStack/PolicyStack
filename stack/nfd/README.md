@@ -3,6 +3,8 @@
 
 Node Feature Discovery Operator and instance for hardware feature labelling
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   nfd:

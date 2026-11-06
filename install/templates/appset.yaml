@@ -89,8 +89,8 @@ spec:
             {{ "{{" }}- range $k := list "version" "channel" {{ "}}" }}{{ "{{" }} with dig $k "" $ {{ "}}" }}
             {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-            selectedName: {{ "{{" }} $name {{ "}}" }}
-            selectedId: {{ "{{" }} .metadata.labels.clusterID {{ "}}" }}
+            policystack:
+              libraryMajors: {{ include "policystack.libraryMajors" . }}
             selector:
               matchExpressions:
                 name:

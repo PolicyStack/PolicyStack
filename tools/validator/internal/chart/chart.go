@@ -31,6 +31,8 @@ type Element struct {
 	ConvertersDir string
 	// Dependencies as declared in Chart.yaml.
 	Dependencies []Dependency
+	// Deprecated is Chart.yaml's deprecated flag.
+	Deprecated bool
 	// Typed values; only the keys the checks inspect.
 	Values *Values
 	// yaml.v3 root node for values.yaml, used for finding line/column.
@@ -63,6 +65,7 @@ type chartYaml struct {
 	APIVersion   string       `yaml:"apiVersion"`
 	Name         string       `yaml:"name"`
 	Version      string       `yaml:"version"`
+	Deprecated   bool         `yaml:"deprecated"`
 	Dependencies []Dependency `yaml:"dependencies"`
 }
 
@@ -455,6 +458,41 @@ func sorted[M ~map[string]V, V any](m M) iter.Seq2[string, V] {
 	}
 }
 
+// AllOn returns a values file that turns on each element and all its policies, templates and
+// operators, over any layer that turns one off: the all-on profile, which renders every converter.
+func AllOn(elements []*Element) ([]byte, error) {
+	on := func() map[string]any { return map[string]any{"enabled": true} }
+	stack := map[string]any{}
+	for _, el := range elements {
+		if el.StackKey == "" || el.Values == nil || el.Values.Component == nil {
+			continue
+		}
+		c, entry := el.Values.Component, on()
+		policies, operators := map[string]any{}, map[string]any{}
+		for name, p := range c.Policies.Sorted() {
+			pol, templates := on(), map[string]any{}
+			for t := range p.Templates.Sorted() {
+				templates[t] = on()
+			}
+			if len(templates) > 0 {
+				pol["templates"] = templates
+			}
+			policies[name] = pol
+		}
+		for name := range c.OperatorPolicies.Sorted() {
+			operators[name] = on()
+		}
+		if len(policies) > 0 {
+			entry["policies"] = policies
+		}
+		if len(operators) > 0 {
+			entry["operatorPolicies"] = operators
+		}
+		stack[el.StackKey] = entry
+	}
+	return yaml.Marshal(map[string]any{"stack": stack})
+}
+
 // LoadAll loads every element chart under stackDir, plus sampleDir when it
 // contains a Chart.yaml, and returns policyNamespace from rootValuesFile.
 func LoadAll(stackDir, sampleDir, rootValuesFile string) ([]*Element, string, error) {
@@ -535,6 +573,7 @@ func Load(dir, policyNamespace string) (*Element, error) {
 		ValuesFile:    valuesFile,
 		ConvertersDir: filepath.Join(dir, "converters"),
 		Dependencies:  cy.Dependencies,
+		Deprecated:    cy.Deprecated,
 		Values: &Values{
 			PolicyNamespace: policyNamespace,
 			Component:       first.Component,

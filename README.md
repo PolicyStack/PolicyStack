@@ -6,38 +6,44 @@ Documentation: https://policystk.io/ (source in [`docs/`](docs/)). Each element'
 
 ## Quick start
 
-From the root of your fork, logged in to the hub as a cluster administrator ([Installation](https://policystk.io/start/install/)):
+To use PolicyStack, create your own repository with [copier](https://copier.readthedocs.io), copying the framework and each element you want from one release `vX.Y.Z`, then install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
 
-1. Install ACM and OpenShift GitOps, unless the hub already runs them:
+1. Create the repository and add the required elements:
+   ```sh
+   url=https://github.com/PolicyStack/PolicyStack.git
+   copier copy --vcs-ref v1.0.0 "$url" my-fleet && cd my-fleet
+   for el in acm gitops upgrade; do
+     copier copy --vcs-ref v1.0.0 -d element="$el" "$url" "stack/$el"
+   done
+   ```
+   Commit it to a Git repository Argo CD can read. Take later releases with `copier update`, the framework first ([Upgrading PolicyStack](https://policystk.io/guides/upgrading/)).
+2. Install ACM and OpenShift GitOps, unless the hub already runs them:
    ```sh
    until helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \
          | oc apply -f - && oc get argocd/openshift-gitops -n openshift-gitops; do sleep 30; done
    oc wait mch/multiclusterhub -n open-cluster-management --for=jsonpath='{.status.phase}'=Running --timeout=20m
    ```
-2. Install PolicyStack, naming the hub and your fork:
+3. Install PolicyStack, naming the hub and your repository:
    ```sh
    helm install policystack ./install -n openshift-gitops \
-     --set hubName=<hub> --set gitRepo=https://github.com/<org>/<fork>.git \
-     --description "$(git rev-parse --short HEAD)"
+     --set hubName=<hub> --set gitRepo=https://github.com/<org>/<repo>.git
    ```
-3. Commit the hub's fleet file, `fleet/hubs/<hub>.yaml`, with `revision: main`.
-4. Commit a fleet file for a managed cluster to the repo's default branch, `fleet/prod-east-1.yaml` for the ManagedCluster `prod-east-1` ([Fleet files](https://policystk.io/reference/fleet/)):
+4. Commit the hub's fleet file, `fleet/hubs/<hub>.yaml`, with `revision: main`.
+5. Commit a fleet file for a managed cluster to the repo's default branch, `fleet/prod-east-1.yaml` for the ManagedCluster `prod-east-1` ([Fleet files](https://policystk.io/reference/fleet/)):
    ```yaml
    revision: main
    valueFiles:
-     - environments/prod.yaml
-     - datacenters/dc1.yaml
-     - platforms/aws.yaml
+     - environments/prod.yaml   # a layer you write under values/
    ```
 
 Every element ships disabled except `upgrade`, which acts only on a fleet file's `version` and `channel` ([Upgrades](https://policystk.io/guides/upgrades/)). Enable an element in a values layer, such as `values/clusters/prod-east-1.yaml` for the cluster above; see [Values cascade](https://policystk.io/concepts/values/).
 
-To have the hub build a hosted cluster instead of importing one, meet the [lifecycle prerequisites](https://policystk.io/guides/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
+To have the hub build a hosted cluster instead of importing one (a preview feature, see [Compatibility](https://policystk.io/reference/compatibility/#maturity)), meet the [lifecycle prerequisites](https://policystk.io/guides/lifecycle/#prerequisites) and name the hub in the cluster's fleet file, `fleet/hcp-kubevirt.yaml`:
 ```yaml
 revision: main
 hub: acm-dc1
 version: 4.20.8
-valueFiles:
+valueFiles:              # layers you write, or copy from upstream's values/
   - environments/nonprod.yaml
   - platforms/kubevirt.yaml
 ```

@@ -3,6 +3,8 @@
 
 Opinionated cluster remediations applied as policy
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   remediations:

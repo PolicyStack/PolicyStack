@@ -2,6 +2,7 @@ package run
 
 import (
 	"cmp"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"maps"
@@ -568,6 +569,70 @@ func TestLoadCRDs(t *testing.T) {
 			crds, err := loadCRDs(tt.opts)
 			if (err != nil) != tt.wantErr || crds != nil {
 				t.Errorf("got %v, %v; want error %v and no CRDs", crds, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestAllOn checks that --all-on ranks the all-on profile of every element below ExtraValues, and
+// removes it after the run.
+func TestAllOn(t *testing.T) {
+	for _, allOn := range []bool{false, true} {
+		t.Run(fmt.Sprint(allOn), func(t *testing.T) {
+			root := t.TempDir()
+			log := filepath.Join(root, "helm.log")
+			write := func(rel, body string, mode os.FileMode) {
+				p := filepath.Join(root, rel)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(body), mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// Logs each template call's -f files, and the content of the first.
+			write("helm", "#!/bin/sh\n[ \"$1\" = template ] || exit 0\nshift 3\nfiles=\nwhile [ $# -gt 0 ]; do [ \"$1\" = -f ] && files=\"$files $2\"; shift; done\n"+
+				"echo \"$files\" >> "+log+"\nset -- $files\nfor f; do case $f in */all-on-*) cat \"$f\" >> "+log+";; esac; done\n", 0o755)
+			write("stack/a/Chart.yaml", "apiVersion: v2\nname: a\nversion: 0.1.0\n", 0o644)
+			write("stack/a/values.yaml", "stack:\n  a:\n    enabled: false\n    policies:\n      p:\n        enabled: false\n", 0o644)
+			write("values.yaml", "policyNamespace: policies\n", 0o644)
+			write("extra.yaml", "selector: {}\n", 0o644)
+			write("fleet/c.yaml", "revision: main\n", 0o644)
+			_, err := Run(t.Context(), Options{
+				RepoRoot:     root,
+				StackDir:     filepath.Join(root, "stack"),
+				LifecycleDir: filepath.Join(root, "lifecycle"),
+				ValuesDir:    filepath.Join(root, "values"),
+				FixturesDir:  filepath.Join(root, "fleet"),
+				HelmBin:      filepath.Join(root, "helm"),
+				ExtraValues:  []string{filepath.Join(root, "extra.yaml")},
+				AllOn:        allOn,
+				Only:         []string{"RENDER000"},
+				Logger:       slog.New(slog.DiscardHandler),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls, err := os.ReadFile(log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			files := strings.Fields(strings.SplitN(string(calls), "\n", 2)[0])
+			want := []string{filepath.Join(root, "stack/a/values.yaml"), filepath.Join(root, "values.yaml"), filepath.Join(root, "extra.yaml")}
+			if allOn {
+				if len(files) != 4 || !strings.Contains(files[2], "all-on-") {
+					t.Fatalf("value files %q: want the all-on profile third", files)
+				}
+				if _, err := os.Stat(files[2]); !os.IsNotExist(err) {
+					t.Errorf("all-on profile %s not removed: %v", files[2], err)
+				}
+				want = slices.Insert(want, 2, files[2])
+				if !strings.Contains(string(calls), "stack:\n    a:\n        enabled: true\n        policies:\n            p:\n                enabled: true\n") {
+					t.Errorf("all-on profile does not turn a and its policy on:\n%s", calls)
+				}
+			}
+			if !slices.Equal(files, want) {
+				t.Errorf("value files %q, want %q", files, want)
 			}
 		})
 	}

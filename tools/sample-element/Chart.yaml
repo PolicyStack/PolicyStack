@@ -3,6 +3,8 @@ name: my-element
 description: Teaching example that tools/create-element.sh copies.
 type: application
 version: 0.1.0
+annotations:
+  policystk.io/stability: preview
 dependencies:
   - name: policy-library
     alias: stack

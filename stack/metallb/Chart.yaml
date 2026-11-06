@@ -4,6 +4,8 @@ description: "MetalLB load balancer: address pools, advertisements and BGP peers
 type: application
 version: 0.1.0
 appVersion: "1.16.0"
+annotations:
+  policystk.io/stability: preview
 dependencies:
   - name: policy-library
     alias: stack

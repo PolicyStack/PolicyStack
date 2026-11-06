@@ -3,6 +3,8 @@
 
 Red Hat Developer Hub (Backstage) internal developer portal
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   developerHub:

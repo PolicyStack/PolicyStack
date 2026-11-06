@@ -46,6 +46,7 @@ nav = [
     { "Lifecycle keys" = "reference/lifecycle.md" },
     { "Validator rules" = "reference/rules.md" },
     { "CI workflows" = "reference/ci.md" },
+    { "Compatibility" = "reference/compatibility.md" },
   ] },
   { "Contributing" = "contributing.md" },
 ]
@@ -93,7 +94,7 @@ pymdownx.superfences.custom_fences = [
 "applicationset.md" = "concepts/architecture.md"
 "applicationset.md#fleet-files" = "concepts/overview.md#fleet-files"
 "applicationset.md#revision" = "reference/fleet.md#revision"
-"applicationset.md#protection" = "start/install.md#set-up-your-fork"
+"applicationset.md#protection" = "start/install.md#protect-the-repository"
 "applicationset.md#injected-values" = "concepts/values.md#order"
 "applicationset.md#the-install-chart" = "reference/install.md"
 "compliance.md" = "elements/compliance.md"
@@ -120,15 +121,20 @@ pymdownx.superfences.custom_fences = [
 "workflows.md" = "reference/ci.md"
 "index.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
 "index.md#terms" = "concepts/overview.md#glossary"
-"contributing.md#forks" = "guides/upgrading.md#merge-upstream"
+"contributing.md#forks" = "guides/upgrading.md"
 # Sections moved by the docs rewrite.
 "concepts/architecture.md#how-a-change-reaches-a-cluster" = "concepts/overview.md#how-a-change-reaches-a-cluster"
 "concepts/architecture.md#terms" = "concepts/overview.md#glossary"
 "concepts/architecture.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
-"reference/fleet.md#protection" = "start/install.md#set-up-your-fork"
+"reference/fleet.md#protection" = "start/install.md#protect-the-repository"
 # policy-library moved into lib/.
 "contributing.md#chart-changes" = "contributing.md#library-changes"
-"guides/disconnected.md#the-chart-repo" = "guides/disconnected.md#git-and-the-hubs-argo-cd"
+"guides/disconnected.md#the-chart-repo" = "guides/disconnected.md#policystack-releases"
+# Forks replaced by copier.
+"start/install.md#set-up-your-fork" = "start/install.md#create-your-repository"
+"guides/upgrading.md#merge-upstream" = "guides/upgrading.md#framework-updates"
+"guides/upgrading.md#example-values-files" = "concepts/values.md#example-files"
+"concepts/overview.md#your-forks-ci" = "concepts/overview.md#your-repositorys-ci"
 
 [project.extra]
 generator = false

@@ -3,6 +3,8 @@
 
 PerformanceProfile pinning platform workloads to reserved CPUs
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   partitioning:

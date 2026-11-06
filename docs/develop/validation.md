@@ -38,17 +38,19 @@ Every rule runs in one of three phases:
 |---|---|---|---|
 | Chart | Once per element | The element's own `Chart.yaml`, `values.yaml` and `converters/` | POLICY021, 022, 030, 031, 040, 070, 090 |
 | Cluster | Once per element and fixture | The `helm template` output for that cascade | POLICY001, 002, 032, 033, 034, 037, 050, 080, 081, 082, RENDER000 |
-| Repo | Once | Every element, every file under `values/`, every fleet file, `install/` | POLICY003, 011, 035, 038, 051, 052, 060, 071, 091 |
+| Repo | Once | Every element, every file under `values/`, every fleet file, `install/`, the copier answers files | POLICY003, 011, 035, 038, 039, 051, 052, 060, 061, 071, 091, 092 |
 
 Cluster-phase rules see the whole cascade, so a values layer that turns a template on or changes its
 action is checked the same as the element's own `values.yaml`.
 
 ## Running it
 
-You need the tools from `mise.toml` on your `PATH` ([Setup](../contributing.md#setup)), plus `make`,
-`git` and `curl`. The first run needs network access: it downloads the CRDs into
-`tools/validator/.crds/`. policy-library, the Helm library chart every element depends on, comes from
-`lib/policy-library` in the same checkout ([Library changes](../contributing.md#library-changes)).
+You need the tools from `mise.toml` on your `PATH` ([Setup](../contributing.md#setup)), plus `make`
+and `git`. The first run builds the validator, which downloads its Go modules (or reads them from
+`GOPROXY`); after that it runs offline: the CRDs are committed in `tools/validator/crds/`
+([CRD schemas](#crd-schemas)), and policy-library, the Helm library chart every element depends on,
+comes from `lib/policy-library` in the same checkout
+([Library changes](../contributing.md#library-changes)).
 
 While writing an element ([Workflow](elements.md#workflow)):
 
@@ -63,13 +65,15 @@ make -C tools/validator validate ELEMENT=metallb # (2)!
 2.  Every rule, for one element. Repo-phase rules still load everything but report only this
     element's findings, so findings that belong to no element (POLICY052, POLICY071) don't show.
 
-Before opening a PR, run the validator part of CI (every CI job: [Setup](../contributing.md#setup)):
+Before opening a PR, run `validate`, which is what `ci` runs in your repository. For a PR to
+upstream PolicyStack, run its validator CI instead (every CI job: [Setup](../contributing.md#setup)):
 
 ```sh
 make -C tools/validator ci # (1)!
 ```
 
-1.  `lint`, `validate`, then `test`.
+1.  `lint`, `validate`, then `test`. Upstream only: `test` reads upstream's test data, which copier
+    leaves out of your repository.
 
 ### Preview
 
@@ -115,47 +119,44 @@ Without `CLUSTER`, preview renders every fixture and prints only the paths it wr
 a new temporary directory, which is not deleted, or to `PREVIEW=<dir>` (relative to
 `tools/validator`). `ELEMENT=my-element` previews the [sample element](elements.md#sample-element).
 
-`preview` reads only the fixtures. To see what a real cluster in your fork gets, run the binary on
-`fleet/` (it renders the cluster's own layers, so nothing is forced on):
-
-```sh
-make -C tools/validator build
-tools/validator/bin/policystack-validator --repo-root . --fixtures-dir fleet --cluster <name> \
-  --extra-values tools/validator/testdata/baseline.yaml --only RENDER000,POLICY081 \
-  --render-dir /tmp/preview --evaluate
-```
+copier leaves the fixtures out of your repository, so there `preview` renders your fleet files
+instead, and `CLUSTER` names one of them (`CLUSTER=<hubName>` for `fleet/hubs/<hubName>.yaml`).
 
 ### What `validate` runs
 
-`validate` builds the binary, fetches the CRDs, then runs the validator three times. All three run,
-and any failure fails the target:
+`validate` builds the binary, then runs the validator in three passes. All of them run, and any
+failure fails the target. Passes 1 and 2 render the fixtures, so they run only where
+`tools/validator/testdata/clusters` exists: upstream has it, an adopter's copy doesn't.
 
 1.  **Fixtures.** Every element plus `tools/sample-element/`, which `tools/create-element.sh` copies
     for every new element and so must stay valid. Skips POLICY052, because fixture revisions are
-    not real pins, and POLICY081, which pass 2 covers. Only this pass runs POLICY071.
-2.  **Profiles.** One run per file in `tools/validator/testdata/profiles/`, each layered alone over
-    the baseline. Profiles turn every element and optional piece on, so POLICY081 and POLICY001 see
-    every converter ([Profiles](#profiles)).
+    not real pins, and POLICY081, which pass 2 covers. It runs POLICY071, the
+    [install chart](../reference/install.md) check.
+2.  **Profiles.** The all-on run, then one run per file in `tools/validator/testdata/profiles/`.
+    Together they turn every element and optional piece on, so POLICY081 and POLICY001 see every
+    converter ([Profiles](#profiles)).
 3.  **Your fleet.** Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exists, which upstream never
-    has: this pass is for an adopter's fork. It renders the real fleet files and is the only pass
-    that runs POLICY052 against real `revision` pins.
+    has. It renders the real fleet files and is the only pass that runs POLICY052 against real
+    `revision` pins. Without fixtures, it also runs POLICY071, so an adopter's copy checks
+    `install/` once it has a fleet file.
 
-A clean run prints `ok: no findings` three times (fixtures, `all-on`, `variants`), four in a fork
-with `fleet/` files.
+Upstream, a clean run prints `ok: no findings` three times (fixtures, all-on, `variants`). An
+adopter's copy prints it once, for `fleet/`.
 
 | Target | Runs |
 | ------ | ---- |
 | `validate [ELEMENT=<chart>]` | The three passes above |
 | `preview ELEMENT=<chart> [CLUSTER=<name>] [PREVIEW=<dir>]` | [Preview](#preview) |
-| `crds` | Downloads the [CRD schemas](#crd-schemas) into `tools/validator/.crds/` when a pin changed |
-| `test` | `crds`, then `go test -race ./...`. Tests that need Helm or the CRDs skip without them. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
+| `crds` | Refetches the committed [CRD schemas](#crd-schemas) in `tools/validator/crds/` from the pinned SHAs. Run it by hand after a pin changes, then commit the result |
+| `test` | Upstream only. `go test -race ./...`. Tests that need Helm skip without it. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
 | `lint` | golangci-lint (`.golangci.yml`, gofmt and goimports included; `make fmt` fixes formatting), `go mod tidy -diff`, `go tool govulncheck` |
-| `ci` | `lint`, `validate`, `test` |
-| `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` does it on every run |
+| `ci` | Upstream only. `lint`, `validate`, `test` |
+| `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` runs it for any chart whose `charts/` archive is older than `lib/` |
 
 `CI` is the environment variable GitHub Actions sets. Leave it unset locally. When it is set, findings
 print as GitHub annotations (`--github`), missing CRDs fail the run instead of skipping POLICY080, and
-tests that would skip fail instead.
+tests that would skip fail instead. `test` and `lint` check the validator itself, so only upstream's
+CI runs them, and `test` fails in a copy, which lacks upstream's test data ([Upstream](../reference/ci.md#upstream)).
 
 !!! note
     Every run starts with `helm dependency update` on each chart, once per run, with
@@ -241,6 +242,7 @@ file; POLICY080 points at the element's `values.yaml` instead.
     | `--github` | GitHub Actions annotations |
     | `--fixtures-dir` | Fleet files to render, hubs in its `hubs/`. Default `tools/validator/testdata/clusters`; pass 3 passes `fleet` |
     | `--extra-values` | Comma-separated values files appended to every cascade but `lifecycle/`'s ([Baseline](#baseline)) |
+    | `--all-on` | Turns on every element and every policy, template and operator in it, ranked below `--extra-values` ([Profiles](#profiles)) |
     | `--lifecycle-dir` | Lifecycle chart, default `<repo>/lifecycle` |
     | `--base-branch` | The branch a PR merges into, default `$GITHUB_BASE_REF`. POLICY052 resolves a `revision` naming it to `HEAD`, the PR's merge commit |
     | `--render-dir` | Writes `<dir>/<fleet file path without .yaml>/<element>.yaml`, a failed render as `# RENDER000:` lines. [Render Diff](../reference/ci.md#render-diff) diffs two of these |
@@ -260,20 +262,18 @@ clusters that exist only for CI. Nothing is deployed. They list real files under
 change to a shared layer such as `values/environments/prod.yaml` changes what every fixture listing
 it renders.
 
-!!! warning "In your fork"
-    The fixtures read your `values/` too. Deleting or renaming a layer a fixture lists (every file
-    under `values/environments/`, `values/datacenters/` and `values/platforms/`, and
-    `values/acm/acm-dc1.yaml`) fails POLICY050 in the fixture pass, which always runs. Your edits
-    to those files are rendered for the fixtures as well, so a mistake there also fails that pass.
-    Keep the files, or edit the fixtures in `tools/validator/testdata/clusters` to match.
+!!! note "Upstream only"
+    copier leaves `tools/validator/testdata/clusters` and upstream's `values/` out of your
+    repository, so the fixture and profile passes don't run there, and nothing in your `values/` is
+    read by a fixture.
 
 The file name is the cluster name: `hubs/acm-dc1.yaml` renders as `acm-dc1` and reads
 `values/clusters/acm-dc1.yaml`. A fixture that sets `hub` names the hub that builds it with
 `lifecycle/` ([Cluster lifecycle](../concepts/lifecycle.md)), so the validator also renders
 `lifecycle/` for it.
 
-Upstream contributors add a fixture for a new fleet shape, such as a new lifecycle engine. In a
-fork, pass 3 checks your `fleet/` files; you don't add fixtures for them. `TestLoadDir_testdata`
+Upstream contributors add a fixture for a new fleet shape, such as a new lifecycle engine. In your
+repository, pass 3 checks your `fleet/` files; you don't add fixtures for them. `TestLoadDir_testdata`
 (`internal/fixtures`) and `TestResolve_testdata` (`internal/cascade`) pin the exact list, so add the
 new file to both.
 
@@ -350,40 +350,37 @@ href: '{{ "{{" }} $host := (lookup "route.openshift.io/v1" "Route" "stackrox" "c
 
 Fixtures leave most elements off, and every optional piece (a policy, template or operator shipped
 `enabled: false`, [Optional pieces](elements.md#optional-pieces)) stays off, so most
-converters never render under the fixtures. The files in `tools/validator/testdata/profiles/` turn
-everything on so POLICY081 and POLICY001 reach every converter. Each profile is its own run, layered
-alone over the baseline:
+converters never render under the fixtures. Pass 2 of `validate` turns everything on so POLICY081
+and POLICY001 reach every converter:
 
-- `all-on.yaml`: every element, and every policy, template and operator shipped `enabled: false`.
-- `variants.yaml`: settings that can't be on together with one in `all-on.yaml`. Example:
-  infra-nodes `workloads` and `restore` exclude each other, so `variants.yaml` turns `workloads`
-  off and `restore` on.
+- **All-on run.** `--all-on` turns on every element under `stack/` (and `tools/sample-element` with
+  `--include-sample-element`) and every policy, template and operator in it, over any layer that
+  turns one off. The validator builds this from the elements at run time, so a new element or
+  `enabled: false` entry needs nothing added. `tools/validator/testdata/inputs.yaml` is layered on
+  top: the inputs below, and the few choices all-on can't make, such as infra-nodes `restore`.
+- **One run per file in `tools/validator/testdata/profiles/`**, each layered alone over the baseline,
+  without `--all-on`. `variants.yaml` holds settings that can't be on together with the all-on run.
+  Example: infra-nodes `workloads` and `restore` exclude each other, so `variants.yaml` turns
+  `workloads` off and `restore` on.
 
-Add a new element, and each `enabled: false` entry, to `all-on.yaml`, or to `variants.yaml` when it
-conflicts with something there:
-
-```yaml title="tools/validator/testdata/profiles/all-on.yaml"
-stack:
-  acs:
-    enabled: true
-    policies:
-      central:
-        enabled: true
-        templates:
-          console:
-            enabled: true
-```
-
-Every rule but POLICY052 and POLICY071 runs on the profiles, so an optional piece also needs its
-input there. A raw-list converter writes `object-templates-raw` by looping over a `config` map
+Every rule but POLICY052 and POLICY071 runs on these, so an optional piece also needs its input. A
+raw-list converter writes `object-templates-raw` by looping over a `config` map
 ([Converter shapes](elements.md#converter-shapes)): metallb's `addressing/pools.yaml` ranges over
 `config.ipAddressPools`. With the map empty it renders `object-templates-raw: []`, and a Policy
 whose templates are all empty is reported Compliant by ACM while checking nothing, which POLICY082
-fails. `all-on.yaml` therefore sets `metallb.config.ipAddressPools` and the other maps. A Policy with
-only some empty templates passes.
+fails. `inputs.yaml` therefore sets `metallb.config.ipAddressPools` and the other maps:
+
+```yaml title="tools/validator/testdata/inputs.yaml"
+stack:
+  metallb:
+    config:
+      ipAddressPools: {internal: {addresses: [192.168.100.1-192.168.100.20]}}
+```
+
+A Policy with only some empty templates passes.
 
 `TestProfileCoverage`, run by `make test`, fails for a converter under `stack/` with ACM templates
-that no profile renders. Profiles never reach `lifecycle/` (extra values are not applied there), so a
+that neither the all-on run nor a profile renders. Profiles never reach `lifecycle/` (extra values are not applied there), so a
 change to a lifecycle converter's ACM template needs a test case in
 `tools/validator/internal/acmtemplates` (`hypershift_test.go`, `hive_test.go`,
 `siteconfig_test.go`, ...), which resolves it against fake hub objects so the branches for an
@@ -400,8 +397,9 @@ objects at PR time.
 It checks rendered objects against the CRDs ACM 2.16 serves, the oldest release PolicyStack
 supports. The checks run in-process (`k8s.io/apiextensions-apiserver`) the way the API server's do:
 prune unknown fields, apply defaults, validate. `InformOnly` is read as `inform`, because the
-ConfigurationPolicy CRD's enum lacks it and ACM's framework add-on translates it. `make crds`
-fetches the CRDs at the SHAs pinned in `tools/validator/Makefile`:
+ConfigurationPolicy CRD's enum lacks it and ACM's framework add-on translates it. The CRDs are
+committed in `tools/validator/crds/` (7 files, about 130 KB), fetched by `make crds` at the SHAs
+pinned in `tools/validator/Makefile`:
 
 | Repo | Branch | CRDs |
 |---|---|---|
@@ -410,14 +408,16 @@ fetches the CRDs at the SHAs pinned in `tools/validator/Makefile`:
 | `stolostron/cert-policy-controller` | `release-2.16` | CertificatePolicy |
 | `open-cluster-management-io/api` | `release-1.2` (v1.2.0, what the propagator requires) | Placement |
 
-The CRD files are not committed: `tools/validator/.crds/` is gitignored. `--crds-dir` overrides it.
-Without CRDs, POLICY080 is skipped with a warning, or fails the run when `CI` is set. CI caches the
-directory keyed on the Makefile. The run logs how many objects were validated.
+Committed, they need no network at validation time, which keeps disconnected sites working.
+`--crds-dir` overrides the directory. Without CRDs, POLICY080 is skipped with a warning, or fails the
+run when `CI` is set. The run logs how many objects were validated.
 
 ??? note "Bumping and adding"
-    Renovate moves each `*_SHA` to its branch head. Moving to a new ACM floor means changing the
-    `branch=` comments and SHAs by hand. To add a CRD, add its raw URL to `CRD_URLS`, plus a
-    `# renovate:` comment and `*_SHA` line for a new repo. Resolve the SHA with
+    Upstream, Renovate moves each `*_SHA` to its branch head. Moving to a new ACM floor means
+    changing the `branch=` comments and SHAs by hand. To add a CRD, add its raw URL to `CRD_URLS`, plus a
+    `# renovate:` comment and `*_SHA` line for a new repo. After any of these, run `make crds` and
+    commit `tools/validator/crds/`: upstream CI refetches the pinned files and fails while they
+    differ, so a Renovate SHA bump stays red until someone does. Resolve the SHA with
     `git ls-remote https://github.com/<repo> refs/heads/<branch>`.
 
 ## Destructive templates

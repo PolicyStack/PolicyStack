@@ -3,6 +3,8 @@
 
 OpenShift GitOps operator and the platform ArgoCD instance
 
+Stability: stable ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   gitops:

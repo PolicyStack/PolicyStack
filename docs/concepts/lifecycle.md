@@ -36,7 +36,7 @@ The fleet file name is the cluster name: a DNS label of at most 30 characters, s
 | Hosted control plane, bare-metal workers | `hypershift` | `Agent` | `lifecycle-<cluster>` on the hub, on a `version` bump |
 | Hosted control plane, workers you boot yourself | `hypershift` | `None` | `lifecycle-<cluster>` on the hub, on a `version` bump |
 
-- **`hypershift`** creates a HostedCluster and NodePools. The control plane runs as pods on the hub, so the hub upgrades it. `install.platform` has no default: leave it out and the render fails with `install.platform is required`. The shipped `values/platforms/kubevirt.yaml` and `agent.yaml` layers set it.
+- **`hypershift`** creates a HostedCluster and NodePools. The control plane runs as pods on the hub, so the hub upgrades it. `install.platform` has no default: leave it out and the render fails with `install.platform is required`. Set it in the fleet file or a layer, as upstream's example `values/platforms/kubevirt.yaml` and `agent.yaml` do.
 - **`hive`** creates a ClusterDeployment, and Hive runs the OpenShift installer against your cloud or vCenter. It ignores `install.platform`; the cloud goes in `install.hive.platform.<aws|gcp|azure|vsphere>`.
 - **`siteconfig`** creates a ClusterInstance. SiteConfig boots your hosts through their BMCs and installs them with the assisted installer (`ai`, default) or from a seed image (`ibi`, single node).
 
@@ -65,7 +65,7 @@ The cluster is built when `present-lifecycle-<cluster>` is Compliant. Compliant 
 
 ### Worked example
 
-`fleet/ocp-aws.yaml` with the shipped `platforms/aws.yaml` layer (full example in [Building clusters](../guides/lifecycle.md#examples)):
+`fleet/ocp-aws.yaml` with a copy of upstream's example `platforms/aws.yaml` layer (full example in [Building clusters](../guides/lifecycle.md#examples)):
 
 ```yaml
 # fleet/ocp-aws.yaml

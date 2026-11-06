@@ -361,7 +361,7 @@ Changes only in a major version. `lib/tests/` pins the output.
 
 | Surface | Contract |
 |---|---|
-| Defines | Every `policy-library.*` define. Consumers call `policy-library.render`; PolicyStack also calls `policy-library.clusterSuffix` and `policy-library.enabled` (takes the entry, returns `"true"` or `""`). |
+| Defines | `policy-library.render` (with the `.component` override), `policy-library.clusterSuffix` and `policy-library.enabled` (takes the entry, returns `"true"` or `""`). Every other `policy-library.*` define is internal and may change in any release. |
 | Values | Every key in `values.schema.json`. A new key is a minor. |
 | Converters | Discovery, `.Config` and the shape rules above. |
 | Output | What existing values render. A new key may change output only when it is set. |
@@ -380,6 +380,7 @@ that needs the change raises its `^4.N.0` floor.
 | 3.1.0 | `copyPolicyMetadata: false` on every Policy |
 | 3.2.0 | Schema rejects unknown keys and wrong types |
 | 4.0.0 | Converter discovery, maps, defaults chain, shape detection. See below. |
+| 4.1.0 | Fails the render when `policystack.libraryMajors`, which PolicyStack's install chart injects, is set and lacks the library's major |
 
 ## Upgrading from 3.x
 

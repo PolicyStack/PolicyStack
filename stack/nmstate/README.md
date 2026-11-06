@@ -3,6 +3,8 @@
 
 Kubernetes NMState operator and declarative node network configuration
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   nmstate:

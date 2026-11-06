@@ -4,6 +4,8 @@ description: "Advanced Cluster Management hub: MultiClusterHub, observability an
 type: application
 version: 0.1.0
 appVersion: "1.16.0"
+annotations:
+  policystk.io/stability: stable
 dependencies:
   - name: policy-library
     alias: stack

@@ -3,6 +3,8 @@
 
 OpenShift Logging operator. The loki element adds log storage, the forwarder and the console UI.
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   logging:

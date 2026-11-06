@@ -2,6 +2,9 @@
 
 Every `install` key the [`lifecycle/`](https://github.com/PolicyStack/PolicyStack/tree/main/lifecycle) chart reads, the objects it renders from them, the steps of its Policies, and what to do when a build fails. Read [Cluster lifecycle](../concepts/lifecycle.md) first for the model; [Building clusters](../guides/lifecycle.md) has complete examples. `hub`, `state`, `version` and `channel` are in [Fleet files](fleet.md#keys).
 
+!!! warning "Every engine and platform is a preview"
+    Lifecycle follows the framework's version, but no engine or platform is stable yet: a framework minor may change their keys or the objects they create, with the steps in its release notes ([Maturity](compatibility.md#maturity)). Pin clusters the hub builds to tags.
+
 How to read this page:
 
 - `hypershift` keys sit directly under `install` (`install.platform`, `install.nodePools`). `hive` and `siteconfig` keys sit under `install.hive` and `install.siteconfig`, so `install.hive.platform` is a different key from `install.platform`. Any [values layer](../concepts/values.md) can set `install`; the fleet file's `install` wins.

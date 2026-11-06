@@ -43,9 +43,10 @@ func realMain() error {
 		onlyFlag      = flag.String("only", "", "comma-separated rule IDs to run exclusively")
 		jobs          = flag.Int("jobs", 0, "parallel render workers (default NumCPU)")
 		helmBin       = flag.String("helm-bin", "helm", "helm binary")
-		crdsDir       = flag.String("crds-dir", "", "CRDs POLICY080 validates against, fetched by make crds (default <repo>/tools/validator/.crds)")
+		crdsDir       = flag.String("crds-dir", "", "CRDs POLICY080 validates against (default <repo>/tools/validator/crds)")
 		includeSample = flag.Bool("include-sample-element", false, "validate tools/sample-element/ alongside stack/")
 		extraValues   = flag.String("extra-values", "", "comma-separated values files appended (highest precedence) to every cascade but lifecycle's — useful for supplying baseline `selector` etc.")
+		allOn         = flag.Bool("all-on", false, "turn on every element and every policy, template and operator it ships off, ranked below --extra-values")
 		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
 		baseBranch    = flag.String("base-branch", os.Getenv("GITHUB_BASE_REF"), "branch HEAD lands on; POLICY052 resolves a revision naming it to HEAD")
 		element       = flag.String("element", "", "check and render only this chart; repo-wide rules still read every element but report only this one")
@@ -65,7 +66,7 @@ func realMain() error {
 		lifecycle: filepath.Join(root, "lifecycle"),
 		values:    filepath.Join(root, "values"),
 		fixtures:  filepath.Join(root, "tools/validator/testdata/clusters"),
-		crds:      filepath.Join(root, "tools/validator/.crds"),
+		crds:      filepath.Join(root, "tools/validator/crds"),
 	}
 	if *stackDir == "" {
 		*stackDir = defaults.stack
@@ -110,6 +111,7 @@ func realMain() error {
 		HelmBin:       *helmBin,
 		CRDsDir:       *crdsDir,
 		ExtraValues:   extras,
+		AllOn:         *allOn,
 		RenderDir:     *renderDir,
 		BaseBranch:    *baseBranch,
 		Element:       *element,

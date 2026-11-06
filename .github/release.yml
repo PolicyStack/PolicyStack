@@ -1,8 +1,0 @@
-# Categories for generated release notes. Squash merges make every PR title a Conventional Commit, so
-# the list reads as a changelog. Label a breaking PR `breaking` to list it first.
-changelog:
-  categories:
-    - title: Breaking changes
-      labels: [breaking]
-    - title: Changes
-      labels: ["*"]

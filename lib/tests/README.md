@@ -14,7 +14,7 @@ untt --strict lib/tests/fixtures/policy-stack-test         # add -u to rewrite s
 | `snapshot_test.yaml` | One golden render per `values*.yaml` |
 | `contract_test.yaml` | The 4.0 element contract: discovery, `enabled`, defaults chain, `.Config`, shape detection, `orderManifests`, operator defaults |
 | `fail_test.yaml` | Schema rejections, removed keys, and every `fail` call in the library |
-| `library_test.yaml` | Template-name suffixes, `copyPolicyMetadata`, mustnothave operators, `hubTemplateOptions`, `policySets` |
+| `library_test.yaml` | Template-name suffixes, `copyPolicyMetadata`, mustnothave operators, `hubTemplateOptions`, `policySets`, `policystack.libraryMajors` |
 
 `converters/base` and `converters/certs` are discovered in every case. `converters/_cases` is a partial
 directory: tests reach its files only through `templates.<t>.file`.

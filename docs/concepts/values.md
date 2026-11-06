@@ -34,6 +34,7 @@ valueFiles:              # lowest precedence first
 | `policyNamespace` | Every element | Set once in the repo root `values.yaml`: `pstack`, the hub namespace every Policy goes in. Don't change it: `install/` creates the namespace from its own copy in `install/values.yaml`, so if the two differ the Policies target a namespace that doesn't exist. The validator (`tools/validator`, which CI runs on every pull request; [Validation](../develop/validation.md)) fails POLICY071 when they differ. |
 | `version`, `channel` | The `upgrade` element, from the fleet file only | Rejected in a layer (POLICY034, [why](../guides/upgrades.md#how-it-works)). Set them in the fleet file. |
 | `selector` | policy-library, injected by the ApplicationSet ([Order](#order)) | Rejected in a layer (POLICY035). If merged anyway, it narrows every Placement. |
+| `policystack` | policy-library, injected by the ApplicationSet ([Order](#order)) | Rejected in a layer (POLICY035). |
 
 Any other top-level key is rejected by the validator (POLICY035).
 
@@ -72,8 +73,8 @@ The `policystack` ApplicationSet on the hub (an Argo CD object that generates on
       - ../../values/clusters/prod-east-1.yaml  # (4)!
     valuesObject:                               # (5)!
       channel: "stable-4.20"                    # (6)!
-      selectedName: prod-east-1                 # (7)!
-      selectedId: <clusterID label>
+      policystack:
+        libraryMajors: [4]                      # (7)!
       selector:                                 # (8)!
         matchExpressions:
           name: {key: name, operator: In, values: ["prod-east-1"]}
@@ -85,12 +86,12 @@ The `policystack` ApplicationSet on the hub (an Argo CD object that generates on
     4.  Always appended, always last, named after the ManagedCluster. Skipped when it doesn't exist ([Missing files](#missing-files)).
     5.  Injected values. Argo CD ranks `valuesObject` above every file, so no layer can override these keys. Nothing else is injected: an element that needs to know the environment reads a key that `environments/<env>.yaml` sets.
     6.  `version` and `channel`, only when the fleet file sets them. The `upgrade` element reads them ([OpenShift upgrades](../guides/upgrades.md)).
-    7.  The cluster's PolicyStack name (different on a hub, see the Hub tab) and its `clusterID` label. Injected for converters to use as `.Values.selectedName` and `.Values.selectedId`, but nothing in `stack/`, `lifecycle/` or policy-library reads them today.
+    7.  The policy-library majors this hub's install chart supports, set in `install/templates/_helpers.tpl`, not by you. policy-library fails the render when the revision's library major isn't listed, so a pin to a revision built for another major shows a ComparisonError that names the fix instead of rendering under ApplicationSets it wasn't built for ([Library changes](../contributing.md#library-changes)). A plain `helm template` sets nothing and checks nothing.
     8.  policy-library turns this into the selector of each Placement the element renders, so its Policies reach this one cluster ([Placement](policies.md#placement)). It is a map, so Helm would merge a layer's `selector` entries into it, ANDed with `name`. No layer can change `name`, because `valuesObject` outranks every file.
 
 === "Hub"
 
-    ACM registers the hub as a ManagedCluster of itself, named `local-cluster` and labeled `local-cluster`. Every hub gets that name by default, so the name can't tell hubs apart. For that cluster the ApplicationSet uses `hubName` instead, the name you gave this hub at install (`--set hubName=`): it reads `fleet/hubs/<hubName>.yaml` instead of `fleet/<cluster>.yaml`, and uses `hubName` where it would use the cluster name in three places: the Application name, the cluster values file and `selectedName` ([The hub](architecture.md#the-hub)). The Placement selector still uses the ManagedCluster name, `local-cluster` unless ACM's `localClusterName` changes it.
+    ACM registers the hub as a ManagedCluster of itself, named `local-cluster` and labeled `local-cluster`. Every hub gets that name by default, so the name can't tell hubs apart. For that cluster the ApplicationSet uses `hubName` instead, the name you gave this hub at install (`--set hubName=`): it reads `fleet/hubs/<hubName>.yaml` instead of `fleet/<cluster>.yaml`, and uses `hubName` where it would use the cluster name in two places: the Application name and the cluster values file ([The hub](architecture.md#the-hub)). The Placement selector still uses the ManagedCluster name, `local-cluster` unless ACM's `localClusterName` changes it.
 
     ```yaml
     # fleet/hubs/acm-dc1.yaml
@@ -115,8 +116,8 @@ The `policystack` ApplicationSet on the hub (an Argo CD object that generates on
       - ../../values/acm/acm-dc1.yaml
       - ../../values/clusters/acm-dc1.yaml   # never clusters/local-cluster.yaml
     valuesObject:
-      selectedName: acm-dc1
-      selectedId: <clusterID label>
+      policystack:
+        libraryMajors: [4]
       selector:
         matchExpressions:
           name: {key: name, operator: In, values: ["local-cluster"]}
@@ -126,7 +127,7 @@ The `policystack` ApplicationSet on the hub (an Argo CD object that generates on
 
     Only for clusters a hub builds; skip this tab if you import your clusters. A fleet file that sets `hub` (the `hubName` of the hub that should build this cluster) gets a lifecycle Application, `lifecycle-<cluster>`, which builds the cluster on that hub ([Cluster lifecycle](lifecycle.md)). It reads the same layers, relative to `lifecycle/`: `values.yaml`, `../values.yaml`, `../values/<entry>` for each `valueFiles` entry, then `../values/clusters/<fleet file name>.yaml`. The cluster file is always named after the fleet file: the `hubName` swap from the Hub tab never applies.
 
-    The injected `valuesObject` differs: it carries the fleet file's lifecycle keys, and no `selectedName` or `selectedId`.
+    The injected `valuesObject` also carries the fleet file's lifecycle keys.
 
     ```yaml
     valuesObject:
@@ -134,6 +135,8 @@ The `policystack` ApplicationSet on the hub (an Argo CD object that generates on
       state: "present"   # (1)!
       version: "4.20.8"  # (2)!
       install: {}        # (3)!
+      policystack:
+        libraryMajors: [4]
       selector:
         matchExpressions:
           hub:           # (4)!
@@ -196,7 +199,7 @@ Every Application sets `ignoreMissingValueFiles: true`: Argo CD skips any listed
     - It turned something off: the shared layer wins. If `values/clusters/prod-east-1.yaml` sets `remediations.enabled: false` and is skipped, remediations from `environments/prod.yaml` keeps enforcing.
     - It changed a setting: the lower layer's value applies. Skip `datacenters/dc2.yaml` on nonprod-west-1 and the registry allowlist reverts to the element defaults, so pulls from `mirror.dc2.example.com` fail.
 
-    The [validator](../develop/validation.md), which CI runs on every pull request in your fork, catches most causes ([Validator rules](../reference/rules.md)):
+    The [validator](../develop/validation.md), which CI runs on every pull request in your repository, catches most causes ([Validator rules](../reference/rules.md)):
 
     | Cause | Validator |
     |---|---|
@@ -329,10 +332,10 @@ global:
 
 ## Example files
 
-Upstream ships [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) as examples for the example clusters in the docs. Keep, edit or delete them in your fork. The validator's test fleet files in `tools/validator/testdata/clusters/` list some of them, so when you delete one, remove or edit the test fleet files that list it, or CI fails POLICY050.
+Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) holds examples for the example clusters in the docs, and the layers the validator's test fleet files in `tools/validator/testdata/clusters/` read. copier copies neither into your repository, so your `values/` starts empty. Copy an example by hand if it fits, and read it first.
 
 !!! warning "The examples enforce"
-    Listing a layer applies it on the next sync, and the elements it turns on enforce, so a cluster that lists `environments/prod.yaml` changes at once. Start a new cluster with an empty `valueFiles`, or set `global.remediationAction: inform` in its cluster file first.
+    Listing a layer applies it on the next sync, and the elements it turns on enforce, so a cluster that lists a copy of `environments/prod.yaml` changes at once. Start a new cluster with an empty `valueFiles`, or set `global.remediationAction: inform` in its cluster file first.
 
 ??? info "What each example file holds"
     | File | Holds |

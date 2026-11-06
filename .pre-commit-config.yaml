@@ -1,7 +1,8 @@
 # Run by prek: in CI (ci.yml lint) as `prek run --all-files`, locally after `prek install`. Tools come
 # from mise.toml (language: system). Only the README generator gets its own env, for PyYAML.
-# Helm templates and converters are not YAML until rendered.
-exclude: (^|/)(templates|converters|__snapshot__)/|^(site|autoshiftv2|oac-apps)/
+# Helm templates and converters are not YAML until rendered. tools/validator/crds holds upstream's
+# files verbatim. The validator's lint runs in upstream.yml.
+exclude: (^|/)(templates|converters|__snapshot__)/|^(site|autoshiftv2|oac-apps|tools/validator/crds)/
 
 repos:
   - repo: builtin
@@ -9,7 +10,9 @@ repos:
       - id: check-yaml
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      # Also outside a git merge: copier update leaves conflict markers in the files it commits.
       - id: check-merge-conflict
+        args: [--assume-in-merge]
       - id: check-added-large-files
 
   - repo: local
@@ -44,13 +47,6 @@ repos:
         language: system
         types: [python]
 
-      - id: validator-lint
-        name: validator lint
-        entry: make -C tools/validator lint
-        language: system
-        files: ^tools/validator/
-        pass_filenames: false
-
       # Rewrites stale element READMEs; a rewrite fails the hook. Commit the result.
       - id: element-readmes
         name: element READMEs
@@ -60,7 +56,7 @@ repos:
         files: ^(stack/[^/]+/(Chart\.yaml|values\.yaml|README\.md|converters/.*)|tools/doc-generator\.py)$
         pass_filenames: false
 
-      # Relative links only. zensical build --strict (ci.yml docs) checks anchors and snippets.
+      # Relative links only. zensical build --strict (upstream.yml docs) checks anchors and snippets.
       - id: lychee
         name: lychee
         entry: lychee --offline docs

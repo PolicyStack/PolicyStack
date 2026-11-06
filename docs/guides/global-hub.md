@@ -1,6 +1,6 @@
 # Global Hub
 
-Read this only if your ACM hubs are, or will be, imported into a [Multicluster Global Hub](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index). PolicyStack does not need one: several hubs can share one fork, each installed with its own `hubName`.
+Read this only if your ACM hubs are, or will be, imported into a [Multicluster Global Hub](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index). PolicyStack does not need one: several hubs can share one repository, each installed with its own `hubName`.
 
 Import each managed hub in **hosted mode** (a Global Hub import mode, unrelated to hosted control planes; see [Import modes](#import-modes)) unless you want the global hub to configure and build clusters for it. In hosted mode every hub keeps running PolicyStack for itself and nothing in the repo changes. Default mode removes the managed hub's `local-cluster`, rules out `hypershift` on it, and makes its hub templates resolve on the global hub.
 

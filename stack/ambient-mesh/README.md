@@ -3,6 +3,8 @@
 
 Service Mesh 3 in ambient mode, with Kiali, OpenTelemetry and Tempo
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   ambientMesh:

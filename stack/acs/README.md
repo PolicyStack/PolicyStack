@@ -5,6 +5,8 @@ Red Hat Advanced Cluster Security: Central, secured clusters and security polici
 
 Guide: https://policystk.io/elements/acs/
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   acs:

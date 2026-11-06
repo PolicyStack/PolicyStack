@@ -95,6 +95,14 @@ counts() {
       + ([$a | keys[] | select($b[.] != null and $b[.] != $a[.])] | kinds("changed"))
     | join(", ")'
 }
+# removed <before> <after>: the names of the Policies before has and after lacks, as `a`, `b`. ACM
+# names are immutable, so a renamed Policy is deleted and recreated and loses its compliance history.
+removed() {
+  jq -rn --slurpfile b <(objects "$1") --slurpfile a <(objects "$2") '
+    ($a | map(.k)) as $ak
+    | [$b[].k | select(startswith("Policy/") and (. as $k | $ak | index($k) | not)) | "`" + ltrimstr("Policy/") + "`"]
+    | join(", ")'
+}
 # total <dir>: "6 elements, 21 objects"
 total() { echo "$(find "$1" -name '*.yaml' | wc -l) elements, $(cat /dev/null "$1"/*.yaml 2>/dev/null | yq -N 'select(.kind != null) | .kind' | wc -l) objects"; }
 # name <cluster> <open> <close>: the cluster's name in code delimiters, hubs marked
@@ -152,6 +160,8 @@ for c in $(printf '%s\n' "${!clusters[@]}" | sort); do
         n=$(counts "$b/$el" "$a/$el")
         [ -n "$n" ] || continue
         changes+=("${el%.yaml}: $n")
+        gone=$(removed "$b/$el" "$a/$el")
+        [ -z "$gone" ] || changes+=("${el%.yaml}: removes Policy $gone")
         { echo '````diff'; gd "$(file "$b/$el")" "$(file "$a/$el")" | sed -E '/^(diff --git|index|new file|deleted file) /d'; printf '````\n\n'; } >> "$d"
       done
       ;;

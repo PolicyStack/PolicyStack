@@ -99,8 +99,8 @@ Args: dict "root" <root context> "component" <stack component>
 The release name is "<chart>-<cluster>" (the ApplicationSet names each Application
 "<element>-<cluster>", and Argo CD uses that as the Helm release name). Strip the chart-name prefix
 to recover the cluster suffix, which is the half a sibling element shares with us. Derived from
-Release.Name rather than a value such as .Values.selectedName so it also works under a plain
-`helm template` and in CI, where no ApplicationSet has injected anything.
+Release.Name rather than an injected value so it also works under a plain `helm template` and in CI,
+where no ApplicationSet has injected anything.
 
 Returns the empty string when Release.Name does not start with "<chart>-".
 */}}
@@ -282,9 +282,21 @@ Args: dict "depsYaml" <output of policy-library.subPolicyDependencies> "ignorePe
 {{- end -}}
 
 {{/*
-Wrapper template that can be called from consuming charts
+Wrapper template that can be called from consuming charts.
+
+PolicyStack's install chart injects policystack.libraryMajors, the library majors its release
+supports. A revision built on any other major fails here, as a ComparisonError on its Application,
+instead of rendering under ApplicationSets it was not built for. Unset, as under a plain
+helm template, nothing is checked. .Chart is the consuming chart's, so the library's own version
+comes from .Subcharts under alias: stack.
 */}}
 {{- define "policy-library.render" -}}
+{{- with (.Values.policystack).libraryMajors -}}
+{{- $version := (index $.Subcharts "stack").Chart.Version -}}
+{{- if not (has (toString (semver $version).Major) (toStrings .)) -}}
+{{- fail (printf "policy-library %s: this revision needs a hub whose install chart supports library major %d, and this hub's supports %s (policystack.libraryMajors). Move the fleet file's revision to a commit built on one of those majors, or upgrade the hub's install chart (helm upgrade)" $version (semver $version).Major (toStrings . | join ", ")) -}}
+{{- end -}}
+{{- end -}}
 {{- include "policy-library.renderPolicies" . -}}
 {{- include "policy-library.renderPlacements" . -}}
 {{- include "policy-library.renderPolicySets" . -}}

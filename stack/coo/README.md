@@ -3,6 +3,8 @@
 
 Cluster Observability Operator for monitoring, logging and tracing UIs
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   coo:

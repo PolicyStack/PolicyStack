@@ -2,7 +2,7 @@ name: CI
 
 # ci is the one required check besides pr-title. No paths filter: a required check skipped by on.paths
 # never reports, so the PR waits on it forever. pr-title.yml stays separate, so a title edit re-runs
-# only that.
+# only that. Jobs that check upstream PolicyStack itself are in upstream.yml.
 on:
   pull_request:
   push:
@@ -12,8 +12,7 @@ on:
 permissions:
   contents: read
 
-# Pull request runs cancel each other. Runs on main queue, so a publish is never cut off; a newer
-# pending run replaces an older one, which is what an unversioned site wants.
+# Pull request runs cancel each other. Runs on main queue; a newer pending run replaces an older one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -31,7 +30,10 @@ jobs:
         with:
           persist-credentials: false
 
+      # The hooks' tools only, not Go, Helm, golangci-lint or copier.
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: python prek aqua:rhysd/actionlint zizmor shellcheck ruff lychee
 
       # Hooks in .pre-commit-config.yaml. A hook that rewrites a file fails and prints the diff.
       - run: prek run --all-files --show-diff-on-failure
@@ -41,118 +43,14 @@ jobs:
     # actionlint 1.7.12 rejects the self-repository form ($/...) zizmor asks for.
     uses: ./.github/workflows/validate.yml # zizmor: ignore[self-repository]
 
-  # lib/policy-library: version bump and lint (lib/ct.yaml), then the helm-unittest suites in lib/tests.
-  library:
-    name: library
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # ct diffs against origin/main
-          persist-credentials: false
-
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install_args: helm github:helm-unittest/helm-unittest
-
-      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
-
-      # A changed lib/policy-library without a version bump fails here.
-      - run: ct lint --config lib/ct.yaml
-
-      # The fixture takes the library through file://, into a gitignored charts/.
-      - run: helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test
-
-      - run: untt --strict lib/tests/fixtures/policy-stack-test
-
-      # A test with no stored snapshot writes one and passes, so it must have been committed.
-      - run: |
-          if [[ -n $(git status --porcelain -- lib/tests) ]]; then
-            git status --porcelain -- lib/tests
-            echo "::error title=Snapshots::Run untt locally and commit lib/tests/**/__snapshot__."
-            exit 1
-          fi
-
-  docs:
-    name: docs
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
-        with:
-          install_args: python
-
-      - run: pip install -r tools/requirements.txt -r tools/requirements-docs.txt
-
-      - run: python -m unittest tools/test_doc_generator.py
-
-      # Fails on a relative .md link or anchor that does not resolve, or a missing snippet.
-      - run: zensical build --strict
-
-      - if: github.event_name == 'push'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: site
-          path: site/
-
   # The one required check. A failed, cancelled or skipped job above turns it red.
   ci:
     name: ci
     if: always()
-    needs: [lint, validate, library, docs]
+    needs: [lint, validate]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
-
-  # A separate job so the write token never shares a runner with pip-installed build code. Forks skip
-  # it: they have neither the App nor the gh-pages ruleset.
-  publish:
-    name: publish
-    if: github.event_name == 'push' && github.repository == 'PolicyStack/PolicyStack'
-    needs: ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Its deployment branch policy releases the App key to main only.
-    environment: github-pages
-    steps:
-      # The gh-pages ruleset lets only this App push. GITHUB_TOKEN cannot be a ruleset bypass actor,
-      # and its pushes do not start a Pages build.
-      - id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
-          private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
-          permission-contents: write
-
-      # The deploy action works through a git worktree, so it needs a checkout.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: site
-          path: site/
-
-      # Zensical drops dotfiles. Without .nojekyll, Pages runs the site through Jekyll.
-      # single-commit wipes the CNAME Pages settings write, so the custom domain ships with each build.
-      - run: |
-          touch site/.nojekyll
-          echo policystk.io > site/CNAME
-
-      # single-commit: the branch holds one snapshot. Built HTML has no useful history, and Argo CD
-      # repo-servers fetch every branch, gh-pages included.
-      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
-        with:
-          folder: site
-          branch: gh-pages
-          single-commit: true
-          token: ${{ steps.app-token.outputs.token }}

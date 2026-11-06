@@ -2,19 +2,20 @@
 
 This page is for changes to PolicyStack itself, sent upstream: the framework (`install/`,
 `lifecycle/`, `lib/`, `tools/`, `.github/`, `docs/`) and the starter elements in `stack/`. Running
-PolicyStack from your own fork and taking upstream changes into it is covered in
-[Upgrading PolicyStack](guides/upgrading.md#merge-upstream); changes you make to elements in that
-fork are yours and need nothing here.
+PolicyStack from your own repository and taking upstream releases into it is covered in
+[Upgrading PolicyStack](guides/upgrading.md); elements you write or eject there are yours and need
+nothing here.
 
 ## Repositories and versions
 
 | Repository | Holds | Versioned by |
 |---|---|---|
-| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework, the starter elements and the policy-library chart (`lib/`) | `vX.Y.Z` git tags with release notes ([Releases](#releases)). Nothing consumes them. policy-library has its own chart version in `lib/policy-library/Chart.yaml` ([Library changes](#library-changes)) |
+| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework, the starter elements and the policy-library chart (`lib/`) | Release tags `vX.Y.Z`, one tag line for the framework and every element, cut by release-please ([Releases](#releases)). Adopters copy and update from them with copier. policy-library has its own chart version in `lib/policy-library/Chart.yaml` ([Library changes](#library-changes)) |
 | [PolicyStack/.github](https://github.com/PolicyStack/.github) | Org defaults, including the Renovate preset | Not versioned |
 
-An element's own `Chart.yaml` `version` (`0.1.0`) is never bumped: Argo CD renders elements from a
-Git path and never packages them.
+Element versions, deprecating a key or an element, and when to contribute instead of ejecting:
+[Versions and deprecation](develop/elements.md#versions-and-deprecation). What each version
+promises adopters: [Compatibility](reference/compatibility.md).
 
 "Release" means two things in these docs: the Helm release name Argo CD gives each element on
 each cluster (`<element>-<cluster>`), and a PolicyStack GitHub release.
@@ -22,7 +23,7 @@ each cluster (`<element>-<cluster>`), and a PolicyStack GitHub release.
 ## Setup
 
 Tool versions live in `mise.toml`. [mise](https://mise.jdx.dev) installs each at the version CI
-uses: Go, Helm, Python, prek (the hook runner) and the linters.
+uses: Go, Helm, Python, copier, prek (the hook runner) and the linters.
 
 ```sh
 git clone https://github.com/<you>/PolicyStack.git && cd PolicyStack
@@ -36,11 +37,13 @@ prek install    # optional: run the hooks on each commit
 are missing, and `make` silently uses whatever `helm` your system has, which may not render the way
 the hub does. The hooks call the mise tools directly, so they need the same `PATH`.
 
-Before opening a PR, run what each [CI](reference/ci.md#ci) job runs:
+Before opening a PR, run what each job of [CI](reference/ci.md#ci) and
+[Upstream](reference/ci.md#upstream) runs:
 
 ```sh
 prek run --all-files                       # lint
-make -C tools/validator validate test      # validate (Helm floor leg)
+make -C tools/validator validate           # validate (Helm floor leg)
+make -C tools/validator lint test          # validator
 helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test && untt --strict lib/tests/fixtures/policy-stack-test   # library
 python -m unittest tools/test_doc_generator.py && zensical build --strict   # docs
 ```
@@ -48,8 +51,8 @@ python -m unittest tools/test_doc_generator.py && zensical build --strict   # do
 The `library` job also runs `ct lint` (the `version` bump check, [Library changes](#library-changes)).
 mise does not install chart-testing, so that step runs in CI only.
 
-The first `validate` needs network access: it downloads Go modules and the CRDs.
-`prek run` also fetches the Go vulnerability database (govulncheck, in the `validator-lint` hook).
+The first `validate` needs network access to download Go modules; the CRDs are committed.
+`make lint` also fetches the Go vulnerability database (govulncheck).
 CI also runs `validate` with Helm 4.2.1; that leg is advisory
 ([Policy Validate](reference/ci.md#policy-validate)).
 
@@ -57,12 +60,14 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
 
 - The title is a Conventional Commit, such as `feat(validator): real POLICY080`. Squash merges make it
   the commit subject and the release-note line ([PR Title](reference/ci.md#pr-title)).
-- A breaking change is anything that changes element values keys, the `values/` layout or fleet
-  file keys for existing users. Mark it with `!` in the title; a maintainer adds the `breaking`
-  label. The title check only needs `!`; the release notes group by label, so without the label the
-  change is listed with the rest.
-- `ci` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`: any member of
-  `@PolicyStack/maintainers`.
+- A breaking change is anything that changes the framework's [Public API](reference/compatibility.md#public-api)
+  or a stable element's values keys or Policy names for existing users. Mark it with `!` in the
+  title: release-please reads it from the squash commit and bumps the major ([Releases](#releases)).
+  A breaking change to a preview element ships in a minor: no `!`, and a title that says what to
+  change, such as `feat(odf): rename config.pools to config.ipAddressPools`
+  ([Element stability](reference/compatibility.md#element-stability)).
+- `ci`, `upstream` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`: any
+  member of `@PolicyStack/maintainers`.
 - Update `docs/` in the same PR.
 - A fix for a bad render or policy that reached a cluster adds a test that would have caught it:
   extend the validator rule that covers it, or add a rule. Check files are named by topic, not rule
@@ -72,23 +77,64 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
   ([Validator rules](reference/rules.md) includes it; `make test` fails without it) and in the phase
   table of [What it checks](develop/validation.md#what-it-checks), which nothing tests.
 
+## Validator rules
+
+A rule ID is never reused, even after its rule is removed. The severity is the `Severity` of the
+`Finding` the rule's `Run` returns. A new rule, or a new error case in an existing rule, that can fail
+a repository that passes today ships as a warning for one framework minor, then becomes an error in
+the next. The release notes of both minors say so. A rule that prevents an outage or a security
+problem may be an error from the start. The comment above `All()` in
+`tools/validator/internal/checks/checks.go` carries the same rule for whoever adds one.
+
 ## Releases
 
-A PolicyStack release is a `v0.x.y` tag with notes generated from the merged PR titles
-(`.github/release.yml`), cut by hand from `main`. It builds no artifact and nothing consumes it:
-adopters merge `upstream/main` and fetch upstream without its tags, so their fleet files pin their
-own fork's tags ([Merge upstream](guides/upgrading.md#merge-upstream)). `v1.0.0` comes once the
-contract is frozen: element values keys, the `values/` layout and fleet file keys, for the framework
-and unmodified elements.
+release-please cuts every release. There is one package, the whole repository, and one tag line,
+`vX.Y.Z`: each release holds the framework and every element. On each `main` push, the `release`
+job of [Upstream](reference/ci.md#upstream) opens or updates one release PR. Merging it tags its
+merge commit and creates the GitHub release with the notes from the PR.
+`.release-please/config.json` configures the package, and `.release-please/manifest.json` records
+the last release.
 
-```sh
-gh release create v0.2.0 --target main --generate-notes
-```
+| Tag | Counts commits that change | Version written to |
+|---|---|---|
+| `vX.Y.Z` | Anything except `.release-please/`, `docs/`, `diagrams/`, `values/`, `lib/tests/` and the validator fixtures | `CHANGELOG.md`, and the `version` lines of `install/Chart.yaml` and `lifecycle/Chart.yaml` marked `x-release-please-version` |
 
-!!! note
-    A tag ruleset lets only maintainers create, move or delete `v*` tags, so release history can't
-    be rewritten. An adopter protects their own fork's tags the same way, since those are what its
-    fleet files pin.
+The squash commit's type sets the bump: `fix` a patch, `feat` a minor, `!` a major. `docs`, `chore`,
+`ci`, `test` and `refactor` commits release nothing. The scope becomes the release-note prefix, so
+scope an element change with the element's name, such as `feat(odf): add config.flexibleScaling`:
+the notes then list it as `odf: add config.flexibleScaling`, which is how adopters find the changes
+to the elements they track. Element `Chart.yaml` `version` lines are never bumped.
+
+`exclude-paths` matches whole directories only. Some files copier leaves out of copies sit outside
+those directories: `README.md`, `zensical.toml`, `.github/workflows/upstream.yml`,
+`tools/test_doc_generator.py` and the rest of the upstream-only list in `copier.yml`. A `fix` or
+`feat` that changes only those still cuts a release, and adopters get an update that changes
+nothing but the version. Title those PRs `docs`, `ci`, `test` or `chore`.
+
+A new element needs no release setup. `tools/create-element.sh` adds copier's answers template, and
+the element ships in the next release.
+
+### First release
+
+The manifest starts empty, so the first run opens one PR at `1.0.0-rc.1` (`release-as`). Until
+`1.0.0` ships, set `release-as` for each release (`1.0.0-rc.2`, then `1.0.0`) and remove it in the
+PR after the release: without it release-please bumps a prerelease to `1.1.0-rc.1`, and a stale one
+proposes a tag that already exists.
+
+### GitHub setup
+
+These are repository settings, not files:
+
+- **Release App.** A GitHub App with Contents, Issues and Pull requests write, installed on the
+  repository. Its client ID is the `RELEASE_APP_CLIENT_ID` variable and its key the
+  `RELEASE_APP_PRIVATE_KEY` secret of a `release` environment whose deployment branch policy allows
+  `main` only. PRs opened with `GITHUB_TOKEN` start no workflow, so a release PR would never get the
+  required checks.
+- **Tag rulesets** on `refs/tags/v*`. One restricts creations, with the
+  Release App and maintainers as bypass actors. A second restricts updates and deletions, with no
+  bypass: a ruleset's bypass list covers all of its rules. Every `copier update` rebuilds its merge
+  base from the old tag, so a moved or deleted tag changes what adopters merge or breaks their
+  updates.
 
 ## Library changes
 
@@ -124,7 +170,8 @@ A library change is one PR:
 1. Change `lib/policy-library`, and in the same PR the elements, validator and docs that depend on it.
 2. Bump `version` in `lib/policy-library/Chart.yaml`. Patch: a fix. Minor: a new optional key or
    define. Major: anything removed or renamed, or different output for unchanged values. `ct lint`
-   in CI's `library` job fails a PR that changes `lib/policy-library` without a bump.
+   in the [Upstream](reference/ci.md#upstream) `library` job fails a PR that changes
+   `lib/policy-library` without a bump.
 3. An element that needs the new minor raises its floor to `^4.N.0`. The others keep theirs.
 4. Run the suites and commit the updated snapshots (`lib/tests/**/__snapshot__`). A snapshot diff
    for values that don't use a new key means the change is a major.
@@ -136,7 +183,13 @@ A library change is one PR:
     ```
 
 A major moves every floor to `^5.0.0` in that same PR, with the element and values changes it needs,
-and is a breaking change (`!`). To roll back, revert the PR; fleet revisions from before it keep
+and is a breaking change (`!`). It also adds `5` to the list in `install/templates/_helpers.tpl`,
+keeping `4`. Both ApplicationSets pass that list to every Application as `policystack.libraryMajors`,
+and policy-library fails the render of a revision whose library major the hub's install chart doesn't
+list. A cluster pinned to a 4.x revision keeps rendering on a hub upgraded to the new install chart,
+and a cluster moved to 5.x fails, naming the fix, on a hub that hasn't been upgraded.
+`TestTemplatePatch` fails when the list lacks the major in `lib/policy-library/Chart.yaml`.
+To roll back, revert the PR; fleet revisions from before it keep
 rendering the library they had.
 
 ## Adding a lifecycle engine

@@ -3,6 +3,8 @@
 
 Node Maintenance Operator for safely cordoning and draining nodes
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   nodeMaintenance:

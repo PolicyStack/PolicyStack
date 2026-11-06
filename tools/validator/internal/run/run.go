@@ -42,7 +42,10 @@ type Options struct {
 	// cascade but the lifecycle chart's, at highest precedence. Used to supply
 	// baseline values such as `selector` when fixture names have no file in
 	// values/clusters/.
-	ExtraValues   []string
+	ExtraValues []string
+	// AllOn ranks the all-on profile (chart.AllOn) of the stack/ elements, and tools/sample-element
+	// when IncludeSample is set, below ExtraValues.
+	AllOn         bool
 	Skip          []string
 	Only          []string
 	IncludeSample bool
@@ -93,6 +96,14 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	if len(elements) == 0 {
 		opts.Logger.Warn("no elements found", "stack-dir", opts.StackDir)
+	}
+	if opts.AllOn {
+		file, err := writeAllOn(elements)
+		if err != nil {
+			return Result{}, fmt.Errorf("all-on profile: %w", err)
+		}
+		defer func() { _ = os.Remove(file) }()
+		opts.ExtraValues = append([]string{file}, opts.ExtraValues...)
 	}
 	// Absence is decided by Chart.yaml alone: Helm and Argo CD render a chart without values.yaml,
 	// so a missing values.yaml must fail the load rather than skip the chart.
@@ -320,6 +331,20 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// writeAllOn writes the all-on profile of elements to a temporary file and returns its path.
+func writeAllOn(elements []*chart.Element) (string, error) {
+	data, err := chart.AllOn(elements)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.CreateTemp("", "all-on-*.yaml")
+	if err != nil {
+		return "", err
+	}
+	_, err = f.Write(data)
+	return f.Name(), errors.Join(err, f.Close())
 }
 
 // valueLayers returns the root values.yaml, when present, then every .yaml file under valuesDir.
@@ -618,6 +643,9 @@ func buildRegistry(opts Options, runner *render.Runner, crds checks.CRDs) []chec
 			v.Runner, v.Root = runner, opts.RepoRoot
 			out = append(out, v)
 		case *checks.PinningCheck:
+			v.Root = opts.RepoRoot
+			out = append(out, v)
+		case *checks.AnswersCheck:
 			v.Root = opts.RepoRoot
 			out = append(out, v)
 		case *checks.FleetPinCheck:

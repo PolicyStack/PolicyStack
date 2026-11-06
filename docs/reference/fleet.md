@@ -2,7 +2,7 @@
 
 A fleet file, `fleet/<cluster>.yaml`, enrolls one cluster: while it exists on the default branch, the hub creates that cluster's Applications, and its keys pick the Git `revision` they render and the values layers they read. What that means for delivery (why the file is read at `HEAD` while everything else is read at `revision`, how long a merge takes, what one broken file stops) is in [How PolicyStack works](../concepts/overview.md#fleet-files).
 
-Upstream ships no live fleet files; your fork adds them. Working examples are the validator fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters).
+Upstream ships no live fleet files; your repository adds them. Working examples are the validator fixtures in [`tools/validator/testdata/clusters/`](https://github.com/PolicyStack/PolicyStack/tree/main/tools/validator/testdata/clusters).
 
 === "Imported cluster"
 
@@ -75,7 +75,7 @@ Two ApplicationSets on the hub read fleet files ([ApplicationSets](../concepts/a
 
 ### What CI rejects
 
-POLICY050 checks every fleet file before merge, in the fork's CI and in `make -C tools/validator validate` ([Validator rules](rules.md)). It fails on:
+POLICY050 checks every fleet file before merge, in your repository's CI and in `make -C tools/validator validate` ([Validator rules](rules.md)). It fails on:
 
 - a YAML error, an unknown key, or a missing or empty `revision`;
 - an unquoted value Argo CD would read as a number or boolean ([Quote numbers and booleans](#quote-numbers-and-booleans));
@@ -114,7 +114,7 @@ version: 4.20.8   # (3)!
 Two rules read oddly at first:
 
 - **A pin to the PR's base branch is checked against the merge commit.** In a PR to `main`, `revision: main` resolves to what `main` will be after the merge. A PR that adds both a fleet file and the values it lists therefore passes.
-- **A `values/clusters/<name>.yaml` that no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` reads is a warning, not an error.** For a tag-pinned cluster, `values/clusters/<name>.yaml` is merged and tagged before the fleet PR that pins that tag, so for a while no fleet file reads it ([First cluster](../start/first-cluster.md)). Once your fork has its first fleet file, every upstream example in `values/clusters/` that no fleet file reads shows this warning. Delete those you don't use.
+- **A `values/clusters/<name>.yaml` that no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` reads is a warning, not an error.** For a tag-pinned cluster, `values/clusters/<name>.yaml` is merged and tagged before the fleet PR that pins that tag, so for a while no fleet file reads it ([First cluster](../start/first-cluster.md)). Once your repository has its first fleet file, every file in `values/clusters/` that no fleet file reads shows this warning. Delete those you don't use.
 
 ### When a revision breaks
 
@@ -146,4 +146,4 @@ PolicyStack reads five labels and ignores every other. The ApplicationSets read 
 | `apps.open-cluster-management.io/cluster-name` | ACM GitOpsCluster, on the Secret only | Matches `hub` to a managed hub imported into a Global Hub in default mode ([Global Hub](../guides/global-hub.md#lifecycle)). |
 | `global-hub.open-cluster-management.io/deploy-mode` | You, when importing a managed hub into a Global Hub | `default` switches that hub to `fleet/hubs/<cluster>.yaml` ([Global Hub](../guides/global-hub.md)). |
 
-PolicyStack installs no RBAC around these labels. Anyone who can label ManagedClusters or edit Secrets in `openshift-gitops` can change what a cluster runs, for example by adding `local-cluster` to a spoke so it reads the hub's file. Keep those rights to hub admins. Who may change `fleet/` itself is set in your fork ([Set up your fork](../start/install.md#set-up-your-fork)).
+PolicyStack installs no RBAC around these labels. Anyone who can label ManagedClusters or edit Secrets in `openshift-gitops` can change what a cluster runs, for example by adding `local-cluster` to a spoke so it reads the hub's file. Keep those rights to hub admins. Who may change `fleet/` itself is set in your repository ([Protect the repository](../start/install.md#protect-the-repository)).

@@ -3,6 +3,8 @@
 
 Central infrastructure management for SiteConfig clusters: metal3, the assisted service and the SiteConfig component
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   cim:

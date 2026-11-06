@@ -56,11 +56,13 @@ POLICY052 does. Exit 1 when it does not resolve. `render-diff.sh` uses it:
 | POLICY035  | error    | A key in the root `values.yaml` or a file under `values/` that nothing reads: an unknown top-level or `global` key, a `stack` key that names no element, an element key policy-library's schema rejects (reported here at the layer; RENDER000 reports it once per element at its `values.yaml`), a `policies` key that names no policy of the element (a `policies` key, a `converters/` directory or `install`), a `templates` key that names no template of its policy and sets no `file`, or a top-level `config` key missing from the element's `values.yaml`. Checks every file, used by a fleet file or not |
 | POLICY037  | error/warning | A rendered ConfigurationPolicy object-template that is `mustonlyhave` or `mustnothave` on an object OpenShift owns: ConfigMap `openshift-config/user-ca-bundle`, Secret `openshift-config/pull-secret`, ClusterVersion `version`, Proxy and Image `cluster` (`config.openshift.io`), or a Namespace starting `openshift-` or `kube-`. Enforced, it replaces or deletes platform state. `musthave` is not covered. Skips an `InformOnly` template and one annotated `validator.policystk.io/allow-destructive: <reason>`. `object-templates-raw` is read with its ACM template actions removed, so every branch counts; raw that is then not YAML is a warning |
 | POLICY038  | error    | An `operatorPolicies` `subscription.source` (`redhat-operators` when unset), in an element's `values.yaml` or a values layer, that is not `redhat-operators`, `certified-operators`, `community-operators`, `redhat-marketplace` or a `global.catalogSources` key in any layer. OLM finds no such CatalogSource, so the operator never installs. Templated values are skipped |
+| POLICY039  | warning  | A values layer or fleet file sets a key whose description in an element's or `lifecycle/`'s `values.yaml` (the comment block directly above it, as `tools/doc-generator.py` reads it) says `Deprecated: use <key>; removed in <version>`. The finding names the replacement and the version that removes the key, which keeps working, and known to POLICY035, until then. A `Deprecated:` note in any other form is reported at the `values.yaml`. Checks every layer file, used by a fleet file or not |
 | POLICY040  | error    | `policySets[].policies[]` names no policy of the element |
 | POLICY050  | error    | Invalid fleet file: YAML error, unknown key, missing or empty `revision`, `revision`, `hub`, `state`, `version`, `channel` or `valueFiles` entry Argo CD reads as a number or boolean, `valueFiles` entry that is null, listed twice, or not a file under `values/`; `version` that is not `x.y.z`, `install.version`; empty `hub`, `version` or `channel`, `hub` with no `hubs/<hub>.yaml`, `hub` naming the cluster itself, `hub` in a hub file, `state` other than `present`/`absent`, `install` that is not a map, `state` or `install` without `hub`, or a cluster that sets `hub` whose name is not a DNS label |
 | POLICY051  | error    | Two siteconfig nodes on one hub with the same `bootMACAddress` or `bmcAddress` (scheme aside), across fleet files that are not `state: absent`: two BareMetalHosts would drive one server |
-| POLICY052  | error/warning | A fleet file's `revision`, resolved in git as Argo CD does (tag, `origin` branch, then a 5 to 40 character commit SHA; a PR's base branch is the merge commit), that does not resolve or whose commit lacks `stack/`, `lifecycle/converters/_hypershift/` (or the pre-4.0 `hypershift/`) when `hub` is set, an upgrade element when `version` or `channel` is set, or a `valueFiles` entry, which Argo CD skips. A `values/clusters/<name>.yaml` no fleet file reads is a warning. Needs git history (`fetch-depth: 0`). `make validate` runs it on `fleet/` only |
-| POLICY060  | error    | `policy-library` version drift across element `Chart.yaml` files |
+| POLICY052  | error/warning | A fleet file's `revision`, resolved in git as Argo CD does (tag, `origin` branch, then a 5 to 40 character commit SHA; a PR's base branch is the merge commit), that does not resolve or whose commit lacks `stack/`, `lifecycle/converters/_hypershift/` (or the pre-4.0 `hypershift/`) when `hub` is set, an upgrade element when `version` or `channel` is set, or a `valueFiles` entry, which Argo CD skips. In a copier copy (a root `.copier-answers.yml`), also a revision whose `.copier-answers.yml` records a framework major newer than this branch's, or more than one major older: hubs run this branch's install chart, which renders its own major and the one before. A revision without the file predates the copy and is not checked. A `values/clusters/<name>.yaml` no fleet file reads is a warning. Needs git history (`fetch-depth: 0`). `make validate` runs it on `fleet/` only |
+| POLICY060  | error    | A chart's `Chart.yaml` does not take policy-library from this repo: it must have exactly one dependency, `policy-library` with `alias: stack`, `repository: file://<path to lib/policy-library>` and a caret floor (`^4.N.0`) that `lib/policy-library/Chart.yaml` `version` satisfies. Helm reports a wrong repository or floor only as `can't get a valid version`, and a wrong alias not at all; the finding says what to change |
+| POLICY061  | error    | A copier answers file that records the wrong release. The root `.copier-answers.yml` `_commit` must be a release tag `vX.Y.Z`. A `stack/<element>/.copier-answers.yml` must have `element: <element>` and a `_commit` release tag no newer than the root's (semver order, prereleases included) and on the same major: update the framework first, and after a framework major update every element to it. Copied from a branch or commit instead of a tag, copier records `git describe` output such as `v1.2.0-3-gabc1234`, which POLICY052 can't read. A directory without an answers file is not checked, and without a root answers file the order is not checked |
 | POLICY070  | error    | `helm lint` non-zero |
 | POLICY071  | error    | `install/`, which each hub runs by hand: `helm lint` fails, an empty `hubName` or `gitRepo` does not fail the install, `policyNamespace` differs from the root `values.yaml`, an ApplicationSet (or its Application template), GitOpsCluster or Placement lacks `velero.io/exclude-from-backup: "true"`, or `install/operators` does not render the ACM and GitOps operators and a MultiClusterHub from the element values, with policy-library's defaults for keys they omit |
 | POLICY080  | error/warning | A rendered object that fails its CRD, checked as the API server would: an unknown field, a value outside an enum such as `remediationAction: enforec`, or a wrong type. Covers Policy, Placement, PlacementBinding and PolicySet, then each `policy-templates[].objectDefinition` (ConfigurationPolicy, OperatorPolicy, CertificatePolicy) with `InformOnly` read as `inform`, as the framework addon does. Findings name the values entry, without a cluster. A kind with no CRD is one warning per element |
@@ -68,6 +70,7 @@ POLICY052 does. Exit 1 when it does not resolve. `render-diff.sh` uses it:
 | POLICY082  | error    | A rendered Policy whose every template is a ConfigurationPolicy with no objects (`object-templates-raw` empty or `[]`, or no `object-templates`). ACM reports it Compliant without checking anything; policy-library renders `[]` when a raw converter's input map is empty. A Policy with only some empty templates passes |
 | POLICY090  | error    | `Chart.yaml` name → camelCase mismatch with single key under `stack:`. For a chart whose `values.schema.json` has an `install.engine` enum (`lifecycle/`), a `stack:` key that is not an engine or an engine with no `stack:` key. Every other check then runs on each engine's component, and each fixture renders the one its `install.engine` selects |
 | POLICY091  | error    | An element name equal to another's, or starting with another's followed by `-`. Release names join element and cluster with `-`, so `a` on cluster `b-c` and `a-b` on cluster `c` would share one Application and its Policies. `lifecycle/` takes part, which reserves `lifecycle` |
+| POLICY092  | warning  | `stack.<key>.enabled: true` for an element whose `Chart.yaml` sets `deprecated: true`, in the root `values.yaml`, a file under `values/`, or the element's own `values.yaml` (on for every cluster). The element still renders; a later major removes it. `helm template` prints the flag only on stderr, which Argo CD discards. Checks every layer file, used by a fleet file or not |
 | RENDER000  | error    | `helm template` failed, or `helm dependency update` did. A chart whose dependencies were not fetched is not rendered, since Helm would use any `charts/` archive of the dependency, whatever its version. Reported once per chart |
 
 <!-- --8<-- [end:rules] -->
@@ -108,6 +111,10 @@ default `selector` into every cascade. The shipped baseline sets a permissive
 `Exists` selector that will render but not match any real cluster. It is not
 applied to `lifecycle/`, which ships its own `selector`.
 
+The validator never injects `policystack.libraryMajors`, so policy-library's
+major check does not run here. `TestTemplatePatch` checks instead that the
+install chart lists the major of `lib/policy-library`.
+
 ```sh
 ./bin/policystack-validator --extra-values tools/validator/testdata/baseline.yaml --repo-root .
 ```
@@ -117,13 +124,15 @@ a failed one as `# RENDER000:` comments. CI diffs two of these trees on PRs (`re
 
 ### Profiles
 
-`testdata/profiles/` turns on every element and optional template, `tools/sample-element` included, so
-POLICY081 reaches every converter. `make validate` runs every rule on them, so an enabled template
-needs its input map or POLICY082 fails. `variants.yaml` holds what `all-on.yaml` cannot set at the
-same time. `TestProfileCoverage` fails for
-a converter with ACM templates that no profile renders.
+`--all-on` turns on every element and all its policies, templates and operators, `tools/sample-element`
+included with `--include-sample-element`, so POLICY081 reaches every converter. It is built at run
+time from `stack/`, so a new element needs no entry. `make validate` runs every rule on it, so an
+enabled template needs its input map or POLICY082 fails: `testdata/inputs.yaml` holds those inputs
+and is layered over it. Each file in `testdata/profiles/` is a further run, alone over the baseline:
+`variants.yaml` holds what the all-on run cannot set at the same time. `TestProfileCoverage` fails
+for a converter with ACM templates that no run renders.
 
 ## Required tools
 
 - `helm` (required)
-- `curl`, for `make crds` (POLICY080 is skipped without the CRDs, and fails the run under `CI`)
+- `curl`, only for `make crds`, which refreshes the committed CRDs in `crds/` after a pin changes

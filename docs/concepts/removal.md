@@ -96,7 +96,7 @@ POLICY033 fails CI on prune that can't work or would fire by accident ([Validato
 - **Not enforced.** ACM prunes only under `enforce`. Not flagged while a [dry run](../guides/rollout.md#dry-run) forces `inform`.
 - **`DeleteAll`** is a warning, reported without failing CI: prefer `DeleteIfCreated`.
 
-If you add prune in your fork, never add it to `stack/cim` or `lifecycle/`: deleting the AgentServiceConfig deletes the assisted-service volumes, and deleting a lifecycle Policy must never delete a cluster.
+If you add prune in your repository, never add it to `stack/cim` or `lifecycle/`: deleting the AgentServiceConfig deletes the assisted-service volumes, and deleting a lifecycle Policy must never delete a cluster.
 
 ### Deleting objects without prune
 

@@ -28,8 +28,8 @@ stack/gitops/
 └── README.md                    # (5)!
 ```
 
-1.  `name: gitops`, equal to the directory name, and one dependency: the [policy-library](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md) chart with `alias: stack`. The library does all the rendering. Helm passes a subchart the values under its alias and checks them against the subchart's `values.schema.json`, so everything under `stack:` is validated: a misspelled key such as `enabeld` fails the render instead of being ignored.
-2.  The element's defaults, all under `stack.gitops`. A chart named `user-monitoring` reads `stack.userMonitoring`: the library camelCases the chart name, because Go templates can't read a key containing `-` with dot syntax. Below, `<el>` stands for this key. A key that doesn't match the chart name renders nothing (POLICY090, a [validator rule](../reference/rules.md) your fork's CI runs).
+1.  `name: gitops`, equal to the directory name, and one dependency: the [policy-library](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md) chart with `alias: stack`, `version: "^4.0.0"` and `repository: file://../../lib/policy-library`. The library does all the rendering. It lives in this repo, so Helm takes it from `lib/` at the same Git revision as the element; `version` is the lowest 4.x the element needs ([Library changes](../contributing.md#library-changes)). Helm passes a subchart the values under its alias and checks them against the subchart's `values.schema.json`, so everything under `stack:` is validated: a misspelled key such as `enabeld` fails the render instead of being ignored.
+2.  The element's defaults, all under `stack.gitops`. A chart named `user-monitoring` reads `stack.userMonitoring`: the library camelCases the chart name, because Go templates can't read a key containing `-` with dot syntax. Below, `<el>` stands for this key. A key that doesn't match the chart name renders nothing (POLICY090, a [validator rule](../reference/rules.md) your repository's CI runs).
 3.  One line, `{{- include "policy-library.render" . -}}`, in nearly every element (`compliance` and `upgrade` add validation before it).
 4.  The manifests. A **converter** is one file here: a Kubernetes manifest with Helm templating that "converts" the element's settings into the objects ACM enforces.
 5.  Generated from `Chart.yaml`, `values.yaml` and `converters/` by `tools/doc-generator.py`. See [Reading an element's README](#reading-an-elements-readme).
@@ -98,7 +98,7 @@ A render error stops the whole Application: Argo CD shows a `ComparisonError` wi
 nothing for that element on that cluster syncs or prunes until the layer is fixed
 ([Applications](architecture.md#applications)). A typo in a layer stops this element on every
 cluster that reads it; a schema error under `stack` stops every element there
-([Schema](values.md#schema)). Your fork's CI ([Your fork's CI](overview.md#your-forks-ci)) runs the same
+([Schema](values.md#schema)). Your repository's CI ([Your repository's CI](overview.md#your-repositorys-ci)) runs the same
 render on every pull request, so these normally fail there first
 ([Validation](../develop/validation.md)).
 
@@ -301,7 +301,7 @@ spec:
 On a new cluster this reads: install the operator, wait for its CSV, then create the ArgoCD
 instance, then the console link. Dependency entry fields (`kind`, `compliance`, `release`, `raw`)
 are listed in the
-[library README](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#ordering-and-dependencies).
+[library README](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#ordering-and-dependencies).
 
 ## Helm templates and ACM templates
 
@@ -392,4 +392,4 @@ layer can set. Browse them on [GitHub](https://github.com/PolicyStack/PolicyStac
 
 In the *Policies* tables, `inform (always)` marks an `InformOnly` template, `(off)` an optional one,
 and "compliant while pending" a template with `ignorePending`. The full list of keys is in the
-[policy-library README](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#reference).
+[policy-library README](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#reference).

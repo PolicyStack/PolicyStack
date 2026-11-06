@@ -3,6 +3,8 @@
 
 Kiali service mesh observability console
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   kiali:

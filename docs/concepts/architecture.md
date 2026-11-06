@@ -204,7 +204,7 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
       labels:
         velero.io/exclude-from-backup: "true" # (1)!
       annotations:
-        argocd.argoproj.io/manifest-generate-paths: '.;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml' # (2)!
+        argocd.argoproj.io/manifest-generate-paths: '.;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml' # (2)!
       finalizers:
         - resources-finalizer.argocd.argoproj.io # (3)!
     spec:
@@ -224,8 +224,8 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
             - ../../values/clusters/prod-east-1.yaml
           valuesObject:
             channel: "stable-4.20"
-            selectedName: prod-east-1 # (5)!
-            selectedId: <clusterID>
+            policystack:
+              libraryMajors: [4] # (5)!
             selector: # (6)!
               matchExpressions:
                 name:
@@ -249,7 +249,7 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
     2.  [Render cache](#render-cache).
     3.  Added by the ApplicationSet controller because `preserveResourcesOnDeletion` is `false`. Deleting the Application deletes its objects in `pstack`.
     4.  A listed file that does not exist is skipped without an error ([Missing files](values.md#missing-files)).
-    5.  Injected, but nothing in `stack/` or `lifecycle/` reads `selectedName` or `selectedId`.
+    5.  The policy-library majors this hub supports. A revision built on another major fails its render ([Order](values.md#order)).
     6.  Becomes the element's single-cluster Placement ([Placement](policies.md#placement)).
     7.  No effect: no Application sets `ignoreDifferences`.
 
@@ -260,7 +260,7 @@ Two different steps can fail, with different blast radius:
 | Step | What runs | Typical cause | What you see | Effect |
 |---|---|---|---|---|
 | Generation | The ApplicationSet controller evaluates its generators. | A fleet file that does not parse, lacks `revision`, or pins a revision that does not exist. | `ErrorOccurred` condition on the ApplicationSet | No Application is created, updated or deleted until it is fixed; existing ones keep their Policies ([One bad fleet file stops the hub](overview.md#one-bad-fleet-file-stops-the-hub)). |
-| Render | Argo CD runs `helm template` for one Application. | A values key the schema rejects, or a `policies.<p>` naming a policy that has no converter. | `ComparisonError` on that Application, sync status `Unknown` | That Application neither syncs nor prunes; its Policies stay as they were. A converter error affects one element. A schema error in a layer fails every Application that reads the layer, all elements and `lifecycle-<cluster>` included ([Schema](values.md#schema)). |
+| Render | Argo CD runs `helm template` for one Application. | A values key the schema rejects, a `policies.<p>` naming a policy that has no converter, or a `revision` whose policy-library major the hub's install chart doesn't support. | `ComparisonError` on that Application, sync status `Unknown` | That Application neither syncs nor prunes; its Policies stay as they were. A converter error affects one element. A schema error in a layer fails every Application that reads the layer, all elements and `lifecycle-<cluster>` included ([Schema](values.md#schema)). |
 
 A render error carries the Helm message. With `stack.gitops.policies.bogus.enabled: true` in a layer:
 
@@ -275,7 +275,7 @@ oc get application gitops-prod-east-1 -n openshift-gitops \
   -o jsonpath='{.status.conditions[?(@.type=="ComparisonError")].message}'
 ```
 
-The fork's CI renders every element for every fleet file and checks every pin, so both normally fail the PR instead of the hub ([Validation](../develop/validation.md)).
+Your repository's CI renders every element for every fleet file and checks every pin, so both normally fail the PR instead of the hub ([Validation](../develop/validation.md)).
 
 ## Deletion
 
@@ -287,9 +287,9 @@ Every Policy sets `copyPolicyMetadata: false`, so Argo CD never treats ACM's rep
 
 Background; nothing to configure.
 
-Each Application lists the files its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). Paths are relative to the source path, `stack/<element>`: `.` is the element directory (policy-library is pulled from its Helm repo by the exact version in `Chart.yaml`, not read from Git), and `../../` is the repo root. For a new commit, Argo CD compares the changed files with this list, with or without a webhook, and reuses the cached render when none match.
+Each Application lists the files its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). Paths are relative to the source path, `stack/<element>`: `.` is the element directory, `../../lib` is the policy-library chart (Helm reads it from Git through `file://`), and `../../` is the repo root. For a new commit, Argo CD compares the changed files with this list, with or without a webhook, and reuses the cached render when none match.
 
-A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-east-1's Applications, and a commit to `stack/compliance/` only the `compliance-*` Applications at that revision. A commit to the root `values.yaml` re-renders all of them. Fleet files are not listed: a fleet change alters the Application spec, which always re-renders.
+A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-east-1's Applications, and a commit to `stack/compliance/` only the `compliance-*` Applications at that revision. A commit to the root `values.yaml` or to `lib/` re-renders all of them, `lifecycle-*` included (its paths start at `lifecycle/`, so the library is `../lib`). Fleet files are not listed: a fleet change alters the Application spec, which always re-renders.
 
 ## The hub
 

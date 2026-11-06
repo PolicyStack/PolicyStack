@@ -5,6 +5,8 @@ Compliance Operator running STIG scans and applying remediations
 
 Guide: https://policystk.io/elements/compliance/
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   compliance:

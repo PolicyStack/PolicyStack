@@ -1,0 +1,6 @@
+# Exercises the key added in chart 2.1.0: suffixTemplateNames. Layered over values-dependencies.yaml.
+# Render with a "<chart>-<cluster>" release name, e.g. policy-stack-test-c1. Every template name gains
+# "-c1", and every automatic or explicit template dependency must follow it.
+stack:
+  policyStackTest:
+    suffixTemplateNames: true

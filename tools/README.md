@@ -27,8 +27,14 @@ The PolicyStack tools provide:
 Copies `tools/sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
 with its camelCase form, sets the description and generates the README. It prompts for missing
 arguments and refuses a name that is not lowercase kebab-case, is longer than 17 characters
-(POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The new element
-passes the validator and prek as is. See [Workflow](../docs/develop/elements.md#workflow).
+(POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The copy keeps
+the sample's policy-library dependency (`file://../../lib/policy-library`, floor `^4.0.0`), which
+resolves from `stack/<name>/` as it does from `tools/sample-element/`. The new element passes the
+validator and prek as is, marked `policystk.io/stability: preview`. In upstream PolicyStack (where
+`.release-please/` exists) it also copies the answers template `{{_copier_conf.answers_file}}.jinja`
+into the element, so adopters can copy it from the next release. In an adopter's copy it doesn't,
+and the element stays local. See
+[Workflow](https://policystk.io/develop/elements/#workflow).
 
 ## doc-generator.py
 
@@ -40,13 +46,14 @@ python tools/doc-generator.py --check          # exit 1 when a README is missing
 python -m unittest tools/test_doc_generator.py
 ```
 
-Writes `stack/<element>/README.md` from `Chart.yaml`, `values.yaml` and `converters/`: the values
-key, optional pieces (`enabled: false` entries), settings, operators, and each Policy with its
+Writes `stack/<element>/README.md` from `Chart.yaml`, `values.yaml` and `converters/`: the
+stability from the `policystk.io/stability` annotation, the values key, optional pieces (`enabled: false` entries), settings, operators, and each Policy with its
 templates, actions, dependencies and converters.
 
 The comment lines directly above a key under `config:`, or above `config:` itself, are its
 description. A blank line ends the block, so a maintainer note separated by one is not rendered.
-Other comments are never rendered. See [Element reference](../docs/develop/elements.md#element-reference).
+Other comments are never rendered. A stability other than `stable` or `preview` is an error; an
+element without the annotation gets no stability line. See [Element reference](https://policystk.io/develop/elements/#element-reference).
 
 It fails on a policy-library 3.x `values.yaml` (`policies` list, `configPolicies`); run
 `tools/migrate-4.0.py` first.
@@ -64,8 +71,9 @@ Without uv, `pip install 'ruamel.yaml>=0.18'` first.
 
 ## CI/CD Integration
 
-`ci.yml` runs the generator tests, and its `element-readmes` prek hook regenerates
-`stack/*/README.md`, failing when one is stale. See [Hooks](../docs/reference/ci.md#hooks).
+Upstream's `upstream.yml` runs the generator tests. The `element-readmes` prek hook, run by `ci.yml`,
+regenerates `stack/*/README.md` and fails when one is stale. See
+[Hooks](https://policystk.io/reference/ci/#hooks).
 
 ## Best Practices
 

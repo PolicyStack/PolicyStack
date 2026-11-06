@@ -9,7 +9,7 @@ name=${1:-} desc=${2:-}
 [ -n "$name" ] || read -rp "Element name (lowercase kebab-case, short): " name
 [[ $name =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] || die "'$name' is not lowercase kebab-case"
 # POLICY001: pstack.install-<name>-<30-character cluster> must fit 63 characters.
-((${#name} <= 17)) || die "'$name' is ${#name} characters, the limit is 17 (docs/concepts/policies.md#naming-limits)"
+((${#name} <= 17)) || die "'$name' is ${#name} characters, the limit is 17 (https://policystk.io/concepts/policies/#naming-limits)"
 # POLICY091: release <element>-<cluster> must not be ambiguous; lifecycle is reserved.
 for e in stack/*/ lifecycle/; do
   e=${e%/} e=${e##*/}
@@ -31,6 +31,10 @@ set_line() { L=$3 awk -v p="$2" 'index($0, p) == 1 {$0 = ENVIRON["L"]} 1' "$1" >
 d=${desc//\\/\\\\} d=${d//\"/\\\"}
 set_line "$dest/Chart.yaml" "description: " "description: \"$d\""
 
+# Upstream only: copier's answers template, so adopters can copy the element. In a copy (no
+# .release-please/) the element stays local, without one.
+[ ! -d .release-please ] || cp '{{_copier_conf.answers_file}}.jinja' "$dest"/
+
 python3 tools/doc-generator.py --element "$name" >/dev/null ||
   die "README not generated: pip install -r tools/requirements.txt, then python3 tools/doc-generator.py --element $name"
-echo "Created $dest, values key stack.$camel. Next steps: docs/develop/elements.md#workflow."
+echo "Created $dest, values key stack.$camel. Next steps: https://policystk.io/develop/elements/#workflow"

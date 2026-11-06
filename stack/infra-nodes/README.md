@@ -3,6 +3,8 @@
 
 Dedicated infra nodes, and moving platform workloads onto them
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   infraNodes:

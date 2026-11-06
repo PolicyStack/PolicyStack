@@ -9,7 +9,7 @@ Onboard an imported cluster and turn on one element. Onboarding is four hand-off
 
 More: [How a change reaches a cluster](../concepts/overview.md#how-a-change-reaches-a-cluster).
 
-PolicyStack must be [installed](install.md) on the hub. The hub doesn't need its own fleet file for this. The examples use `prod-east-1`; replace it with your cluster's name. Don't name a real cluster `prod-east-1` ([Set up your fork](install.md#set-up-your-fork), step 2).
+PolicyStack must be [installed](install.md) on the hub. The hub doesn't need its own fleet file for this. The examples use `prod-east-1`; replace it with your cluster's name.
 
 ## Onboard the cluster
 
@@ -36,7 +36,7 @@ PolicyStack must be [installed](install.md) on the hub. The hub doesn't need its
 
     The fleet file itself is always read from the default branch, because it says which revision to read everything else at ([Fleet files](../concepts/overview.md#fleet-files)). Name it exactly like the ManagedCluster: a misnamed fleet file matches nothing and reports no error.
 
-    CI rejects an invalid fleet file or a revision missing a listed layer (POLICY050, POLICY052), and Render Diff comments the Policies the merge adds ([Set up your fork](install.md#set-up-your-fork)).
+    CI rejects an invalid fleet file or a revision missing a listed layer (POLICY050, POLICY052), and Render Diff comments the Policies the merge adds ([Protect the repository](install.md#protect-the-repository)).
 
     ???+ example "Adding shared layers"
         List layers under `valueFiles`, lowest precedence first ([Values cascade](../concepts/values.md#order)):
@@ -49,13 +49,13 @@ PolicyStack must be [installed](install.md) on the hub. The hub doesn't need its
           - platforms/aws.yaml      # (2)!
         ```
 
-        1.  The upstream example turns elements on and enforces them ([Example files](../concepts/values.md#example-files)). Read a layer before you list it.
+        1.  A layer you wrote, or copied from upstream's examples ([Example files](../concepts/values.md#example-files)). Upstream's `environments/prod.yaml` turns elements on and enforces them. Read a layer before you list it.
         2.  Picks the AWS variant of the node elements.
 
         Helm merges the element's `values.yaml`, the root `values.yaml`, each listed layer, then `values/clusters/prod-east-1.yaml`. Later files win: maps merge key by key, lists are replaced whole ([Merge rules](../concepts/values.md#merge-rules)).
 
         !!! warning "Land the cluster file before the fleet file"
-            If `values/clusters/prod-east-1.yaml` turns off something a listed layer turns on, it must already be at the revision when the fleet file merges. Otherwise the first render enforces the element, and turning it off afterwards deletes the Policy but not what it changed ([What happens on the managed cluster](../concepts/removal.md#what-happens-on-the-managed-cluster)). With `remediations` from `environments/prod.yaml`, the Samples Operator stays `Removed`.
+            If `values/clusters/prod-east-1.yaml` turns off something a listed layer turns on, it must already be at the revision when the fleet file merges. Otherwise the first render enforces the element, and turning it off afterwards deletes the Policy but not what it changed ([What happens on the managed cluster](../concepts/removal.md#what-happens-on-the-managed-cluster)). With `remediations` from a copy of upstream's `environments/prod.yaml`, the Samples Operator stays `Removed`.
 
             - `revision: main`: put both files in one PR.
             - Tag or SHA: merge the cluster file to `main`, tag, then PR the fleet file pinning the new tag.

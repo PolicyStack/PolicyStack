@@ -3,6 +3,8 @@
 
 Red Hat build of OpenTelemetry for distributed tracing
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   opentelemetry:

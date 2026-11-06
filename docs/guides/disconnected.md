@@ -6,7 +6,7 @@ A disconnected cluster cannot reach the internet. PolicyStack normally pulls fro
 
 | Normally reached | By | Disconnected replacement | Set up |
 |---|---|---|---|
-| GitHub and the `policy-library` chart repo | Argo CD on the hub, and the fork's CI | Internal Git and a mirror of the chart repo | By hand ([Before you start](#before-you-start)) |
+| GitHub | Argo CD on the hub, your repository's CI, and copier | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
 | Container images and operator catalogs | Every cluster | oc-mirror's mirror sets and CatalogSources, applied by the `disconnected` element; `global.catalogSources` points every operator at the mirrored catalog | [Site layer](#site-layer) |
 | Public certificate authorities | Every cluster | Your mirror registry's CA and your internal servers' CAs, applied by the `disconnected` element | [Site layer](#site-layer) |
 | Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
@@ -24,7 +24,7 @@ Terms used on this page:
 
 Other terms: [Glossary](../concepts/overview.md#glossary).
 
-Order of work: mirror, set up Git and the chart repo, write the site layer, bring up the hub, then add spokes.
+Order of work: mirror, set up Git, write the site layer, bring up the hub, then add spokes.
 
 ## Before you start
 
@@ -77,29 +77,36 @@ mirror:
 3.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it.
 4.  ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: `stable-2.12` for ACM 2.17 (ACM release notes).
 
-### The chart repo
+### PolicyStack releases
 
-Every element is a Helm chart that depends on `policy-library` from `https://policystack.github.io/PolicyStack-chart`. The dependency is not committed (`charts/` and `*.tgz` are gitignored), so Argo CD's repo server downloads it on every render. If the hub cannot reach the repo, every Application shows a ComparisonError and nothing syncs.
+Your repository is created and updated from upstream's Git tags ([Installation](../start/install.md#create-your-repository)), so the site needs a copy of upstream's repository, tags included. policy-library is in it (`lib/`); there is no chart repository to mirror.
 
-Either let the hub's repo server reach it through a proxy (`HTTPS_PROXY` in `spec.repo.env` of the `openshift-gitops` ArgoCD CR), or serve a copy from any HTTPS server:
+1.  Mirror upstream on a connected machine, then carry it across and push it to your Git server. Repeat to pick up new releases:
 
-```sh
-helm pull policy-library --repo https://policystack.github.io/PolicyStack-chart --version 4.0.0
-helm repo index . --url https://charts.dc2.example.com/policystack # upload index.yaml and the .tgz
-```
+    ```sh
+    git clone --mirror https://github.com/PolicyStack/PolicyStack.git
+    git -C PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git
+    ```
 
-Mirror every version a `Chart.yaml` asks for at any revision a fleet file pins: a cluster pinned to a revision whose version is missing gets a ComparisonError. Then repoint every chart, and run this again after merging new elements from upstream:
+2.  On every machine that runs copier, send the upstream URL to the mirror:
 
-```sh
-sed -i 's#https://policystack.github.io/PolicyStack-chart#https://charts.dc2.example.com/policystack#' \
-  stack/*/Chart.yaml lifecycle/Chart.yaml
-```
+    ```sh
+    git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
+      https://github.com/PolicyStack/PolicyStack.git
+    ```
 
-If your fork's CI runs (GitHub Actions on GitHub, [Set up your fork](../start/install.md#set-up-your-fork)), it runs `helm dependency update` on the same files, so its runners need that repo too.
+    copier reaches upstream only through `git`, so the answers files keep the upstream URL in `_src_path` and every command in [Installation](../start/install.md) and [Upgrading PolicyStack](upgrading.md) works unchanged.
+
+    !!! warning "Global or system config only"
+        copier clones upstream into a temporary directory, where your repository's own `.git/config` doesn't apply. Set the rewrite with `--global` or `--system`, or for one shell with `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.<mirror>.insteadOf GIT_CONFIG_VALUE_0=<upstream>`. A rewrite in your repository's own config is ignored, and copier tries GitHub.
+
+3.  Install copier from your Python package mirror: `pipx install copier` with `PIP_INDEX_URL` pointing at it. `mise install` installs the pinned copier the same way.
+
+CI in your repository needs the tools in `mise.toml` and the validator's Go modules (`GOPROXY` pointing at your Go module proxy). The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
 
 ### Git and the hub's Argo CD
 
-Argo CD on the hub reads your fork before any Policy exists, and PolicyStack never manages that Argo CD instance (the hub layer turns off the `gitops` element's `instance` policy, [Installation](../start/install.md#hand-the-operators-to-policystack)). So `trustedCA` below never reaches it. If your Git server or chart mirror uses a private CA, add it to Argo CD by hand, as a [repository TLS certificate](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/).
+Argo CD on the hub reads your repository before any Policy exists, and PolicyStack never manages that Argo CD instance (the hub layer turns off the `gitops` element's `instance` policy, [Installation](../start/install.md#hand-the-operators-to-policystack)). So `trustedCA` below never reaches it. If your Git server uses a private CA, add it to Argo CD by hand, as a [repository TLS certificate](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/).
 
 ## Site layer
 
@@ -180,7 +187,7 @@ stack:
 ```
 
 1.  Every Subscription names its catalog, and every shipped element names `redhat-operators`, which oc-mirror does not create: it names the mirrored catalog `cs-<index>-<tag>`. This map renames the source in every OperatorPolicy the elements render, and in the hub's bootstrap Subscriptions. With it, `metallb` renders `source: cs-redhat-operator-index-v4-20`. Add one key per catalog you mirror.
-2.  `global` applies to every cluster that lists this layer, whether or not it enables the element. Enabling the element in the same file keeps the mapping and the CatalogSource it points to together. Otherwise a cluster that lists the layer but leaves the element off has every operator pointed at a catalog it does not have, and no operator installs or upgrades. The fork's CI validator ([POLICY038](../reference/rules.md#rules)) only checks that a source is a known catalog name or a `catalogSources` key, not that the CatalogSource exists on the cluster.
+2.  `global` applies to every cluster that lists this layer, whether or not it enables the element. Enabling the element in the same file keeps the mapping and the CatalogSource it points to together. Otherwise a cluster that lists the layer but leaves the element off has every operator pointed at a catalog it does not have, and no operator installs or upgrades. Your repository's CI validator ([POLICY038](../reference/rules.md#rules)) only checks that a source is a known catalog name or a `catalogSources` key, not that the CatalogSource exists on the cluster.
 3.  The `yq` output. Applied as is, with `musthave`: the listed fields are set and nothing else on the object is touched ([ACM policies in brief](../concepts/acm.md#configurationpolicy)).
 4.  The mirror registry's CA, keyed by host. A ConfigMap key cannot contain `:`, so OpenShift reads `..` as the port separator.
 5.  CAs of your other internal HTTPS servers: Git, Helm, OSUS, the RHCOS image server.
@@ -218,7 +225,7 @@ The hub needs the mirrored catalog before PolicyStack exists to apply it, becaus
     ```
 
 3. [Install the operators](../start/install.md#install-the-operators), adding the site layer with `-f values/datacenters/dc2.yaml`. Its `global.catalogSources` points the ACM and GitOps Subscriptions at the mirrored catalog.
-4. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git and the chart repo ([Before you start](#before-you-start)).
+4. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git ([Before you start](#before-you-start)).
 5. List `datacenters/dc2.yaml` in the hub's fleet file, `fleet/hubs/<hubName>.yaml` (`hubName` is the name you installed the hub with, [Hub file](../reference/fleet.md#hub-file)). The `disconnected` element then enforces the same objects by name, so ACM manages the ones you applied instead of creating copies. If they differ from `clusterResources`, the Policy changes them to match.
 
 ## What the element applies

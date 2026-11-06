@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -85,5 +86,74 @@ func TestPolicy052_ClusterFiles(t *testing.T) {
 	}
 	if got := (&FleetPinCheck{Root: dir}).Run(Context{}); len(got) != 0 {
 		t.Errorf("no fleet: want no findings, got %+v", got)
+	}
+}
+
+func TestPolicy052_FrameworkSkew(t *testing.T) {
+	dir := t.TempDir()
+	answers := func(commit string) {
+		t.Helper()
+		data := "_commit: " + commit + "\n_src_path: https://github.com/PolicyStack/PolicyStack\n"
+		if err := os.WriteFile(filepath.Join(dir, answersFile), []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	testenv.Commit(t, dir, "stack/acm/Chart.yaml")
+	testenv.Git(t, dir, "tag", "pre-copier")
+	for _, tag := range []string{"v1.4.0", "v2.0.0", "v3.1.0", "v3.0.0-2-gabc1234", "acm-v3.0.0", "v4.0.0-rc.1"} {
+		answers(tag)
+		testenv.Commit(t, dir)
+		testenv.Git(t, dir, "tag", "at-"+tag)
+	}
+
+	for _, tc := range []struct {
+		name, head, rev string
+		want            []string
+	}{
+		{name: "same major", head: "v3.2.0", rev: "at-v3.1.0"},
+		{name: "one major behind", head: "v3.2.0", rev: "at-v2.0.0"},
+		{name: "revision before the copier copy", head: "v3.2.0", rev: "pre-copier"},
+		{name: "not a copier copy", rev: "at-v1.4.0"},
+		{name: "unreadable framework release here is POLICY061's", head: "v3.2.0-1-g1234567", rev: "at-v1.4.0"},
+		{
+			name: "two majors behind", head: "v3.2.0", rev: "at-v1.4.0",
+			want: []string{`revision "at-v1.4.0" is framework v1.4.0, more than one major behind this branch's v3.2.0: hubs render this major and the one before only. Move the revision forward`},
+		},
+		{
+			name: "newer major", head: "v2.5.0", rev: "at-v3.1.0",
+			want: []string{`revision "at-v3.1.0" is framework v3.1.0, a newer major than this branch's v2.5.0: hubs run this branch's install chart, which cannot render it. Merge the framework update first`},
+		},
+		{name: "prerelease of the next major is newer", head: "v3.2.0", rev: "at-v4.0.0-rc.1", want: []string{
+			`revision "at-v4.0.0-rc.1" is framework v4.0.0-rc.1, a newer major than this branch's v3.2.0: hubs run this branch's install chart, which cannot render it. Merge the framework update first`,
+		}},
+		{
+			name: "git describe output", head: "v3.2.0", rev: "at-v3.0.0-2-gabc1234",
+			want: []string{`revision "at-v3.0.0-2-gabc1234" has no framework release tag in /.copier-answers.yml (_commit "v3.0.0-2-gabc1234")`},
+		},
+		{
+			name: "prefixed tag at the root", head: "v3.2.0", rev: "at-acm-v3.0.0",
+			want: []string{`revision "at-acm-v3.0.0" has no framework release tag in /.copier-answers.yml (_commit "acm-v3.0.0")`},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.head == "" {
+				if err := os.Remove(filepath.Join(dir, answersFile)); err != nil && !os.IsNotExist(err) {
+					t.Fatal(err)
+				}
+			} else {
+				answers(tc.head)
+			}
+			cl := &fixtures.Cluster{Name: "prod-east-1", SourceFile: "fleet/prod-east-1.yaml", Revision: tc.rev}
+			var got []string
+			for _, f := range (&FleetPinCheck{Root: dir}).Run(Context{Clusters: []*fixtures.Cluster{cl}}) {
+				if f.Severity != SevError {
+					t.Errorf("unexpected finding: %+v", f)
+				}
+				got = append(got, f.Message)
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("got %q\nwant %q", got, tc.want)
+			}
+		})
 	}
 }

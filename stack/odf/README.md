@@ -3,6 +3,8 @@
 
 OpenShift Data Foundation: Ceph storage and the NooBaa object gateway
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   odf:

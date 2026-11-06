@@ -3,6 +3,8 @@
 
 Loki log storage, the log forwarder and the console logging UI
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   loki:

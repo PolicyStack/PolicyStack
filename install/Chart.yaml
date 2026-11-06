@@ -2,4 +2,4 @@ apiVersion: v2
 name: policystack
 description: Installs PolicyStack on an ACM hub - the ApplicationSets, cluster import into Argo CD and its RBAC
 type: application
-version: 0.2.0
+version: 0.2.0 # x-release-please-version: the framework release (.release-please/config.json)

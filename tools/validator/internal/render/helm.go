@@ -6,11 +6,14 @@ package render
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,17 +37,24 @@ func New(helmBin string) *Runner {
 	return &Runner{HelmBin: helmBin}
 }
 
-// EnsureDeps runs `helm dependency update` on elementDir at most once per
-// process, and not at all when charts/ already holds every Chart.yaml
-// dependency at its pinned version. Later calls return the first call's error.
+// EnsureDeps runs `helm dependency update` on elementDir at most once per process, and not at all
+// when upToDate. Later calls return the first call's error. --skip-refresh only when every
+// dependency is file://, which needs no repository index. A remote one, as in every revision before
+// lib/ that Render Diff renders, needs its index fetched: a fresh Helm cache has none.
 func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	v, _ := r.depOnce.LoadOrStore(elementDir, &sync.Once{})
 	once := v.(*sync.Once)
 	once.Do(func() {
-		if alreadyDownloaded(elementDir) {
+		deps, ok := readDeps(elementDir)
+		local := ok && !slices.ContainsFunc(deps, func(d dependency) bool { return !strings.HasPrefix(d.Repository, "file://") })
+		if local && upToDate(elementDir, deps) {
 			return
 		}
-		cmd := exec.CommandContext(ctx, r.HelmBin, "dependency", "update", elementDir) //nolint:gosec // G204: no shell; the binary is --helm-bin
+		args := []string{"dependency", "update"}
+		if local {
+			args = append(args, "--skip-refresh")
+		}
+		cmd := exec.CommandContext(ctx, r.HelmBin, append(args, elementDir)...) //nolint:gosec // G204: no shell; the binary is --helm-bin
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
@@ -57,21 +67,45 @@ func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	return nil
 }
 
-// alreadyDownloaded reports whether charts/<name>-<version>.tgz exists for every dependency, so a
-// stale archive left by an earlier pin is never rendered in place of the pinned one.
-func alreadyDownloaded(elementDir string) bool {
-	data, err := os.ReadFile(filepath.Join(elementDir, "Chart.yaml"))
-	if err != nil {
-		return false
+type dependency struct{ Name, Repository string }
+
+// readDeps returns the dependencies in dir/Chart.yaml. An unreadable Chart.yaml is !ok, leaving the
+// error to helm.
+func readDeps(dir string) (deps []dependency, ok bool) {
+	data, err := os.ReadFile(filepath.Join(dir, "Chart.yaml"))
+	var c struct{ Dependencies []dependency }
+	if err != nil || yaml.Unmarshal(data, &c) != nil {
+		return nil, false
 	}
-	var c struct {
-		Dependencies []struct{ Name, Version string }
-	}
-	if yaml.Unmarshal(data, &c) != nil {
-		return false
-	}
-	for _, d := range c.Dependencies {
-		if !FileExists(filepath.Join(elementDir, "charts", d.Name+"-"+d.Version+".tgz")) {
+	return c.Dependencies, true
+}
+
+// upToDate reports whether charts/ holds exactly one archive per file:// dependency, newer than
+// every file under its source directory, so an update would rewrite nothing. Skipping it keeps
+// parallel renders of the same chart, as in concurrent test packages, from rewriting charts/ under
+// each other. A git checkout sets mtimes to checkout time, so a changed lib/ is never missed.
+func upToDate(dir string, deps []dependency) bool {
+	for _, d := range deps {
+		archives, _ := filepath.Glob(filepath.Join(dir, "charts", d.Name+"-*.tgz"))
+		if len(archives) != 1 {
+			return false
+		}
+		built, err := os.Stat(archives[0])
+		if err != nil {
+			return false
+		}
+		src := filepath.Join(dir, strings.TrimPrefix(d.Repository, "file://"))
+		errStale := errors.New("stale")
+		err = filepath.WalkDir(src, func(_ string, e fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if info, err := e.Info(); err != nil || info.ModTime().After(built.ModTime()) {
+				return errStale
+			}
+			return nil
+		})
+		if err != nil {
 			return false
 		}
 	}

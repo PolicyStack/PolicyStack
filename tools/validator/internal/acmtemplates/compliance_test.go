@@ -543,7 +543,7 @@ func TestComplianceStructure(t *testing.T) {
 	}
 
 	// Applying remediations reboots nodes, so it stays opt-in.
-	defaults, _ := complianceRender(t, []string{allOn[0], complianceFiles(t, "stack:\n  compliance:\n    enabled: true\n")[2]})
+	defaults, _ := complianceRender(t, []string{allOn[0], complianceFiles(t, "stack:\n  compliance:\n    enabled: true\n")[len(allOn)]})
 	names := strings.Join(slices.Sorted(maps.Keys(defaults)), " ")
 	if !strings.Contains(names, "findings-compliance") || strings.Contains(names, "remediate-compliance") {
 		t.Errorf("default Policies: %s", names)

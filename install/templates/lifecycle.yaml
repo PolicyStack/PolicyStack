@@ -76,7 +76,8 @@ spec:
         automated:
           prune: true
           selfHeal: true
-  # manifest-generate-paths lists every file the render reads, as in appset.yaml.
+  # manifest-generate-paths lists every file the render reads, as in appset.yaml; ../lib is the
+  # policy-library chart.
   templatePatch: |
     {{ "{{" }}- $name := trimSuffix ".yaml" .path.filename {{ "}}" }}
     {{ "{{" }}- $files := list "../values.yaml" {{ "}}" }}
@@ -84,7 +85,7 @@ spec:
     {{ "{{" }}- $files = append $files (print "../values/clusters/" $name ".yaml") {{ "}}" }}
     metadata:
       annotations:
-        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (prepend $files ".") {{ "}}" }}'
+        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (concat (list "." "../lib") $files) {{ "}}" }}'
     spec:
       source:
         helm:
@@ -101,6 +102,8 @@ spec:
             {{ "{{" }} $k {{ "}}" }}: {{ "{{" }} . | quote {{ "}}" }}
             {{ "{{" }}- end {{ "}}" }}{{ "{{" }} end {{ "}}" }}
             install: {{ "{{" }} dig "install" dict . | toJson {{ "}}" }}
+            policystack:
+              libraryMajors: {{ include "policystack.libraryMajors" . }}
             selector:
               matchExpressions:
                 hub:

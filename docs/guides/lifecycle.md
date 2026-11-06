@@ -2,13 +2,16 @@
 
 You build, upgrade, scale and destroy OpenShift clusters by editing fleet files. Read [Cluster lifecycle](../concepts/lifecycle.md) first: it explains how a fleet file with `hub:` becomes a Policy on the hub that drives ACM's own installers, and which engine to pick ([Pick an engine](../concepts/lifecycle.md#pick-an-engine)). Every key and generated object is in [Lifecycle keys](../reference/lifecycle.md).
 
+!!! warning "Every engine and platform is a preview"
+    Lifecycle follows the framework's version, but no engine or platform is stable yet: a framework minor may change their converters, behaviour and defaults not fixed at create, with the steps in its release notes. Their `install` keys and the names of the objects they create change only in a major ([Maturity](../reference/compatibility.md#maturity)). Pin clusters the hub builds to tags.
+
 ## Prerequisites
 
 On every hub that builds clusters:
 
 - ACM 2.16 or later.
 - The hub manages itself: `oc get managedcluster -l local-cluster=true` returns one cluster (ACM creates it by default). Without it the hub's lifecycle ApplicationSet creates no `lifecycle-<cluster>` Application, and nothing reports an error. Exception: a hub imported into Multicluster Global Hub in default mode has no `local-cluster`; see [Global Hub](global-hub.md#lifecycle).
-- `fleet/hubs/<hubName>.yaml` exists, the hub's own fleet file ([Add the hub's fleet file](../start/install.md#add-the-hubs-fleet-file)). Your fork's CI fails a cluster whose `hub` has no hub file (POLICY050), which catches a typo that would leave the cluster with no hub to build or destroy it. The hub file's `valueFiles` are also where hub-side settings go, such as `stack.cim` for bare metal.
+- `fleet/hubs/<hubName>.yaml` exists, the hub's own fleet file ([Add the hub's fleet file](../start/install.md#add-the-hubs-fleet-file)). Your repository's CI fails a cluster whose `hub` has no hub file (POLICY050), which catches a typo that would leave the cluster with no hub to build or destroy it. The hub file's `valueFiles` are also where hub-side settings go, such as `stack.cim` for bare metal.
 - For `engine: hypershift`: the hypershift-addon is Available (`oc get managedclusteraddon hypershift-addon -n local-cluster` shows `AVAILABLE True`). It is on by default.
 
 ## Build a cluster
@@ -458,7 +461,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves the shared 
 
 Lifecycle uses the same [values cascade](../concepts/values.md#order) as Day-2, starting from `lifecycle/values.yaml`, the lifecycle chart's defaults (every `install` key, commented). The fleet file's `install` ranks above every layer.
 
-Shipped layers:
+Upstream's example layers. copier doesn't copy them into your repository: copy the one you need from [upstream's `values/platforms/`](https://github.com/PolicyStack/PolicyStack/tree/main/values/platforms) into your `values/platforms/`, and read it first ([Example files](../concepts/values.md#example-files)).
 
 | Layer | Sets |
 |---|---|
@@ -470,7 +473,7 @@ Shipped layers:
 
 `aws`, `vmware` and `baremetal` also select the matching `infraNodes` and `storageNodes` Day-2 policies, so imported clusters on those platforms list the same layer; lifecycle reads only its `install`.
 
-The AWS example with its layer:
+The AWS example, with a copy of `platforms/aws.yaml`:
 
 ```yaml
 # fleet/ocp-aws.yaml

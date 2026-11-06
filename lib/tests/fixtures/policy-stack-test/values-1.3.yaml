@@ -1,0 +1,41 @@
+# Exercises element: dependencies (1.3.0) and a raw object list (rawTemplate before 4.0).
+# Render with a "<chart>-<cluster>" release name, e.g. policy-stack-test-c1.
+stack:
+  policyStackTest:
+    policies:
+      # Cross-element dependencies resolve to "<name>-<element>-<cluster>", where <cluster> is
+      # taken from THIS release's own suffix, so one line is correct on every cluster.
+      consume:
+        remediationAction: enforce
+        dependencies:
+          - name: install
+            element: cert-manager
+          - name: ready
+            element: openshift-data-foundation
+            compliance: Compliant
+          # release: still wins over element: (explicit escape hatch)
+          - name: pinned
+            element: ignored-because-release-wins
+            release: other-element-somecluster
+          # same-element dependency keeps the old behaviour
+          - name: install
+        templates:
+          cm:
+            file: base/test-cm
+            config:
+              name: consume-cm
+              value1: consume
+
+      # One ConfigurationPolicy whose object count comes from a values map
+      install:
+        remediationAction: enforce
+        templates:
+          machinesets:
+            file: _cases/raw-list
+            config:
+              role: infra
+              zones:
+                us-east-2a:
+                  replicas: 3
+                us-east-2b:
+                  replicas: 2

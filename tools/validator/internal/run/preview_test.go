@@ -24,8 +24,7 @@ func TestPreview(t *testing.T) {
 		if err := os.CopyFS(dir, os.DirFS(filepath.Join(repo, "tools/validator/internal/chart/testdata/element"))); err != nil {
 			t.Fatal(err)
 		}
-		chartYAML, _ := os.ReadFile(filepath.Join(dir, "Chart.yaml"))
-		if err := os.WriteFile(filepath.Join(dir, "Chart.yaml"), []byte(strings.Replace(string(chartYAML), "name: conformance", "name: "+name, 1)), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "Chart.yaml"), []byte(fixtureChart(t, name)), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

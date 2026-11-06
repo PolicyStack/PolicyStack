@@ -3,8 +3,10 @@ name: cim
 description: "Central infrastructure management for SiteConfig clusters: metal3, the assisted service and the SiteConfig component"
 type: application
 version: 0.1.0
+annotations:
+  policystk.io/stability: preview
 dependencies:
   - name: policy-library
     alias: stack
-    version: "4.0.0"
-    repository: "https://policystack.github.io/PolicyStack-chart"
+    version: "^4.0.0"
+    repository: "file://../../lib/policy-library"

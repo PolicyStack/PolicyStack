@@ -3,6 +3,8 @@
 
 External Secrets Operator (Red Hat) for syncing secrets from external KMS providers
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   eso:

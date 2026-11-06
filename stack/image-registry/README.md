@@ -3,6 +3,8 @@
 
 Internal image registry storage and configuration
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   imageRegistry:

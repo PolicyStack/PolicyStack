@@ -3,6 +3,8 @@
 
 Red Hat OpenShift Dev Spaces cloud development environments
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   devSpaces:

@@ -3,6 +3,8 @@
 
 Per-team ArgoCD instances for application delivery
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   teamGitops:

@@ -10,6 +10,7 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
+      - 'lib/**'
       - 'values/**'
       - 'values.yaml'
       - 'fleet/**'

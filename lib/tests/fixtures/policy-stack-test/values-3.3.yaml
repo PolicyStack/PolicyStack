@@ -1,0 +1,8 @@
+# Exercises chart 3.3.0: policies.<p>.hubTemplateOptions. Layered over values.yaml.
+# Passed through verbatim on the base Policy only; certs keeps rendering without it.
+stack:
+  policyStackTest:
+    policies:
+      base:
+        hubTemplateOptions:
+          serviceAccountName: policy-hub-reader

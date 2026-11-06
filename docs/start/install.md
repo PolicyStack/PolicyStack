@@ -1,40 +1,44 @@
 # Installation
 
-PolicyStack runs on the ACM hub: a Helm release from [`install/`](https://github.com/PolicyStack/PolicyStack/tree/main/install) points the hub's Argo CD at your fork, and ACM delivers the Policies Argo CD renders, hub objects that describe a cluster's configuration ([ACM policies in brief](../concepts/acm.md), [what the release creates](#install-policystack)).
+PolicyStack runs on the ACM hub: a Helm release from `install/` points the hub's Argo CD at your repository, and ACM delivers the Policies Argo CD renders, hub objects that describe a cluster's configuration ([ACM policies in brief](../concepts/acm.md), [what the release creates](#install-policystack)).
 
 - An **element** is a Helm chart under `stack/` that turns settings for one product into Policies. Every element ships off.
 - A **layer** is a values file under `values/` that turns elements on and configures them.
 - A **fleet file**, `fleet/<cluster>.yaml`, enrolls one cluster and lists the layers it reads. The hub is itself a managed cluster, enrolled by `fleet/hubs/<hub>.yaml`.
 
-Full model: [How PolicyStack works](../concepts/overview.md).
+You create your own repository with [copier](https://copier.readthedocs.io), which copies the framework and each element you want from an upstream release tag `vX.Y.Z`, and records what it copied. Later, `copier update` merges a newer release with your changes, for you to open as a PR ([Upgrading PolicyStack](../guides/upgrading.md)). Full model: [How PolicyStack works](../concepts/overview.md).
 
 1. [Check the prerequisites](#prerequisites)
-2. [Set up your fork](#set-up-your-fork)
-3. [Install the operators](#install-the-operators) (new hubs only)
-4. [Install PolicyStack](#install-policystack)
-5. [Add the hub's fleet file](#add-the-hubs-fleet-file)
-6. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
+2. [Create your repository](#create-your-repository)
+3. [Add elements](#add-elements)
+4. [Protect the repository](#protect-the-repository)
+5. [Install the operators](#install-the-operators) (new hubs only)
+6. [Install PolicyStack](#install-policystack)
+7. [Add the hub's fleet file](#add-the-hubs-fleet-file)
+8. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
 
-Run every command from the root of your fork's clone, logged in to the hub as a cluster administrator.
+Run every command from the root of your repository's clone, logged in to the hub as a cluster administrator.
 
 | Placeholder | Meaning | Example |
 |---|---|---|
 | `<hub>` | The hub's name in PolicyStack (`hubName`). Every hub's own ManagedCluster is called `local-cluster`, so PolicyStack needs a unique name to pick the hub's files ([The hub](../concepts/architecture.md#the-hub)). Lowercase DNS label, at most 30 characters ([Naming limits](../concepts/policies.md#naming-limits)). | `hub-east` |
-| `<org>/<fork>` | Your GitHub org and repository | `acme/policystack` |
+| `<org>/<repo>` | Your GitHub org and repository | `acme/fleet` |
 
 !!! warning "Choose `hubName` once"
     Changing it deletes and recreates the hub's own Applications and Policies, and abandons the clusters this hub built until their fleet files name the new hub ([The hub](../concepts/architecture.md#the-hub)). Two active hubs with one `hubName` apply the same hub file and build the same clusters.
 
 ## Prerequisites
 
-- A GitHub repository for your fork. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
-- `oc`, and `helm` 3.14 or later on your workstation: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
-- Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18. Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
+- An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
+- copier 9.18 or later, `git` and Python on your workstation: `pipx install copier`. Once the repository exists, `mise install` installs the copier version it pins ([Setup](../contributing.md#setup)).
+- `oc`, and `helm` 3.14 or later: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
+- Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 ([Support](../reference/compatibility.md#support)). Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
 - The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters.
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`. The install chart creates its objects in that namespace and grants Policy rights to that instance's application controller; another instance has neither.
 - The hub is not a passive DR hub. On a passive DR hub, install PolicyStack only at takeover ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
 ```sh
+copier --version                         # copier 9.18.0 or later
 helm version --short                     # v3.14.0 or later
 oc auth can-i '*' '*' --all-namespaces   # yes
 oc get managedclusters -l local-cluster=true
@@ -44,60 +48,83 @@ oc get managedclusters -l local-cluster=true
 
 The last command applies to a hub that already runs ACM. A new hub creates `local-cluster` in [Install the operators](#install-the-operators).
 
-## Set up your fork
+## Create your repository
 
-Argo CD reads only your fork. Upstream ships no fleet files and no live configuration.
+Argo CD reads only your repository. Upstream ships no fleet files and no live configuration.
 
-1.  Copy [PolicyStack](https://github.com/PolicyStack/PolicyStack) into your org and clone it. GitHub doesn't allow a private fork of a public repository, so a private copy is a new repository:
+Pick the newest framework release, a tag `vX.Y.Z` on the [releases page](https://github.com/PolicyStack/PolicyStack/releases), and copy it:
 
-    === "Public"
+```sh
+url=https://github.com/PolicyStack/PolicyStack.git
+copier copy --vcs-ref v1.0.0 "$url" <repo> # (1)!
+cd <repo>
+git init -b main && git add -A && git commit -m "chore: PolicyStack v1.0.0"
+git remote add origin https://github.com/<org>/<repo>.git
+git push -u origin main
+```
 
-        Fork it on GitHub, then:
+1.  Without `--vcs-ref`, copier takes the newest release. Name the release so the copy is the one you picked.
 
-        ```sh
-        git clone https://github.com/<org>/<fork>.git && cd <fork>
-        ```
+You now have the framework (`install/`, `lifecycle/`, `lib/`, `tools/`, the CI workflows and hooks, `mise.toml`, the root `values.yaml`) and `.copier-answers.yml`, which records the release you copied:
 
-    === "Private"
+```yaml title=".copier-answers.yml"
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v1.0.0
+_src_path: https://github.com/PolicyStack/PolicyStack.git
+element: ''
+```
 
-        Create an empty private repository, then:
+`copier update` reads `_commit` to know what to merge, and the validator reads it to check every fleet pin (POLICY052) and every element's release (POLICY061). Never edit it by hand ([Answers files](../guides/upgrading.md#answers-files)).
 
-        ```sh
-        git clone https://github.com/PolicyStack/PolicyStack.git <fork> && cd <fork>
-        git remote rename origin upstream && git config remote.upstream.tagOpt --no-tags
-        git remote add origin https://github.com/<org>/<fork>.git && git push -u origin main
-        ```
+copier leaves out `stack/`, which you fill in the next step, and everything that stays upstream: the docs, the upstream README and CODEOWNERS, and the example `values/` files ([Example files](../concepts/values.md#example-files)). Who owns each path from here on: [The repository](../concepts/overview.md#the-repository).
 
-        [Merge upstream](../guides/upgrading.md#merge-upstream) works the same, through the `upstream` remote. Argo CD needs a [repository secret](#install-policystack) to read it.
+## Add elements
 
-    You edit `fleet/` (which clusters exist, which revision each reads, which layers it gets) and `values/` (the layers). You may add, change or delete elements under `stack/`; a changed element is yours to maintain. `install/`, `lifecycle/`, `tools/` and `.github/` come from upstream when you [merge upstream](../guides/upgrading.md#merge-upstream) ([The repository](../concepts/overview.md#the-repository)).
+Each element is copied on its own into `stack/<element>/`, from the same release tag as the framework, and gets its own `.copier-answers.yml`. Every repository needs `acm`, `gitops` and `upgrade`: [Install the operators](#install-the-operators) reads the first two, and `upgrade` applies a fleet file's `version` and `channel`. Add any others the same way, now or later:
 
-2.  Decide what to do with the example files under `values/` ([Example files](../concepts/values.md#example-files)). They do nothing until a fleet file lists them, except `values/clusters/<name>.yaml`, which the hub or cluster of that name reads automatically, with no fleet-file entry. The shipped `acm-dc1.yaml` and `prod-east-1.yaml` turn elements on, so don't use those names for real clusters, or delete the files. Once `fleet/` has a file, the fork's CI (step 3) warns (POLICY052) about every `values/clusters/<name>.yaml` that no fleet file reads.
+```sh
+url=https://github.com/PolicyStack/PolicyStack.git
+for el in acm gitops upgrade cert-manager; do
+  copier copy --vcs-ref v1.0.0 -d element="$el" "$url" "stack/$el" # (1)!
+done
+git add stack && git commit -m "feat: add acm, gitops, upgrade and cert-manager"
+```
 
-3.  Enable GitHub Actions on the fork. GitHub doesn't run workflows on a new fork until you enable them in its **Actions** tab. These checks then run on every PR:
+1.  The `_commit` in your root `.copier-answers.yml`. An element added later takes that tag too: an element may be older than your framework, never newer. An element that first ships in a newer release needs the framework updated to that release first ([Framework updates](../guides/upgrading.md#framework-updates)); until then `copier copy` fails with `FileNotFoundError: ... stack/<element>`.
 
-    | Check | What it does for you |
-    |---|---|
-    | `ci` | Runs the [validator](../develop/validation.md), the repo's CI checker. It renders every element the way Argo CD will and checks the result. Once `fleet/` exists it also checks each fleet file and its `revision` (POLICY050, POLICY052) and every values key (POLICY035). Also runs the lint hooks from `.pre-commit-config.yaml` (a hook that rewrites a file fails and prints the diff) and the docs build. |
-    | `pr-title` | The PR title must be a Conventional Commit, such as `feat: enable gitops on prod-east-1`. |
-    | Render Diff | On PRs to the default branch, comments the Policies each fleet cluster gains, loses or changes. It only reports and never blocks. |
+!!! warning "Pass `--vcs-ref` for every element"
+    Without it copier copies the newest release, which can be newer than your framework. That element may then need framework code you don't have yet, and POLICY061 fails it. Delete the directory and copy it again with your framework's tag.
 
-    Details: [CI workflows](../reference/ci.md), [Validator rules](../reference/rules.md).
+Each element is either stable or preview, shown at the top of its `README.md`. A preview element may change incompatibly in a framework minor ([Element stability](../reference/compatibility.md#element-stability)). Each element's settings are in its `README.md`.
 
-4.  Protect `fleet/`. A fleet file decides which revision and layers a cluster reads, and a fleet file with `hub:` and `state: absent` makes the hub delete that cluster ([Cluster lifecycle](../concepts/lifecycle.md)). Clusters pinned to a branch also take every merge to `values/` and `stack/` on that branch, so if production follows `main`, own those paths too, or pin production to tags ([Rolling out changes](../guides/rollout.md#choosing-a-pin)). Replace upstream's `* @PolicyStack/maintainers` line in `CODEOWNERS`: it names a team your org doesn't have, so no review would be requested.
+Some elements depend on another: `odf`, for one, waits on Policies of `storage-nodes`. Copy both. Once the first fleet file exists, CI fails a missing dependency with [POLICY011](../reference/rules.md), naming it. In your repository the validator checks elements and values only through the clusters in `fleet/` ([What `validate` runs](../develop/validation.md#what-validate-runs)).
+
+Elements you write yourself also go under `stack/`, without an answers file ([Writing an element](../develop/elements.md)).
+
+## Protect the repository
+
+1.  Protect `fleet/`. A fleet file decides which revision and layers a cluster reads, and a fleet file with `hub:` and `state: absent` makes the hub delete that cluster ([Cluster lifecycle](../concepts/lifecycle.md)). Clusters pinned to a branch also take every merge to `values/` and `stack/` on that branch, so if production follows `main`, own those paths too, or pin production to tags ([Rolling out changes](../guides/rollout.md#choosing-a-pin)). Write your own `CODEOWNERS`:
 
     ```text
     # .github/CODEOWNERS
     /fleet/ @<org>/<team>
     ```
 
-    The team needs write access to the fork. To protect only production, own `/fleet/prod-*.yaml` and `/fleet/hubs/` instead.
+    The team needs write access to the repository. To protect only production, own `/fleet/prod-*.yaml` and `/fleet/hubs/` instead.
 
-    Then add a ruleset on the default branch (**Settings > Rules > Rulesets**). A fork doesn't inherit upstream's, and without one nothing blocks a merge:
+2.  Add a ruleset on the default branch (**Settings > Rules > Rulesets**). Without one nothing blocks a merge:
 
     - Require a pull request with code owner review.
     - Require the status checks `ci` and `pr-title`. The picker lists only checks that have run, so open one PR first (the fleet PR in [Add the hub's fleet file](#add-the-hubs-fleet-file) works), or type the names.
     - Block force pushes and deletion.
+
+    These checks run on every PR ([CI workflows](../reference/ci.md), [Validator rules](../reference/rules.md)):
+
+    | Check | What it does for you |
+    |---|---|
+    | `ci` | Runs the lint hooks from `.pre-commit-config.yaml` (a hook that rewrites a file fails and prints the diff) and the [validator](../develop/validation.md). The validator renders every fleet cluster the way Argo CD will and checks the result, each fleet file and its `revision` (POLICY050, POLICY052), and every values key (POLICY035). |
+    | `pr-title` | The PR title must be a Conventional Commit, such as `feat: enable gitops on prod-east-1`. |
+    | Render Diff | On PRs to the default branch, comments the Policies each fleet cluster gains, loses or changes. It only reports and never blocks. |
 
 !!! warning "Label rights change what clusters run"
     Anyone who can label ManagedClusters or edit the cluster Secrets in `openshift-gitops` can switch a cluster to another fleet file. Keep both rights to hub admins ([Labels](../reference/fleet.md#labels)).
@@ -165,7 +192,7 @@ Argo CD reads only your fork. Upstream ships no fleet files and no live configur
 ## Install PolicyStack
 
 ??? info "Private repository: add a repository secret first"
-    Argo CD needs credentials to read a private repo ([Argo CD docs](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)). Without them the ApplicationSets can't read the fork and create no Applications.
+    Argo CD needs credentials to read a private repo ([Argo CD docs](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)). Without them the ApplicationSets can't read the repository and create no Applications.
 
     ```yaml
     apiVersion: v1
@@ -177,22 +204,21 @@ Argo CD reads only your fork. Upstream ships no fleet files and no live configur
         argocd.argoproj.io/secret-type: repository
     stringData:
       type: git
-      url: https://github.com/<org>/<fork>.git
+      url: https://github.com/<org>/<repo>.git
       username: <user>
       password: <token>  # (1)!
     ```
 
     1.  A fine-grained personal access token with read-only Contents access to this one repository.
 
-    Apply it with `oc apply -f -`. Never commit it to the fork.
+    Apply it with `oc apply -f -`. Never commit it.
 
 ```sh
 helm install policystack ./install -n openshift-gitops \
-  --set hubName=<hub> --set gitRepo=https://github.com/<org>/<fork>.git \
-  --description "$(git rev-parse --short HEAD)"
+  --set hubName=<hub> --set gitRepo=https://github.com/<org>/<repo>.git
 ```
 
-Both values are required and stored in the release; upgrades reuse them. `--description` records the commit, which [upgrades](../guides/upgrading.md#install-chart) compare against. The release creates ([Install chart](../reference/install.md)):
+Both values are required and stored in the release; upgrades reuse them. The release's chart version is the framework release it came from, which [upgrades](../guides/upgrading.md#install-chart) compare against. The release creates ([Install chart](../reference/install.md)):
 
 | Object | Why |
 |---|---|
@@ -232,7 +258,7 @@ revision: main  # (1)!
 
 1.  A branch the cluster follows, or a tag or SHA it stays on ([Revision](../reference/fleet.md#revision)). Name your default branch if it isn't `main`.
 
-PR it to the default branch and merge. Within about 6 minutes (the ApplicationSet polls Git every 3 minutes) every directory under `stack/` gets an Application named `<element>-<hub>`, 43 with the shipped catalog. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`.
+PR it to the default branch and merge. Within about 6 minutes (the ApplicationSet polls Git every 3 minutes) every directory under `stack/` gets an Application named `<element>-<hub>`, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`.
 
 ```sh
 oc get applications.argoproj.io -n openshift-gitops | grep <hub>  # (1)!
@@ -264,7 +290,7 @@ valueFiles:
 1.  Add `acm/<hub>.yaml` too if you wrote it under [Single node or disconnected hub](#install-the-operators).
 
 !!! warning "Listed layers apply at once, with `enforce`"
-    Every shipped element enforces by default, so the hub changes as soon as the PR merges. The upstream example layers turn elements on ([Example files](../concepts/values.md#example-files)). List only layers you wrote or reviewed, or put `global.remediationAction: inform` in `values/clusters/<hub>.yaml` to report without changing anything ([Dry run](../guides/rollout.md#dry-run)).
+    Every shipped element enforces by default, so the hub changes as soon as the PR merges. If you copied a layer from upstream's examples ([Example files](../concepts/values.md#example-files)), read it first: they turn elements on. Or put `global.remediationAction: inform` in `values/clusters/<hub>.yaml` to report without changing anything ([Dry run](../guides/rollout.md#dry-run)).
 
 Every `valueFiles` entry must exist at the revision. Argo CD skips a missing file silently, but CI fails the PR:
 

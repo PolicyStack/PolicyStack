@@ -1,0 +1,70 @@
+# One golden render per fixture values file. A diff in __snapshot__/ is a behaviour change: bump the
+# chart major if it changes output for values that did not opt in to a new key.
+suite: render snapshots
+templates:
+  - templates/policies.yaml
+release:
+  name: test
+tests:
+  - it: baseline (values.yaml)
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 1.3.0 element dependencies and a raw object list
+    release:
+      name: policy-stack-test-c1
+    values:
+      - ../values-1.3.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 1.2.0 dependencies and ordering
+    values:
+      - ../values-dependencies.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 2.0.0 placement
+    values:
+      - ../values-2.0.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 2.1.0 suffixTemplateNames
+    release:
+      name: policy-stack-test-c1
+    values:
+      - ../values-dependencies.yaml
+      - ../values-2.1.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 3.0.0 operatorPolicies map
+    values:
+      - ../values-3.0.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 3.3.0 hubTemplateOptions
+    values:
+      - ../values-3.3.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 3.4.0 global keys and mustnothave operator removal
+    values:
+      - ../values-3.4.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: 4.0.0 discovery, defaults, .Config, shapes, clusterMonitoring
+    values:
+      - ../values-4.0.yaml
+    asserts:
+      - matchSnapshot: {}
+
+  - it: policySets with usePolicySetsPlacements
+    values:
+      - ../values-policysets.yaml
+    asserts:
+      - matchSnapshot: {}

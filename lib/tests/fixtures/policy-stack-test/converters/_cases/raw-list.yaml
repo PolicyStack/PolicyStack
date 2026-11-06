@@ -1,0 +1,16 @@
+{{- /*
+Emits one object per entry in a values MAP, so the instance count comes from the values cascade.
+The output starts with "-", so it renders into object-templates-raw. The Helm range resolves at
+render time; the escaped braces survive to the managed cluster for ACM to evaluate.
+*/ -}}
+{{- range $zone, $cfg := .Config.zones }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    metadata:
+      name: {{ "{{" }} (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}-{{ $.Config.role }}-{{ $zone }}
+      namespace: openshift-machine-api
+    spec:
+      replicas: {{ $cfg.replicas }}
+{{- end }}

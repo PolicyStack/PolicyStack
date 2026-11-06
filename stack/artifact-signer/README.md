@@ -3,6 +3,8 @@
 
 Red Hat Trusted Artifact Signer for supply-chain signing
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   artifactSigner:

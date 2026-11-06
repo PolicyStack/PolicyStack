@@ -1,0 +1,753 @@
+# The 4.0 element contract: discovery, enabled, defaults, .Config, shape detection, ordering and
+# operator defaults. Each case layers over values.yaml.
+suite: element contract
+templates:
+  - templates/policies.yaml
+release:
+  name: test
+tests:
+  # Discovery
+  - it: discovers converters/<policy>/<template>.yaml and adds install for operators
+    documentSelector:
+      path: kind
+      value: Policy
+      matchMany: true
+    asserts:
+      - hasDocuments:
+          count: 3
+          filterAware: true
+      - containsDocument:
+          kind: Policy
+          apiVersion: policy.open-cluster-management.io/v1
+          name: base-test
+          any: true
+      - containsDocument:
+          kind: Policy
+          apiVersion: policy.open-cluster-management.io/v1
+          name: certs-test
+          any: true
+      - containsDocument:
+          kind: Policy
+          apiVersion: policy.open-cluster-management.io/v1
+          name: install-test
+          any: true
+
+  - it: names each ConfigurationPolicy <policy>-<template>
+    documentSelector:
+      path: metadata.name
+      value: certs-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 1
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: certs-bundle
+
+  - it: skips _ partials and _ directories
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 1
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: base-test-cm
+
+  - it: binds every discovered Policy
+    documentSelector:
+      path: kind
+      value: PlacementBinding
+    asserts:
+      - lengthEqual:
+          path: subjects
+          count: 3
+      - equal:
+          path: subjects[0].name
+          value: base-test
+      - equal:
+          path: subjects[1].name
+          value: certs-test
+      - equal:
+          path: subjects[2].name
+          value: install-test
+
+  - it: reuses a file, partials included, through file
+    set:
+      stack.policyStackTest.policies.extra.templates:
+        copy:
+          file: base/test-cm
+        note:
+          file: base/_note
+    documentSelector:
+      path: metadata.name
+      value: extra-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: extra-copy
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: extra-note
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata.name
+          value: test-cm
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.spec.object-templates[0].objectDefinition.metadata.name
+          value: note
+
+  - it: concatenates the objects of a file list in order
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file:
+        - certs/bundle
+        - base/test-cm
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata.name
+          value: trusted-ca
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[1].objectDefinition.metadata.name
+          value: testcm
+
+  # Enabled by default
+  - it: drops a policy with enabled false from Policies and the binding
+    set:
+      stack.policyStackTest.policies.certs.enabled: false
+    asserts:
+      - notContains:
+          path: subjects
+          content:
+            apiGroup: policy.open-cluster-management.io
+            kind: Policy
+            name: certs-test
+        documentSelector:
+          path: kind
+          value: PlacementBinding
+      - hasDocuments:
+          count: 2
+          filterAware: true
+        documentSelector:
+          path: kind
+          value: Policy
+          matchMany: true
+
+  - it: drops a template with enabled false
+    set:
+      stack.policyStackTest.policies.base.templates.second:
+        file: base/_note
+      stack.policyStackTest.policies.base.templates.test-cm.enabled: false
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 1
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: base-second
+
+  - it: renders no Policy when every template is off
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.enabled: false
+    asserts:
+      - notContains:
+          path: subjects
+          content:
+            apiGroup: policy.open-cluster-management.io
+            kind: Policy
+            name: base-test
+        documentSelector:
+          path: kind
+          value: PlacementBinding
+      - hasDocuments:
+          count: 2
+          filterAware: true
+        documentSelector:
+          path: kind
+          value: Policy
+          matchMany: true
+
+  - it: drops an operator with enabled false, and install with it when it is the last
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.enabled: false
+    asserts:
+      - notContains:
+          path: subjects
+          content:
+            apiGroup: policy.open-cluster-management.io
+            kind: Policy
+            name: install-test
+        documentSelector:
+          path: kind
+          value: PlacementBinding
+      - hasDocuments:
+          count: 2
+          filterAware: true
+        documentSelector:
+          path: kind
+          value: Policy
+          matchMany: true
+
+  - it: drops install when a layer nulls the last operator, even if values declare it
+    set:
+      stack.policyStackTest.policies.install.description: x
+      stack.policyStackTest.operatorPolicies.oadp: null
+    asserts:
+      - notContains:
+          path: subjects
+          content:
+            apiGroup: policy.open-cluster-management.io
+            kind: Policy
+            name: install-test
+        documentSelector:
+          path: kind
+          value: PlacementBinding
+      - hasDocuments:
+          count: 2
+          filterAware: true
+        documentSelector:
+          path: kind
+          value: Policy
+          matchMany: true
+
+  - it: renders the remaining operators when one is off
+    values:
+      - ../values-3.0.yaml
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.enabled: false
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 3
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: install-cert-manager-ns
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: install-cert-manager-status
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.metadata.name
+          value: install-cert-manager
+
+  # Defaults: entry -> policy -> default -> inform/low
+  - it: falls back to inform and low
+    documentSelector:
+      path: metadata.name
+      value: certs-test
+    asserts:
+      - equal:
+          path: spec.remediationAction
+          value: inform
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.remediationAction
+          value: inform
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.severity
+          value: low
+
+  - it: takes default when the policy sets nothing
+    set:
+      stack.policyStackTest.default.remediationAction: enforce
+      stack.policyStackTest.default.severity: high
+    documentSelector:
+      path: metadata.name
+      value: certs-test
+    asserts:
+      - equal:
+          path: spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.severity
+          value: high
+
+  - it: prefers the policy over default
+    set:
+      stack.policyStackTest.default.remediationAction: inform
+      stack.policyStackTest.default.severity: high
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.severity
+          value: medium
+
+  - it: prefers the template severity over the policy
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.severity: critical
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.severity
+          value: critical
+
+  - it: keeps an InformOnly template under an enforce Policy
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.remediationAction: InformOnly
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.remediationAction
+          value: InformOnly
+
+  - it: lets global.remediationAction override the Policy action only
+    set:
+      global.remediationAction: inform
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.remediationAction
+          value: inform
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.remediationAction
+          value: enforce
+
+  - it: gives operators the install Policy's action and severity
+    set:
+      stack.policyStackTest.policies.install.remediationAction: enforce
+      stack.policyStackTest.policies.install.severity: high
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.remediationAction
+          value: enforce
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.severity
+          value: high
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.spec.remediationAction
+          value: inform
+
+  - it: waitForOperator implies ignorePending
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: oadp
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].ignorePending
+          value: true
+      - equal:
+          path: spec.policy-templates[0].extraDependencies[0].name
+          value: install-oadp-status
+
+  - it: lets ignorePending false win over waitForOperator
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: oadp
+      stack.policyStackTest.policies.base.templates.test-cm.ignorePending: false
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - notExists:
+          path: spec.policy-templates[0].ignorePending
+
+  # .Config
+  - it: reads element config as .Config
+    set:
+      stack.policyStackTest.config:
+        name: element-cm
+        value1: element
+    documentSelector:
+      path: metadata.name
+      value: certs-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata.name
+          value: trusted-ca
+
+  - it: merges templates.<t>.config over element config
+    set:
+      stack.policyStackTest.config:
+        name: element-cm
+        value1: element
+      stack.policyStackTest.policies.base.templates.test-cm.config: null
+      stack.policyStackTest.policies.base.templates.override:
+        file: base/test-cm
+        config:
+          value1: template
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition
+          value:
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: element-cm
+              namespace: default
+            data:
+              value1: template
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.spec.object-templates[0].objectDefinition.data.value1
+          value: element
+
+  # Shape detection
+  - it: renders a single object into object-templates
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 1
+      - notExists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+
+  - it: drops an empty --- document
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/multi
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 1
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata.name
+          value: multi-a
+
+  - it: splits on column-0 --- only, one object per document
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/multi
+      stack.policyStackTest.policies.base.templates.test-cm.config.second: true
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[1].objectDefinition.metadata.name
+          value: testcm
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[1].objectDefinition.data.key
+          value: a---b
+
+  - it: treats output that starts with --- as documents, not a raw list
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/range-docs
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[1].objectDefinition.metadata.name
+          value: range-b
+      - notExists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+
+  - it: applies template object options to every document
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/multi
+      stack.policyStackTest.policies.base.templates.test-cm.config.second: true
+      stack.policyStackTest.policies.base.templates.test-cm.complianceType: mustonlyhave
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].complianceType
+          value: mustonlyhave
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[1].complianceType
+          value: mustonlyhave
+
+  - it: renders a list into object-templates-raw
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/raw-list
+      stack.policyStackTest.policies.base.templates.test-cm.config:
+        role: infra
+        zones:
+          a:
+            replicas: 1
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - notExists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+      - matchRegex:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+          pattern: '^- complianceType: musthave\n'
+
+  - it: renders output that starts with an ACM template into object-templates-raw
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/acm-first
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - matchRegex:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+          pattern: '^\{\{- range \$ns := \(lookup "v1" "Namespace" "" ""\)\.items \}\}\n'
+
+  - it: renders empty output as an empty raw list
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/empty
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+          value: |
+            []
+
+  - it: renders a raw list from a single-entry file list
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file:
+        - _cases/acm-first
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - exists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+
+  - it: ignores YAML comments when picking the shape and drops comment-only documents
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/comments
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - notExists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates
+      - matchRegex:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates-raw
+          pattern: '^# one Namespace\n- complianceType: musthave\n'
+
+  # orderManifests
+  - it: renders orderManifests first, in list order, then the rest by name, all chained
+    set:
+      stack.policyStackTest.policies.base.orderManifests:
+        - zz
+        - test-cm
+      stack.policyStackTest.policies.base.templates.aa:
+        file: base/_note
+      stack.policyStackTest.policies.base.templates.zz:
+        file: base/_note
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 3
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: base-zz
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: base-test-cm
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.metadata.name
+          value: base-aa
+      - notExists:
+          path: spec.policy-templates[0].extraDependencies
+      - equal:
+          path: spec.policy-templates[1].extraDependencies[0].name
+          value: base-zz
+      - equal:
+          path: spec.policy-templates[2].extraDependencies[0].name
+          value: base-test-cm
+
+  - it: does not chain templates without orderManifests
+    set:
+      stack.policyStackTest.policies.base.templates.aa:
+        file: base/_note
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 2
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: base-aa
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: base-test-cm
+      - notExists:
+          path: spec.policy-templates[1].extraDependencies
+
+  - it: skips a disabled template in the chain
+    set:
+      stack.policyStackTest.policies.base.orderManifests:
+        - aa
+        - bb
+        - test-cm
+      stack.policyStackTest.policies.base.templates.aa:
+        file: base/_note
+      stack.policyStackTest.policies.base.templates.bb:
+        file: base/_note
+        enabled: false
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[1].extraDependencies[0].name
+          value: base-aa
+
+  # Operators
+  - it: defaults source, sourceNamespace, upgradeApproval and the OperatorGroup name
+    values:
+      - ../values-3.0.yaml
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.operatorGroup
+          value:
+            name: openshift-cert-manager-operator
+            namespace: cert-manager-operator
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.source
+          value: redhat-operators
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.sourceNamespace
+          value: openshift-marketplace
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.upgradeApproval
+          value: Automatic
+
+  - it: keeps explicit source, sourceNamespace and upgradeApproval
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.subscription.source: certified-operators
+      stack.policyStackTest.operatorPolicies.oadp.subscription.sourceNamespace: custom-marketplace
+      stack.policyStackTest.operatorPolicies.oadp.upgradeApproval: None
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.source
+          value: certified-operators
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.sourceNamespace
+          value: custom-marketplace
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.upgradeApproval
+          value: None
+
+  - it: remaps the default source through global.catalogSources
+    set:
+      global.catalogSources:
+        redhat-operators: cs-redhat-operator-index-v4-20
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.source
+          value: cs-redhat-operator-index-v4-20
+
+  - it: remaps an explicit source through global.catalogSources
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.subscription.source: certified-operators
+      global.catalogSources:
+        redhat-operators: cs-redhat-operator-index-v4-20
+        certified-operators: cs-certified-operator-index-v4-20
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.spec.subscription.source
+          value: cs-certified-operator-index-v4-20
+
+  - it: clusterMonitoring labels the operator Namespace
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.clusterMonitoring: true
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata
+          value:
+            name: openshift-adp
+            labels:
+              openshift.io/cluster-monitoring: "true"
+
+  - it: leaves the operator Namespace unlabelled by default
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - notExists:
+          path: spec.policy-templates[0].objectDefinition.spec.object-templates[0].objectDefinition.metadata.labels
+
+  - it: renders install templates before its operators
+    set:
+      stack.policyStackTest.policies.install.templates.prereq:
+        file: base/test-cm
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - lengthEqual:
+          path: spec.policy-templates
+          count: 4
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: install-prereq
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: install-oadp-ns
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.metadata.name
+          value: install-oadp-status
+      - equal:
+          path: spec.policy-templates[3].objectDefinition.metadata.name
+          value: install-oadp

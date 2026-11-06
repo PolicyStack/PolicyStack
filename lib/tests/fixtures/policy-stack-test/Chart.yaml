@@ -1,0 +1,10 @@
+apiVersion: v2
+name: policy-stack-test
+description: Fixture chart used to render policy-library for local verification
+type: application
+version: 0.1.0
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "4.x.x"
+    repository: "file://../../../policy-library"

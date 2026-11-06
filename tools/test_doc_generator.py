@@ -215,6 +215,25 @@ class RenderTest(Fixture):
     def test_no_guide_without_home(self):
         self.assertNotIn("Guide:", self.render())
 
+    def test_stability(self):
+        md = self.render(
+            chart="name: el\nannotations:\n  policystk.io/stability: preview\n"
+        )
+        self.assertIn(
+            "\n\nStability: preview ([Compatibility](https://policystk.io/"
+            "reference/compatibility/#element-stability))\n\n",
+            md,
+        )
+
+    def test_no_stability_without_annotation(self):
+        self.assertNotIn("Stability:", self.render(chart="name: el\nannotations:\n"))
+
+    def test_unknown_stability(self):
+        with self.assertRaisesRegex(ValueError, "policystk.io/stability is 'beta'"):
+            self.render(
+                chart="name: el\nannotations:\n  policystk.io/stability: beta\n"
+            )
+
     def test_names_and_dependencies(self):
         md = self.render()
         self.assertIn(
@@ -552,10 +571,33 @@ class MainTest(Fixture):
         self.assertTrue((self.el / "README.md").exists())
         self.assertEqual(self.run_main("--element", "missing"), 1)
 
+    def test_tracked_element_skipped(self):
+        # A copier-tracked element keeps upstream's README, even a stale one.
+        (self.el / ".copier-answers.yml").write_text("_commit: v1.0.0\n")
+        (self.el / "README.md").write_text("upstream\n")
+        self.assertEqual(self.run_main(), 0)
+        self.assertEqual(self.run_main("--check"), 0)
+        self.assertEqual((self.el / "README.md").read_text(), "upstream\n")
+        # --element still generates it on request.
+        self.assertEqual(self.run_main("--element", "el"), 0)
+        self.assertNotEqual((self.el / "README.md").read_text(), "upstream\n")
+
     def test_element_without_values_skipped(self):
         (self.root / "empty").mkdir()
         self.assertEqual(self.run_main(), 0)
         self.assertFalse((self.root / "empty" / "README.md").exists())
+
+    def test_missing_stack_dir(self):
+        def main(*args):
+            with contextlib.redirect_stdout(io.StringIO()):
+                return doc_generator.main(list(args))
+
+        # A framework copy before its first element: nothing to do.
+        with contextlib.chdir(self.root / "el"):
+            self.assertEqual(main(), 0)
+            self.assertEqual(main("--check"), 0)
+            self.assertEqual(main("--element", "el"), 1)
+        self.assertEqual(self.run_main("--stack-dir", str(self.root / "nope")), 1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,51 @@
+# copier template for adopting PolicyStack (docs/start/install.md). One vX.Y.Z tag line, two scopes,
+# each with its own answers file: the framework, copied to the repository root, and one element,
+# copied to stack/<element> with -d element=<element>.
+# No _tasks, _migrations or Jinja extensions, so copier runs it without --trust. Only
+# *.jinja files are rendered (the answers files), so Helm templates are copied verbatim.
+_min_copier_version: "9.18.0" # an _exclude entry holding several patterns
+
+element:
+  type: str
+  default: ""
+  help: stack/ element to copy; empty copies the framework
+
+_subdirectory: "{{ 'stack/' ~ element if element else '.' }}"
+
+# Patterns match paths relative to _subdirectory, so the root-only list applies to the framework
+# scope alone. Setting _exclude replaces copier's defaults: the first four entries keep them.
+_exclude:
+  - .git
+  - copier.yml
+  - __pycache__
+  - "*.py[co]"
+  # Elements come per element, docs and examples stay upstream, and adopter-owned paths are never
+  # written. Upstream test data is left out too: tools/validator's Makefile and Go tests run in
+  # upstream.yml only.
+  - |
+    {% if not element %}
+    /stack
+    /fleet
+    /values
+    /README.md
+    /CHANGELOG.md
+    /CLAUDE.md
+    /renovate.json
+    /.release-please
+    /.github/CODEOWNERS
+    /.github/workflows/upstream.yml
+    /docs
+    /site
+    /zensical.toml
+    /diagrams
+    /lib/ct.yaml
+    /lib/tests
+    /tools/requirements-docs.txt
+    /tools/test_doc_generator.py
+    /tools/validator/testdata/clusters
+    /tools/validator/testdata/inputs.yaml
+    /tools/validator/testdata/profiles
+    {% endif %}
+
+# No _skip_if_exists: copier 9.19 renders it before the answers load, so a pattern that depends on
+# `element` also matches stack/<element>/values.yaml and drops the adopter's edits on update.

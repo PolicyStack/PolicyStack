@@ -1,0 +1,13 @@
+# chart-testing config for the policy-library chart: `ct lint --config lib/ct.yaml` from the repo root.
+target-branch: main
+chart-dirs:
+  - lib
+# A changed chart without a version bump fails here.
+check-version-increment: true
+# Fails on lint warnings too. ct runs helm lint itself, so CI has no separate step.
+helm-lint-extra-args: --strict
+# Checks maintainer names against the GitHub API; Chart.yaml lists the team, not an account.
+validate-maintainers: false
+# yamllint needs a values.yaml, which a library chart does not have. Chart.yaml is still
+# checked against ct's schema.
+validate-yaml: false

@@ -3,6 +3,8 @@
 
 Dedicated storage nodes for OpenShift Data Foundation
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   storageNodes:

@@ -1,8 +1,8 @@
 # PolicyStack
 
-PolicyStack configures OpenShift clusters from Git through Red Hat Advanced Cluster Management (ACM) governance policies. It is for admins who run an ACM hub and want every cluster's operators and settings reviewed in Git, rolled out cluster by cluster, and reported as compliant or not. It adds no controller of its own: a Helm chart points the hub's OpenShift GitOps (Argo CD) at your fork, and ACM does the rest.
+PolicyStack configures OpenShift clusters from Git through Red Hat Advanced Cluster Management (ACM) governance policies. It is for admins who run an ACM hub and want every cluster's operators and settings reviewed in Git, rolled out cluster by cluster, and reported as compliant or not. It adds no controller of its own: a Helm chart points the hub's OpenShift GitOps (Argo CD) at your repository, and ACM does the rest.
 
-You fork the repository, describe each cluster in it, and turn on the elements you want. An element is a Helm chart under `stack/` that configures one product, such as cert-manager, MetalLB or the Compliance Operator.
+You create your own repository from PolicyStack's releases with copier, describe each cluster in it, and turn on the elements you want. An element is a Helm chart under `stack/` that configures one product, such as cert-manager, MetalLB or the Compliance Operator.
 
 ## How it works
 
@@ -12,7 +12,7 @@ You fork the repository, describe each cluster in it, and turn on the elements y
 
 ```mermaid
 flowchart LR
-  subgraph git["Your fork"]
+  subgraph git["Your repository"]
     fleet["fleet/#lt;cluster#gt;.yaml"]
     stack["stack/#lt;element#gt;/"]
     vals["values files"]
@@ -61,7 +61,7 @@ The install chart also creates a second ApplicationSet, `policystack-lifecycle`,
 
 | Section | Read it when | Start at |
 |---|---|---|
-| Get started | You set up your fork and a hub, then onboard a cluster | [Installation](start/install.md) |
+| Get started | You create your repository and set up a hub, then onboard a cluster | [Installation](start/install.md) |
 | Concepts | You want to know how the parts fit and why | [How PolicyStack works](concepts/overview.md) |
 | Guides | You run a hub: rollouts, operator versions, building clusters, upgrades | [Rolling out changes](guides/rollout.md) |
 | Elements | You configure an element | Its [`stack/<element>/README.md`](https://github.com/PolicyStack/PolicyStack/tree/main/stack) on GitHub; [ACS](elements/acs.md) and [Compliance](elements/compliance.md) have guides |

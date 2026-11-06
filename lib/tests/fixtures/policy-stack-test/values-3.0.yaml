@@ -1,0 +1,19 @@
+# Exercises chart 3.0.0: operatorPolicies is a map. Layered over values.yaml.
+# Pins oadp without restating it (mid two-step bump: old and new CSV both allowed), and adds an
+# operator with only the required keys: source, sourceNamespace, upgradeApproval and the
+# OperatorGroup name take the library defaults.
+stack:
+  policyStackTest:
+    operatorPolicies:
+      oadp:
+        subscription:
+          startingCSV: oadp-operator.v1.4.1
+        versions:
+          - oadp-operator.v1.4.1
+          - oadp-operator.v1.4.2
+
+      cert-manager:
+        namespace: cert-manager-operator
+        subscription:
+          channel: stable-v1
+          name: openshift-cert-manager-operator

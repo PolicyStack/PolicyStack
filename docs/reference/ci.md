@@ -1,36 +1,41 @@
 # CI workflows
 
-PolicyStack's GitHub Actions workflows live in `.github/workflows/`. They run in
-upstream PolicyStack and, unchanged, in your fork, the copy of PolicyStack your hubs read.
-For an adopter, the checks that cover real clusters are the `fleet/` pass of
-[Policy Validate](#policy-validate) and [Render Diff](#render-diff); the rest guard the framework.
+PolicyStack's GitHub Actions workflows live in `.github/workflows/`. Four of them check a fleet
+repository and run unchanged in yours: copier copies them with the framework, and framework updates
+change them, so don't edit them ([Tiers](compatibility.md#tiers)). [Upstream](#upstream) (`upstream.yml`) checks PolicyStack
+itself and runs only in upstream PolicyStack. For an adopter, the checks that cover real clusters are
+the `fleet/` pass of [Policy Validate](#policy-validate) and [Render Diff](#render-diff); the rest
+guard the framework.
 
-| Workflow | Trigger | Fails when | In your fork |
-| -------- | ------- | ---------- | ------------ |
-| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook, the validator, a validator test, the doc generator tests or the site build fails | Runs. Its `publish` job is skipped |
+| Workflow | Trigger | Fails when | In your repository |
+| -------- | ------- | ---------- | ------------------ |
+| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook or the validator fails | Runs |
 | [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit | Runs |
-| [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI, and by PR CI in PolicyStack-chart (the repo of the policy-library chart) | A validator error, a bad fleet pin, a broken install chart, a failing test | Runs, including the `fleet/` pass |
-| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in a fork |
+| [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart | Runs, including the `fleet/` pass |
+| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
+| [Upstream](#upstream) (`upstream.yml`) | Every PR and `main` push | The policy-library lint or tests, a validator lint or test, a stale CRD, the doc generator tests or the site build fails | Absent: copier leaves it out |
 
-A new push to a PR cancels its running CI and Render Diff checks. CI and Policy Validate can also be
-started from the Actions tab.
+A new push to a PR cancels its running CI, Upstream and Render Diff checks. CI, Upstream and Policy
+Validate can also be started from the Actions tab.
 
 ## Required checks
 
 A required check is one GitHub won't let a PR merge without. `ci` and `pr-title` are the required
 checks for `main`, set in a GitHub repository ruleset. Rulesets live in the repository settings, not
-in the repo, so a fork doesn't inherit them: without one, a red PR still merges.
-
-Enable Actions on the fork first (Actions tab): GitHub doesn't run workflows on a new fork, and a
-required check that never runs blocks every PR. Then create a branch ruleset on the default branch
-that requires the status checks `ci` and `pr-title`
-([Set up your fork](../start/install.md#set-up-your-fork) has the steps, plus code owner review on
-`fleet/`). The ruleset matches checks by job name, so renaming `ci` or `pr-title` leaves PRs waiting
+in the files copier copies, so your repository has none until you add one: without it, a red PR
+still merges. Create a branch ruleset on the default branch that requires the status checks `ci`
+and `pr-title` ([Protect the repository](../start/install.md#protect-the-repository) has the steps,
+plus code owner review on `fleet/`). The ruleset matches checks by job name, so renaming `ci` or `pr-title` leaves PRs waiting
 on a check that never reports.
 
 `ci` is the last job in `ci.yml`. It always runs and fails if any job it needs failed, was cancelled
 or was skipped ([alls-green](https://github.com/re-actors/alls-green)). A new job goes in its
 `needs`, not in the ruleset.
+
+Upstream PolicyStack's ruleset requires a third check, `upstream`, the same kind of last job in
+`upstream.yml`. A job in one workflow can't wait on a job in another, and `ci.yml` can't call
+`upstream.yml` because that file is missing from your repository, so upstream PRs are gated by the
+two checks together.
 
 !!! note
     No gating workflow has a `paths` filter. A required check whose workflow is skipped by `on.paths`
@@ -40,11 +45,9 @@ or was skipped ([alls-green](https://github.com/re-actors/alls-green)). A new jo
 
 | Job | Runs |
 | --- | ---- |
-| `lint` | `prek run --all-files --show-diff-on-failure`: the [hooks](#hooks) in `.pre-commit-config.yaml` |
+| `lint` | `prek run --all-files --show-diff-on-failure`: the [hooks](#hooks) in `.pre-commit-config.yaml`. It installs only the hooks' tools from `mise.toml` |
 | `validate` | [Policy Validate](#policy-validate) |
-| `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
-| `ci` | The required check over `lint`, `validate` and `docs` |
-| `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `ci`: the site to `gh-pages` |
+| `ci` | The required check over `lint` and `validate` |
 
 Tool versions come from `mise.toml`. Run the same checks locally: [Setup](../contributing.md#setup).
 
@@ -55,15 +58,17 @@ prek is a pre-commit-compatible hook runner, installed by `mise install`. It rea
 
 | Hook | Checks |
 | ---- | ------ |
-| `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins |
+| `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins. `check-merge-conflict` runs with `--assume-in-merge`, so it also fails the conflict markers a `copier update` commits |
 | `actionlint` (workflow syntax), `zizmor` (workflow security audit) | Workflows. zizmor runs offline |
 | `shellcheck` | Shell scripts |
 | `ruff-check`, `ruff-format` | `tools/*.py` |
-| `validator-lint` | `make -C tools/validator lint`: golangci-lint, `go mod tidy -diff`, govulncheck |
-| `element-readmes` | Regenerates `stack/*/README.md` ([Element reference](../develop/elements.md#element-reference)) |
+| `element-readmes` | Regenerates `stack/*/README.md`, except for elements with a `.copier-answers.yml`: their README is upstream's ([Element reference](../develop/elements.md#element-reference)) |
 | `lychee` | Link checker: relative links in `docs/`, offline |
 
-Every hook skips `templates/`, `converters/` and `__snapshot__/`: they are YAML only once rendered.
+`check-yaml`, `trailing-whitespace`, `end-of-file-fixer` and `check-added-large-files` skip
+`templates/`, `converters/` and `__snapshot__/`, which are YAML only once rendered.
+`check-merge-conflict` checks them too. Every hook skips `tools/validator/crds/`, which holds
+upstream's files as fetched.
 
 A hook that rewrites a file (`trailing-whitespace`, `end-of-file-fixer`, `ruff-format`,
 `element-readmes`) fails. Commit what it wrote:
@@ -75,6 +80,21 @@ git add -u             # stage the rewritten files; add a new element's README b
 
 !!! tip
     `prek install` runs the hooks on every commit.
+
+## Upstream
+
+`upstream.yml` checks PolicyStack itself (the library, the validator code and the docs site), then
+publishes the site and cuts releases. It runs on every PR and `main` push in upstream PolicyStack. copier leaves it out of an adopter's copy, so
+none of this runs there.
+
+| Job | Runs |
+| --- | ---- |
+| `library` | policy-library in `lib/`: `ct lint --config lib/ct.yaml`, which fails a change to `lib/policy-library` without a `version` bump and runs `helm lint --strict`; then the helm-unittest suites in `lib/tests` (`untt --strict`), failing on a snapshot that is not committed ([Library changes](../contributing.md#library-changes)) |
+| `validator` | `make -C tools/validator lint` (golangci-lint, `go mod tidy -diff`, govulncheck) and `test`; then `make crds`, failing when `tools/validator/crds/` differs from the files the Makefile pins ([CRD schemas](../develop/validation.md#crd-schemas)) |
+| `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
+| `upstream` | The required check over `library`, `validator` and `docs` |
+| `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: the site to `gh-pages` |
+| `release` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: release-please opens or updates the release PR and, once it merges, tags it `vX.Y.Z` ([Releases](../contributing.md#releases)) |
 
 ### Documentation site
 
@@ -101,17 +121,19 @@ digits, `-`) and `!` (breaking) are optional.
 ```text
 feat(validator): real POLICY080       # ok
 fix!: rename hubName                  # ok
+feat(odf): breaking: rename config.pools  # ok: preview break, a minor
 Revert "feat: add metallb"            # fails: retitle to revert: feat: add metallb
 ```
 
-Editing the title re-runs the check. In a fork, PR titles become the notes of your own release
-tags the same way (`gh release create --generate-notes`); if you don't cut releases, drop
-`pr-title` from your ruleset.
+Editing the title re-runs the check. Upstream, release-please reads the squash commits to pick each
+release's version and write its notes ([Releases](../contributing.md#releases)). In your repository
+the titles only keep history readable; if you don't want the check, drop `pr-title` from your
+ruleset.
 
 ## Policy Validate
 
-Runs the [validator](../develop/validation.md) and its tests. Findings are annotated on the PR at
-the file and line to fix. Errors fail the job, warnings only annotate.
+Runs the [validator](../develop/validation.md). Findings are annotated on the PR at the file and
+line to fix. Errors fail the job, warnings only annotate.
 
 The job runs twice. The leg that counts uses the Helm in `mise.toml`, 3.18.4: Argo CD renders every
 element with the Helm bundled in OpenShift GitOps, and OpenShift GitOps 1.18, the oldest PolicyStack
@@ -123,31 +145,35 @@ becomes required when Argo CD 3.5 ships in OpenShift GitOps or Helm 3 reaches en
 
 ```sh
 make -C tools/validator validate   # (1)!
-make -C tools/validator test       # (2)!
 ```
 
 1.  Three validator passes ([What `validate` runs](../develop/validation.md#what-validate-runs)).
-    POLICY080 needs the [CRDs](../develop/validation.md#crd-schemas), cached between runs.
-2.  Last, so a failing test does not hide the annotations. Helm 3 leg only.
+    POLICY080 reads the committed [CRDs](../develop/validation.md#crd-schemas), so the job needs no
+    network beyond Go modules.
 
 !!! note
     The Helm floor in `mise.toml` moves only when the supported OpenShift GitOps floor does
-    ([Installation](../start/install.md)). Renovate does not bump it.
+    ([Installation](../start/install.md)). Upstream's Renovate does not bump it.
 
 ### Your fleet (POLICY052)
 
 The `fleet/` pass renders your fleet files from the PR's tree, not each file's `revision`: a cluster
 pinned to tag `v1.0` is validated against the PR's code. POLICY052 checks the pin itself: that it
-resolves and that its commit has what the fleet file uses ([Revision](fleet.md#revision)). To see what a pinned cluster actually gets, read
+resolves and that its commit has what the fleet file uses ([Revision](fleet.md#revision)). In a
+copier copy it also reads the framework release in `.copier-answers.yml` at that commit: a revision
+a major newer than the PR's, or more than one major older, fails, since the hub's install chart
+renders only its own major and the one before. To see what a pinned cluster actually gets, read
 [Render Diff](#render-diff).
 
 ### Install chart (POLICY071)
 
-`install/` is run by hand on each hub, so nothing else renders it. The check fails when:
+`install/` is run by hand on each hub, so nothing else renders it. Upstream checks it in the
+fixtures pass; your repository checks it in the `fleet/` pass, so only once `fleet/` has a file.
+It reads `stack/acm` and `stack/gitops`, which every repository needs. The check fails when:
 
 - `helm lint install` fails.
 - `helm template install` succeeds with an empty `hubName` or `gitRepo`. Neither has a usable
-  default: `hubName` picks the hub's own fleet file and the clusters it builds, `gitRepo` is the fork Argo CD reads.
+  default: `hubName` picks the hub's own fleet file and the clusters it builds, `gitRepo` is the repository Argo CD reads.
 - `policyNamespace` differs between `install/values.yaml` and `values.yaml`, which the elements read.
 - An ApplicationSet (or its Application template), the GitOpsCluster or its Placement lacks
   `velero.io/exclude-from-backup: "true"`. ACM backup restores onto a passive hub, where a restored
@@ -155,18 +181,10 @@ resolves and that its commit has what the fleet file uses ([Revision](fleet.md#r
 - `install/operators` doesn't render the ACM and GitOps operators plus a MultiClusterHub
   ([Installation](../start/install.md)).
 
-### Chart PRs
-
-PolicyStack-chart's PR CI calls this workflow with `library-artifact` (the PR's
-`charts/policy-library`) and runs `make -C tools/validator consumers` on PolicyStack `main`
-([Chart changes](../contributing.md#chart-changes)). The test step is skipped, so a chart PR that
-adds a key doesn't fail on PolicyStack's tests. POLICY071 still runs; `install/` does not use
-policy-library.
-
 ## Render Diff
 
 Comments on the PR with what the merge changes in each `fleet/` cluster's rendered Policies. Upstream
-ships no fleet files, so this only does something in a fork. It never blocks a merge.
+ships no fleet files, so this only does something in your repository. It never blocks a merge.
 
 ```markdown
 ### Fleet render: 3 cluster(s) change
@@ -176,7 +194,7 @@ ships no fleet files, so this only does something in a fork. It never blocks a m
 
 | Cluster | Revision | Changes |
 |---|---|---|
-| `prod-east-1` | `main` | user-monitoring: 1 Policy changed |
+| `prod-east-1` | `main` | user-monitoring: 1 Policy changed<br>metallb: 1 Policy added, 1 Policy removed<br>metallb: removes Policy `config-metallb-prod-east-1` |
 | `nonprod-west-1` | `v1.0.0` → `main` | metallb: **render failed** |
 | `edge-2` | new at `main` | 6 elements, 21 objects added |
 ```
@@ -199,7 +217,9 @@ from Policy Validate.
 
 Below the table, each cluster gets one collapsed block holding a diff per
 changed element, or the Helm error. `render fixed` means the element failed at the cluster's revision
-before the merge and renders now. An element that fails the same way on both sides is not listed. A
+before the merge and renders now. `removes Policy` names each Policy the merge deletes from the hub,
+renames included: ACM names can't change, so a renamed Policy is deleted and recreated and starts its
+compliance history over. An element that fails the same way on both sides is not listed. A
 cluster added or removed shows totals only. A warning above the table flags a fleet file whose
 `revision` doesn't resolve or that the validator can't load at all. If it merges anyway, the
 ApplicationSet can't build its list of Applications: it deletes nothing, but no change reaches any
@@ -210,17 +230,17 @@ push that changes nothing deletes it.
 
 !!! info "Limits"
     - Comments stop near 60,000 characters. The full patch is the run's `render-diff.patch` artifact.
-    - A PR from another repository (a contributor's own fork of yours) gets a read-only token, so
+    - A PR from another repository (a personal fork of yours) gets a read-only token, so
       the result goes to the job summary instead of a comment.
     - About 30 seconds per distinct commit rendered.
 
 ## Dependencies
 
-Renovate is a bot that opens dependency update PRs. Its config is the org preset
-`renovate-config.json` in [`PolicyStack/.github`](https://github.com/PolicyStack/.github);
-`renovate.json` only extends it. Renovate runs only where its GitHub App is installed. In a fork you
-can leave it off: policy-library and tool bumps arrive when you
-[merge upstream](../guides/upgrading.md#merge-upstream).
+Upstream, Renovate, a bot that opens dependency update PRs, bumps everything in the table below.
+Its config is the org preset `renovate-config.json` in
+[`PolicyStack/.github`](https://github.com/PolicyStack/.github), which upstream's `renovate.json`
+extends. copier doesn't copy that file, and your repository runs no bot: the pins below reach you
+with framework updates ([Upgrading PolicyStack](../guides/upgrading.md)).
 
 | Pinned in | What |
 | --------- | ---- |
@@ -228,5 +248,7 @@ can leave it off: policy-library and tool bumps arrive when you
 | `tools/validator/go.mod` | Go libraries and `govulncheck` (`go tool`) |
 | `tools/requirements*.txt` | PyYAML, Zensical |
 | `.github/workflows/` | Actions, by commit SHA |
-| `tools/validator/Makefile` | The CRD source SHAs ([CRD schemas](../develop/validation.md#crd-schemas)) |
-| `stack/*/Chart.yaml`, `lifecycle/`, `tools/sample-element/`, `tools/validator/internal/chart/testdata/element/` | policy-library, bumped together in one PR after a chart release ([Chart changes](../contributing.md#chart-changes)) |
+| `tools/validator/Makefile` | The CRD source SHAs. A bump needs `make crds` and the refetched `tools/validator/crds/` committed on the PR ([CRD schemas](../develop/validation.md#crd-schemas)) |
+
+policy-library is not a dependency Renovate moves: it is `lib/policy-library` in this repo, and
+elements declare a floor on it ([Library changes](../contributing.md#library-changes)).

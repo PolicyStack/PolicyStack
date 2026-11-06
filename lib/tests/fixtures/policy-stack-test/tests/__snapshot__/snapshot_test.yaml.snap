@@ -1,0 +1,2416 @@
+1.2.0 dependencies and ordering:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - ignorePending: true
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: enforce
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: enforce
+  4: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: workloads-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      dependencies:
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: cluster-bootstrap-platform-base
+          namespace: open-cluster-management
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: hand-made-policy
+          namespace: open-cluster-management
+      disabled: false
+      policy-templates:
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: ConfigurationPolicy
+              name: install-oadp-status
+            - apiVersion: policy.open-cluster-management.io/v1beta1
+              compliance: Compliant
+              kind: OperatorPolicy
+              name: install-oadp
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: Policy
+              name: some-prereq-policy-test
+              namespace: open-cluster-management
+          ignorePending: true
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: workloads-dpa
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: dpa
+                    kind: ConfigMap
+                    metadata:
+                      name: dpa-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: ConfigurationPolicy
+              name: workloads-dpa
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: workloads-followup
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: unset
+                    kind: ConfigMap
+                    metadata:
+                      name: test-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+      remediationAction: enforce
+  5: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: workloads-test
+  7: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+1.3.0 element dependencies and a raw object list:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: consume-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      dependencies:
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: install-cert-manager-c1
+          namespace: open-cluster-management
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: ready-openshift-data-foundation-c1
+          namespace: open-cluster-management
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: pinned-other-element-somecluster
+          namespace: open-cluster-management
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: install-policy-stack-test-c1
+          namespace: open-cluster-management
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: consume-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: consume
+                    kind: ConfigMap
+                    metadata:
+                      name: consume-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+      remediationAction: enforce
+  4: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-machinesets
+            spec:
+              object-templates-raw: |
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: machine.openshift.io/v1beta1
+                    kind: MachineSet
+                    metadata:
+                      name: {{ (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName }}-infra-us-east-2a
+                      namespace: openshift-machine-api
+                    spec:
+                      replicas: 3
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: machine.openshift.io/v1beta1
+                    kind: MachineSet
+                    metadata:
+                      name: {{ (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName }}-infra-us-east-2b
+                      namespace: openshift-machine-api
+                    spec:
+                      replicas: 2
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: enforce
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: enforce
+  5: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: policy-stack-test-c1
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: policy-stack-test-c1
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: consume-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-policy-stack-test-c1
+  7: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-policy-stack-test-c1
+        - certs-policy-stack-test-c1
+2.0.0 placement:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      clusterSets:
+        - global
+      numberOfClusters: 1
+      predicates:
+        - requiredClusterSelector:
+            celSelector:
+              celExpressions:
+                - managedCluster.metadata.labels["vendor"] == "OpenShift"
+            claimSelector:
+              matchExpressions:
+                - key: platform.open-cluster-management.io
+                  operator: In
+                  values:
+                    - AWS
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+                - key: name
+                  operator: Exists
+                - key: config.example.com/ocp.1
+                  operator: In
+                  values:
+                    - "4.10"
+        - requiredClusterSelector:
+            labelSelector:
+              matchLabels:
+                name: canary
+      tolerations: []
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: PolicySet
+        name: baseline-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+2.1.0 suffixTemplateNames:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm-c1
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle-c1
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-c1-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-c1-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - ignorePending: true
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp-c1
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: enforce
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: enforce
+  4: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: workloads-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      dependencies:
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: cluster-bootstrap-platform-base
+          namespace: open-cluster-management
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: hand-made-policy
+          namespace: open-cluster-management
+      disabled: false
+      policy-templates:
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: ConfigurationPolicy
+              name: install-oadp-c1-status
+            - apiVersion: policy.open-cluster-management.io/v1beta1
+              compliance: Compliant
+              kind: OperatorPolicy
+              name: install-oadp-c1
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: Policy
+              name: some-prereq-policy-policy-stack-test-c1
+              namespace: open-cluster-management
+          ignorePending: true
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: workloads-dpa-c1
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: dpa
+                    kind: ConfigMap
+                    metadata:
+                      name: dpa-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: ConfigurationPolicy
+              name: workloads-dpa-c1
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: workloads-followup-c1
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: unset
+                    kind: ConfigMap
+                    metadata:
+                      name: test-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+      remediationAction: enforce
+  5: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: policy-stack-test-c1
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: policy-stack-test-c1
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-policy-stack-test-c1
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: workloads-policy-stack-test-c1
+  7: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-policy-stack-test-c1
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-policy-stack-test-c1
+        - certs-policy-stack-test-c1
+3.0.0 operatorPolicies map:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-cert-manager-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: cert-manager-operator
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-cert-manager-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: cert-manager-operator
+                    spec:
+                      displayName: openshift-cert-manager-operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              name: install-cert-manager
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-cert-manager-operator
+                namespace: cert-manager-operator
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable-v1
+                name: openshift-cert-manager-operator
+                namespace: cert-manager-operator
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+                startingCSV: oadp-operator.v1.4.1
+              upgradeApproval: Automatic
+              versions:
+                - oadp-operator.v1.4.1
+                - oadp-operator.v1.4.2
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+3.3.0 hubTemplateOptions:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      hubTemplateOptions:
+        serviceAccountName: policy-hub-reader
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+3.4.0 global keys and mustnothave operator removal:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: inform
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-prereq
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: unset
+                    kind: ConfigMap
+                    metadata:
+                      name: test-cm
+                      namespace: default
+              remediationAction: inform
+              severity: low
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1beta1
+              compliance: Compliant
+              kind: OperatorPolicy
+              name: install-oadp
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: mustnothave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - extraDependencies:
+            - apiVersion: policy.open-cluster-management.io/v1
+              compliance: Compliant
+              kind: ConfigurationPolicy
+              name: install-prereq
+          objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: mustnothave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              removalBehavior:
+                customResourceDefinitions: Keep
+                operatorGroups: DeleteIfUnused
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: cs-redhat-operator-index-v4-20
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+4.0.0 discovery, defaults, .Config, shapes, clusterMonitoring:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: InformOnly
+              severity: critical
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: enforce
+              severity: high
+      remediationAction: enforce
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      labels:
+                        openshift.io/cluster-monitoring: "true"
+                      name: openshift-adp
+              remediationAction: enforce
+              severity: high
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: high
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: enforce
+              severity: high
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: enforce
+  4: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: shapes-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-acm-first
+            spec:
+              object-templates-raw: |
+                {{- range $ns := (lookup "v1" "Namespace" "" "").items }}
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: {{ $ns.metadata.name }}
+                {{- end }}
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-empty
+            spec:
+              object-templates-raw: |
+                []
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-list
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: element
+                    kind: ConfigMap
+                    metadata:
+                      name: element-cm
+                      namespace: default
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: multi-a
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-multi
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: multi-a
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      key: a---b
+                    kind: ConfigMap
+                    metadata:
+                      name: multi-b
+                      namespace: multi-a
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-partial
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      name: note
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-raw-list
+            spec:
+              object-templates-raw: |
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: machine.openshift.io/v1beta1
+                    kind: MachineSet
+                    metadata:
+                      name: {{ (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName }}-worker-a
+                      namespace: openshift-machine-api
+                    spec:
+                      replicas: 1
+              remediationAction: enforce
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: shapes-single
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: element
+                    kind: ConfigMap
+                    metadata:
+                      name: element-cm
+                      namespace: default
+              remediationAction: enforce
+              severity: low
+      remediationAction: enforce
+  5: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: shapes-test
+  7: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+baseline (values.yaml):
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: base-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: certs-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: Policy
+        name: install-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+policySets with usePolicySetsPlacements:
+  1: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        description: Baseline policy
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: base-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              annotations:
+                description: Test ConfigMap
+              name: base-test-cm
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    data:
+                      value1: hello
+                    kind: ConfigMap
+                    metadata:
+                      name: testcm
+                      namespace: default
+              remediationAction: enforce
+              severity: medium
+      remediationAction: enforce
+  2: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: certs-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: certs-bundle
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      labels:
+                        config.openshift.io/inject-trusted-cabundle: "true"
+                      name: trusted-ca
+                      namespace: openshift-config
+              remediationAction: inform
+              severity: low
+      remediationAction: inform
+  3: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: Policy
+    metadata:
+      annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+      name: install-test
+      namespace: open-cluster-management
+    spec:
+      copyPolicyMetadata: false
+      disabled: false
+      policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-ns
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: v1
+                    kind: Namespace
+                    metadata:
+                      name: openshift-adp
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: install-oadp-status
+            spec:
+              object-templates:
+                - complianceType: musthave
+                  objectDefinition:
+                    apiVersion: operators.coreos.com/v1alpha1
+                    kind: ClusterServiceVersion
+                    metadata:
+                      namespace: openshift-adp
+                    spec:
+                      displayName: OADP Operator
+                    status:
+                      phase: Succeeded
+              remediationAction: inform
+              severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1beta1
+            kind: OperatorPolicy
+            metadata:
+              annotations:
+                description: Operator policy for OpenShift ADP
+              name: install-oadp
+            spec:
+              complianceType: musthave
+              operatorGroup:
+                name: openshift-adp-group
+                namespace: openshift-adp
+                targetNamespaces:
+                  - openshift-adp
+              remediationAction: inform
+              severity: low
+              subscription:
+                channel: stable
+                name: redhat-oadp-operator
+                namespace: openshift-adp
+                source: redhat-operators
+                sourceNamespace: openshift-marketplace
+              upgradeApproval: Automatic
+      remediationAction: inform
+  4: |
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    kind: Placement
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    spec:
+      predicates:
+        - requiredClusterSelector:
+            labelSelector:
+              matchExpressions:
+                - key: environment
+                  operator: In
+                  values:
+                    - dev
+      tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+  5: |
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PlacementBinding
+    metadata:
+      name: test
+      namespace: open-cluster-management
+    placementRef:
+      apiGroup: cluster.open-cluster-management.io
+      kind: Placement
+      name: test
+    subjects:
+      - apiGroup: policy.open-cluster-management.io
+        kind: PolicySet
+        name: baseline-test
+      - apiGroup: policy.open-cluster-management.io
+        kind: PolicySet
+        name: certs-only-test
+  6: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: baseline-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - base-test
+        - certs-test
+  7: |
+    apiVersion: policy.open-cluster-management.io/v1beta1
+    kind: PolicySet
+    metadata:
+      name: certs-only-test
+      namespace: open-cluster-management
+    spec:
+      policies:
+        - certs-test

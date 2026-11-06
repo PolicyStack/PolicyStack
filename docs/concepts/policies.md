@@ -85,7 +85,7 @@ helm template metallb-nonprod-west-1 stack/metallb \
   --set 'selector.matchExpressions.name.values={nonprod-west-1}'
 ```
 
-1.  `charts/` is gitignored, so this downloads policy-library once. Needs network access.
+1.  Packages `lib/policy-library` into the gitignored `charts/`. Re-run it after a change to `lib/`.
 
 The validator's preview (`make -C tools/validator preview ELEMENT=<element>`, [Preview](../develop/validation.md#preview)) supplies `operator: Exists` instead, so its Placement selects every cluster. The preview is meant to do that.
 
@@ -107,7 +107,7 @@ Check with `oc get managedclustersetbinding global -n pstack`. Without it, each 
 
 ### Overriding the Placement
 
-A top-level `placement:` key in any values layer merges into the generated spec ([policy-library Placement](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#placement)). It applies to every element's Placement for every cluster reading that layer. POLICY080 checks the rendered Placement against its CRD (unknown fields, types), but nothing checks what the keys do, so a wrong selector shows up only on the hub.
+A top-level `placement:` key in any values layer merges into the generated spec ([policy-library Placement](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#placement)). It applies to every element's Placement for every cluster reading that layer. POLICY080 checks the rendered Placement against its CRD (unknown fields, types), but nothing checks what the keys do, so a wrong selector shows up only on the hub.
 
 | Key | Effect |
 |---|---|

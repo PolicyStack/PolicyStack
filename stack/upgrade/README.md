@@ -5,6 +5,8 @@ Drive and observe OpenShift cluster version upgrades
 
 Guide: https://policystk.io/guides/upgrades/
 
+Stability: stable ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   upgrade:

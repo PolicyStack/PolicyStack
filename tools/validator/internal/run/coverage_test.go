@@ -2,6 +2,7 @@ package run
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"io"
 	"io/fs"
@@ -19,21 +20,20 @@ import (
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
-// TestProfileCoverage renders every element for every fixture under each testdata/profiles file,
-// as the POLICY081 CI step does, and fails for a converter with escaped ACM templates that no
-// render includes.
+// TestProfileCoverage renders every element for every fixture in the all-on run and under each
+// testdata/profiles file, as make validate does, and fails for a converter with escaped ACM
+// templates that no render includes.
 func TestProfileCoverage(t *testing.T) {
 	helm := testenv.Helm(t)
 	root, _ := filepath.Abs("../../../..")
 	testdata := filepath.Join(root, "tools/validator/testdata")
 	profiles, _ := filepath.Glob(filepath.Join(testdata, "profiles/*.yaml"))
-	if len(profiles) == 0 {
-		t.Fatal("no profiles in testdata/profiles")
-	}
 
 	rendered := map[string]bool{} // <chart>/<ConfigurationPolicy>
-	for _, p := range profiles {
+	// "" is the all-on run: --all-on and testdata/inputs.yaml.
+	for _, p := range append([]string{""}, profiles...) {
 		dir := t.TempDir()
+		values := []string{filepath.Join(testdata, "baseline.yaml"), cmp.Or(p, filepath.Join(testdata, "inputs.yaml"))}
 		res, err := Run(t.Context(), Options{
 			RepoRoot:     root,
 			StackDir:     filepath.Join(root, "stack"),
@@ -41,7 +41,8 @@ func TestProfileCoverage(t *testing.T) {
 			ValuesDir:    filepath.Join(root, "values"),
 			FixturesDir:  filepath.Join(testdata, "clusters"),
 			HelmBin:      helm,
-			ExtraValues:  []string{filepath.Join(testdata, "baseline.yaml"), p},
+			ExtraValues:  values,
+			AllOn:        p == "",
 			Only:         []string{"RENDER000"},
 			RenderDir:    dir,
 			Logger:       slog.New(slog.DiscardHandler),
@@ -50,7 +51,7 @@ func TestProfileCoverage(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, f := range res.Findings {
-			t.Errorf("%s: %s does not render for %s", filepath.Base(p), f.Element, f.Cluster)
+			t.Errorf("%s: %s does not render for %s", filepath.Base(cmp.Or(p, "all-on")), f.Element, f.Cluster)
 		}
 		err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -96,7 +97,7 @@ func TestProfileCoverage(t *testing.T) {
 	}
 	slices.Sort(missed)
 	for _, m := range missed {
-		t.Errorf("%s is not evaluated: enable its element and template in a testdata/profiles file", m)
+		t.Errorf("%s is not evaluated: give it its config input in testdata/inputs.yaml, or a testdata/profiles file", m)
 	}
 	t.Logf("%d/%d converters with ACM templates evaluated", len(covered)-len(missed), len(covered))
 }

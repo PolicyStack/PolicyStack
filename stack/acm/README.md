@@ -3,6 +3,8 @@
 
 Advanced Cluster Management hub: MultiClusterHub, observability and search
 
+Stability: stable ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   acm:

@@ -1,0 +1,42 @@
+# Exercises every dependency / ordering key added in chart 1.2.0, in the 4.0 shape.
+stack:
+  policyStackTest:
+    policies:
+      install:
+        remediationAction: enforce
+
+      # Explicit cross-release / raw dependencies, and templates chained in orderManifests order
+      # rather than name order.
+      workloads:
+        remediationAction: enforce
+        dependencies:
+          - name: cluster-bootstrap
+            release: platform-base
+          - name: hand-made-policy
+            raw: true
+            compliance: Compliant
+        orderManifests:
+          - dpa
+          - followup
+        templates:
+          # waitForOperator resolves to the generated install-oadp-status ConfigurationPolicy
+          # and implies ignorePending.
+          dpa:
+            file: base/test-cm
+            waitForOperator: oadp
+            extraDependencies:
+              - name: oadp
+                kind: OperatorPolicy
+                policyRef: install
+              - name: some-prereq-policy
+                kind: Policy
+            config:
+              name: dpa-cm
+              value1: dpa
+          # Chained onto workloads-dpa.
+          followup:
+            file: base/test-cm
+
+    operatorPolicies:
+      oadp:
+        ignorePending: true

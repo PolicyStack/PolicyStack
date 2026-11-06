@@ -15,13 +15,6 @@ import (
 // values layer changes and report it at the layer.
 func TestRenderPhaseLayers(t *testing.T) {
 	helm := testenv.Helm(t)
-	repo, _ := filepath.Abs("../../../..")
-	// The conformance fixture pins the policy-library the elements use.
-	fixture := filepath.Join(repo, "tools/validator/internal/chart/testdata/element")
-	chartYAML, err := os.ReadFile(filepath.Join(fixture, "Chart.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	root := t.TempDir()
 	write := func(rel, body string) {
 		p := filepath.Join(root, rel)
@@ -32,16 +25,7 @@ func TestRenderPhaseLayers(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// The fixture's fetched archive saves a fetch.
-	archives, _ := filepath.Glob(filepath.Join(fixture, "charts/policy-library-*.tgz"))
-	for _, a := range archives {
-		data, err := os.ReadFile(a)
-		if err != nil {
-			t.Fatal(err)
-		}
-		write("stack/gate/charts/"+filepath.Base(a), string(data))
-	}
-	write("stack/gate/Chart.yaml", strings.Replace(string(chartYAML), "name: conformance", "name: gate", 1))
+	write("stack/gate/Chart.yaml", fixtureChart(t, "gate"))
 	write("stack/gate/templates/policy.yaml", `{{- include "policy-library.render" . -}}`+"\n")
 	write("stack/gate/converters/gate/cv.yaml", "apiVersion: config.openshift.io/v1\nkind: ClusterVersion\nmetadata:\n  name: version\n")
 	write("stack/gate/values.yaml", `stack:
@@ -111,4 +95,16 @@ func TestRenderPhaseLayers(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("findings\n got %q\nwant %q\n%+v", got, want, res.Findings)
 	}
+}
+
+// fixtureChart returns the conformance fixture's Chart.yaml, which declares policy-library as the
+// elements do, for a copy named name outside the repo: the library path is made absolute.
+func fixtureChart(t *testing.T, name string) string {
+	t.Helper()
+	repo, _ := filepath.Abs("../../../..")
+	data, err := os.ReadFile(filepath.Join(repo, "tools/validator/internal/chart/testdata/element/Chart.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.NewReplacer("name: conformance", "name: "+name, "file://../../../../../../lib", "file://"+filepath.Join(repo, "lib")).Replace(string(data))
 }

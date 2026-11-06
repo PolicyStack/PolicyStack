@@ -46,4 +46,10 @@ func TestResolve(t *testing.T) {
 	if !Has(t.Context(), dir, first, "stack/a") || Has(t.Context(), dir, first, "stack/b") {
 		t.Error("Has does not reflect the tree at the commit")
 	}
+	if got, err := Show(t.Context(), dir, first, "stack/a"); err != nil || string(got) != "stack/a\n" {
+		t.Errorf("Show(stack/a) = %q, %v", got, err)
+	}
+	if _, err := Show(t.Context(), dir, first, "stack/b"); err == nil {
+		t.Error("Show of a file the commit lacks: want an error")
+	}
 }

@@ -1,0 +1,9 @@
+{{- /* Starts with an ACM template, so it renders into object-templates-raw. */ -}}
+{{ "{{-" }} range $ns := (lookup "v1" "Namespace" "" "").items {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ "{{" }} $ns.metadata.name {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}

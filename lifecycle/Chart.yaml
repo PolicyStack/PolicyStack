@@ -2,9 +2,9 @@ apiVersion: v2
 name: lifecycle
 description: "Builds, upgrades and destroys a cluster from its fleet file"
 type: application
-version: 0.2.0
+version: 0.2.0 # x-release-please-version: the framework release (.release-please/config.json)
 dependencies:
   - name: policy-library
     alias: stack
-    version: "4.0.0"
-    repository: "https://policystack.github.io/PolicyStack-chart"
+    version: "^4.0.0"
+    repository: "file://../lib/policy-library"

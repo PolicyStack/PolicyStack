@@ -1,0 +1,326 @@
+# Values that must not render. Patterns stay loose where values.schema.json rejects the input:
+# the schema validator's wording changes between Helm versions. The nameless dependency fail call
+# sits behind the schema, so the schema is what that test reaches.
+suite: render failures
+templates:
+  - templates/policies.yaml
+release:
+  name: test
+tests:
+  - it: rejects an unknown component key (schema)
+    set:
+      stack.policyStackTest.enabeld: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "enabeld"
+
+  - it: rejects global.remediationAction enforce (schema)
+    set:
+      global.remediationAction: enforce
+    asserts:
+      - failedTemplate:
+          errorPattern: "remediationAction"
+
+  - it: rejects the pre-3.0 operatorPolicies list (schema)
+    set:
+      stack.policyStackTest.operatorPolicies:
+        - name: oadp
+    asserts:
+      - failedTemplate:
+          errorPattern: "operatorPolicies"
+
+  - it: rejects the pre-4.0 policies list (schema)
+    set:
+      stack.policyStackTest.policies:
+        - name: base
+    asserts:
+      - failedTemplate:
+          errorPattern: "policies"
+
+  # Keys removed in 4.0. Each fails the schema instead of being silently ignored.
+  - it: rejects toggles (schema)
+    set:
+      stack.policyStackTest.toggles:
+        base: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "toggles"
+
+  - it: rejects configPolicies (schema)
+    set:
+      stack.policyStackTest.configPolicies: []
+    asserts:
+      - failedTemplate:
+          errorPattern: "configPolicies"
+
+  - it: rejects certificatePolicies (schema)
+    set:
+      stack.policyStackTest.certificatePolicies: []
+    asserts:
+      - failedTemplate:
+          errorPattern: "certificatePolicies"
+
+  - it: rejects component orderPolicies (schema)
+    set:
+      stack.policyStackTest.orderPolicies: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "orderPolicies"
+
+  - it: rejects a boolean orderManifests (schema)
+    set:
+      stack.policyStackTest.policies.base.orderManifests: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "orderManifests"
+
+  - it: rejects policyRef on an operator (schema)
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.policyRef: base
+    asserts:
+      - failedTemplate:
+          errorPattern: "policyRef"
+
+  - it: rejects remediationAction on an operator (schema)
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.remediationAction: enforce
+    asserts:
+      - failedTemplate:
+          errorPattern: "remediationAction"
+
+  - it: rejects rawTemplate (schema)
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.rawTemplate: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "rawTemplate"
+
+  - it: rejects templateParameters (schema)
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.templateParameters:
+        name: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "templateParameters"
+
+  - it: rejects enableTemplateParameters (schema)
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.enableTemplateParameters: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "enableTemplateParameters"
+
+  - it: rejects templateNames (schema)
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.templateNames:
+        - name: cm
+    asserts:
+      - failedTemplate:
+          errorPattern: "templateNames"
+
+  - it: rejects a policy namespace (schema)
+    set:
+      stack.policyStackTest.policies.base.namespace: default
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespace"
+
+  - it: rejects a template remediationAction other than InformOnly (schema)
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.remediationAction: enforce
+    asserts:
+      - failedTemplate:
+          errorPattern: "remediationAction"
+
+  - it: rejects an operator layered in without a subscription.name
+    set:
+      stack.policyStackTest.operatorPolicies.typo:
+        namespace: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "operatorPolicies.typo has no subscription.name"
+
+  - it: rejects a values template with no file
+    set:
+      stack.policyStackTest.policies.base.templates.typo:
+        description: x
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.base.templates.typo has no file - add converters/base/typo.yaml or set file'
+
+  - it: rejects a disabled values template with no file
+    set:
+      stack.policyStackTest.policies.base.templates.typo.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "policies.base.templates.typo has no file"
+
+  - it: rejects a file that does not exist
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/missing
+    asserts:
+      - failedTemplate:
+          errorPattern: 'converters/_cases/missing.yaml, a file of base-test-cm, is missing or empty'
+
+  - it: rejects a missing file in a file list
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file:
+        - base/test-cm
+        - base/missing
+    asserts:
+      - failedTemplate:
+          errorPattern: 'converters/base/missing.yaml, a file of base-test-cm, is missing or empty'
+
+  - it: rejects a policy with no templates
+    set:
+      stack.policyStackTest.policies.orphan.description: x
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.orphan has no templates - add converters/orphan/<template>.yaml'
+
+  - it: rejects a disabled policy with no templates
+    set:
+      stack.policyStackTest.policies.orphan.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "policies.orphan has no templates"
+
+  - it: rejects a raw list next to other documents
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file:
+        - base/test-cm
+        - _cases/acm-first
+    asserts:
+      - failedTemplate:
+          errorPattern: "base-test-cm renders a raw object list next to other documents"
+
+  - it: rejects orderManifests naming no template of the policy
+    set:
+      stack.policyStackTest.policies.base.orderManifests:
+        - test-cm
+        - typo
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.base.orderManifests names "typo", which is not a template of the policy'
+
+  - it: rejects orderManifests naming a disabled policy's missing template
+    set:
+      stack.policyStackTest.policies.certs:
+        enabled: false
+        orderManifests:
+          - typo
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.certs.orderManifests names "typo"'
+
+  - it: rejects orderManifests listing a template twice
+    set:
+      stack.policyStackTest.policies.base.orderManifests:
+        - test-cm
+        - test-cm
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.base.orderManifests lists "test-cm" twice'
+
+  - it: rejects an ordered install template that waits on an operator
+    set:
+      stack.policyStackTest.policies.install:
+        orderManifests:
+          - prereq
+        templates:
+          prereq:
+            file: base/test-cm
+          late:
+            file: base/_note
+            waitForOperator: oadp
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policies.install.orderManifests chains operators after templates, so template "late" can.t wait on an operator'
+
+  - it: rejects suffixTemplateNames when the release name lacks the chart prefix
+    set:
+      stack.policyStackTest.suffixTemplateNames: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'suffixTemplateNames requires Release.Name \("test"\) to start with the chart name "policy-stack-test"'
+
+  - it: rejects a dependency without a name
+    set:
+      stack.policyStackTest.policies.base.dependencies:
+        - kind: Policy
+    asserts:
+      - failedTemplate:
+          errorPattern: "dependencies[./]0.*name|requires a 'name'"
+
+  - it: rejects an unknown dependency kind without apiVersion
+    set:
+      stack.policyStackTest.policies.base.dependencies:
+        - name: x
+          kind: Widget
+    asserts:
+      - failedTemplate:
+          errorPattern: 'unknown dependency kind "Widget"'
+
+  - it: rejects element dependencies when the release name lacks the chart prefix
+    set:
+      stack.policyStackTest.policies.base.dependencies:
+        - name: install
+          element: cert-manager
+    asserts:
+      - failedTemplate:
+          errorPattern: 'dependency element:"cert-manager" on policy "base" requires Release.Name'
+
+  - it: rejects element on a template-kind dependency
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.extraDependencies:
+        - name: x
+          kind: ConfigurationPolicy
+          element: cert-manager
+    asserts:
+      - failedTemplate:
+          errorPattern: "is only valid for kind Policy"
+
+  - it: rejects waitForOperator naming no operator
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: missing
+    asserts:
+      - failedTemplate:
+          errorPattern: 'waitForOperator "missing" on policy "base" matches no enabled entry'
+
+  - it: rejects waitForOperator naming a disabled operator
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.enabled: false
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: oadp
+    asserts:
+      - failedTemplate:
+          errorPattern: 'waitForOperator "oadp" on policy "base" matches no enabled entry'
+
+  - it: rejects waitForOperator on an operator being uninstalled
+    set:
+      stack.policyStackTest.operatorPolicies.oadp.complianceType: mustnothave
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: oadp
+    asserts:
+      - failedTemplate:
+          errorPattern: 'waitForOperator "oadp" on policy "base" names an operator with complianceType mustnothave'
+
+  - it: rejects waitForOperator when the install Policy is disabled
+    set:
+      stack.policyStackTest.policies.install.enabled: false
+      stack.policyStackTest.policies.base.templates.test-cm.waitForOperator: oadp
+    asserts:
+      - failedTemplate:
+          errorPattern: 'waitForOperator "oadp" on policy "base" needs policies.install, which is disabled'
+
+  - it: rejects a hub whose policystack.libraryMajors lacks the library's major
+    set:
+      policystack.libraryMajors: [5]
+    asserts:
+      - failedTemplate:
+          errorPattern: 'policy-library 4\.[0-9]+\.[0-9]+: this revision needs a hub whose install chart supports library major 4, and this hub''s supports 5 \(policystack.libraryMajors\)'
+
+  - it: lists every major the hub supports
+    set:
+      policystack.libraryMajors: [3, 5]
+    asserts:
+      - failedTemplate:
+          errorPattern: "this hub's supports 3, 5 "

@@ -39,6 +39,11 @@ func Has(ctx context.Context, dir, commit, path string) bool {
 	return git(ctx, dir, "cat-file", "-e", commit+":"+path).Run() == nil
 }
 
+// Show returns the content of path at commit, or an error when the commit has no such file.
+func Show(ctx context.Context, dir, commit, path string) ([]byte, error) {
+	return git(ctx, dir, "cat-file", "blob", commit+":"+path).Output()
+}
+
 func git(ctx context.Context, dir string, args ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...) //nolint:gosec // G204: no shell; fixed binary
 }

@@ -3,6 +3,8 @@
 
 User Workload Monitoring: Prometheus, Thanos Ruler and Alertmanager for application metrics
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   userMonitoring:

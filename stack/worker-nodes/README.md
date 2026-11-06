@@ -3,6 +3,8 @@
 
 Worker node sizing and kubelet tuning
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   workerNodes:

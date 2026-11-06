@@ -1,0 +1,46 @@
+# Layered over --all-on in make validate's all-on run (docs/develop/validation.md#profiles): the
+# config inputs an optional piece needs to render anything, or POLICY082 fails, and the choices the
+# all-on profile can't make.
+stack:
+  teamGitops:
+    config:
+      teams: {dev: {}}
+  # restore undoes workloads: variants.yaml covers it.
+  infraNodes:
+    policies:
+      restore:
+        enabled: false
+  metallb:
+    config:
+      ipAddressPools: {internal: {addresses: [192.168.100.1-192.168.100.20]}}
+      l2Advertisements: {internal: {ipAddressPools: [internal]}}
+      bgpAdvertisements: {internal: {ipAddressPools: [internal], peers: [rack1]}}
+      bgpPeers: {rack1: {myASN: 64512, peerASN: 64512, peerAddress: 10.0.0.1}}
+  nmstate:
+    config:
+      networking:
+        interfaces:
+          bond0: {type: bond, ports: [ens1f0, ens1f1], ipv4: dhcp}
+      hosts:
+        worker-0:
+          networking:
+            interfaces:
+              bond0: {mac: "aa:bb:cc:dd:ee:ff"}
+  partitioning:
+    config:
+      reservedCpus: 0-1
+      isolatedCpus: 2-31
+  disconnected:
+    config:
+      clusterResources:
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata: {name: cs-redhat-operator-index-v4-20, namespace: openshift-marketplace}
+          spec: {image: "mirror.example.com:8443/redhat/redhat-operator-index:v4.20", sourceType: grpc}
+      registryCAs:
+        mirror.example.com..8443: |
+          -----BEGIN CERTIFICATE-----
+          -----END CERTIFICATE-----
+      trustedCA: |
+        -----BEGIN CERTIFICATE-----
+        -----END CERTIFICATE-----

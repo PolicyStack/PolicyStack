@@ -11,7 +11,7 @@ The [install chart](https://github.com/PolicyStack/PolicyStack/tree/main/install
 
 | Value | Required | Set with | What it does | Changing it later |
 |---|---|---|---|---|
-| `gitRepo` | Yes | `--set` | Clone URL of your fork, such as `https://github.com/<org>/<fork>.git`. The `repoURL` of both ApplicationSets' git generators and of every Application. For a private fork it must equal the `url` of the Argo CD repository Secret that holds the fork's credentials ([Private fork](../start/install.md#install-policystack)). | `helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values --set gitRepo=<url>` re-points every Application at once, so the new repo needs the same fleet files and every pinned revision. |
+| `gitRepo` | Yes | `--set` | Clone URL of your repository, such as `https://github.com/<org>/<repo>.git`. The `repoURL` of both ApplicationSets' git generators and of every Application. For a private repository it must equal the `url` of the Argo CD repository Secret that holds its credentials ([Private repository](../start/install.md#install-policystack)). | `helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values --set gitRepo=<url>` re-points every Application at once, so the new repo needs the same fleet files and every pinned revision. |
 | `hubName` | Yes | `--set` | This hub's name in PolicyStack: picks `fleet/hubs/<hubName>.yaml` and `values/clusters/<hubName>.yaml`, names the hub's Applications `<element>-<hubName>`, and selects the fleet files whose `hub` key names this hub as the builder ([Fleet keys](../concepts/lifecycle.md#fleet-keys), [The hub](../concepts/architecture.md#the-hub)). Use a lowercase DNS label of at most 30 characters, because it ends up in Policy names ([Naming limits](../concepts/policies.md#naming-limits)). Unique per active hub reading the repo; a DR hub takes over the old hub's name. | Renames and recreates every hub Application and its Policies, and drops lifecycle Applications for `hub: <old>` ([Changing `hubName`](../concepts/architecture.md#several-hubs-one-repo)). |
 | `policyNamespace` | Default `pstack` | `install/values.yaml` | Namespace the chart creates and binds the `global` set into. Elements read their own copy from the root `values.yaml`. | Leave at `pstack`. Changing it, even in both files, renames every Policy, so all are deleted and recreated ([Removal and pruning](../concepts/removal.md)). If `install/values.yaml` and the root `values.yaml` differ, elements render into a namespace this chart did not create or bind: their Applications fail to sync or their Placements select nothing. CI rule [POLICY071](rules.md) compares the two files; a `--set policyNamespace` at install bypasses it. |
 
@@ -34,7 +34,7 @@ Three different objects are called `global`: ACM's built-in ManagedClusterSet th
 | ClusterRole, ClusterRoleBinding | `openshift-gitops-policy-admin` | | The OpenShift GitOps application controller cannot create or change ACM policy objects. Grants it get, list, watch, create, update, patch and delete on `policies`, `configurationpolicies`, `certificatepolicies`, `operatorpolicies`, `policysets`, `placementbindings`, `placementrules`, `placements`, `placementdecisions` and the two status subresources, the role from ACM's ["Policy definitions with GitOps"](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/gitops/). Bound only to `openshift-gitops-argocd-application-controller`, which is why PolicyStack needs the default Argo CD instance. |
 
 !!! warning "AppProject `default`"
-    Every generated Application uses the `default` AppProject, which the chart does not create. OpenShift GitOps ships it unrestricted. If yours is restricted, allow your fork's URL as a source and `https://kubernetes.default.svc` with namespaces `open-cluster-management` and `pstack` as destinations, or every Application shows an `InvalidSpecError` saying the source repository or destination is not permitted in project `default`.
+    Every generated Application uses the `default` AppProject, which the chart does not create. OpenShift GitOps ships it unrestricted. If yours is restricted, allow your repository's URL as a source and `https://kubernetes.default.svc` with namespaces `open-cluster-management` and `pstack` as destinations, or every Application shows an `InvalidSpecError` saying the source repository or destination is not permitted in project `default`.
 
 ### Backup and restore
 
@@ -49,7 +49,7 @@ Every object carries `helm.sh/resource-policy: keep`, so `helm uninstall policys
 ## Preview and upgrade
 
 ```sh
-helm template policystack ./install --set hubName=acm-dc1 --set gitRepo=https://github.com/<org>/<fork>.git
+helm template policystack ./install --set hubName=acm-dc1 --set gitRepo=https://github.com/<org>/<repo>.git
 ```
 
-Run from the root of your fork. A merged change under `install/` does nothing until you run `helm upgrade` on the hub. Then it reaches every cluster on that hub at once, because the ApplicationSets are not pinned to any fleet file's `revision`. Upgrade as in [Upgrading PolicyStack](../guides/upgrading.md#install-chart).
+Run from the root of your repository. A merged change under `install/`, which only a framework update brings, does nothing until you run `helm upgrade` on the hub. Then it reaches every cluster on that hub at once, because the ApplicationSets are not pinned to any fleet file's `revision`. Upgrade as in [Upgrading PolicyStack](../guides/upgrading.md#install-chart).

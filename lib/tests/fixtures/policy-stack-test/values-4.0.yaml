@@ -1,0 +1,70 @@
+# Exercises chart 4.0.0. Layered over values.yaml.
+stack:
+  policyStackTest:
+    # The chain: entry -> policy -> default -> inform/low. certs sets nothing and takes these.
+    default:
+      remediationAction: enforce
+      severity: high
+
+    # .Config in every converter; templates.<t>.config merges over it.
+    config:
+      name: element-cm
+      value1: element
+
+    policies:
+      base:
+        templates:
+          # InformOnly survives the enforce Policy; severity overrides the policy's.
+          test-cm:
+            remediationAction: InformOnly
+            severity: critical
+
+      # One template per shape, all through file. Rendered in name order.
+      shapes:
+        severity: low
+        templates:
+          single:
+            file: base/test-cm
+          partial:
+            file: base/_note
+          multi:
+            file: _cases/multi
+            config:
+              second: true
+              name: multi-b
+          list:
+            file:
+              - base/test-cm
+              - _cases/multi
+          raw-list:
+            file: _cases/raw-list
+            config:
+              role: worker
+              zones:
+                a:
+                  replicas: 1
+          acm-first:
+            file: _cases/acm-first
+          empty:
+            file: _cases/empty
+          skipped:
+            file: base/test-cm
+            enabled: false
+
+      # A whole policy off: no Policy, no binding subject, no PolicySet member render change.
+      off:
+        enabled: false
+        templates:
+          cm:
+            file: base/test-cm
+
+    operatorPolicies:
+      oadp:
+        clusterMonitoring: true
+      # An operator off: no templates for it in install.
+      logging:
+        enabled: false
+        namespace: openshift-logging
+        subscription:
+          channel: stable-6.2
+          name: cluster-logging

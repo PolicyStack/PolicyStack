@@ -156,3 +156,60 @@ func TestLoadV3(t *testing.T) {
 		})
 	}
 }
+
+func TestAllOn(t *testing.T) {
+	el, err := Load("testdata/element", "policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Elements without a component, such as a values.yaml with no stack block, are left out.
+	got, err := AllOn([]*Element{el, {ChartName: "no-stack"}, {ChartName: "no-values", StackKey: "noValues"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every entry, those already on and those a layer could turn off included.
+	want := `stack:
+    conformance:
+        enabled: true
+        operatorPolicies:
+            my-operator:
+                enabled: true
+            other-operator:
+                enabled: true
+        policies:
+            config:
+                enabled: true
+                templates:
+                    multi:
+                        enabled: true
+                    "off":
+                        enabled: true
+                    pair:
+                        enabled: true
+                    rawlist:
+                        enabled: true
+                    reused:
+                        enabled: true
+            gates:
+                enabled: true
+                templates:
+                    version:
+                        enabled: true
+            install:
+                enabled: true
+                templates:
+                    instance:
+                        enabled: true
+            unused:
+                enabled: true
+                templates:
+                    cm:
+                        enabled: true
+`
+	if string(got) != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+	if got, err := AllOn(nil); err != nil || string(got) != "stack: {}\n" {
+		t.Errorf("no elements: got %q, %v", got, err)
+	}
+}

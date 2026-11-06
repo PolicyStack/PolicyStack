@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,6 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/cascade"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/render"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
@@ -64,10 +67,34 @@ func lifecycleFiles(t *testing.T, cluster string) (string, []string) {
 	return "", nil
 }
 
-// allOn is the value files that turn every element and toggle on.
+// allOn is the value files of make validate's all-on run: the baseline, the all-on profile of
+// stack/ (set by TestMain) and its inputs.
 var allOn = []string{
 	filepath.Join(repoRoot, "tools/validator/testdata/baseline.yaml"),
-	filepath.Join(repoRoot, "tools/validator/testdata/profiles/all-on.yaml"),
+	"",
+	filepath.Join(repoRoot, "tools/validator/testdata/inputs.yaml"),
+}
+
+func TestMain(m *testing.M) {
+	elements, _, err := chart.LoadAll(filepath.Join(repoRoot, "stack"), "", filepath.Join(repoRoot, "values.yaml"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := chart.AllOn(elements)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir, err := os.MkdirTemp("", "acmtemplates")
+	if err != nil {
+		log.Fatal(err)
+	}
+	allOn[1] = filepath.Join(dir, "all-on.yaml")
+	if err := os.WriteFile(allOn[1], data, 0o644); err != nil {
+		log.Fatal(err)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(dir)
+	os.Exit(code)
 }
 
 // helmTemplate runs helm template on the chart in dir and returns its output.

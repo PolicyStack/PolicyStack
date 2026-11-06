@@ -3,6 +3,8 @@
 
 Kubelet tuning for control-plane nodes
 
+Stability: preview ([Compatibility](https://policystk.io/reference/compatibility/#element-stability))
+
 ```yaml
 stack:
   masterNodes:

@@ -3,7 +3,7 @@
 You build, upgrade, scale and destroy OpenShift clusters by editing fleet files. Read [Cluster lifecycle](../concepts/lifecycle.md) first: it explains how a fleet file with `hub:` becomes a Policy on the hub that drives ACM's own installers, and which engine to pick ([Pick an engine](../concepts/lifecycle.md#pick-an-engine)). Every key and generated object is in [Lifecycle keys](../reference/lifecycle.md).
 
 !!! warning "Every engine and platform is a preview"
-    Lifecycle follows the framework's version, but no engine or platform is stable yet: a framework minor may change their keys or the objects they create, with the steps in its release notes ([Maturity](../reference/compatibility.md#maturity)). Pin clusters the hub builds to tags.
+    Lifecycle follows the framework's version, but no engine or platform is stable yet: a framework minor may change their converters, behaviour and defaults not fixed at create, with the steps in its release notes. Their `install` keys and the names of the objects they create change only in a major ([Maturity](../reference/compatibility.md#maturity)). Pin clusters the hub builds to tags.
 
 ## Prerequisites
 

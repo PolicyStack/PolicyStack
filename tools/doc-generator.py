@@ -10,6 +10,8 @@ merged with values, and naming, defaults and state follow policy-library 4.0's t
 Usage:
     python doc-generator.py [--stack-dir stack] [--element <name>]
     python doc-generator.py --check  # exit 1 when a README is stale
+
+Without --element, elements copied by copier (with a .copier-answers.yml) are skipped.
 """
 
 import argparse
@@ -480,10 +482,14 @@ def write_if_changed(path, content):
 
 
 def elements(stack_dir):
+    # An element with a copier answers file is tracked: its README comes from upstream's release,
+    # so a newer generator in the framework never rewrites it (docs/develop/elements.md#element-reference).
     return sorted(
         p
         for p in Path(stack_dir).iterdir()
-        if p.is_dir() and not p.name.startswith(".")
+        if p.is_dir()
+        and not p.name.startswith(".")
+        and not (p / ".copier-answers.yml").exists()
     )
 
 

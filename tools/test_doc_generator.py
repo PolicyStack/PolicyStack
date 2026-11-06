@@ -571,6 +571,17 @@ class MainTest(Fixture):
         self.assertTrue((self.el / "README.md").exists())
         self.assertEqual(self.run_main("--element", "missing"), 1)
 
+    def test_tracked_element_skipped(self):
+        # A copier-tracked element keeps upstream's README, even a stale one.
+        (self.el / ".copier-answers.yml").write_text("_commit: v1.0.0\n")
+        (self.el / "README.md").write_text("upstream\n")
+        self.assertEqual(self.run_main(), 0)
+        self.assertEqual(self.run_main("--check"), 0)
+        self.assertEqual((self.el / "README.md").read_text(), "upstream\n")
+        # --element still generates it on request.
+        self.assertEqual(self.run_main("--element", "el"), 0)
+        self.assertNotEqual((self.el / "README.md").read_text(), "upstream\n")
+
     def test_element_without_values_skipped(self):
         (self.root / "empty").mkdir()
         self.assertEqual(self.run_main(), 0)

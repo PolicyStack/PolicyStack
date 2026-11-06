@@ -11,7 +11,7 @@ Upstream has one tag line, `vX.Y.Z`, semver. Each release tag holds the framewor
 | Framework | `/.copier-answers.yml` | `install/`, `lifecycle/`, policy-library in `lib/`, `tools/`, the CI workflows and hooks |
 | Element | `stack/<element>/.copier-answers.yml` | That element only |
 
-Because each part has its own record, you can update them at different times: the framework to `v1.3.0` this week, `odf` next month, `acm` not at all. One rule orders them: an element is never on a newer release than the framework, so take the framework first. An element on an older release than the framework is supported within the same major ([Versions](../reference/compatibility.md#versions)).
+Because each part has its own record, you can update them at different times: the framework to `v1.3.0` this week, `odf` next month, `acm` not at all. One rule orders them: an element is never on a newer release than the framework, so take the framework first. An element on an older release than the framework keeps working within the same major ([Versions](../reference/compatibility.md#versions)).
 
 A major breaks something you depend on, and its release notes say what to change. A stable element breaks only in a major; a preview element may break in a minor, with notes. Each element's `README.md` shows which it is ([Element stability](../reference/compatibility.md#element-stability)). Lifecycle engines and platforms are all preview.
 
@@ -121,9 +121,10 @@ POLICY052 checks only the major: on the update PR, a fleet file whose `revision`
 
 `copier update stack/odf` merges upstream's changes to `odf` since your `_commit` with yours and moves `_commit`. Nothing outside `stack/odf/` changes.
 
-- Read the element's entries in the release notes, listed under its name (`odf:`), and the Render Diff. For a preview element any minor may rename keys or Policies.
+- Read the element's entries in the release notes, prefixed with its name (`odf:`), and the Render Diff. For a preview element any minor may rename keys or Policies; search those entries for `breaking:`.
 - If the element needs a newer policy-library than your framework has, its render fails and [POLICY060](../reference/rules.md) says so. Taking the element at the framework's release, as above, avoids it.
 - A file upstream deleted is deleted from `stack/odf/` too, even if you edited it, without a conflict. Check the PR diff for deleted files and move any edit you need into a values layer.
+- An element upstream removed (POLICY092 warned while it was deprecated) can't be updated: `copier update` fails with a `FileNotFoundError` naming `stack/<element>` in copier's temporary clone. [Eject](#skip-freeze-eject-roll-back) it to keep it as yours, or remove it.
 - Elements update independently, so merge their PRs in any order.
 
 ## Skip, freeze, eject, roll back
@@ -213,6 +214,6 @@ helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values
 
 `--reset-then-reuse-values` (Helm 3.14 or later) takes the new chart's defaults and keeps every value set at install or a later upgrade, normally just `hubName` and `gitRepo`.
 
-Within a major the ApplicationSets only add injected values, which no element or lifecycle schema rejects, so clusters pinned to older revisions keep rendering. A policy-library major is checked at render: the chart passes `policystack.libraryMajors`, and a revision built on a library major the hub's chart doesn't list fails its render with a ComparisonError that says to move the pin or upgrade the hub.
+Within a major the ApplicationSets only add injected values, so clusters pinned to older revisions keep rendering. The exception is a fleet file's `install`, passed through as written: a key newer than the cluster's `revision` fails that revision's lifecycle schema ([Lifecycle](../reference/compatibility.md#lifecycle)). A policy-library major is checked at render: the chart passes `policystack.libraryMajors`, and a revision built on a library major the hub's chart doesn't list fails its render with a ComparisonError that says to move the pin or upgrade the hub.
 
 Roll back with `helm rollback policystack <revision> -n openshift-gitops`.

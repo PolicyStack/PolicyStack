@@ -572,14 +572,17 @@ above it with one line in exactly this form:
 The comment is the key's description, so the element README shows it. The validator warns
 (POLICY039) on every values layer and fleet file that sets the key, naming the replacement and the
 version, and keeps accepting the key (POLICY035) until it is gone. A `Deprecated:` line in any other
-form is reported at the `values.yaml`. Remove the key no earlier than that major, and at least one
-minor and 90 days after the release that deprecated it. `lifecycle/values.yaml` keys work the same
-way, with a framework version.
+form is reported at the `values.yaml`. In a stable element, remove the key no earlier than that
+major, and at least one minor and 90 days after the release that deprecated it. A preview element
+may name the next minor instead, or rename the key without deprecating it
+([Deprecation](../reference/compatibility.md#deprecation)). `lifecycle/values.yaml` keys are
+deprecated the same way, with a framework version, but at every maturity: `removed in` names a
+major, and the key keeps working until then ([Lifecycle](../reference/compatibility.md#lifecycle)).
 
-To retire an element, set `deprecated: true` in its `Chart.yaml` and keep it working until a major
-removes it. The validator warns (POLICY092) on every values file that turns it on. Never rename an
-element directory: a rename deletes and recreates every Policy it renders. Add the new element and
-deprecate the old one.
+To retire an element, set `deprecated: true` in its `Chart.yaml` and keep it working until a later
+release removes it: any later minor for a preview element, a major for a stable one. The validator
+warns (POLICY092) on every values file that turns it on. Never rename an element directory: a
+rename deletes and recreates every Policy it renders. Add the new element and deprecate the old one.
 
 ### Eject or contribute
 
@@ -605,10 +608,17 @@ edit it.
 
 ```sh
 pip install -r tools/requirements.txt
-python tools/doc-generator.py                   # all elements
+python tools/doc-generator.py                   # every element without a .copier-answers.yml
 python tools/doc-generator.py --element <name>  # one element
 python tools/doc-generator.py --check           # report stale ones, write nothing
 ```
+
+Without `--element`, the generator skips elements copied from upstream (those with a
+`.copier-answers.yml`). Their README comes with each release, so a framework update with a newer
+generator doesn't rewrite them and make them count as modified. If you edit a tracked element's
+`Chart.yaml`, `values.yaml` or converters, run `--element <name>` yourself; its README then merges
+with upstream's on each update like any other edited file. After you
+[eject](#eject-or-contribute) an element, the next run regenerates its README.
 
 | Source | Shown as |
 |---|---|

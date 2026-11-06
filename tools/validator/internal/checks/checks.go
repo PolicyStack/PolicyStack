@@ -83,9 +83,9 @@ type Check interface {
 }
 
 // All returns the registered checks in stable order. A new rule, or a new error in a rule, that can
-// fail a repository that passes today ships as SevWarning for one framework minor, then SevError;
-// one preventing an outage or a security problem may be SevError at once. IDs are never reused
-// (docs/contributing.md#validator-rules).
+// fail a repository that passes today ships as SevWarning for at least one framework minor before
+// SevError; one preventing an outage or a security problem may be SevError at once. IDs are never
+// reused (docs/contributing.md#validator-rules).
 func All() []Check {
 	return []Check{
 		&NameLengthCheck{},      // POLICY001

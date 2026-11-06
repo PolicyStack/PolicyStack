@@ -1,19 +1,24 @@
 # Run by prek: in CI (ci.yml lint) as `prek run --all-files`, locally after `prek install`. Tools come
 # from mise.toml (language: system). Only the README generator gets its own env, for PyYAML.
-# Helm templates and converters are not YAML until rendered. tools/validator/crds holds upstream's
-# files verbatim. The validator's lint runs in upstream.yml.
-exclude: (^|/)(templates|converters|__snapshot__)/|^(site|autoshiftv2|oac-apps|tools/validator/crds)/
+# tools/validator/crds holds upstream's files verbatim. The validator's lint runs in upstream.yml.
+exclude: ^(site|autoshiftv2|oac-apps|tools/validator/crds)/
 
 repos:
   - repo: builtin
     hooks:
+      # Helm templates and converters are not YAML until rendered; snapshots are generated.
       - id: check-yaml
+        exclude: &unrendered (^|/)(templates|converters|__snapshot__)/
       - id: trailing-whitespace
+        exclude: *unrendered
       - id: end-of-file-fixer
-      # Also outside a git merge: copier update leaves conflict markers in the files it commits.
+        exclude: *unrendered
+      # Every file, templates and converters included. Also outside a git merge: copier update
+      # leaves conflict markers in the files it commits.
       - id: check-merge-conflict
         args: [--assume-in-merge]
       - id: check-added-large-files
+        exclude: *unrendered
 
   - repo: local
     hooks:

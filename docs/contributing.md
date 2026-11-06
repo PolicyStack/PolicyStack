@@ -60,11 +60,16 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
 
 - The title is a Conventional Commit, such as `feat(validator): real POLICY080`. Squash merges make it
   the commit subject and the release-note line ([PR Title](reference/ci.md#pr-title)).
-- A breaking change is anything that changes the framework's [Public API](reference/compatibility.md#public-api)
-  or a stable element's values keys or Policy names for existing users. Mark it with `!` in the
-  title: release-please reads it from the squash commit and bumps the major ([Releases](#releases)).
-  A breaking change to a preview element ships in a minor: no `!`, and a title that says what to
-  change, such as `feat(odf): rename config.pools to config.ipAddressPools`
+- A breaking change is anything that changes the framework's [Public API](reference/compatibility.md#public-api),
+  a stable element's values keys or Policy names for existing users, a stable lifecycle engine, or
+  anything [Lifecycle](reference/compatibility.md#lifecycle) holds for a major at every maturity.
+  Mark it with `!` in the title: release-please reads it from the squash commit and bumps the major
+  ([Releases](#releases)).
+  Any other breaking change to a preview element or a preview lifecycle engine ships in a minor:
+  no `!`, and a subject that starts with `breaking:` and says what to change, such as
+  `feat(odf): breaking: rename config.pools to config.ipAddressPools` or
+  `feat(lifecycle): breaking: ...`. The notes then list it under `odf:` with a subject starting
+  `breaking:`, which adopters search for
   ([Element stability](reference/compatibility.md#element-stability)).
 - `ci`, `upstream` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`: any
   member of `@PolicyStack/maintainers`.
@@ -81,8 +86,9 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
 
 A rule ID is never reused, even after its rule is removed. The severity is the `Severity` of the
 `Finding` the rule's `Run` returns. A new rule, or a new error case in an existing rule, that can fail
-a repository that passes today ships as a warning for one framework minor, then becomes an error in
-the next. The release notes of both minors say so. A rule that prevents an outage or a security
+a repository that passes today ships as a warning for at least one framework minor before it
+becomes an error. The release notes of the minor that adds the warning and of the minor that makes
+it an error say so. A rule that prevents an outage or a security
 problem may be an error from the start. The comment above `All()` in
 `tools/validator/internal/checks/checks.go` carries the same rule for whoever adds one.
 
@@ -113,28 +119,6 @@ nothing but the version. Title those PRs `docs`, `ci`, `test` or `chore`.
 
 A new element needs no release setup. `tools/create-element.sh` adds copier's answers template, and
 the element ships in the next release.
-
-### First release
-
-The manifest starts empty, so the first run opens one PR at `1.0.0-rc.1` (`release-as`). Until
-`1.0.0` ships, set `release-as` for each release (`1.0.0-rc.2`, then `1.0.0`) and remove it in the
-PR after the release: without it release-please bumps a prerelease to `1.1.0-rc.1`, and a stale one
-proposes a tag that already exists.
-
-### GitHub setup
-
-These are repository settings, not files:
-
-- **Release App.** A GitHub App with Contents, Issues and Pull requests write, installed on the
-  repository. Its client ID is the `RELEASE_APP_CLIENT_ID` variable and its key the
-  `RELEASE_APP_PRIVATE_KEY` secret of a `release` environment whose deployment branch policy allows
-  `main` only. PRs opened with `GITHUB_TOKEN` start no workflow, so a release PR would never get the
-  required checks.
-- **Tag rulesets** on `refs/tags/v*`. One restricts creations, with the
-  Release App and maintainers as bypass actors. A second restricts updates and deletions, with no
-  bypass: a ruleset's bypass list covers all of its rules. Every `copier update` rebuilds its merge
-  base from the old tag, so a moved or deleted tag changes what adopters merge or breaks their
-  updates.
 
 ## Library changes
 
@@ -168,13 +152,16 @@ gets whatever `lib/` holds. If that does not satisfy the constraint, Helm fails 
 A library change is one PR:
 
 1. Change `lib/policy-library`, and in the same PR the elements, validator and docs that depend on it.
-2. Bump `version` in `lib/policy-library/Chart.yaml`. Patch: a fix. Minor: a new optional key or
-   define. Major: anything removed or renamed, or different output for unchanged values. `ct lint`
+2. Bump `version` in `lib/policy-library/Chart.yaml`. Patch: a fix, which may change output only
+   where it was a bug. Minor: a new optional key or define. Major: anything removed or renamed, or
+   any other change to output for unchanged values
+   ([policy-library versions](reference/compatibility.md#policy-library-versions)). `ct lint`
    in the [Upstream](reference/ci.md#upstream) `library` job fails a PR that changes
    `lib/policy-library` without a bump.
 3. An element that needs the new minor raises its floor to `^4.N.0`. The others keep theirs.
 4. Run the suites and commit the updated snapshots (`lib/tests/**/__snapshot__`). A snapshot diff
-   for values that don't use a new key means the change is a major.
+   for values that don't use a new key means the change is a major, unless the PR names the bug
+   the diff fixes.
 
     ```sh
     helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test

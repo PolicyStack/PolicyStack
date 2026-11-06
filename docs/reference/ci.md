@@ -62,11 +62,13 @@ prek is a pre-commit-compatible hook runner, installed by `mise install`. It rea
 | `actionlint` (workflow syntax), `zizmor` (workflow security audit) | Workflows. zizmor runs offline |
 | `shellcheck` | Shell scripts |
 | `ruff-check`, `ruff-format` | `tools/*.py` |
-| `element-readmes` | Regenerates `stack/*/README.md` ([Element reference](../develop/elements.md#element-reference)) |
+| `element-readmes` | Regenerates `stack/*/README.md`, except for elements with a `.copier-answers.yml`: their README is upstream's ([Element reference](../develop/elements.md#element-reference)) |
 | `lychee` | Link checker: relative links in `docs/`, offline |
 
-Every hook skips `templates/`, `converters/` and `__snapshot__/`, which are YAML only once rendered,
-and `tools/validator/crds/`, which holds upstream's files as fetched.
+`check-yaml`, `trailing-whitespace`, `end-of-file-fixer` and `check-added-large-files` skip
+`templates/`, `converters/` and `__snapshot__/`, which are YAML only once rendered.
+`check-merge-conflict` checks them too. Every hook skips `tools/validator/crds/`, which holds
+upstream's files as fetched.
 
 A hook that rewrites a file (`trailing-whitespace`, `end-of-file-fixer`, `ruff-format`,
 `element-readmes`) fails. Commit what it wrote:
@@ -119,6 +121,7 @@ digits, `-`) and `!` (breaking) are optional.
 ```text
 feat(validator): real POLICY080       # ok
 fix!: rename hubName                  # ok
+feat(odf): breaking: rename config.pools  # ok: preview break, a minor
 Revert "feat: add metallb"            # fails: retitle to revert: feat: add metallb
 ```
 

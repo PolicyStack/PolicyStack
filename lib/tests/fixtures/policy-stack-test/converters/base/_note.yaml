@@ -1,0 +1,6 @@
+{{- /* A partial: never discovered as a template, but a template can name it in file. */ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: note
+  namespace: default

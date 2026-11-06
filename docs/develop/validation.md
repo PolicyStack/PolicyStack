@@ -46,9 +46,9 @@ action is checked the same as the element's own `values.yaml`.
 ## Running it
 
 You need the tools from `mise.toml` on your `PATH` ([Setup](../contributing.md#setup)), plus `make`,
-`git` and `curl`. The first run needs network access: it downloads policy-library (the Helm library
-chart every element depends on) into each element's `charts/` and the CRDs into
-`tools/validator/.crds/`.
+`git` and `curl`. The first run needs network access: it downloads the CRDs into
+`tools/validator/.crds/`. policy-library, the Helm library chart every element depends on, comes from
+`lib/policy-library` in the same checkout ([Library changes](../contributing.md#library-changes)).
 
 While writing an element ([Workflow](elements.md#workflow)):
 
@@ -148,20 +148,21 @@ with `fleet/` files.
 | `validate [ELEMENT=<chart>]` | The three passes above |
 | `preview ELEMENT=<chart> [CLUSTER=<name>] [PREVIEW=<dir>]` | [Preview](#preview) |
 | `crds` | Downloads the [CRD schemas](#crd-schemas) into `tools/validator/.crds/` when a pin changed |
-| `test` | `crds`, then `go test -race ./...`. Tests that need Helm, the CRDs or a fetched policy-library skip without them. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
+| `test` | `crds`, then `go test -race ./...`. Tests that need Helm or the CRDs skip without them. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
 | `lint` | golangci-lint (`.golangci.yml`, gofmt and goimports included; `make fmt` fixes formatting), `go mod tidy -diff`, `go tool govulncheck` |
 | `ci` | `lint`, `validate`, `test` |
-| `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` fetches on demand |
-| `consumers LIBRARY=<dir>` | `validate` against an unreleased policy-library checkout ([Chart changes](../contributing.md#chart-changes)) |
+| `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` does it on every run |
 
 `CI` is the environment variable GitHub Actions sets. Leave it unset locally. When it is set, findings
 print as GitHub annotations (`--github`), missing CRDs fail the run instead of skipping POLICY080, and
 tests that would skip fail instead.
 
 !!! note
-    `helm dependency update` runs unless `charts/` already holds `<name>-<version>.tgz` for every
-    dependency. Bumping policy-library to an unpublished version fails the fetch, and RENDER000
-    reports the element unrendered. Test an unpublished chart with `consumers` instead.
+    Every run starts with `helm dependency update` on each chart, once per run, with
+    `--skip-refresh` when every dependency is `file://`. It packages `lib/policy-library` into the chart's `charts/`, so the render always uses the library
+    in your checkout, even when its version has not changed. When `lib/policy-library` does not
+    satisfy the chart's `version` floor, the update fails, RENDER000 reports the element
+    unrendered, and POLICY060 says what to change.
 
 ### Baseline
 

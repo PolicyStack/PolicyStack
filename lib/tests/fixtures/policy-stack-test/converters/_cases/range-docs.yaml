@@ -1,0 +1,8 @@
+{{- /* A range that opens each object with ---, so the output starts with a separator. */ -}}
+{{- range list "range-a" "range-b" }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ . }}
+{{- end }}

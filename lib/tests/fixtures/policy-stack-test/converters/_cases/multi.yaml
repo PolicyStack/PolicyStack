@@ -1,0 +1,15 @@
+{{- /* Two documents, one object each. An empty document is dropped. */ -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multi-a
+---
+{{- if .Config.second }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Config.name }}
+  namespace: multi-a
+data:
+  key: "a---b"
+{{- end }}

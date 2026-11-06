@@ -1,0 +1,7 @@
+{{- /* Renders nothing unless .Config.emit is set: an empty object-templates-raw list. */ -}}
+{{- if .Config.emit }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: emitted
+{{- end }}

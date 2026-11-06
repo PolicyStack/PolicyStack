@@ -126,6 +126,9 @@ pymdownx.superfences.custom_fences = [
 "concepts/architecture.md#terms" = "concepts/overview.md#glossary"
 "concepts/architecture.md#day-2-handoff" = "concepts/lifecycle.md#day-2-handoff"
 "reference/fleet.md#protection" = "start/install.md#set-up-your-fork"
+# policy-library moved into lib/.
+"contributing.md#chart-changes" = "contributing.md#library-changes"
+"guides/disconnected.md#the-chart-repo" = "guides/disconnected.md#git-and-the-hubs-argo-cd"
 
 [project.extra]
 generator = false

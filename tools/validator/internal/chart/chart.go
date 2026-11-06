@@ -54,6 +54,7 @@ type NamedComponent struct {
 // Dependency is a single entry from Chart.yaml `dependencies:`.
 type Dependency struct {
 	Name       string `yaml:"name"`
+	Alias      string `yaml:"alias"`
 	Version    string `yaml:"version"`
 	Repository string `yaml:"repository"`
 }

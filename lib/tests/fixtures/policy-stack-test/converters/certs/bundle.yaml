@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trusted-ca
+  namespace: openshift-config
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"

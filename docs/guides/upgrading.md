@@ -6,14 +6,14 @@ Each part reaches your clusters on its own path:
 
 | Part | Delivered by | Reaches clusters |
 |---|---|---|
-| Elements, `lifecycle/`, [policy-library](../concepts/elements.md) version | Argo CD, from your fork at each fleet file's `revision` | Clusters pinned to the default branch, often the hub: within minutes of the merge. Clusters pinned to a tag or SHA: when you [move the pin](#roll-it-out). |
+| Elements, `lifecycle/`, [policy-library](../concepts/elements.md) (`lib/`) | Argo CD, from your fork at each fleet file's `revision` | Clusters pinned to the default branch, often the hub: within minutes of the merge. Clusters pinned to a tag or SHA: when you [move the pin](#roll-it-out). |
 | Validator and CI | GitHub Actions in your fork | On the merge PR itself |
 | ACM and GitOps operators | The `acm` and `gitops` elements, after [handover](../start/install.md#hand-the-operators-to-policystack) | Like any element, at the hub's `revision` ([ACM and GitOps](#acm-and-gitops)) |
 | Install chart (`install/`) | `helm upgrade`, run by you on each hub | When you run it, for every cluster on that hub at once ([Install chart](#install-chart)) |
 
 A merge can carry:
 
-- A policy-library bump in `stack/*/Chart.yaml`. `charts/` is not committed: Argo CD downloads the library version at render time. Disconnected, mirror it first ([The chart repo](disconnected.md#the-chart-repo)), or every element fails to render with a ComparisonError.
+- Changes to policy-library in `lib/policy-library`. Argo CD renders each element with the library from the same revision, so a cluster gets them when its `revision` reaches the merge, together with the element changes that need them. Nothing to mirror: the library comes with your fork.
 - Element default changes: operator channels (`stack/acm/values.yaml` ships `release-2.17`), newly enabled policies, renamed or removed values keys.
 - New validator rules, which apply to your fleet and values on the merge PR.
 - Edits to upstream's example `values/` files ([Example files](#example-values-files)).

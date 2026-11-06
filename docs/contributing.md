@@ -1,24 +1,23 @@
 # Contributing
 
 This page is for changes to PolicyStack itself, sent upstream: the framework (`install/`,
-`lifecycle/`, `tools/`, `.github/`, `docs/`), the starter elements in `stack/`, and the
-policy-library chart. Running PolicyStack from your own fork and taking upstream changes into it is
-covered in [Upgrading PolicyStack](guides/upgrading.md#merge-upstream); changes you make to elements
-in that fork are yours and need nothing here.
+`lifecycle/`, `lib/`, `tools/`, `.github/`, `docs/`) and the starter elements in `stack/`. Running
+PolicyStack from your own fork and taking upstream changes into it is covered in
+[Upgrading PolicyStack](guides/upgrading.md#merge-upstream); changes you make to elements in that
+fork are yours and need nothing here.
 
 ## Repositories and versions
 
 | Repository | Holds | Versioned by |
 |---|---|---|
-| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework and the starter elements | `vX.Y.Z` git tags with release notes ([Releases](#releases)). Nothing consumes them |
-| [PolicyStack-chart](https://github.com/PolicyStack/PolicyStack-chart) | The policy-library Helm chart every element depends on | Chart semver (`4.0.0`), published at `https://policystack.github.io/PolicyStack-chart`. Every chart pins one exact version ([Chart changes](#chart-changes)) |
+| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework, the starter elements and the policy-library chart (`lib/`) | `vX.Y.Z` git tags with release notes ([Releases](#releases)). Nothing consumes them. policy-library has its own chart version in `lib/policy-library/Chart.yaml` ([Library changes](#library-changes)) |
 | [PolicyStack/.github](https://github.com/PolicyStack/.github) | Org defaults, including the Renovate preset | Not versioned |
 
 An element's own `Chart.yaml` `version` (`0.1.0`) is never bumped: Argo CD renders elements from a
 Git path and never packages them.
 
-"Release" means three things in these docs: the Helm release name Argo CD gives each element on
-each cluster (`<element>-<cluster>`), a PolicyStack GitHub release, and a chart release.
+"Release" means two things in these docs: the Helm release name Argo CD gives each element on
+each cluster (`<element>-<cluster>`), and a PolicyStack GitHub release.
 
 ## Setup
 
@@ -42,10 +41,14 @@ Before opening a PR, run what each [CI](reference/ci.md#ci) job runs:
 ```sh
 prek run --all-files                       # lint
 make -C tools/validator validate test      # validate (Helm floor leg)
+helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test && untt --strict lib/tests/fixtures/policy-stack-test   # library
 python -m unittest tools/test_doc_generator.py && zensical build --strict   # docs
 ```
 
-The first `validate` needs network access: it downloads Go modules, policy-library and the CRDs.
+The `library` job also runs `ct lint` (the `version` bump check, [Library changes](#library-changes)).
+mise does not install chart-testing, so that step runs in CI only.
+
+The first `validate` needs network access: it downloads Go modules and the CRDs.
 `prek run` also fetches the Go vulnerability database (govulncheck, in the `validator-lint` hook).
 CI also runs `validate` with Helm 4.2.1; that leg is advisory
 ([Policy Validate](reference/ci.md#policy-validate)).
@@ -87,69 +90,54 @@ gh release create v0.2.0 --target main --generate-notes
     be rewritten. An adopter protects their own fork's tags the same way, since those are what its
     fleet files pin.
 
-## Chart changes
+## Library changes
 
-The policy-library chart lives in
-[PolicyStack-chart](https://github.com/PolicyStack/PolicyStack-chart). A pin is the exact `version` of
-the `policy-library` dependency (alias `stack`) in a `Chart.yaml`. Every chart in `CHARTS` of
-`tools/validator/Makefile` pins it: each element, `lifecycle/`, `tools/sample-element/` and the
-validator's test chart. `make deps` and `make consumers` loop over that list, so a new chart that
-uses policy-library outside `stack/` must be added there, or chart PRs never test it.
+policy-library is the Helm library chart every element renders through. It lives in
+`lib/policy-library`, with its helm-unittest suites in `lib/tests`. Every chart that uses it declares
+it the same way:
 
-When a chart PR merges, chart-releaser creates a GitHub release holding the `.tgz` and updates the
-index Helm reads. As soon as the version is published, Renovate, a bot, opens one PR that moves
-every pin at once.
-
-=== "Minor or patch"
-
-    1. **Chart PR.** Bump `version` in `charts/policy-library/Chart.yaml` (chart-testing's
-       `ct lint` fails without it, and chart-releaser publishes only versions with no release yet)
-       and commit the updated helm-unittest snapshots (`tests/**/__snapshot__`). Its `consumers`
-       job runs [Policy Validate](reference/ci.md#policy-validate) on PolicyStack `main` against
-       the chart under test. It must be green.
-    2. **Merge.** chart-releaser publishes `policy-library-<version>`.
-    3. **Renovate** opens one PR that bumps every pin.
-    4. **PolicyStack `ci`** gates it.
-
-=== "Major"
-
-    Renovate can't land a major: the pins and the element changes the new major needs must be one PR.
-
-    1. **Chart PR with `!`.** `consumers` is red by design: it renders PolicyStack `main`, still
-       written for the old major, against the new chart. A maintainer merges it through the ruleset
-       bypass.
-    2. **Merge.** chart-releaser publishes it. Nothing moves: every pin still names the old major.
-    3. **Renovate's major PR.** Renovate opens a PR with only the pins; its `ci` fails because the
-       elements aren't migrated. Close it: Renovate then ignores that major until the pins move by
-       hand, and minors and patches arrive as usual.
-    4. **Migration PR:** pins, elements, values layers, validator and docs in one change. You can
-       prepare it before step 2 and test it locally against the chart checkout (below). If you open
-       it before step 2, its `ci` stays red until the chart is published: `helm dependency update`
-       can't fetch an unpublished version, so RENDER000 reports every element unrendered.
-    5. **Merge.** Upstream has no clusters, so nothing moves here. In a fork, clusters pinned to its
-       default branch move when it merges upstream, and tag-pinned clusters when their `revision`
-       does.
-
-Test a chart checkout before opening the chart PR, with PolicyStack-chart cloned next to
-PolicyStack, from the PolicyStack root:
-
-```sh
-make -C tools/validator consumers LIBRARY="$PWD/../PolicyStack-chart/charts/policy-library"
+```yaml title="stack/gitops/Chart.yaml"
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "^4.0.0"                              # floor: the lowest 4.x this chart needs
+    repository: "file://../../lib/policy-library"  # relative to the chart directory
 ```
 
-It packages the checkout under each chart's pinned version, so the validator renders it instead of
-the published chart, and runs `validate` (not `lint` or `test`). On exit it deletes every
-`charts/policy-library-*.tgz` in those charts, so the next `validate` downloads the published chart
-again.
+Those charts are each element, `lifecycle/` (`file://../lib/policy-library`),
+`tools/sample-element/` and the validator's test chart. `make deps` loops over `CHARTS` in
+`tools/validator/Makefile`, so a new chart outside `stack/` must be added there.
 
-!!! warning
-    `LIBRARY` must be absolute: make runs from `tools/validator`.
+Helm resolves `file://` at render time. Argo CD's repo server and the validator package
+`lib/policy-library` into the chart's `charts/` from the same Git revision they render. `charts/` and
+`Chart.lock` are gitignored. A cluster pinned to a tag therefore renders the library as it was at
+that tag, and a library change reaches a cluster in the same commit as the element changes that use
+it. Nothing is published, and there is no chart repo to reach.
 
-**Rollback.** A chart release is never withdrawn. Argo CD downloads the pinned version every time it
-renders, so any fleet `revision` whose `Chart.yaml` pins a removed version would stop rendering. Ship
-a patch, and exclude the bad version in the Renovate preset in PolicyStack/.github (a
-`packageRules` entry for `policy-library` with `allowedVersions`). On PolicyStack, revert the
-Renovate or migration PR; in a fork, move a fleet file's `revision` back to the previous tag.
+`version` is a floor, not a pin. `^4.2.0` accepts any 4.x at or above 4.2.0, and the chart always
+gets whatever `lib/` holds. If that does not satisfy the constraint, Helm fails with a generic
+`can't get a valid version for 1 subchart(s)`; POLICY060 reports the same mistake with the fix
+([Validator rules](reference/rules.md)).
+
+A library change is one PR:
+
+1. Change `lib/policy-library`, and in the same PR the elements, validator and docs that depend on it.
+2. Bump `version` in `lib/policy-library/Chart.yaml`. Patch: a fix. Minor: a new optional key or
+   define. Major: anything removed or renamed, or different output for unchanged values. `ct lint`
+   in CI's `library` job fails a PR that changes `lib/policy-library` without a bump.
+3. An element that needs the new minor raises its floor to `^4.N.0`. The others keep theirs.
+4. Run the suites and commit the updated snapshots (`lib/tests/**/__snapshot__`). A snapshot diff
+   for values that don't use a new key means the change is a major.
+
+    ```sh
+    helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test
+    untt --strict lib/tests/fixtures/policy-stack-test  # -u rewrites snapshots
+    make -C tools/validator validate test
+    ```
+
+A major moves every floor to `^5.0.0` in that same PR, with the element and values changes it needs,
+and is a breaking change (`!`). To roll back, revert the PR; fleet revisions from before it keep
+rendering the library they had.
 
 ## Adding a lifecycle engine
 

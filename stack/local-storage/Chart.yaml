@@ -7,5 +7,5 @@ appVersion: "1.16.0"
 dependencies:
   - name: policy-library
     alias: stack
-    version: "4.0.0"
-    repository: "https://policystack.github.io/PolicyStack-chart"
+    version: "^4.0.0"
+    repository: "file://../../lib/policy-library"

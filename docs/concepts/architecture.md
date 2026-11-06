@@ -204,7 +204,7 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
       labels:
         velero.io/exclude-from-backup: "true" # (1)!
       annotations:
-        argocd.argoproj.io/manifest-generate-paths: '.;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml' # (2)!
+        argocd.argoproj.io/manifest-generate-paths: '.;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/platforms/aws.yaml;../../values/clusters/prod-east-1.yaml' # (2)!
       finalizers:
         - resources-finalizer.argocd.argoproj.io # (3)!
     spec:
@@ -287,9 +287,9 @@ Every Policy sets `copyPolicyMetadata: false`, so Argo CD never treats ACM's rep
 
 Background; nothing to configure.
 
-Each Application lists the files its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). Paths are relative to the source path, `stack/<element>`: `.` is the element directory (policy-library is pulled from its Helm repo by the exact version in `Chart.yaml`, not read from Git), and `../../` is the repo root. For a new commit, Argo CD compares the changed files with this list, with or without a webhook, and reuses the cached render when none match.
+Each Application lists the files its render reads in [`manifest-generate-paths`](https://argo-cd.readthedocs.io/en/stable/operator-manual/high_availability/#manifest-paths-annotation). Paths are relative to the source path, `stack/<element>`: `.` is the element directory, `../../lib` is the policy-library chart (Helm reads it from Git through `file://`), and `../../` is the repo root. For a new commit, Argo CD compares the changed files with this list, with or without a webhook, and reuses the cached render when none match.
 
-A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-east-1's Applications, and a commit to `stack/compliance/` only the `compliance-*` Applications at that revision. A commit to the root `values.yaml` re-renders all of them. Fleet files are not listed: a fleet change alters the Application spec, which always re-renders.
+A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-east-1's Applications, and a commit to `stack/compliance/` only the `compliance-*` Applications at that revision. A commit to the root `values.yaml` or to `lib/` re-renders all of them, `lifecycle-*` included (its paths start at `lifecycle/`, so the library is `../lib`). Fleet files are not listed: a fleet change alters the Application spec, which always re-renders.
 
 ## The hub
 

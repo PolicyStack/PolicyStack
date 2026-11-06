@@ -70,7 +70,7 @@ Argo CD reads only your fork. Upstream ships no fleet files and no live configur
 
         [Merge upstream](../guides/upgrading.md#merge-upstream) works the same, through the `upstream` remote. Argo CD needs a [repository secret](#install-policystack) to read it.
 
-    You edit `fleet/` (which clusters exist, which revision each reads, which layers it gets) and `values/` (the layers). You may add, change or delete elements under `stack/`; a changed element is yours to maintain. `install/`, `lifecycle/`, `tools/` and `.github/` come from upstream when you [merge upstream](../guides/upgrading.md#merge-upstream) ([The repository](../concepts/overview.md#the-repository)).
+    You edit `fleet/` (which clusters exist, which revision each reads, which layers it gets) and `values/` (the layers). You may add, change or delete elements under `stack/`; a changed element is yours to maintain. `install/`, `lifecycle/`, `lib/`, `tools/` and `.github/` come from upstream when you [merge upstream](../guides/upgrading.md#merge-upstream) ([The repository](../concepts/overview.md#the-repository)).
 
 2.  Decide what to do with the example files under `values/` ([Example files](../concepts/values.md#example-files)). They do nothing until a fleet file lists them, except `values/clusters/<name>.yaml`, which the hub or cluster of that name reads automatically, with no fleet-file entry. The shipped `acm-dc1.yaml` and `prod-east-1.yaml` turn elements on, so don't use those names for real clusters, or delete the files. Once `fleet/` has a file, the fork's CI (step 3) warns (POLICY052) about every `values/clusters/<name>.yaml` that no fleet file reads.
 

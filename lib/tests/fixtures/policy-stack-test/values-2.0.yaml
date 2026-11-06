@@ -1,0 +1,39 @@
+# Exercises every key added in chart 2.0.0: placement:. Layered over values.yaml.
+# Also covers an Exists expression and a numeric-looking label value, which must render as a string.
+selector:
+  matchExpressions:
+    name:
+      key: name
+      operator: Exists
+    ocp:
+      key: config.example.com/ocp.1
+      operator: In
+      values:
+        - "4.10"
+
+# Placement spec. claimSelector/celSelector are ANDed into the predicate built from selector,
+# predicates are appended (ORed), and every other key passes through verbatim.
+placement:
+  claimSelector:
+    matchExpressions:
+      - key: platform.open-cluster-management.io
+        operator: In
+        values:
+          - AWS
+  celSelector:
+    celExpressions:
+      - managedCluster.metadata.labels["vendor"] == "OpenShift"
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            name: canary
+  # Replaces the default unreachable/unavailable tolerations.
+  tolerations: []
+  clusterSets:
+    - global
+  numberOfClusters: 1
+
+stack:
+  policyStackTest:
+    usePolicySetsPlacements: true

@@ -62,8 +62,8 @@ spec:
           selfHeal: true
           allowEmpty: true
   # manifest-generate-paths lists every file the render reads, so a commit re-renders only the
-  # Applications it touches. Fleet files are not listed: a fleet change alters the spec, which always
-  # re-renders.
+  # Applications it touches. ../../lib is the policy-library chart, which Helm reads through file://.
+  # Fleet files are not listed: a fleet change alters the spec, which always re-renders.
   templatePatch: |
     {{ "{{" }}- $name := .name {{ "}}" }}
     {{ "{{" }}- if index .metadata.labels "local-cluster" {{ "}}" }}
@@ -75,7 +75,7 @@ spec:
     metadata:
       name: '{{ "{{" }}.path.basenameNormalized{{ "}}" }}-{{ "{{" }} $name {{ "}}" }}'
       annotations:
-        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (prepend $files ".") {{ "}}" }}'
+        argocd.argoproj.io/manifest-generate-paths: '{{ "{{" }} join ";" (concat (list "." "../../lib") $files) {{ "}}" }}'
     spec:
       source:
         helm:

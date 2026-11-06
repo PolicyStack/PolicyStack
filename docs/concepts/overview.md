@@ -11,6 +11,7 @@ You fork PolicyStack and pass the fork's URL as `gitRepo` when you install the c
 | `install/` | The Helm chart you run once per hub. It creates the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace and RBAC ([Install chart](../reference/install.md)). | Upstream |
 | `install/operators/` | Renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet ([Installation](../start/install.md)). | Upstream |
 | `lifecycle/` | The chart that builds and destroys clusters ([Cluster lifecycle](lifecycle.md)). | Upstream |
+| `lib/` | policy-library, the Helm library chart every element and `lifecycle/` renders through, and its tests ([How an element is built](elements.md)). | Upstream |
 | `tools/` | The validator, the sample element and the README generator. | Upstream |
 | `.github/` | CI workflows and `CODEOWNERS`. | Upstream |
 | `docs/` | This site. | Upstream |
@@ -196,7 +197,7 @@ Actions are off in a new fork and nothing is required until you add a ruleset: [
 | OperatorPolicy | A policy template that installs and upgrades one OLM operator. An element's `operatorPolicies` create them in its `install` Policy ([ACM policies in brief](acm.md)). |
 | Placement, PlacementBinding | ACM objects that choose clusters and bind Policies to them. Every PolicyStack Placement selects exactly one cluster ([Placement and naming](policies.md)). |
 | Policy | ACM's unit of compliance on the hub. It wraps one or more policy templates and carries the remediation action ([ACM policies in brief](acm.md)). |
-| policy-library | The Helm library chart every element depends on, aliased `stack`. It discovers converters and renders the Policies and Placement ([How an element is built](elements.md)). |
+| policy-library | The Helm library chart every element depends on, aliased `stack`, in `lib/policy-library`. It discovers converters and renders the Policies and Placement ([How an element is built](elements.md)). |
 | `pstack` | The hub namespace holding every Policy, Placement and PlacementBinding PolicyStack renders (`policyNamespace`) ([Placement and naming](policies.md)). |
 | Release | The Application name, also the Helm release name: `<element>-<cluster>`, `<element>-<hubName>` on the hub. Policy, Placement and PlacementBinding names derive from it ([Rendered names](elements.md#rendered-names)). |
 | Render | Argo CD running `helm template` for one Application. A failed render shows as `ComparisonError` and changes nothing ([How a change reaches a cluster](#how-a-change-reaches-a-cluster)). |

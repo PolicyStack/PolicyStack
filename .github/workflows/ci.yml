@@ -41,6 +41,39 @@ jobs:
     # actionlint 1.7.12 rejects the self-repository form ($/...) zizmor asks for.
     uses: ./.github/workflows/validate.yml # zizmor: ignore[self-repository]
 
+  # lib/policy-library: version bump and lint (lib/ct.yaml), then the helm-unittest suites in lib/tests.
+  library:
+    name: library
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # ct diffs against origin/main
+          persist-credentials: false
+
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: helm github:helm-unittest/helm-unittest
+
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+
+      # A changed lib/policy-library without a version bump fails here.
+      - run: ct lint --config lib/ct.yaml
+
+      # The fixture takes the library through file://, into a gitignored charts/.
+      - run: helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test
+
+      - run: untt --strict lib/tests/fixtures/policy-stack-test
+
+      # A test with no stored snapshot writes one and passes, so it must have been committed.
+      - run: |
+          if [[ -n $(git status --porcelain -- lib/tests) ]]; then
+            git status --porcelain -- lib/tests
+            echo "::error title=Snapshots::Run untt locally and commit lib/tests/**/__snapshot__."
+            exit 1
+          fi
+
   docs:
     name: docs
     runs-on: ubuntu-latest
@@ -71,7 +104,7 @@ jobs:
   ci:
     name: ci
     if: always()
-    needs: [lint, validate, docs]
+    needs: [lint, validate, library, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

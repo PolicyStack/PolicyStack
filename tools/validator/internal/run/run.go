@@ -617,6 +617,9 @@ func buildRegistry(opts Options, runner *render.Runner, crds checks.CRDs) []chec
 		case *checks.InstallCheck:
 			v.Runner, v.Root = runner, opts.RepoRoot
 			out = append(out, v)
+		case *checks.PinningCheck:
+			v.Root = opts.RepoRoot
+			out = append(out, v)
 		case *checks.FleetPinCheck:
 			v.Root, v.Branch = opts.RepoRoot, opts.BaseBranch
 			out = append(out, v)

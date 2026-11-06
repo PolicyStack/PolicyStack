@@ -6,7 +6,7 @@ A disconnected cluster cannot reach the internet. PolicyStack normally pulls fro
 
 | Normally reached | By | Disconnected replacement | Set up |
 |---|---|---|---|
-| GitHub and the `policy-library` chart repo | Argo CD on the hub, and the fork's CI | Internal Git and a mirror of the chart repo | By hand ([Before you start](#before-you-start)) |
+| GitHub | Argo CD on the hub, and the fork's CI | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([Before you start](#before-you-start)) |
 | Container images and operator catalogs | Every cluster | oc-mirror's mirror sets and CatalogSources, applied by the `disconnected` element; `global.catalogSources` points every operator at the mirrored catalog | [Site layer](#site-layer) |
 | Public certificate authorities | Every cluster | Your mirror registry's CA and your internal servers' CAs, applied by the `disconnected` element | [Site layer](#site-layer) |
 | Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
@@ -24,7 +24,7 @@ Terms used on this page:
 
 Other terms: [Glossary](../concepts/overview.md#glossary).
 
-Order of work: mirror, set up Git and the chart repo, write the site layer, bring up the hub, then add spokes.
+Order of work: mirror, set up Git, write the site layer, bring up the hub, then add spokes.
 
 ## Before you start
 
@@ -77,29 +77,9 @@ mirror:
 3.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it.
 4.  ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: `stable-2.12` for ACM 2.17 (ACM release notes).
 
-### The chart repo
-
-Every element is a Helm chart that depends on `policy-library` from `https://policystack.github.io/PolicyStack-chart`. The dependency is not committed (`charts/` and `*.tgz` are gitignored), so Argo CD's repo server downloads it on every render. If the hub cannot reach the repo, every Application shows a ComparisonError and nothing syncs.
-
-Either let the hub's repo server reach it through a proxy (`HTTPS_PROXY` in `spec.repo.env` of the `openshift-gitops` ArgoCD CR), or serve a copy from any HTTPS server:
-
-```sh
-helm pull policy-library --repo https://policystack.github.io/PolicyStack-chart --version 4.0.0
-helm repo index . --url https://charts.dc2.example.com/policystack # upload index.yaml and the .tgz
-```
-
-Mirror every version a `Chart.yaml` asks for at any revision a fleet file pins: a cluster pinned to a revision whose version is missing gets a ComparisonError. Then repoint every chart, and run this again after merging new elements from upstream:
-
-```sh
-sed -i 's#https://policystack.github.io/PolicyStack-chart#https://charts.dc2.example.com/policystack#' \
-  stack/*/Chart.yaml lifecycle/Chart.yaml
-```
-
-If your fork's CI runs (GitHub Actions on GitHub, [Set up your fork](../start/install.md#set-up-your-fork)), it runs `helm dependency update` on the same files, so its runners need that repo too.
-
 ### Git and the hub's Argo CD
 
-Argo CD on the hub reads your fork before any Policy exists, and PolicyStack never manages that Argo CD instance (the hub layer turns off the `gitops` element's `instance` policy, [Installation](../start/install.md#hand-the-operators-to-policystack)). So `trustedCA` below never reaches it. If your Git server or chart mirror uses a private CA, add it to Argo CD by hand, as a [repository TLS certificate](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/).
+Argo CD on the hub reads your fork before any Policy exists, and PolicyStack never manages that Argo CD instance (the hub layer turns off the `gitops` element's `instance` policy, [Installation](../start/install.md#hand-the-operators-to-policystack)). So `trustedCA` below never reaches it. If your Git server uses a private CA, add it to Argo CD by hand, as a [repository TLS certificate](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/).
 
 ## Site layer
 
@@ -218,7 +198,7 @@ The hub needs the mirrored catalog before PolicyStack exists to apply it, becaus
     ```
 
 3. [Install the operators](../start/install.md#install-the-operators), adding the site layer with `-f values/datacenters/dc2.yaml`. Its `global.catalogSources` points the ACM and GitOps Subscriptions at the mirrored catalog.
-4. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git and the chart repo ([Before you start](#before-you-start)).
+4. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git ([Before you start](#before-you-start)).
 5. List `datacenters/dc2.yaml` in the hub's fleet file, `fleet/hubs/<hubName>.yaml` (`hubName` is the name you installed the hub with, [Hub file](../reference/fleet.md#hub-file)). The `disconnected` element then enforces the same objects by name, so ACM manages the ones you applied instead of creating copies. If they differ from `clusterResources`, the Policy changes them to match.
 
 ## What the element applies

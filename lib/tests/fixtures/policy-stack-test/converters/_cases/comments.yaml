@@ -1,0 +1,10 @@
+{{- /* YAML comments are kept but don't pick the shape: the header-only document is dropped and the list renders raw. */ -}}
+# header
+---
+# one Namespace
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: commented

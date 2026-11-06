@@ -268,7 +268,7 @@ Use `false` to turn a piece off, never `null`: null counts as unset, which turns
 
 ## Schema
 
-Helm merges every layer first, then validates the result once against policy-library's [values.schema.json](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/values.schema.json), which covers the `stack` key and `global` (Helm passes top-level `global` to every subchart, the library included). A misspelled or mistyped library key fails the render. The wording depends on the Helm version:
+Helm merges every layer first, then validates the result once against policy-library's [values.schema.json](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/values.schema.json), which covers the `stack` key and `global` (Helm passes top-level `global` to every subchart, the library included). A misspelled or mistyped library key fails the render. The wording depends on the Helm version:
 
 === "Helm 3.18.4 and earlier (OpenShift GitOps 1.18, CI)"
 

@@ -15,7 +15,7 @@ import (
 // layerRootKeys are the top-level keys a values layer may set: what the elements and lifecycle read.
 // version and channel are allowed here because POLICY034 reports them. componentKeys are the keys
 // policy-library's schema allows under stack.<element> (definitions.component); TestComponentKeys
-// compares them with the vendored archive.
+// compares them with lib/policy-library/values.schema.json.
 var (
 	layerRootKeys   = []string{"policyNamespace", "stack", "global", "placement", "install", "version", "channel"}
 	layerGlobalKeys = []string{"remediationAction", "catalogSources"}

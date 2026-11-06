@@ -266,7 +266,7 @@ func TestDedupe(t *testing.T) {
 }
 
 func TestDependencyFailure(t *testing.T) {
-	const chartYAML = "apiVersion: v2\nname: a\nversion: 0.1.0\ndependencies:\n  - name: policy-library\n    version: 3.4.0\n    repository: https://example.invalid\n"
+	const chartYAML = "apiVersion: v2\nname: a\nversion: 0.1.0\ndependencies:\n  - name: policy-library\n    version: ^4.0.0\n    repository: file://../../lib/policy-library\n"
 	tests := []struct {
 		name     string
 		archive  string // in stack/a/charts
@@ -282,7 +282,8 @@ func TestDependencyFailure(t *testing.T) {
 		},
 		{name: "no archive", only: "RENDER000", want: []string{"RENDER000 a stack/a/Chart.yaml"}},
 		{name: "RENDER000 not run", archive: "policy-library-3.3.0.tgz", only: "POLICY081"},
-		{name: "pinned archive needs no fetch", archive: "policy-library-3.4.0.tgz", only: "RENDER000", rendered: true},
+		// The library changes without a version change, so a matching archive is no reason to skip.
+		{name: "matching archive is not trusted", archive: "policy-library-4.0.0.tgz", only: "RENDER000", want: []string{"RENDER000 a stack/a/Chart.yaml"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -297,8 +298,8 @@ func TestDependencyFailure(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			// A helm whose dependency update fails, as for an unpublished policy-library.
-			write("helm", "#!/bin/sh\necho \"$*\" >> "+log+"\n[ \"$1\" = dependency ] && { echo 'Error: chart not found' >&2; exit 1; }\nexit 0\n", 0o755)
+			// A helm whose dependency update fails for stack/a, as for a missing lib/policy-library.
+			write("helm", "#!/bin/sh\necho \"$*\" >> "+log+"\ncase \"$1 $4\" in dependency\\ */stack/a) echo 'Error: chart not found' >&2; exit 1;; esac\nexit 0\n", 0o755)
 			write("stack/a/Chart.yaml", chartYAML, 0o644)
 			write("stack/a/values.yaml", "stack:\n  a:\n    enabled: true\n", 0o644)
 			write("stack/b/Chart.yaml", "apiVersion: v2\nname: b\nversion: 0.1.0\n", 0o644)

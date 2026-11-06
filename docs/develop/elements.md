@@ -5,7 +5,7 @@ Policies and templates, and `values.yaml` only configures them. ACM terms (Polic
 `musthave`, inform/enforce) are explained in [ACM policies in brief](../concepts/acm.md).
 
 Every key the library reads is in the
-[policy-library README](https://github.com/PolicyStack/PolicyStack-chart/blob/main/charts/policy-library/README.md#reference).
+[policy-library README](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#reference).
 
 ## Before you start
 
@@ -16,9 +16,12 @@ Every key the library reads is in the
 | `prek install` (optional) | Runs the repo hooks, including `element-readmes`, on each commit | A stale README fails CI instead of your commit |
 | A nonprod cluster in your fleet. Its fleet file, `fleet/<cluster>.yaml`, says which Git revision and values layers it gets ([Fleet files](../concepts/overview.md#fleet-files)) | Steps 10-12 | You can't try the element on a cluster. Stop after step 9 and rely on CI |
 
-policy-library is downloaded, not committed: `preview` and `validate` fetch it into
-`stack/<name>/charts/` (gitignored), so the first run needs network access. Argo CD fetches it itself
-when it renders.
+policy-library lives in this repo, in `lib/policy-library`. Your `Chart.yaml` declares it with
+`repository: file://../../lib/policy-library` and a floor such as `version: "^4.0.0"`, which
+`create-element.sh` copies from the sample. Helm packages it into `stack/<name>/charts/`
+(gitignored) on every `preview` and `validate`, and Argo CD does the same when it renders. If your
+element needs a library feature added in 4.N, raise the floor to `^4.N.0`
+([Library changes](../contributing.md#library-changes)).
 
 ## Workflow
 

@@ -1,14 +1,8 @@
 name: Policy Validate
 
-# Called by ci.yml, and by the PolicyStack-chart PR CI with library-artifact set: every chart then
-# renders the chart under test instead of the published one (docs/reference/ci.md#policy-validate).
+# Called by ci.yml (docs/reference/ci.md#policy-validate).
 on:
   workflow_call:
-    inputs:
-      library-artifact:
-        description: Artifact holding an unpacked policy-library chart directory. Empty renders the published chart.
-        type: string
-        default: ''
   workflow_dispatch:
 
 permissions:
@@ -37,8 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ inputs.library-artifact && 'PolicyStack/PolicyStack' || github.repository }}
-          ref: ${{ inputs.library-artifact && 'main' || '' }}
           fetch-depth: 0 # tags and origin/* branches for POLICY052
           persist-credentials: false
 
@@ -61,24 +53,12 @@ jobs:
           path: tools/validator/.crds
           key: crds-${{ hashFiles('tools/validator/Makefile') }}
 
-      - if: inputs.library-artifact != ''
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: ${{ inputs.library-artifact }}
-          path: ${{ runner.temp }}/policy-library
-
       # Findings are annotated on the PR, fleet pins (POLICY052) and install/ (POLICY071) included.
       # Recipes in tools/validator/Makefile.
       - name: Validate
-        if: inputs.library-artifact == ''
         run: make -C tools/validator validate
 
-      - name: Validate against the chart under test
-        if: inputs.library-artifact != ''
-        run: make -C tools/validator consumers LIBRARY="$RUNNER_TEMP/policy-library"
-
-      # Last, so a failing test does not hide the annotations above. The chart repo skips it: a chart
-      # PR that adds a key must not fail on the validator's own tests.
+      # Last, so a failing test does not hide the annotations above.
       - name: Test validator
-        if: ${{ !cancelled() && inputs.library-artifact == '' && matrix.helm == '' }}
+        if: ${{ !cancelled() && matrix.helm == '' }}
         run: make -C tools/validator test

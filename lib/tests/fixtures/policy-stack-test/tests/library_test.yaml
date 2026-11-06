@@ -1,0 +1,181 @@
+# Contracts the snapshots only show by example.
+suite: library contracts
+templates:
+  - templates/policies.yaml
+release:
+  name: test
+tests:
+  - it: suffixTemplateNames appends the cluster to template names and their dependencies
+    release:
+      name: policy-stack-test-c1
+    values:
+      - ../values-dependencies.yaml
+      - ../values-2.1.yaml
+    documentSelector:
+      path: metadata.name
+      value: workloads-policy-stack-test-c1
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: workloads-dpa-c1
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: workloads-followup-c1
+      - equal:
+          path: spec.policy-templates[0].extraDependencies[0].name
+          value: install-oadp-c1-status
+      - equal:
+          path: spec.policy-templates[0].extraDependencies[1].name
+          value: install-oadp-c1
+      - equal:
+          path: spec.policy-templates[1].extraDependencies[0].name
+          value: workloads-dpa-c1
+
+  - it: suffixed operator templates keep -ns and -status last
+    release:
+      name: policy-stack-test-c1
+    values:
+      - ../values-dependencies.yaml
+      - ../values-2.1.yaml
+    documentSelector:
+      path: metadata.name
+      value: install-policy-stack-test-c1
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: install-oadp-c1-ns
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: install-oadp-c1-status
+      - equal:
+          path: spec.policy-templates[2].objectDefinition.metadata.name
+          value: install-oadp-c1
+
+  # Template names are object names on the managed cluster: a DNS-1123 label, at most 63 long.
+  - it: suffixed template names stay valid DNS-1123 labels
+    release:
+      name: policy-stack-test-c1
+    values:
+      - ../values-dependencies.yaml
+      - ../values-2.1.yaml
+    documentSelector:
+      path: kind
+      value: Policy
+      matchMany: true
+    asserts:
+      - matchRegex:
+          path: spec.policy-templates[*].objectDefinition.metadata.name
+          pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$
+
+  - it: template names carry no suffix by default
+    values:
+      - ../values-dependencies.yaml
+    documentSelector:
+      path: metadata.name
+      value: workloads-test
+    asserts:
+      - equal:
+          path: spec.policy-templates[0].objectDefinition.metadata.name
+          value: workloads-dpa
+      - equal:
+          path: spec.policy-templates[1].objectDefinition.metadata.name
+          value: workloads-followup
+
+  # 3.1.0: always off, so ACM does not copy Argo CD tracking metadata onto replicated Policies.
+  - it: every Policy sets copyPolicyMetadata false
+    documentSelector:
+      path: kind
+      value: Policy
+      matchMany: true
+    asserts:
+      - equal:
+          path: spec.copyPolicyMetadata
+          value: false
+
+  # 3.4.0: removing the namespace would also remove every other operator installed in it.
+  - it: a mustnothave operator renders no namespace template
+    values:
+      - ../values-3.4.yaml
+    documentSelector:
+      path: metadata.name
+      value: install-test
+    asserts:
+      - notMatchRegex:
+          path: spec.policy-templates[*].objectDefinition.metadata.name
+          pattern: -ns$
+
+  - it: hubTemplateOptions passes through on the Policy that sets it
+    values:
+      - ../values-3.3.yaml
+    documentSelector:
+      path: metadata.name
+      value: base-test
+    asserts:
+      - equal:
+          path: spec.hubTemplateOptions
+          value:
+            serviceAccountName: policy-hub-reader
+
+  - it: hubTemplateOptions is omitted when unset
+    values:
+      - ../values-3.3.yaml
+    documentSelector:
+      path: metadata.name
+      value: certs-test
+    asserts:
+      - notExists:
+          path: spec.hubTemplateOptions
+
+  - it: renders only enabled policySets that list policies
+    values:
+      - ../values-policysets.yaml
+    documentSelector:
+      path: kind
+      value: PolicySet
+      matchMany: true
+    asserts:
+      - hasDocuments:
+          count: 2
+          filterAware: true
+      - containsDocument:
+          kind: PolicySet
+          apiVersion: policy.open-cluster-management.io/v1beta1
+          name: baseline-test
+          namespace: open-cluster-management
+          any: true
+      - containsDocument:
+          kind: PolicySet
+          apiVersion: policy.open-cluster-management.io/v1beta1
+          name: certs-only-test
+          namespace: open-cluster-management
+          any: true
+
+  - it: usePolicySetsPlacements binds the rendered policySets instead of Policies
+    values:
+      - ../values-policysets.yaml
+    documentSelector:
+      path: kind
+      value: PlacementBinding
+    asserts:
+      - equal:
+          path: subjects
+          value:
+            - apiGroup: policy.open-cluster-management.io
+              kind: PolicySet
+              name: baseline-test
+            - apiGroup: policy.open-cluster-management.io
+              kind: PolicySet
+              name: certs-only-test
+
+  - it: PolicySet members carry the release suffix
+    values:
+      - ../values-policysets.yaml
+    documentSelector:
+      path: metadata.name
+      value: baseline-test
+    asserts:
+      - equal:
+          path: spec.policies
+          value:
+            - base-test
+            - certs-test

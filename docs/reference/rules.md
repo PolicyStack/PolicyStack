@@ -51,7 +51,7 @@ one opt-out in the repo is POLICY037's: make the template `InformOnly`
 
 | Rule | Usual cause | Fix |
 |---|---|---|
-| RENDER000 | `helm template` failed | Read the Helm error under the finding. A `hint:` line names the usual cause: a missing `selector` (when running the binary by hand, pass the [baseline](../develop/validation.md#baseline)) or a values key the chart reads that no file sets. `dependencies not fetched` means no network, or a policy-library version that isn't published |
+| RENDER000 | `helm template` failed | Read the Helm error under the finding. A `hint:` line names the usual cause: a missing `selector` (when running the binary by hand, pass the [baseline](../develop/validation.md#baseline)) or a values key the chart reads that no file sets. `dependencies not fetched` means `helm dependency update` could not package `lib/policy-library`: POLICY060 names the `Chart.yaml` fix |
 | POLICY001 | A policy or template name too long for a 30-character cluster name | Shorten it ([Naming limits](../concepts/policies.md#naming-limits)) |
 | POLICY002 | Two names collide on one cluster. Also reported across elements: element `b` with policy `x-a` and element `a-b` with policy `x` both render Policy `x-a-b-<cluster>`, which POLICY091 doesn't catch | Rename one policy or template |
 | POLICY003 | Two elements ship a template of the same name | Rename one. ACM requires template names unique across every Policy on a cluster |
@@ -65,6 +65,7 @@ one opt-out in the repo is POLICY037's: make the template `InformOnly`
 | POLICY038 | A `subscription.source` that is not a default catalog | Fix the name, or declare it under `global.catalogSources` ([Disconnected clusters](../guides/disconnected.md)) |
 | POLICY050 | A broken fleet file | Fix the key the message names. `install.version` is an error whatever its value: use the top-level `version` |
 | POLICY052 | A `revision` that doesn't resolve, or a commit missing what the fleet file uses | Push the branch or tag first. The "upgrade element" is `stack/upgrade`: a fleet file setting `version` or `channel` needs a `revision` that has it. Locally, `main` means `origin/main` ([flags](../develop/validation.md#reading-the-output)) |
+| POLICY060 | A `Chart.yaml` copied from outside `stack/`, written by hand, or with a floor above `lib/policy-library` | Set what the message names. A floor above the library means the library change this chart needs is missing, or `lib/policy-library/Chart.yaml` `version` was not bumped with it ([Library changes](../contributing.md#library-changes)) |
 | POLICY070 | `helm lint` failed on the element with only its own `values.yaml`, where it is off | A chart structure error; render problems are RENDER000 |
 | POLICY080 | A misspelled field or enum value in a rendered object | Fix the field the message names |
 | POLICY081 | An ACM template that fails on an empty cluster | [ACM templates](../develop/validation.md#acm-templates) |

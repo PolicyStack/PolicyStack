@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Config.name | default "test-cm" }}
+  namespace: default
+data:
+  value1: {{ .Config.value1 | default "unset" | quote }}

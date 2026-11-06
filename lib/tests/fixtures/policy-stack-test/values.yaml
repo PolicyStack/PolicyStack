@@ -1,0 +1,53 @@
+# Baseline values. converters/ adds what is not declared here: base/test-cm, certs/bundle, and the
+# install Policy for operatorPolicies. Every other values file layers over this one.
+policyNamespace: open-cluster-management
+
+selector:
+  matchExpressions:
+    environment:
+      key: environment
+      operator: In
+      values:
+        - dev
+
+stack:
+  policyStackTest:
+    enabled: true
+    default:
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      base:
+        description: "Baseline policy"
+        severity: medium
+        remediationAction: enforce
+        templates:
+          test-cm:
+            description: "Test ConfigMap"
+            config:
+              name: testcm
+              value1: hello
+
+    operatorPolicies:
+      oadp:
+        description: "Operator policy for OpenShift ADP"
+        displayName: "OADP Operator"
+        namespace: openshift-adp
+        operatorGroup:
+          name: openshift-adp-group
+          targetNamespaces:
+            - openshift-adp
+        subscription:
+          channel: stable
+          name: redhat-oadp-operator
+
+    policySets:
+      - name: baseline
+        policies:
+          - base
+          - certs

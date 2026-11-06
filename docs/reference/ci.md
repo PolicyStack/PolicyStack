@@ -7,10 +7,10 @@ For an adopter, the checks that cover real clusters are the `fleet/` pass of
 
 | Workflow | Trigger | Fails when | In your fork |
 | -------- | ------- | ---------- | ------------ |
-| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook, the validator, a validator test, the doc generator tests or the site build fails | Runs. Its `publish` job is skipped |
+| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook, the validator, a validator test, the policy-library lint or tests, the doc generator tests or the site build fails | Runs. Its `publish` job is skipped |
 | [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit | Runs |
-| [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI, and by PR CI in PolicyStack-chart (the repo of the policy-library chart) | A validator error, a bad fleet pin, a broken install chart, a failing test | Runs, including the `fleet/` pass |
-| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in a fork |
+| [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart, a failing test | Runs, including the `fleet/` pass |
+| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in a fork |
 
 A new push to a PR cancels its running CI and Render Diff checks. CI and Policy Validate can also be
 started from the Actions tab.
@@ -42,8 +42,9 @@ or was skipped ([alls-green](https://github.com/re-actors/alls-green)). A new jo
 | --- | ---- |
 | `lint` | `prek run --all-files --show-diff-on-failure`: the [hooks](#hooks) in `.pre-commit-config.yaml` |
 | `validate` | [Policy Validate](#policy-validate) |
+| `library` | policy-library in `lib/`: `ct lint --config lib/ct.yaml`, which fails a change to `lib/policy-library` without a `version` bump and runs `helm lint --strict`; then the helm-unittest suites in `lib/tests` (`untt --strict`), failing on a snapshot that is not committed ([Library changes](../contributing.md#library-changes)) |
 | `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
-| `ci` | The required check over `lint`, `validate` and `docs` |
+| `ci` | The required check over `lint`, `validate`, `library` and `docs` |
 | `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `ci`: the site to `gh-pages` |
 
 Tool versions come from `mise.toml`. Run the same checks locally: [Setup](../contributing.md#setup).
@@ -155,14 +156,6 @@ resolves and that its commit has what the fleet file uses ([Revision](fleet.md#r
 - `install/operators` doesn't render the ACM and GitOps operators plus a MultiClusterHub
   ([Installation](../start/install.md)).
 
-### Chart PRs
-
-PolicyStack-chart's PR CI calls this workflow with `library-artifact` (the PR's
-`charts/policy-library`) and runs `make -C tools/validator consumers` on PolicyStack `main`
-([Chart changes](../contributing.md#chart-changes)). The test step is skipped, so a chart PR that
-adds a key doesn't fail on PolicyStack's tests. POLICY071 still runs; `install/` does not use
-policy-library.
-
 ## Render Diff
 
 Comments on the PR with what the merge changes in each `fleet/` cluster's rendered Policies. Upstream
@@ -219,7 +212,7 @@ push that changes nothing deletes it.
 Renovate is a bot that opens dependency update PRs. Its config is the org preset
 `renovate-config.json` in [`PolicyStack/.github`](https://github.com/PolicyStack/.github);
 `renovate.json` only extends it. Renovate runs only where its GitHub App is installed. In a fork you
-can leave it off: policy-library and tool bumps arrive when you
+can leave it off: tool bumps arrive when you
 [merge upstream](../guides/upgrading.md#merge-upstream).
 
 | Pinned in | What |
@@ -229,4 +222,6 @@ can leave it off: policy-library and tool bumps arrive when you
 | `tools/requirements*.txt` | PyYAML, Zensical |
 | `.github/workflows/` | Actions, by commit SHA |
 | `tools/validator/Makefile` | The CRD source SHAs ([CRD schemas](../develop/validation.md#crd-schemas)) |
-| `stack/*/Chart.yaml`, `lifecycle/`, `tools/sample-element/`, `tools/validator/internal/chart/testdata/element/` | policy-library, bumped together in one PR after a chart release ([Chart changes](../contributing.md#chart-changes)) |
+
+policy-library is not a dependency Renovate moves: it is `lib/policy-library` in this repo, and
+elements declare a floor on it ([Library changes](../contributing.md#library-changes)).

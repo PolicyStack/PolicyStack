@@ -27,8 +27,10 @@ The PolicyStack tools provide:
 Copies `tools/sample-element/` to `stack/<name>/`, replacing `my-element` with the name and `myElement`
 with its camelCase form, sets the description and generates the README. It prompts for missing
 arguments and refuses a name that is not lowercase kebab-case, is longer than 17 characters
-(POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The new element
-passes the validator and prek as is. See [Workflow](../docs/develop/elements.md#workflow).
+(POLICY001), or equals, extends or prefixes an existing element's name (POLICY091). The copy keeps
+the sample's policy-library dependency (`file://../../lib/policy-library`, floor `^4.0.0`), which
+resolves from `stack/<name>/` as it does from `tools/sample-element/`. The new element passes the
+validator and prek as is. See [Workflow](../docs/develop/elements.md#workflow).
 
 ## doc-generator.py
 

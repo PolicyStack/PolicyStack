@@ -8,7 +8,7 @@ BASELINE := tools/validator/testdata/baseline.yaml
 # Every chart that depends on policy-library, TestConformance's fixture included.
 CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(ROOT)/lifecycle $(ROOT)/tools/sample-element internal/chart/testdata/element
 
-.PHONY: build test lint fmt clean run tidy deps crds validate preview consumers ci
+.PHONY: build test lint fmt clean run tidy deps crds validate preview ci
 
 # CRDs POLICY080 validates rendered objects against, at the ACM 2.16 floor (docs/develop/validation.md#crd-schemas).
 # Renovate bumps each SHA to its branch head; the branches move with the floor, by hand.
@@ -53,9 +53,9 @@ clean:
 run: build
 	./$(BINARY) --repo-root ../..
 
-# Fetches policy-library into every chart ahead of time. validate also fetches on demand.
+# Packages lib/policy-library into every chart's charts/ ahead of time. validate does it on every run.
 deps:
-	@for c in $(CHARTS); do helm dependency update $$c >/dev/null || exit 1; done
+	@for c in $(CHARTS); do helm dependency update --skip-refresh $$c >/dev/null || exit 1; done
 
 # Refetches only when a pin changes. CI caches the directory keyed on this file.
 crds:
@@ -100,18 +100,4 @@ preview: build
 	find "$$dir" -name '*.yaml' | sort | $(if $(CLUSTER),xargs tail -n +1,cat); \
 	exit $$failed
 
-# Renders every chart against the policy-library chart directory in LIBRARY, packaged as the chart's
-# pinned version so the validator skips the download (alreadyDownloaded in internal/render/helm.go).
-# The packages are removed on every exit, so the next validate fetches the published chart again.
-consumers:
-	@test -f "$(LIBRARY)/Chart.yaml" || { echo "usage: make consumers LIBRARY=<policy-library chart dir>"; exit 2; }
-	@trap 'rm -f $(addsuffix /charts/policy-library-*.tgz,$(CHARTS))' EXIT; trap 'exit 130' INT TERM; \
-	for c in $(CHARTS); do \
-	  v=$$(helm dependency list $$c 2>/dev/null | awk '$$1 == "policy-library" { print $$2 }'); \
-	  rm -f $$c/charts/policy-library-*.tgz; \
-	  helm package "$(LIBRARY)" --version "$$v" -d $$c/charts >/dev/null || exit 1; \
-	done; \
-	$(MAKE) --no-print-directory validate
-
-# test after validate, which fetches the policy-library archives TestComponentKeys reads (validate.yml).
 ci: lint validate test

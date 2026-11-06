@@ -3,6 +3,7 @@ package cascade
 import (
 	"bytes"
 	"os/exec"
+	"path"
 	"slices"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ import (
 
 // TestTemplatePatch renders the install chart, evaluates each ApplicationSet's templatePatch as
 // Argo CD does, and checks that manifest-generate-paths covers every values file the
-// Application reads.
+// Application reads and the policy-library chart in lib/.
 func TestTemplatePatch(t *testing.T) {
 	helm := testenv.Helm(t)
 	out, err := exec.CommandContext(t.Context(), helm, "template", "ci", "../../../../install",
@@ -48,46 +49,51 @@ func TestTemplatePatch(t *testing.T) {
 	fleet := []any{"environments/prod.yaml", "datacenters/dc1.yaml"}
 	for _, tc := range []struct {
 		name, appset string
+		dir          string // the Application's source path
 		params       map[string]any
 		want         string
 	}{
 		{
 			name:   "spoke",
 			appset: "policystack",
+			dir:    "stack/acm",
 			params: map[string]any{
 				"name": "prod-east-1", "revision": "main", "valueFiles": fleet, "path": stack,
 				"metadata": map[string]any{"labels": map[string]string{"clusterID": "id"}},
 			},
-			want: ".;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/prod-east-1.yaml",
+			want: ".;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/prod-east-1.yaml",
 		},
 		{
 			name:   "hub",
 			appset: "policystack",
+			dir:    "stack/acm",
 			params: map[string]any{
 				"name": "local-cluster", "revision": "main", "valueFiles": fleet, "path": stack, "version": "4.20.1",
 				"metadata": map[string]any{"labels": map[string]string{"clusterID": "id", "local-cluster": "true"}},
 			},
-			want: ".;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/acm-dc1.yaml",
+			want: ".;../../lib;../../values.yaml;../../values/environments/prod.yaml;../../values/datacenters/dc1.yaml;../../values/clusters/acm-dc1.yaml",
 		},
 		{
 			name:   "global hub default mode, no valueFiles",
 			appset: "policystack",
+			dir:    "stack/acm",
 			params: map[string]any{
 				"name": "mh1", "revision": "main", "path": stack,
 				"metadata": map[string]any{"labels": map[string]string{
 					"clusterID": "id", "global-hub.open-cluster-management.io/deploy-mode": "default",
 				}},
 			},
-			want: ".;../../values.yaml;../../values/clusters/mh1.yaml",
+			want: ".;../../lib;../../values.yaml;../../values/clusters/mh1.yaml",
 		},
 		{
 			name:   "lifecycle",
 			appset: "policystack-lifecycle",
+			dir:    "lifecycle",
 			params: map[string]any{
 				"name": "local-cluster", "revision": "main", "valueFiles": fleet, "hub": "acm-dc1", "version": "4.20.1",
 				"path": map[string]any{"path": "fleet", "filename": "hcp-kubevirt.yaml"},
 			},
-			want: ".;../values.yaml;../values/environments/prod.yaml;../values/datacenters/dc1.yaml;../values/clusters/hcp-kubevirt.yaml",
+			want: ".;../lib;../values.yaml;../values/environments/prod.yaml;../values/datacenters/dc1.yaml;../values/clusters/hcp-kubevirt.yaml",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -122,6 +128,9 @@ func TestTemplatePatch(t *testing.T) {
 			paths := strings.Split(got, ";")
 			if !slices.Contains(paths, ".") {
 				t.Errorf("manifest-generate-paths %q misses the chart directory", got)
+			}
+			if !slices.ContainsFunc(paths, func(p string) bool { return path.Join(tc.dir, p) == "lib" }) {
+				t.Errorf("manifest-generate-paths %q misses lib, relative to %s", got, tc.dir)
 			}
 			for _, f := range app.Spec.Source.Helm.ValueFiles {
 				if f != "values.yaml" && !slices.Contains(paths, f) {

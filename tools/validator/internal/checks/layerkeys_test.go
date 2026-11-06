@@ -1,12 +1,7 @@
 package checks
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"encoding/json"
-	"errors"
-	"io"
 	"maps"
 	"os"
 	"path/filepath"
@@ -14,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/chart"
-	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
 func TestPolicy035_LayerKeys(t *testing.T) {
@@ -174,76 +168,28 @@ stack:
 	}
 }
 
-// TestComponentKeys compares componentKeys with definitions.component in the policy-library archive
-// each element pins. The archives are gitignored, so it skips when none is fetched.
+// TestComponentKeys compares componentKeys with definitions.component in lib/policy-library.
 func TestComponentKeys(t *testing.T) {
-	charts, _ := filepath.Glob("../../../../stack/*/Chart.yaml")
-	seen := map[string]bool{}
-	var archives []string
-	for _, c := range charts {
-		el, err := chart.Load(filepath.Dir(c), "policy")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, d := range el.Dependencies {
-			a := filepath.Join(el.Dir, "charts", "policy-library-"+d.Version+".tgz")
-			if _, err := os.Stat(a); d.Name == "policy-library" && err == nil && !seen[filepath.Base(a)] {
-				seen[filepath.Base(a)] = true
-				archives = append(archives, a)
-			}
-		}
-	}
-	if len(archives) == 0 {
-		testenv.Skip(t, "no pinned policy-library archive under stack/*/charts")
-	}
-	for _, a := range archives {
-		var schema struct {
-			Definitions struct {
-				Component struct {
-					Properties           map[string]any `json:"properties"`
-					AdditionalProperties *bool          `json:"additionalProperties"`
-				} `json:"component"`
-			} `json:"definitions"`
-		}
-		if err := json.Unmarshal(archiveFile(t, a, "policy-library/values.schema.json"), &schema); err != nil {
-			t.Fatalf("%s: %v", a, err)
-		}
-		c := schema.Definitions.Component
-		if c.AdditionalProperties == nil || *c.AdditionalProperties {
-			t.Errorf("%s: definitions.component allows additional properties", filepath.Base(a))
-		}
-		if got, want := slices.Sorted(maps.Keys(c.Properties)), slices.Sorted(slices.Values(componentKeys)); !slices.Equal(got, want) {
-			t.Errorf("%s: definitions.component properties\n got %q\nwant %q (componentKeys)", filepath.Base(a), got, want)
-		}
-	}
-}
-
-// archiveFile returns name from the gzipped tar at path.
-func archiveFile(t *testing.T, path, name string) []byte {
-	t.Helper()
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile("../../../../lib/policy-library/values.schema.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gz, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
+	var schema struct {
+		Definitions struct {
+			Component struct {
+				Properties           map[string]any `json:"properties"`
+				AdditionalProperties *bool          `json:"additionalProperties"`
+			} `json:"component"`
+		} `json:"definitions"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
 		t.Fatal(err)
 	}
-	tr := tar.NewReader(gz)
-	for {
-		h, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			t.Fatalf("%s: no %s", path, name)
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if h.Name == name {
-			data, err := io.ReadAll(tr)
-			if err != nil {
-				t.Fatal(err)
-			}
-			return data
-		}
+	c := schema.Definitions.Component
+	if c.AdditionalProperties == nil || *c.AdditionalProperties {
+		t.Error("definitions.component allows additional properties")
+	}
+	if got, want := slices.Sorted(maps.Keys(c.Properties)), slices.Sorted(slices.Values(componentKeys)); !slices.Equal(got, want) {
+		t.Errorf("definitions.component properties\n got %q\nwant %q (componentKeys)", got, want)
 	}
 }

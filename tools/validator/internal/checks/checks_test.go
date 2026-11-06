@@ -23,8 +23,9 @@ name: my-element
 version: 0.1.0
 dependencies:
   - name: policy-library
-    version: "1.1.0"
-    repository: https://policystack.github.io/PolicyStack-chart
+    alias: stack
+    version: "^4.0.0"
+    repository: file://../../lib/policy-library
 `
 	}
 	if err := os.WriteFile(filepath.Join(dir, "Chart.yaml"), []byte(chartYAML), 0o644); err != nil {

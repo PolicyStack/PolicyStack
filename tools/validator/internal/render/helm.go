@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,17 +35,20 @@ func New(helmBin string) *Runner {
 	return &Runner{HelmBin: helmBin}
 }
 
-// EnsureDeps runs `helm dependency update` on elementDir at most once per
-// process, and not at all when charts/ already holds every Chart.yaml
-// dependency at its pinned version. Later calls return the first call's error.
+// EnsureDeps runs `helm dependency update` on elementDir at most once per process. Later calls
+// return the first call's error. An archive already in charts/ is never trusted: policy-library is
+// read through file:// from lib/, whose content changes without a version change. --skip-refresh
+// only when every dependency is file://, which needs no repository index. A remote one, as in every
+// revision before lib/ that Render Diff renders, needs its index fetched: a fresh Helm cache has none.
 func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	v, _ := r.depOnce.LoadOrStore(elementDir, &sync.Once{})
 	once := v.(*sync.Once)
 	once.Do(func() {
-		if alreadyDownloaded(elementDir) {
-			return
+		args := []string{"dependency", "update"}
+		if localDeps(elementDir) {
+			args = append(args, "--skip-refresh")
 		}
-		cmd := exec.CommandContext(ctx, r.HelmBin, "dependency", "update", elementDir) //nolint:gosec // G204: no shell; the binary is --helm-bin
+		cmd := exec.CommandContext(ctx, r.HelmBin, append(args, elementDir)...) //nolint:gosec // G204: no shell; the binary is --helm-bin
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
@@ -57,25 +61,17 @@ func (r *Runner) EnsureDeps(ctx context.Context, elementDir string) error {
 	return nil
 }
 
-// alreadyDownloaded reports whether charts/<name>-<version>.tgz exists for every dependency, so a
-// stale archive left by an earlier pin is never rendered in place of the pinned one.
-func alreadyDownloaded(elementDir string) bool {
-	data, err := os.ReadFile(filepath.Join(elementDir, "Chart.yaml"))
-	if err != nil {
+// localDeps reports whether every dependency in dir/Chart.yaml has a file:// repository. An
+// unreadable Chart.yaml is false, leaving the error to helm.
+func localDeps(dir string) bool {
+	data, err := os.ReadFile(filepath.Join(dir, "Chart.yaml"))
+	var c struct{ Dependencies []struct{ Repository string } }
+	if err != nil || yaml.Unmarshal(data, &c) != nil {
 		return false
 	}
-	var c struct {
-		Dependencies []struct{ Name, Version string }
-	}
-	if yaml.Unmarshal(data, &c) != nil {
-		return false
-	}
-	for _, d := range c.Dependencies {
-		if !FileExists(filepath.Join(elementDir, "charts", d.Name+"-"+d.Version+".tgz")) {
-			return false
-		}
-	}
-	return true
+	return !slices.ContainsFunc(c.Dependencies, func(d struct{ Repository string }) bool {
+		return !strings.HasPrefix(d.Repository, "file://")
+	})
 }
 
 // TemplateResult is the captured output of a helm template invocation.

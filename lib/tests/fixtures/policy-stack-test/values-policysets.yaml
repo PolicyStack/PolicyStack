@@ -1,0 +1,20 @@
+# Exercises policySets with usePolicySetsPlacements. Layered over values.yaml.
+# The PlacementBinding binds only the rendered sets: disabled is not enabled and empty has no
+# policies.
+stack:
+  policyStackTest:
+    usePolicySetsPlacements: true
+    policySets:
+      - name: baseline
+        policies:
+          - base
+          - certs
+      - name: certs-only
+        policies:
+          - certs
+      - name: disabled
+        enabled: false
+        policies:
+          - base
+      - name: empty
+        policies: []

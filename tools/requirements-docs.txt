@@ -1,1 +1,3 @@
-zensical==0.0.73
+zensical==0.1.0
+# The theme ships separately; unpinned it changes between CI runs.
+zensical-ui==0.0.41

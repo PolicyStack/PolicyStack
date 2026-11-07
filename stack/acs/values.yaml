@@ -22,8 +22,11 @@ stack:
         provider: openshift
         # Role granted to any authenticated user
         minimumRole: None
-        # OpenShift group mapped to the ACS Admin role
-        adminGroup: cluster-admins
+        # OpenShift groups mapped to the ACS roles their members get, as group: [roles]. Roles are
+        # ACS built-ins (Admin, Analyst, ...). Set a group to null in a later layer to drop it.
+        groups:
+          cluster-admins:
+            - Admin
       # Admission control behaviour on secured clusters
       admissionControl:
         # Enforce deploy-time policies (SecuredCluster admissionControl.enforcement). Off by

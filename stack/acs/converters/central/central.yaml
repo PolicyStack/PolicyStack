@@ -11,10 +11,16 @@ data:
     minimumRole: {{ $auth.minimumRole | quote }}
     openshift:
       enable: true
+    {{- with $auth.groups }}
     groups:
+      {{- range $group, $roles := . }}
+      {{- range $roles }}
       - key: groups
-        value: {{ $auth.adminGroup | quote }}
-        role: Admin
+        value: {{ $group | quote }}
+        role: {{ . | quote }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
 ---
 {{- /*
 The Central CR, rendered entirely from values (no hub-side ConfigMap lookup).

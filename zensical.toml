@@ -54,21 +54,37 @@ nav = [
 
 [project.theme]
 features = [
-  "content.action.edit", "content.code.annotate", "content.code.copy", "content.tabs.link",
-  "navigation.sections", "navigation.tabs",
+  "content.action.edit", "content.code.annotate", "content.code.copy", "content.code.select",
+  "content.tabs.link", "content.tooltips", "navigation.footer", "navigation.instant",
+  "navigation.instant.progress", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky",
+  "navigation.top", "search.highlight", "toc.integrate",
 ]
+icon.logo = "lucide/layers"
+
+# Toggle cycles system, light, dark. The system entry repeats the colors: the page renders with
+# them before the theme's JS resolves the OS scheme.
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+primary = "blue grey"
+accent = "teal"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
+primary = "blue grey"
+accent = "teal"
 toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
+primary = "blue grey"
+accent = "teal"
 toggle.icon = "lucide/moon"
-toggle.name = "Switch to light mode"
+toggle.name = "Switch to system preference"
 
 # Setting this table replaces Zensical's default extension set. It exists for snippets, which
 # reference/rules.md uses to include the rules table from tools/validator/README.md. highlight

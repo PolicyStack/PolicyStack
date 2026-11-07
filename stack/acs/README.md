@@ -39,7 +39,7 @@ Under `stack.acs.config`. Maps merge across layers; lists are replaced whole.
 | `auth` | Authentication wired in declaratively at Central startup |  |
 | `auth.provider` | Auth provider to declare. Empty disables declarative auth config entirely. | `openshift` |
 | `auth.minimumRole` | Role granted to any authenticated user | `None` |
-| `auth.adminGroup` | OpenShift group mapped to the ACS Admin role | `cluster-admins` |
+| `auth.groups` | OpenShift groups mapped to the ACS roles their members get, as group: [roles]. Roles are ACS built-ins (Admin, Analyst, ...). Set a group to null in a later layer to drop it. | `{cluster-admins: [Admin]}` |
 | `admissionControl` | Admission control behaviour on secured clusters |  |
 | `admissionControl.enabled` | Enforce deploy-time policies (SecuredCluster admissionControl.enforcement). Off by default: it sits in the admission path. The operator itself defaults it on. | `false` |
 | `admissionControl.contactImageScanners` | ScanIfMissing or DoNotScanInline. Ignored by ACS 4.9+. | `ScanIfMissing` |

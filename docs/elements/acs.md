@@ -52,9 +52,40 @@ Central must run on the ACM hub: the `secured` Policy reads the CRS and Central'
 
 Settings (auth, scanner sizing, SecurityPolicies, admission control) are in the element's [README](https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/README.md#settings). The defaults:
 
-- OpenShift login, with the `cluster-admins` group mapped to the ACS `Admin` role and no role for other users.
+- OpenShift login, with the `cluster-admins` group mapped to the ACS `Admin` role and no role for other users ([Access](#access)).
 - Three SecurityPolicies: no privilege escalation, no root user, no shell spawning.
 - Admission control enforcement off, because the webhook sits in every deployment's path. The operator's own default is on.
+
+## Access
+
+Users log in to Central with their OpenShift account. A user gets `config.auth.minimumRole` plus every role mapped to each OpenShift group they belong to (`oc get groups`), so groups synced from LDAP work too. `config.auth.groups` maps a group to a list of roles:
+
+```yaml
+stack:
+  acs:
+    config:
+      auth:
+        groups:
+          cluster-admins: # (1)!
+            - Admin
+          sec-ops:
+            - Analyst
+            - Vulnerability Management Approver
+          ci-bots:
+            - Continuous Integration
+```
+
+1.  The default. Groups from every layer merge, so a cluster's file can add a group without repeating this one. Set it to `null` to remove it.
+
+Roles are names of existing ACS roles, case-sensitive: the system roles listed under **Platform Configuration > Access Control > Roles**. The mapping lands in ConfigMap `stackrox/acs-declarative-configs`, which Central reloads on change without a restart.
+
+!!! note "Read-only in the UI"
+    Central owns everything in the declarative config. The OpenShift auth provider and its group rules can't be edited in the ACS UI; change them in values.
+
+!!! warning "Failures"
+    - A role name that doesn't exist doesn't fail the Policy. Central skips the rule and reports it under **Platform Configuration > System Health > Declarative configuration**.
+    - A group given as a string (`sec-ops: Analyst`) instead of a list fails the render with `range can't iterate over Analyst`.
+    - `auth.provider: ""` drops the declarative config, and with it every group mapping. Only the `admin` user from Secret `stackrox/central-htpasswd` can log in.
 
 ## What it creates
 

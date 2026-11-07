@@ -1,0 +1,69 @@
+stack:
+  fileIntegrity:
+    enabled: false
+
+    # One FileIntegrity, file-integrity, runs AIDE on every Linux node whatever its taints. Its AIDE
+    # configuration is the operator's default plus aideExclusions.
+    config:
+      # Seconds between AIDE scans on each node
+      gracePeriod: 900
+      # Host paths AIDE skips on top of the operator's default exclusions. Path: reason. A path is an
+      # absolute AIDE regular expression matched from the start, so a directory covers everything
+      # under it. null in a later layer removes an entry.
+      aideExclusions:
+        # Not in the operator's default: without it every machine config daemon restart fails the node
+        /etc/machine-config-daemon/previous-logs: "The machine config daemon copies its log here on every restart"
+
+    default:
+      remediationAction: enforce
+      severity: high
+      categories:
+        - SI System and Information Integrity
+      controls:
+        - SI-7 Software, Firmware, and Information Integrity
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      install:
+        description: "Install and manage the File Integrity Operator"
+        severity: medium
+
+      config:
+        description: "Configure AIDE and deploy the FileIntegrity instance"
+        dependencies:
+          - name: install
+        templates:
+          file-integrity:
+            description: "Namespace pod security label, AIDE configuration and the FileIntegrity instance"
+            # The FileIntegrity CRD only exists after the operator installs
+            waitForOperator: file-integrity
+
+      findings:
+        description: "AIDE not running, or nodes whose latest scan found changed files or failed"
+        remediationAction: inform
+        dependencies:
+          - name: config
+        templates:
+          file-integrity-active:
+            description: "FileIntegrity phase Active"
+            remediationAction: InformOnly
+          file-integrity-nodes:
+            description: "FileIntegrityNodeStatus with a Failed or Errored latest result"
+            complianceType: mustnothave
+            remediationAction: InformOnly
+
+    operatorPolicies:
+      file-integrity:
+        description: "File Integrity Operator"
+        displayName: "File Integrity Operator"
+        namespace: openshift-file-integrity
+        clusterMonitoring: true
+        operatorGroup:
+          name: file-integrity-operator
+          targetNamespaces:
+            - openshift-file-integrity
+        subscription:
+          channel: stable
+          name: file-integrity-operator
+        versions: []

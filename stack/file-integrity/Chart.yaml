@@ -1,0 +1,13 @@
+apiVersion: v2
+name: file-integrity
+description: "File Integrity Operator running AIDE on every node and reporting changed files"
+home: https://policystk.io/elements/file-integrity/
+type: application
+version: 0.1.0
+annotations:
+  policystk.io/stability: preview
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "^4.0.0"
+    repository: "file://../../lib/policy-library"

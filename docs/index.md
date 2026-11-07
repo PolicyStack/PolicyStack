@@ -64,7 +64,7 @@ The install chart also creates a second ApplicationSet, `policystack-lifecycle`,
 | Get started | You create your repository and set up a hub, then onboard a cluster | [Installation](start/install.md) |
 | Concepts | You want to know how the parts fit and why | [How PolicyStack works](concepts/overview.md) |
 | Guides | You run a hub: rollouts, operator versions, building clusters, upgrades | [Rolling out changes](guides/rollout.md) |
-| Elements | You configure an element | Its [`stack/<element>/README.md`](https://github.com/PolicyStack/PolicyStack/tree/main/stack) on GitHub; [ACS](elements/acs.md) and [Compliance](elements/compliance.md) have guides |
+| Elements | You configure an element | Its [`stack/<element>/README.md`](https://github.com/PolicyStack/PolicyStack/tree/main/stack) on GitHub; [ACS](elements/acs.md), [Compliance](elements/compliance.md) and [File Integrity](elements/file-integrity.md) have guides |
 | Develop | You write or change an element | [Writing an element](develop/elements.md) |
 | Reference | You look up a key, label, rule or workflow | [Fleet files](reference/fleet.md) |
 | Contributing | You change the framework itself | [Contributing](contributing.md) |

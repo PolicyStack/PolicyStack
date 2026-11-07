@@ -1,0 +1,17 @@
+{{- /*
+lastResult is each node's latest scan: Failed found changed files, Errored means AIDE could not run.
+Never results[]: it keeps an old Failed next to a newer Succeeded.
+*/ -}}
+apiVersion: fileintegrity.openshift.io/v1alpha1
+kind: FileIntegrityNodeStatus
+metadata:
+  namespace: openshift-file-integrity
+lastResult:
+  condition: Failed
+---
+apiVersion: fileintegrity.openshift.io/v1alpha1
+kind: FileIntegrityNodeStatus
+metadata:
+  namespace: openshift-file-integrity
+lastResult:
+  condition: Errored

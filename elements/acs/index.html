@@ -1,0 +1,2242 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/elements/acs/">
+      
+      
+      
+        <link rel="prev" href="../../guides/upgrading/">
+      
+      
+        <link rel="next" href="../compliance/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.73">
+    
+    
+      
+        <title>ACS - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ACS
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="././" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turn-it-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Turn it on
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-creates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What it creates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What it creates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-the-crs-reaches-each-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How the CRS reaches each cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        First run
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-the-crs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Generate the CRS
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Health
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#renew-or-rotate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Renew or rotate
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-register-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Re-register a cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turning-it-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Turning it off
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clusters-registered-with-init-bundles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Clusters registered with init bundles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turn-it-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Turn it on
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-creates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What it creates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What it creates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-the-crs-reaches-each-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How the CRS reaches each cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        First run
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-the-crs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Generate the CRS
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#health" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Health
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#renew-or-rotate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Renew or rotate
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-register-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Re-register a cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turning-it-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Turning it off
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clusters-registered-with-init-bundles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Clusters registered with init bundles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/elements/acs.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="advanced-cluster-security">Advanced Cluster Security<a class="headerlink" href="#advanced-cluster-security" title="Permanent link">&para;</a></h1>
+<p>The <a href="https://github.com/PolicyStack/PolicyStack/tree/main/stack/acs"><code>acs</code></a> element installs Red Hat Advanced Cluster Security (ACS) and registers clusters with it. ACS has two parts:</p>
+<ul>
+<li><strong>Central</strong>: the UI, API, database and scanners. It runs once, on the ACM hub.</li>
+<li><strong>Secured cluster</strong>: the agents on every cluster you want protected. Sensor watches the cluster and connects to Central; Collector and Admission Controller run alongside it.</li>
+</ul>
+<p>A new secured cluster proves itself to Central once, with a <strong>cluster registration secret (CRS)</strong>. You generate one CRS on the hub, following Red Hat's <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes/4.11/html/installing/installing-rhacs-on-red-hat-openshift">CRS procedure</a>, and the element copies it to every cluster. Sensor uses it to register, gets its own certificates back and renews them itself, so the CRS expiring, being replaced or revoked never affects a cluster that has already registered.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>ACS 4.9 or later. CRS registration is GA from 4.10; on 4.9 it is Technology Preview but works with this element.</li>
+<li>A default StorageClass on the hub. Central's database PVC <code>stackrox-db</code> uses it; without one Central never starts and <code>central-central-ready</code> stays NonCompliant.</li>
+<li>Generating a CRS needs the ACS <code>Admin</code> role.</li>
+<li>Every secured cluster must reach Central's Route on the hub on port 443.</li>
+</ul>
+<h2 id="turn-it-on">Turn it on<a class="headerlink" href="#turn-it-on" title="Permanent link">&para;</a></h2>
+<p><code>enabled: true</code> installs the operator. <code>policies.central</code> and <code>policies.secured</code> are the element's two optional Policies (<a href="../../concepts/elements/">How an element is built</a>); turn on the role each cluster plays. Both ship off.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Hub</label><label for="__tabbed_1_2">Secured clusters</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>In a <a href="../../concepts/values/#layers">layer</a> only the hub reads: <code>values/clusters/&lt;hubName&gt;.yaml</code> (the hub's <a href="../../concepts/overview/#words-with-more-than-one-meaning"><code>hubName</code></a>), or a file such as <code>values/acm/&lt;hubName&gt;.yaml</code> that only hub fleet files list (<a href="../../reference/fleet/#hub-file">Hub file</a>). Turning <code>central</code> on for any other cluster starts a second Central there that no cluster registers with.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">acs</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">central</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">secured</span><span class="p">:</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<ol>
+<li>Optional. It makes ACS monitor the hub itself. Other managed clusters don't need it.</li>
+</ol>
+</div>
+<div class="tabbed-block">
+<p>In any layer those clusters read, for example <code>values/environments/prod.yaml</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">acs</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">secured</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p>Central must run on the ACM hub: the <code>secured</code> Policy reads the CRS and Central's Route from the hub (<a href="#how-the-crs-reaches-each-cluster">How the CRS reaches each cluster</a>). Until <code>central</code> runs there and you have <a href="#generate-the-crs">generated the CRS</a>, <code>secured-tls</code> on every secured cluster is NonCompliant with a <code>template-error</code>.</p>
+<p>Settings (auth, scanner sizing, SecurityPolicies, admission control) are in the element's <a href="https://github.com/PolicyStack/PolicyStack/blob/main/stack/acs/README.md#settings">README</a>. The defaults:</p>
+<ul>
+<li>OpenShift login, with the <code>cluster-admins</code> group mapped to the ACS <code>Admin</code> role and no role for other users.</li>
+<li>Three SecurityPolicies: no privilege escalation, no root user, no shell spawning.</li>
+<li>Admission control enforcement off, because the webhook sits in every deployment's path. The operator's own default is on.</li>
+</ul>
+<h2 id="what-it-creates">What it creates<a class="headerlink" href="#what-it-creates" title="Permanent link">&para;</a></h2>
+<p><code>&lt;cluster&gt;</code> is the ManagedCluster name, or <code>hubName</code> on the hub (<a href="../../concepts/elements/#rendered-names">Rendered names</a>). Every Policy enforces. Templates marked (InformOnly) only report, even inside an enforcing Policy (<a href="../../concepts/acm/#inform-enforce-and-informonly">inform, enforce and InformOnly</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Where</th>
+<th>Templates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>install-acs-&lt;cluster&gt;</code></td>
+<td>Every cluster with <code>enabled: true</code></td>
+<td><code>install-acs-ns</code>, <code>install-acs</code> (OperatorPolicy, package <code>rhacs-operator</code>, channel <code>stable</code>), <code>install-acs-status</code> (reports only, <a href="../../concepts/elements/#the-install-policy">The install Policy</a>)</td>
+</tr>
+<tr>
+<td><code>central-acs-&lt;hubName&gt;</code></td>
+<td>The hub</td>
+<td><code>central-central</code> (namespace <code>stackrox</code>, Central <code>stackrox-central-services</code>, auth config), <code>central-central-ready</code> (InformOnly), <code>central-policies</code> (SecurityPolicies, after <code>central-central-ready</code>), <code>central-crs-ready</code> (InformOnly), <code>central-hub-access</code>, <code>central-console</code> (console link)</td>
+</tr>
+<tr>
+<td><code>secured-acs-&lt;cluster&gt;</code></td>
+<td>Every secured cluster</td>
+<td><code>secured-tls</code> (the CRS copy), <code>secured-agents</code> (SecuredCluster <code>stackrox-secured-cluster-services</code>, after <code>secured-tls</code>), <code>secured-agents-ready</code> (InformOnly)</td>
+</tr>
+</tbody>
+</table>
+<p><code>central</code> and <code>secured</code> stay Pending until <code>install-acs-&lt;cluster&gt;</code> is Compliant, so the operator is running before any ACS resource is written.</p>
+<h3 id="how-the-crs-reaches-each-cluster">How the CRS reaches each cluster<a class="headerlink" href="#how-the-crs-reaches-each-cluster" title="Permanent link">&para;</a></h3>
+<p><code>secured-tls</code> holds a Secret whose data is the hub template <code>{{hub copySecretData "stackrox" "cluster-registration-secret" hub}}</code>. ACM resolves hub templates on the hub while it copies the Policy to each cluster (<a href="../../concepts/acm/">ACM policies in brief</a>), so the CRS never sits in Git:</p>
+<ol>
+<li>The ACM policy propagator reads <code>stackrox/cluster-registration-secret</code> on the hub, as ServiceAccount <code>acs-hub-templates</code>. <code>central-hub-access</code> creates that ServiceAccount, a Role in <code>stackrox</code> that can read only this Secret and the <code>central</code> Route, and a ClusterRole to read ManagedClusters (the hub skip below reads their labels).</li>
+<li>It writes the data, encrypted, into the cluster's copy of <code>secured-acs-&lt;cluster&gt;</code>. The cluster decrypts it and creates <code>stackrox/cluster-registration-secret</code>. The hub skips this: its own SecuredCluster reads the original.</li>
+<li><code>secured-agents</code> fills the SecuredCluster's <code>centralEndpoint</code> the same way, from the hub's Route <code>stackrox/central</code> plus <code>:443</code>, and its <code>clusterName</code> from the ManagedCluster name. You set neither. A missing Route is an error, never an empty endpoint.</li>
+</ol>
+<p>The propagator watches what it read. Replacing the hub's Secret re-copies it to every cluster without a commit.</p>
+<h2 id="first-run">First run<a class="headerlink" href="#first-run" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Merge the values above to the revision the hub's fleet file pins (move a tag or SHA pin, <a href="../../guides/rollout/#promoting-and-rolling-back">Promoting and rolling back</a>). The operator installs, then Central deploys on the hub.</li>
+<li>Wait for <code>central-central-ready</code> to be Compliant: in the console, <strong>Governance &gt; Policies &gt; <code>central-acs-&lt;hubName&gt;</code></strong>.</li>
+<li><a href="#generate-the-crs">Generate the CRS</a>.</li>
+<li>Each secured cluster gets the copy, then its SecuredCluster, and turns Compliant.</li>
+</ol>
+<p>Until step 3 these are not Compliant, and that is expected:</p>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>State</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>central-crs-ready</code></td>
+<td>NonCompliant</td>
+<td>No CRS on the hub yet</td>
+</tr>
+<tr>
+<td><code>secured-tls</code>, on every secured cluster</td>
+<td>NonCompliant</td>
+<td>The hub template can't find the Secret</td>
+</tr>
+<tr>
+<td><code>secured-agents</code></td>
+<td>Pending</td>
+<td>Waits for <code>secured-tls</code>, so no SecuredCluster exists yet</td>
+</tr>
+<tr>
+<td><code>secured-agents-ready</code></td>
+<td>NonCompliant</td>
+<td>No SecuredCluster, no Sensor</td>
+</tr>
+</tbody>
+</table>
+<p>They clear on their own once the Secret exists.</p>
+<h2 id="generate-the-crs">Generate the CRS<a class="headerlink" href="#generate-the-crs" title="Permanent link">&para;</a></h2>
+<p>Run this from a shell logged in to the hub with <code>oc</code>. <code>roxctl</code> is the ACS CLI; install it first from Red Hat's ACS docs.</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ROX_ENDPOINT</span><span class="o">=</span><span class="k">$(</span>oc<span class="w"> </span>-n<span class="w"> </span>stackrox<span class="w"> </span>get<span class="w"> </span>route<span class="w"> </span>central<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.spec.host}'</span><span class="k">)</span>:443<span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ROX_API_TOKEN</span><span class="o">=</span>&lt;token<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>Admin<span class="w"> </span>role&gt;<span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>roxctl<span class="w"> </span>central<span class="w"> </span>crs<span class="w"> </span>generate<span class="w"> </span><span class="s2">"fleet-</span><span class="k">$(</span>date<span class="w"> </span>+%Y%m%d<span class="k">)</span><span class="s2">"</span><span class="w"> </span>--valid-for<span class="w"> </span>8760h<span class="w"> </span>--output<span class="w"> </span>crs.yaml<span class="w"> </span><span class="c1"># (3)!</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>oc<span class="w"> </span>apply<span class="w"> </span>-n<span class="w"> </span>stackrox<span class="w"> </span>-f<span class="w"> </span>crs.yaml
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>rm<span class="w"> </span>crs.yaml
+</span></code></pre></div>
+<ol>
+<li>Every <code>roxctl</code> command on this page reads it. The Route serves Central's own certificate, so on <code>x509: certificate signed by unknown authority</code> also <code>export ROX_CA_CERT_FILE=&lt;file&gt;</code> holding key <code>ca.pem</code> of Secret <code>stackrox/central-tls</code>.</li>
+<li><strong>Platform Configuration &gt; Integrations &gt; API Token</strong>. Or skip it and pass <code>--password</code> with the <code>admin</code> password from Secret <code>stackrox/central-htpasswd</code>.</li>
+<li>The CRS's name in Central. Central refuses a name already used by a CRS that isn't revoked, so the date keeps renewals unique. 8760h is one year.</li>
+</ol>
+<p><code>crs.yaml</code> is a Secret named <code>cluster-registration-secret</code>, the name the operator reads, with annotations that include <code>crs.platform.stackrox.io/name</code>, <code>id</code> and <code>expires-at</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Set <code>--valid-for</code></p>
+<p>Without it the CRS lasts 24 hours and <code>central-crs-ready</code> is NonCompliant from the start (<a href="#health">Health</a>).</p>
+</div>
+<p>Any other way of writing the Secret works, an ExternalSecret from your secret store for example, as long as it also writes the <code>crs.platform.stackrox.io/expires-at</code> annotation (with the External Secrets Operator: <code>spec.target.template.metadata.annotations</code>). Without it, <code>central-crs-ready</code> stays NonCompliant forever.</p>
+<h2 id="health">Health<a class="headerlink" href="#health" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Policy</th>
+<th>Compliant means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>central-crs-ready</code></td>
+<td><code>central-acs-&lt;hubName&gt;</code></td>
+<td>The hub holds the CRS with over 90 days left, so a CRS valid for 90 days or less never is. Checked daily, every 10 minutes while NonCompliant. A one-year CRS turns NonCompliant about 9 months after you generate it</td>
+</tr>
+<tr>
+<td><code>secured-tls</code></td>
+<td><code>secured-acs-&lt;cluster&gt;</code></td>
+<td>The cluster holds the copy. Turns NonCompliant on every cluster at once when the hub's Secret is gone</td>
+</tr>
+<tr>
+<td><code>secured-agents-ready</code></td>
+<td><code>secured-acs-&lt;cluster&gt;</code></td>
+<td>The SecuredCluster is deployed and Sensor is ready. A refused or expired registration shows up here, because Sensor never becomes ready</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Not detected</p>
+<p>A cluster still holding certificates from another Central (moved to another hub, Central reinstalled with a new CA) reports ready while it is disconnected. Check <strong>Platform Configuration &gt; Clusters</strong> in ACS.</p>
+</div>
+<h2 id="renew-or-rotate">Renew or rotate<a class="headerlink" href="#renew-or-rotate" title="Permanent link">&para;</a></h2>
+<p>When <code>central-crs-ready</code> turns NonCompliant:</p>
+<ol>
+<li>Note the current CRS's name: <code>oc -n stackrox get secret cluster-registration-secret -o jsonpath='{.metadata.annotations.crs\.platform\.stackrox\.io/name}'</code>. Applying the new one overwrites it.</li>
+<li>Run <a href="#generate-the-crs">Generate the CRS</a> again. The copies on every cluster follow.</li>
+<li>Optional: revoke the old one with <code>roxctl central crs revoke &lt;name&gt;</code>, with the exports from <a href="#generate-the-crs">Generate the CRS</a>. Do this right away after a leak. <code>roxctl central crs list</code> shows every CRS with its expiry.</li>
+</ol>
+<div class="admonition danger">
+<p class="admonition-title">Never delete the Secret</p>
+<p>Replace it with <code>oc apply</code> instead. Registration doesn't need it again, but the operator reads <code>cluster-registration-secret</code> on every reconcile, expired or not. Without it, or the old init bundle secrets, the operator fails to reconcile the SecuredCluster (<code>InitBundleSecretsMissingError</code>), so setting changes stop reaching the agents. A deleted copy comes back at the next <code>secured-tls</code> evaluation; a deleted hub Secret turns <code>secured-tls</code> NonCompliant on every cluster and breaks the hub's own SecuredCluster.</p>
+</div>
+<p>After a Central reinstall the CRS is no longer valid. Generate a new one.</p>
+<h2 id="re-register-a-cluster">Re-register a cluster<a class="headerlink" href="#re-register-a-cluster" title="Permanent link">&para;</a></h2>
+<p>Central refuses a CRS for a cluster name that has connected before. In ACS, each cluster is named after its ManagedCluster; the hub is <code>local-cluster</code> unless ACM's <code>localClusterName</code> changed it.</p>
+<p>A refused cluster shows <code>secured-agents-ready</code> NonCompliant, and the Sensor pod's CRS init container crash-loops (<code>oc -n stackrox get pods -l app=sensor</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rebuilt or re-created under the same name, including <a href="../../guides/lifecycle/#destroy">lifecycle</a> <code>state: absent</code> then re-added; SecuredCluster or <code>stackrox</code> namespace deleted</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Moved to another hub; Central reinstalled</td>
+<td>2, 3</td>
+</tr>
+<tr>
+<td>Central restored from backup</td>
+<td>None if Sensor reconnects, else 1, 2, 3</td>
+</tr>
+<tr>
+<td>Still refused</td>
+<td>The steps you skipped, in order 1, 2, 3</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Hub: delete the cluster's old record so Central accepts the name again. <strong>Platform Configuration &gt; Clusters</strong>, or <code>roxctl cluster delete --name &lt;cluster&gt;</code> with the exports from <a href="#generate-the-crs">Generate the CRS</a>.</li>
+<li>Cluster: delete the certificates Sensor already holds, so it falls back to the CRS. <code>oc -n stackrox get secret -o name | grep -E '/tls-cert-|/(sensor|collector|admission-control)-tls$' | xargs oc -n stackrox delete</code></li>
+<li>Cluster: restart Sensor so it registers. <code>oc -n stackrox delete pod -l app=sensor</code></li>
+</ol>
+<p>Step 2 is safe only once <code>cluster-registration-secret</code> is on the cluster; without it Sensor has nothing to register with.</p>
+<h2 id="turning-it-off">Turning it off<a class="headerlink" href="#turning-it-off" title="Permanent link">&para;</a></h2>
+<p>Turning off <code>secured</code>, <code>central</code> or the element deletes their Policies but nothing they created: no template sets <code>pruneObjectBehavior</code>, the ACM setting that deletes a template's objects with its Policy (<a href="../../concepts/removal/#what-happens-on-the-managed-cluster">Removal and pruning</a>). The operator, Central or SecuredCluster, the <code>stackrox</code> namespace and the CRS copy stay, and the cluster stays registered in Central. Re-enabling it picks up the existing SecuredCluster and Sensor keeps its registration. If the SecuredCluster or <code>stackrox</code> namespace was deleted in the meantime, or the cluster was rebuilt, follow <a href="#re-register-a-cluster">Re-register a cluster</a>.</p>
+<h2 id="clusters-registered-with-init-bundles">Clusters registered with init bundles<a class="headerlink" href="#clusters-registered-with-init-bundles" title="Permanent link">&para;</a></h2>
+<p>An init bundle is ACS's older registration method: TLS Secrets (<code>sensor-tls</code>, <code>collector-tls</code>, <code>admission-control-tls</code>) applied to each cluster. This section is for clusters that already run ACS agents registered with one, for example from before PolicyStack. New installs skip it. The element manages Central <code>stackrox-central-services</code> and SecuredCluster <code>stackrox-secured-cluster-services</code> in <code>stackrox</code>; yours must have those names, or the element creates second ones.</p>
+<ol>
+<li>Check the names: <code>oc get central,securedcluster -A</code>. Both must be in <code>stackrox</code> with the names above.</li>
+<li>Make sure the hub and every cluster run ACS 4.9 or later. Lift any <code>operatorPolicies.acs.versions</code> pin below that (<a href="../../guides/operators/#pinning">Operator versions</a>).</li>
+<li><a href="#turn-it-on">Turn the element on</a>, previewing step 4 with a <a href="../../guides/rollout/#dry-run">dry run</a> first, then merge and <a href="#generate-the-crs">generate the CRS</a>. Until you generate it, <code>central-crs-ready</code> and <code>secured-tls</code> are NonCompliant and the SecuredCluster isn't touched.</li>
+<li>Every cluster gets <code>cluster-registration-secret</code>, then the element's SecuredCluster settings merge into yours; the hub's Central gets the element's Central settings, auth config and SecurityPolicies the same way. Any field that differs changes at that point: admission control enforcement turns off unless <code>config.admissionControl.enabled: true</code>.</li>
+<li>Wait until <code>central-crs-ready</code>, <code>secured-tls</code> and <code>secured-agents-ready</code> are Compliant everywhere.</li>
+</ol>
+<div class="admonition danger">
+<p class="admonition-title">Keep the old secrets</p>
+<p>Leave <code>sensor-tls</code>, <code>collector-tls</code> and <code>admission-control-tls</code> on every cluster, and let the old init bundle expire rather than revoking it: revoking cuts off every cluster still using its certificates. They are the cluster's only credentials until <code>cluster-registration-secret</code> exists; deleting them first fails Sensor with <code>InitBundleSecretsMissingError</code>.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.tabs.link","navigation.sections","navigation.tabs"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.77dd0ce9.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2307 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/concepts/acm/">
+      
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../elements/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.73">
+    
+    
+      
+        <title>ACM policies in brief - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ACM policies in brief
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../elements/acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The objects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-policy-reaches-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How a Policy reaches a cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configurationpolicy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ConfigurationPolicy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operatorpolicy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        OperatorPolicy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inform-enforce-and-informonly" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        inform, enforce and InformOnly
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compliance states
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies-and-ignorepending" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Dependencies and ignorePending
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#severity-and-compliance-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Severity and compliance annotations
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hub-and-managed-cluster-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hub and managed-cluster templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Further reading
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The objects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-policy-reaches-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How a Policy reaches a cluster
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configurationpolicy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ConfigurationPolicy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operatorpolicy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        OperatorPolicy
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inform-enforce-and-informonly" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        inform, enforce and InformOnly
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Compliance states
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies-and-ignorepending" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Dependencies and ignorePending
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#severity-and-compliance-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Severity and compliance annotations
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hub-and-managed-cluster-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hub and managed-cluster templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Further reading
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/concepts/acm.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="acm-policies-in-brief">ACM policies in brief<a class="headerlink" href="#acm-policies-in-brief" title="Permanent link">&para;</a></h1>
+<p>PolicyStack never applies anything to a managed cluster itself. It renders Red Hat Advanced Cluster Management (ACM) governance objects onto the hub, in namespace <code>pstack</code> (created by PolicyStack's install chart, <a href="../policies/#where-policies-live">Where Policies live</a>), and ACM does the rest: it copies each Policy to the cluster it targets, applies or checks it there, and reports compliance back. An element is one Helm chart under <code>stack/</code> (metallb, gitops, …), rendered once per cluster; how its files become these objects is on <a href="../elements/">How an element is built</a>.</p>
+<h2 id="the-objects">The objects<a class="headerlink" href="#the-objects" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Lives in</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Policy</code></td>
+<td><code>pstack</code> on the hub</td>
+<td>A wrapper. It holds one or more policy templates, a <code>remediationAction</code>, optional <code>dependencies</code> and compliance annotations. ACM never applies a Policy directly; it delivers it.</td>
+</tr>
+<tr>
+<td>Policy template</td>
+<td>Inside a Policy, under <code>spec.policy-templates</code></td>
+<td>One unit of work. PolicyStack uses two kinds: ConfigurationPolicy and OperatorPolicy. On the hub they are not separate objects, so <code>oc get configurationpolicy -n pstack</code> returns nothing; read them in the Policy's YAML.</td>
+</tr>
+<tr>
+<td><code>ConfigurationPolicy</code></td>
+<td>Created on the managed cluster</td>
+<td>Lists Kubernetes objects and how each must compare with the live cluster (<a href="#configurationpolicy">ConfigurationPolicy</a>).</td>
+</tr>
+<tr>
+<td><code>OperatorPolicy</code></td>
+<td>Created on the managed cluster</td>
+<td>Installs and maintains one OLM operator (<a href="#operatorpolicy">OperatorPolicy</a>).</td>
+</tr>
+<tr>
+<td><code>Placement</code></td>
+<td><code>pstack</code> on the hub</td>
+<td>Selects managed clusters by label. PolicyStack renders one per element per cluster, selecting only that cluster (<a href="../policies/#placement">Placement</a>).</td>
+</tr>
+<tr>
+<td><code>PlacementBinding</code></td>
+<td><code>pstack</code> on the hub</td>
+<td>Links Policies to a Placement. A Policy with no binding goes nowhere.</td>
+</tr>
+<tr>
+<td><code>ManagedClusterSet</code>, <code>ManagedClusterSetBinding</code></td>
+<td>Hub</td>
+<td>Clusters are grouped into ManagedClusterSets; ACM's built-in set <code>global</code> holds every cluster. A Placement only sees clusters from sets bound to its own namespace by a ManagedClusterSetBinding. PolicyStack binds <code>global</code> into <code>pstack</code> (<a href="../policies/#cluster-sets">Cluster sets</a>).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="how-a-policy-reaches-a-cluster">How a Policy reaches a cluster<a class="headerlink" href="#how-a-policy-reaches-a-cluster" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+  subgraph hub["Hub"]
+    root["Policy&lt;br&gt;pstack/config-metallb-c1"]
+    pl["Placement + PlacementBinding&lt;br&gt;pstack/metallb-c1"]
+    rep["Replicated Policy&lt;br&gt;c1/pstack.config-metallb-c1"]
+  end
+  subgraph spoke["Managed cluster c1"]
+    fw["governance-policy-framework"]
+    cp["ConfigurationPolicy&lt;br&gt;c1/config-metallb-instance"]
+    cpc["config-policy-controller"]
+    obj["MetalLB metallb&lt;br&gt;in metallb-system"]
+  end
+  pl --&gt;|"picks c1"| rep
+  root --&gt;|"propagator copies"| rep
+  rep --&gt;|"syncs"| fw
+  fw --&gt;|"creates"| cp
+  cp --&gt; cpc
+  cpc --&gt;|"checks or applies"| obj
+  cpc -.-&gt;|"status"| rep
+  rep -.-&gt;|"status"| root</code></pre>
+<p>Names in this example: the Helm release is <code>metallb-c1</code> (<code>&lt;element&gt;-&lt;cluster&gt;</code>), Policies are <code>&lt;policy&gt;-&lt;release&gt;</code> and templates <code>&lt;policy&gt;-&lt;template&gt;</code>, so template names don't carry the cluster (<a href="../elements/#rendered-names">Rendered names</a>).</p>
+<ol>
+<li>Argo CD syncs the root Policy (the one from Git; ACM's per-cluster copies are <em>replicated</em> Policies) into <code>pstack</code> on the hub, with its Placement and PlacementBinding. Look with <code>oc get policies.policy.open-cluster-management.io -n pstack</code> (the full resource name, because <code>policies</code> can resolve to another policy engine's kind); the compliance column there sums up every cluster the Policy reaches.</li>
+<li>For each cluster the Placement selects, ACM's policy propagator on the hub copies the Policy into the hub namespace named after the cluster (ACM creates one per managed cluster at import; <code>local-cluster</code> for the hub itself), as <code>&lt;namespace&gt;.&lt;name&gt;</code>: <code>pstack.config-metallb-c1</code> in namespace <code>c1</code>. Hub templates are resolved in this step (<a href="#hub-and-managed-cluster-templates">Hub and managed-cluster templates</a>). Per-cluster compliance is read from this copy. The name doubles as a label value, so it is capped at 63 characters (<a href="../policies/#naming-limits">Naming limits</a>).</li>
+<li>Each managed cluster runs two ACM governance add-ons: <code>governance-policy-framework</code> copies the replicated Policy into the cluster-named namespace on the managed cluster and creates each policy template there as a real object; <code>config-policy-controller</code> evaluates them (next step).</li>
+<li><code>config-policy-controller</code> compares every ConfigurationPolicy and OperatorPolicy with the live cluster, changes the cluster under <code>enforce</code>, and writes compliance into the template's status. The framework sends it back up to the replicated Policy, and the propagator rolls it up into the root Policy.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Template names are per cluster, not per Policy</p>
+<p>Every template of every Policy placed on a cluster lands in the same namespace there, so two Policies can't ship a template with the same name. The second one reports <code>Template name must be unique. Policy template with kind: ConfigurationPolicy name: &lt;name&gt; already exists in policy &lt;policy&gt;</code>. CI catches this before merge (POLICY002 within an element, POLICY003 across elements; <a href="../../reference/rules/">Validator rules</a>).</p>
+</div>
+<p>This is the <code>config</code> Policy of the metallb element as Argo CD syncs it for cluster <code>c1</code> (render it with the <code>helm template</code> command in <a href="../policies/#placement">Placement</a>, release <code>metallb-c1</code>, plus <code>--set stack.metallb.enabled=true</code>; without <code>selector</code>, the cluster selector the ApplicationSet passes into every Application, the render fails):</p>
+<div class="language-yaml highlight"><span class="filename">Policy pstack/config-metallb-c1</span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">policy.open-cluster-management.io/v1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Policy</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">config-metallb-c1</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pstack</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">policy.open-cluster-management.io/categories</span><span class="p">:</span><span class="w"> </span><span class="s">"SC</span><span class="nv"> </span><span class="s">System</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">Communications</span><span class="nv"> </span><span class="s">Protection"</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">policy.open-cluster-management.io/controls</span><span class="p">:</span><span class="w"> </span><span class="s">"SC-7</span><span class="nv"> </span><span class="s">Boundary</span><span class="nv"> </span><span class="s">Protection"</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">policy.open-cluster-management.io/standards</span><span class="p">:</span><span class="w"> </span><span class="s">"NIST</span><span class="nv"> </span><span class="s">SP</span><span class="nv"> </span><span class="s">800-53"</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">remediationAction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enforce</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">disabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># (3)!</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">copyPolicyMetadata</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># (4)!</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="c1"># (5)!</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">policy.open-cluster-management.io/v1</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Policy</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">install-metallb-c1</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">      </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pstack</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="nt">compliance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Compliant</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="nt">policy-templates</span><span class="p">:</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">extraDependencies</span><span class="p">:</span><span class="w"> </span><span class="c1"># (6)!</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">policy.open-cluster-management.io/v1</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ConfigurationPolicy</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">install-metallb-status</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">          </span><span class="nt">compliance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Compliant</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">      </span><span class="nt">ignorePending</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">      </span><span class="nt">objectDefinition</span><span class="p">:</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">        </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">policy.open-cluster-management.io/v1</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ConfigurationPolicy</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">        </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">config-metallb-instance</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">        </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">          </span><span class="nt">remediationAction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enforce</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">          </span><span class="nt">severity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">medium</span><span class="w"> </span><span class="c1"># (7)!</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="w">          </span><span class="nt">object-templates</span><span class="p">:</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">complianceType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">musthave</span><span class="w"> </span><span class="c1"># (8)!</span>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="w">              </span><span class="nt">objectDefinition</span><span class="p">:</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">                </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb.io/v1beta1</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">                </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MetalLB</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">                </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">                  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb</span>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">                  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb-system</span>
+</span></code></pre></div>
+<ol>
+<li>Metadata only (<a href="#severity-and-compliance-annotations">Severity and compliance annotations</a>).</li>
+<li>Overrides the <code>remediationAction</code> of every template below (<a href="#inform-enforce-and-informonly">inform, enforce and InformOnly</a>).</li>
+<li><code>true</code> stops ACM delivering the Policy while it stays on the hub. To remove a Policy, see <a href="../removal/">Removal and pruning</a>.</li>
+<li>Keeps Argo CD's tracking labels off the replicated copies, so Argo CD never sees them as its own and never prunes them.</li>
+<li>The whole Policy waits until Policy <code>install-metallb-c1</code> is Compliant on this cluster (<a href="#dependencies-and-ignorepending">Dependencies and ignorePending</a>).</li>
+<li>This one template also waits for the operator's install check.</li>
+<li>Shown in the console; changes no behavior.</li>
+<li>The MetalLB object must exist with these fields (<a href="#configurationpolicy">ConfigurationPolicy</a>).</li>
+</ol>
+<h2 id="configurationpolicy">ConfigurationPolicy<a class="headerlink" href="#configurationpolicy" title="Permanent link">&para;</a></h2>
+<p>A ConfigurationPolicy lists objects under <code>object-templates</code>. Each entry is an <code>objectDefinition</code> (the object, written like a manifest) and a <code>complianceType</code> that says how it must compare with the cluster. The controller only looks at the fields you list, except where <code>mustonlyhave</code> says otherwise.</p>
+<table>
+<thead>
+<tr>
+<th><code>complianceType</code></th>
+<th>Compliant when</th>
+<th>Under <code>enforce</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>musthave</code> (PolicyStack's default)</td>
+<td>The object exists and every listed field matches. Unlisted fields are ignored; a listed list must contain the listed items, and may hold more.</td>
+<td>Creates the object, or patches the listed fields. Other fields and list items stay.</td>
+</tr>
+<tr>
+<td><code>mustonlyhave</code></td>
+<td>The object exists and matches exactly: listed maps and lists hold nothing else, and the object has no top-level field you didn't list (<code>metadata</code> and <code>status</code> aside).</td>
+<td>Creates the object, or replaces those fields and removes the extra ones. Anything another controller added to them is removed on every evaluation.</td>
+</tr>
+<tr>
+<td><code>mustnothave</code></td>
+<td>No object with that name exists.</td>
+<td>Deletes it.</td>
+</tr>
+</tbody>
+</table>
+<p>Take a live ConfigMap <code>app</code> with <code>data: {a: "1", b: "2"}</code> and a template listing <code>data: {a: "1"}</code>: <code>musthave</code> is Compliant, <code>mustonlyhave</code> is NonCompliant and enforce removes <code>b</code>, <code>mustnothave</code> is NonCompliant and enforce deletes the ConfigMap.</p>
+<p>Two shapes are checks only, whatever the action:</p>
+<ul>
+<li><strong>An object with no <code>metadata.name</code> and no <code>objectSelector</code></strong> matches any object of that kind (in that namespace) with the listed fields. <code>musthave</code> is Compliant if one matches, <code>mustnothave</code> if none do. ACM can't create or delete by an unknown name, so it evaluates these as <code>inform</code>. With <code>objectSelector</code>, each selected object is handled by name and <code>enforce</code> acts on it.</li>
+<li><strong>Fields under <code>status</code></strong> are compared but never written; a mismatch stays NonCompliant.</li>
+</ul>
+<p>PolicyStack generates one such check per operator, named <code>install-&lt;key&gt;-status</code> after the operator's key in the element (<code>install-metallb-status</code> for MetalLB): a ClusterServiceVersion with no name, <code>spec.displayName</code> set to the operator's display name, and <code>status.phase: Succeeded</code>. It turns Compliant once the operator finished installing, which is what other templates wait on.</p>
+<p><code>object-templates-raw</code> is the same list written as one string, so <a href="#hub-and-managed-cluster-templates">ACM templates on the cluster</a> can decide how many objects there are; PolicyStack picks it from the output shape of a converter (an element file that renders a template's objects) (<a href="../../develop/elements/#converter-shapes">Converter shapes</a>). What happens to objects when a ConfigurationPolicy goes away (<code>pruneObjectBehavior</code>) is on <a href="../removal/#what-happens-on-the-managed-cluster">Removal and pruning</a>.</p>
+<h2 id="operatorpolicy">OperatorPolicy<a class="headerlink" href="#operatorpolicy" title="Permanent link">&para;</a></h2>
+<p>An OperatorPolicy manages one OLM operator: it creates and maintains the operator's Subscription and OperatorGroup, and approves the InstallPlans OLM proposes (an InstallPlan is OLM's proposal to install or upgrade to a ClusterServiceVersion, one operator version). The fields that matter:</p>
+<ul>
+<li><code>complianceType: musthave</code> keeps the operator installed; <code>mustnothave</code> uninstalls it under enforce, as <code>removalBehavior</code> says (by default the Subscription and CSV go, the OperatorGroup goes if nothing else uses it, CRDs stay).</li>
+<li><code>upgradeApproval</code> (required): <code>None</code> approves the first install only; <code>Automatic</code> also approves later upgrades.</li>
+<li><code>versions</code> lists the CSV names it may approve, for the first install and for upgrades. Empty allows any.</li>
+</ul>
+<p>The OperatorPolicy owns approval: ACM rejects an OperatorPolicy whose <code>subscription</code> sets <code>installPlanApproval</code>, and CI fails it first (POLICY030). Under <code>inform</code> it approves nothing: a fresh cluster gets no operator, and the Policy reports NonCompliant. Pinning, bumping and uninstalling are on <a href="../../guides/operators/">Operator versions</a>.</p>
+<h2 id="inform-enforce-and-informonly">inform, enforce and InformOnly<a class="headerlink" href="#inform-enforce-and-informonly" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Where it is set</th>
+<th>What the controller does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inform</code></td>
+<td>Policy</td>
+<td>Compares and reports. Never changes the cluster, never approves an InstallPlan. On new config every missing object reads NonCompliant: the list of what <code>enforce</code> would change.</td>
+</tr>
+<tr>
+<td><code>enforce</code></td>
+<td>Policy</td>
+<td>Creates, patches or deletes objects until they match, and approves InstallPlans.</td>
+</tr>
+<tr>
+<td><code>InformOnly</code></td>
+<td>One template</td>
+<td>Keeps that template <code>inform</code> even when its Policy enforces.</td>
+</tr>
+</tbody>
+</table>
+<p>The Policy's <code>remediationAction</code> overrides the action of every template inside it. The only exception is a template set to <code>InformOnly</code>, which the add-on turns into <code>inform</code> on the cluster. Use it for checks that must never act: a readiness check, or a <code>mustnothave</code> that should report an object rather than delete it (the compliance element's findings templates are <code>mustnothave</code> ComplianceCheckResults; enforced, ACM would delete the scan results).</p>
+<p>Which action each Policy gets, and how to force every Policy to <code>inform</code> for a dry run, is on <a href="../elements/#inform-or-enforce">Inform or enforce</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Enforced means applied, not ready</p>
+<p>An enforced ConfigurationPolicy turns Compliant as soon as the API server accepts the create or patch. It says nothing about whether the operator behind the object finished its work. An OperatorPolicy is the exception: it stays NonCompliant until the CSV reaches <code>Succeeded</code> and its deployments are available. Wait on a separate inform check for that, as <a href="../lifecycle/">Cluster lifecycle</a> does after each step.</p>
+</div>
+<h2 id="compliance-states">Compliance states<a class="headerlink" href="#compliance-states" title="Permanent link">&para;</a></h2>
+<p>The controller reports a state per template; the add-on rolls them up to the Policy.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Template</th>
+<th>Policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Compliant</code></td>
+<td>The cluster matches.</td>
+<td>Every template is Compliant.</td>
+</tr>
+<tr>
+<td><code>NonCompliant</code></td>
+<td>The cluster differs, a check failed, or the template could not be processed (message starts with <code>template-error;</code>).</td>
+<td>At least one template is NonCompliant. This wins over Pending.</td>
+</tr>
+<tr>
+<td><code>Pending</code></td>
+<td>A dependency is unmet, so the template isn't evaluated (<a href="#dependencies-and-ignorepending">Dependencies and ignorePending</a>).</td>
+<td>No template is NonCompliant and at least one is Pending.</td>
+</tr>
+</tbody>
+</table>
+<p>An empty state means nothing has reported. If <code>oc get policies.policy.open-cluster-management.io -n c1</code> doesn't list the Policy at all, the Placement selected no cluster: check <code>oc get placementdecisions -n pstack</code> and <a href="../policies/#cluster-sets">Cluster sets</a>. If the copy exists but is empty, the cluster hasn't reported, for example because it is unreachable.</p>
+<p>Read the reason on the hub, from the replicated Policy:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># one line per Policy on cluster c1</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>oc<span class="w"> </span>get<span class="w"> </span>policies.policy.open-cluster-management.io<span class="w"> </span>-n<span class="w"> </span>c1
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># NAME                        REMEDIATION ACTION   COMPLIANCE STATE   AGE</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># pstack.config-metallb-c1    enforce              Compliant          5m</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># pstack.install-metallb-c1   enforce              Compliant          6m</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># one line per template: name, state, latest message</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>oc<span class="w"> </span>get<span class="w"> </span>policies.policy.open-cluster-management.io<span class="w"> </span>pstack.config-metallb-c1<span class="w"> </span>-n<span class="w"> </span>c1<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{range .status.details[*]}{.templateMeta.name}{"\t"}{.compliant}{"\t"}{.history[0].message}{"\n"}{end}'</span>
+</span></code></pre></div>
+<p>Messages name the object and what is wrong with it:</p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NonCompliant; violation - metallbs [metallb] not found in namespace metallb-system</code></td>
+<td><code>musthave</code> under inform, object missing.</td>
+</tr>
+<tr>
+<td><code>NonCompliant; violation - metallbs [metallb] in namespace metallb-system is missing, and cannot be created, reason: ...</code></td>
+<td>Enforce tried to create it and the API refused.</td>
+</tr>
+<tr>
+<td><code>NonCompliant; violation - metallbs [metallb] found but not as specified in namespace metallb-system</code></td>
+<td>Exists, a listed field differs.</td>
+</tr>
+<tr>
+<td><code>Compliant; notification - metallbs [metallb] was created successfully in namespace metallb-system</code></td>
+<td>Enforce created it.</td>
+</tr>
+<tr>
+<td><code>Pending; Dependencies were not satisfied: 1 is still pending (Policy pstack.install-metallb-c1)</code></td>
+<td>Waiting on a dependency.</td>
+</tr>
+<tr>
+<td><code>Compliant; Dependencies were not satisfied: 2 are still pending (ConfigurationPolicy install-metallb-status, Policy pstack.install-metallb-c1) but ignorePending is true</code></td>
+<td>Waiting, but reported Compliant because of <code>ignorePending</code>: <code>config-metallb-instance</code> before the operator is installed.</td>
+</tr>
+<tr>
+<td><code>NonCompliant; template-error; ...</code></td>
+<td>The template could not be processed, for example a failed hub template.</td>
+</tr>
+</tbody>
+</table>
+<p>On the managed cluster, <code>oc get configurationpolicies,operatorpolicies -n c1</code> lists the templates and <code>oc describe</code> shows each one's related objects. In the console, the same data is under <strong>Governance</strong>, per Policy and per cluster.</p>
+<h2 id="dependencies-and-ignorepending">Dependencies and ignorePending<a class="headerlink" href="#dependencies-and-ignorepending" title="Permanent link">&para;</a></h2>
+<p>A dependency makes something wait until another policy object reaches a given compliance state (PolicyStack writes <code>Compliant</code> unless the values entry sets <code>compliance</code>).</p>
+<ul>
+<li><code>spec.dependencies</code> on a Policy holds back every template in it.</li>
+<li><code>extraDependencies</code> on one policy template holds back that template only.</li>
+</ul>
+<p>Either may name a Policy or a template (ConfigurationPolicy, OperatorPolicy) on the same cluster. While a dependency is unmet, the template is <code>Pending</code> and does not exist on the managed cluster: the add-on doesn't create it, or <strong>deletes it</strong> if it was there. A dependency that goes NonCompliant later, for example while an operator upgrades and its CSV leaves <code>Succeeded</code>, removes the dependent templates until it recovers. With <code>pruneObjectBehavior</code>, removing a template also deletes its objects, so every operator upgrade would delete and recreate, for example, the MetalLB instance. That is why PolicyStack rejects <code>pruneObjectBehavior</code> on any template with a dependency (POLICY033, <a href="../removal/">Removal and pruning</a>).</p>
+<p><code>ignorePending: true</code> on a template reports a Pending template as Compliant, with the message ending <code>but ignorePending is true</code>. The Policy can then read Compliant while the template hasn't run.</p>
+<p>In the metallb example, Policy <code>config</code> waits for Policy <code>install</code>, and its <code>config-metallb-instance</code> template also waits for <code>install-metallb-status</code>. The waits exist because the MetalLB CRD only exists once the operator is installed. Until then the template is Pending and not created, and because of <code>ignorePending</code> the <code>config</code> Policy reads Compliant instead of Pending. Check <code>install-metallb-c1</code> before trusting a green <code>config</code>.</p>
+<p>The values keys that render these (<code>dependencies</code>, <code>extraDependencies</code>, <code>waitForOperator</code>, <code>orderManifests</code>) are on <a href="../elements/#waiting-and-ordering">How an element is built</a>.</p>
+<h2 id="severity-and-compliance-annotations">Severity and compliance annotations<a class="headerlink" href="#severity-and-compliance-annotations" title="Permanent link">&para;</a></h2>
+<p>All four are metadata; none changes what ACM does.</p>
+<ul>
+<li><code>severity</code> (<code>low</code>, <code>medium</code>, <code>high</code>, <code>critical</code>) sits on each template and shows in the console next to its violations.</li>
+<li><code>categories</code>, <code>controls</code> and <code>standards</code> become <code>policy.open-cluster-management.io/*</code> annotations on the Policy. The Governance dashboard groups Policies by them, so claiming a control the Policy doesn't implement misreports compliance.</li>
+</ul>
+<h2 id="hub-and-managed-cluster-templates">Hub and managed-cluster templates<a class="headerlink" href="#hub-and-managed-cluster-templates" title="Permanent link">&para;</a></h2>
+<p>ACM resolves Go templates inside policy templates, in two places:</p>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Resolved by</th>
+<th>When</th>
+<th>Can read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{{hub ... hub}}</code></td>
+<td>The propagator, on the hub</td>
+<td>When it replicates the Policy for each cluster, and again when a hub object the template reads changes</td>
+<td>Hub objects in the Policy's namespace (<code>pstack</code>), and the target ManagedCluster (<code>.ManagedClusterName</code>, <code>.ManagedClusterLabels</code>). Other namespaces need <code>hubTemplateOptions.serviceAccountName</code> on the Policy, naming a ServiceAccount in <code>pstack</code> with read access.</td>
+</tr>
+<tr>
+<td><code>{{ ... }}</code></td>
+<td><code>config-policy-controller</code>, on the managed cluster</td>
+<td>On every evaluation</td>
+<td>Objects on that cluster (<code>lookup</code>, <code>fromSecret</code>, <code>fromConfigMap</code>, <code>fromClusterClaim</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>Hub templates are how a secret on the hub reaches a cluster without being stored in Git (<a href="../../develop/elements/#secrets">Secrets</a>). A failed hub template shows on the cluster as a <code>template-error</code> on that template. Converters are Helm templates too, so an ACM template inside one is written escaped, for example <code>{{ "{{" }}hub fromSecret … hub{{ "}}" }}</code>, so that Helm prints it instead of evaluating it (<a href="../elements/#helm-templates-and-acm-templates">Helm templates and ACM templates</a>).</p>
+<h2 id="further-reading">Further reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/governance/">ACM Governance</a>: the policy framework, ConfigurationPolicy, OperatorPolicy, templates and dependencies.</li>
+<li><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/clusters/">ACM Clusters</a>: ManagedClusterSets and Placements.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.tabs.link","navigation.sections","navigation.tabs"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.77dd0ce9.min.js"></script>
+      
+    
+  </body>
+</html>

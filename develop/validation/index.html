@@ -1,0 +1,2567 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/develop/validation/">
+      
+      
+      
+        <link rel="prev" href="../elements/">
+      
+      
+        <link rel="next" href="../../reference/fleet/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.73">
+    
+    
+      
+        <title>Validation - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Validation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../elements/acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What it checks
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preview
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-validate-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What <code>validate</code> runs
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Baseline
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reading the output
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixtures
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acm-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ACM templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Profiles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crd-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CRD schemas
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destructive-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Destructive templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What it checks
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preview
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-validate-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What <code>validate</code> runs
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Baseline
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reading the output
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixtures
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acm-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ACM templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Profiles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crd-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CRD schemas
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#destructive-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Destructive templates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/develop/validation.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h1>
+<p><code>tools/validator</code> is a Go program that renders every element (a Helm chart under <code>stack/</code>,
+<a href="../../concepts/elements/">How an element is built</a>) the way Argo CD will, then checks the sources
+and the result against the <a href="../../reference/rules/">validator rules</a>. CI runs it on every PR
+(<a href="../../reference/ci/#policy-validate">Policy Validate</a>). This page is for element authors and for
+anyone fixing a finding.</p>
+<p>The validator exists because most PolicyStack mistakes are silent or show up late, on a managed cluster:</p>
+<ul>
+<li>Argo CD skips a values file that doesn't exist, so a typo in a
+  <a href="../../reference/fleet/">fleet file</a>'s <code>valueFiles</code> (the list of values files a cluster reads)
+  silently drops that layer (POLICY050, POLICY052).</li>
+<li>A converter (a template file under an element's <code>converters/</code>) that reads a <code>config</code> key nobody
+  set renders <code>null</code>, not an error (POLICY022).</li>
+<li>The hub accepts any typo inside a Policy's <code>policy-templates</code>, such as
+  <code>remediationAction: enforec</code>; it only fails on the managed cluster (POLICY080,
+  <a href="#crd-schemas">CRD schemas</a>).</li>
+<li>ACM templates (the escaped <code>{{ "{{" }} ... {{ "}}" }}</code> parts of a converter) are resolved by ACM
+  after Helm, so <code>helm template</code> never runs them (POLICY081).</li>
+<li>ACM rejects a Policy whose hub copy, <code>pstack.&lt;policy&gt;-&lt;element&gt;-&lt;cluster&gt;</code>, is over 63 characters. The name
+  grows with the cluster name, so it only fails for long cluster names (POLICY001,
+  <a href="../../concepts/policies/#naming-limits">Naming limits</a>).</li>
+</ul>
+<h2 id="what-it-checks">What it checks<a class="headerlink" href="#what-it-checks" title="Permanent link">&para;</a></h2>
+<p>The validator never talks to a cluster. It stands in for the fleet with <strong>fixtures</strong>: made-up fleet
+files in <code>tools/validator/testdata/clusters</code> (see <a href="#fixtures">Fixtures</a>). For each element and each
+fixture it builds the same values cascade the ApplicationSet builds
+(<a href="../../concepts/values/#order">Order</a>) and runs <code>helm template</code> with it. It also renders
+<code>lifecycle/</code>, the chart a hub uses to build and destroy clusters, for fixtures that set <code>hub:</code> (the
+hub that builds them), as release <code>lifecycle-&lt;cluster&gt;</code>
+(<a href="../../concepts/lifecycle/">Cluster lifecycle</a>).</p>
+<p>Every rule runs in one of three phases:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Runs</th>
+<th>Reads</th>
+<th>Rules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chart</td>
+<td>Once per element</td>
+<td>The element's own <code>Chart.yaml</code>, <code>values.yaml</code> and <code>converters/</code></td>
+<td>POLICY021, 022, 030, 031, 040, 070, 090</td>
+</tr>
+<tr>
+<td>Cluster</td>
+<td>Once per element and fixture</td>
+<td>The <code>helm template</code> output for that cascade</td>
+<td>POLICY001, 002, 032, 033, 034, 037, 050, 080, 081, 082, RENDER000</td>
+</tr>
+<tr>
+<td>Repo</td>
+<td>Once</td>
+<td>Every element, every file under <code>values/</code>, every fleet file, <code>install/</code>, the copier answers files</td>
+<td>POLICY003, 011, 035, 038, 039, 051, 052, 060, 061, 071, 091, 092</td>
+</tr>
+</tbody>
+</table>
+<p>Cluster-phase rules see the whole cascade, so a values layer that turns a template on or changes its
+action is checked the same as the element's own <code>values.yaml</code>.</p>
+<h2 id="running-it">Running it<a class="headerlink" href="#running-it" title="Permanent link">&para;</a></h2>
+<p>You need the tools from <code>mise.toml</code> on your <code>PATH</code> (<a href="../../contributing/#setup">Setup</a>), plus <code>make</code>
+and <code>git</code>. The first run builds the validator, which downloads its Go modules (or reads them from
+<code>GOPROXY</code>); after that it runs offline: the CRDs are committed in <code>tools/validator/crds/</code>
+(<a href="#crd-schemas">CRD schemas</a>), and policy-library, the Helm library chart every element depends on,
+comes from <code>lib/policy-library</code> in the same checkout
+(<a href="../../contributing/#library-changes">Library changes</a>).</p>
+<p>While writing an element (<a href="../elements/#workflow">Workflow</a>):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>-C<span class="w"> </span>tools/validator<span class="w"> </span>preview<span class="w"> </span><span class="nv">ELEMENT</span><span class="o">=</span>metallb<span class="w"> </span><span class="nv">CLUSTER</span><span class="o">=</span>nonprod-west-1<span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>-C<span class="w"> </span>tools/validator<span class="w"> </span>validate<span class="w"> </span><span class="nv">ELEMENT</span><span class="o">=</span>metallb<span class="w"> </span><span class="c1"># (2)!</span>
+</span></code></pre></div>
+<ol>
+<li>Renders one element for one fixture and prints it. <code>ELEMENT</code> is the chart name (<code>stack/&lt;name&gt;</code>).
+    <code>CLUSTER</code> is the fixture's file name without directory or <code>.yaml</code>: <code>CLUSTER=acm-dc1</code> for
+    <code>hubs/acm-dc1.yaml</code>.</li>
+<li>Every rule, for one element. Repo-phase rules still load everything but report only this
+    element's findings, so findings that belong to no element (POLICY052, POLICY071) don't show.</li>
+</ol>
+<p>Before opening a PR, run <code>validate</code>, which is what <code>ci</code> runs in your repository. For a PR to
+upstream PolicyStack, run its validator CI instead (every CI job: <a href="../../contributing/#setup">Setup</a>):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>-C<span class="w"> </span>tools/validator<span class="w"> </span>ci<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><code>lint</code>, <code>validate</code>, then <code>test</code>. Upstream only: <code>test</code> reads upstream's test data, which copier
+    leaves out of your repository.</li>
+</ol>
+<h3 id="preview">Preview<a class="headerlink" href="#preview" title="Permanent link">&para;</a></h3>
+<p><code>preview</code> writes a temporary values file holding only <code>stack.&lt;key&gt;.enabled: true</code> (<code>&lt;key&gt;</code> is
+<code>ELEMENT</code> in camelCase: <code>user-monitoring</code> → <code>userMonitoring</code>) and appends it, with
+<a href="#baseline"><code>baseline.yaml</code></a>, on top of the fixture's cascade. Only the element switch is forced:
+policies, templates and operators shipped <code>enabled: false</code> stay off unless the fixture's layers turn
+them on. To preview one, set its <code>enabled: true</code> in the fixture's <code>values/clusters/&lt;fixture&gt;.yaml</code>
+for the run. It runs only RENDER000 and POLICY081, so it prints output even when other rules would
+fail (run <code>validate</code> for those). It prints two files:</p>
+<ul>
+<li><code>&lt;element&gt;.yaml</code>: the Placement, PlacementBinding and Policies after Helm. The Placement selects
+  <code>name Exists</code> (from the baseline), not the single cluster Argo CD would target
+  (<a href="../../concepts/policies/#placement">Placement</a>).</li>
+<li><code>&lt;element&gt;.evaluated.yaml</code>: the objects each ConfigurationPolicy would apply, with ACM templates
+  resolved on an empty cluster (<a href="#acm-templates">ACM templates</a>). Each object is headed by its
+  ConfigurationPolicy name and <code>complianceType</code>. A template that fails is listed first as
+  <code># POLICY081 &lt;name&gt;: &lt;error&gt;</code>. An object whose template looks up something the empty cluster lacks
+  is written as rendered, marked <code>looks up an object the cluster lacks</code>. OperatorPolicies are not
+  expanded; only their <code>-ns</code> and <code>-status</code> ConfigurationPolicies appear.</li>
+</ul>
+<div class="language-yaml highlight"><span class="filename">nonprod-west-1/metallb.evaluated.yaml (excerpt)</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nn">---</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># addressing-pools (mustonlyhave)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb.io/v1beta1</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IPAddressPool</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">services</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb-system</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">addresses</span><span class="p">:</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.20.30.100-10.20.30.120</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">autoAssign</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nn">---</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># install-metallb-ns (musthave)</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Namespace</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb-system</span>
+</span></code></pre></div>
+<p>Without <code>CLUSTER</code>, preview renders every fixture and prints only the paths it wrote. The files go to
+a new temporary directory, which is not deleted, or to <code>PREVIEW=&lt;dir&gt;</code> (relative to
+<code>tools/validator</code>). <code>ELEMENT=my-element</code> previews the <a href="../elements/#sample-element">sample element</a>.</p>
+<p>copier leaves the fixtures out of your repository, so there <code>preview</code> renders your fleet files
+instead, and <code>CLUSTER</code> names one of them (<code>CLUSTER=&lt;hubName&gt;</code> for <code>fleet/hubs/&lt;hubName&gt;.yaml</code>).</p>
+<h3 id="what-validate-runs">What <code>validate</code> runs<a class="headerlink" href="#what-validate-runs" title="Permanent link">&para;</a></h3>
+<p><code>validate</code> builds the binary, then runs the validator in three passes. All of them run, and any
+failure fails the target. Passes 1 and 2 render the fixtures, so they run only where
+<code>tools/validator/testdata/clusters</code> exists: upstream has it, an adopter's copy doesn't.</p>
+<ol>
+<li><strong>Fixtures.</strong> Every element plus <code>tools/sample-element/</code>, which <code>tools/create-element.sh</code> copies
+    for every new element and so must stay valid. Skips POLICY052, because fixture revisions are
+    not real pins, and POLICY081, which pass 2 covers. It runs POLICY071, the
+    <a href="../../reference/install/">install chart</a> check.</li>
+<li><strong>Profiles.</strong> The all-on run, then one run per file in <code>tools/validator/testdata/profiles/</code>.
+    Together they turn every element and optional piece on, so POLICY081 and POLICY001 see every
+    converter (<a href="#profiles">Profiles</a>).</li>
+<li><strong>Your fleet.</strong> Only when <code>fleet/*.yaml</code> or <code>fleet/hubs/*.yaml</code> exists, which upstream never
+    has. It renders the real fleet files and is the only pass that runs POLICY052 against real
+    <code>revision</code> pins. Without fixtures, it also runs POLICY071, so an adopter's copy checks
+    <code>install/</code> once it has a fleet file.</li>
+</ol>
+<p>Upstream, a clean run prints <code>ok: no findings</code> three times (fixtures, all-on, <code>variants</code>). An
+adopter's copy prints it once, for <code>fleet/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>validate [ELEMENT=&lt;chart&gt;]</code></td>
+<td>The three passes above</td>
+</tr>
+<tr>
+<td><code>preview ELEMENT=&lt;chart&gt; [CLUSTER=&lt;name&gt;] [PREVIEW=&lt;dir&gt;]</code></td>
+<td><a href="#preview">Preview</a></td>
+</tr>
+<tr>
+<td><code>crds</code></td>
+<td>Refetches the committed <a href="#crd-schemas">CRD schemas</a> in <code>tools/validator/crds/</code> from the pinned SHAs. Run it by hand after a pin changes, then commit the result</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td>Upstream only. <code>go test -race ./...</code>. Tests that need Helm skip without it. A rule ID missing from the rules table in <code>tools/validator/README.md</code> (which <a href="../../reference/rules/">Validator rules</a> includes) fails</td>
+</tr>
+<tr>
+<td><code>lint</code></td>
+<td>golangci-lint (<code>.golangci.yml</code>, gofmt and goimports included; <code>make fmt</code> fixes formatting), <code>go mod tidy -diff</code>, <code>go tool govulncheck</code></td>
+</tr>
+<tr>
+<td><code>ci</code></td>
+<td>Upstream only. <code>lint</code>, <code>validate</code>, <code>test</code></td>
+</tr>
+<tr>
+<td><code>deps</code></td>
+<td><code>helm dependency update</code> for every chart that uses policy-library. Optional: <code>validate</code> runs it for any chart whose <code>charts/</code> archive is older than <code>lib/</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>CI</code> is the environment variable GitHub Actions sets. Leave it unset locally. When it is set, findings
+print as GitHub annotations (<code>--github</code>), missing CRDs fail the run instead of skipping POLICY080, and
+tests that would skip fail instead. <code>test</code> and <code>lint</code> check the validator itself, so only upstream's
+CI runs them, and <code>test</code> fails in a copy, which lacks upstream's test data (<a href="../../reference/ci/#upstream">Upstream</a>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Every run starts with <code>helm dependency update</code> on each chart, once per run, with
+<code>--skip-refresh</code> when every dependency is <code>file://</code>. It packages <code>lib/policy-library</code> into the chart's <code>charts/</code>, so the render always uses the library
+in your checkout, even when its version has not changed. When <code>lib/policy-library</code> does not
+satisfy the chart's <code>version</code> floor, the update fails, RENDER000 reports the element
+unrendered, and POLICY060 says what to change.</p>
+</div>
+<h3 id="baseline">Baseline<a class="headerlink" href="#baseline" title="Permanent link">&para;</a></h3>
+<p>In production the ApplicationSet adds <code>selector</code>, the label selector that makes the element's
+Placement pick its one cluster (<a href="../../concepts/policies/#placement">Placement</a>), to every element's
+values. Outside Argo CD
+nothing does, and policy-library reads it unconditionally, so an enabled element fails:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>error RENDER000 [metallb/nonprod-west-1] hint: cascade did not provide `selector`. ...
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>... at &lt;$root.Values.selector.matchExpressions&gt;: nil pointer evaluating interface {}.matchExpressions
+</span></code></pre></div>
+<p><code>validate</code> and <code>preview</code> pass <code>--extra-values tools/validator/testdata/baseline.yaml</code>, which supplies
+a selector matching every cluster. A disabled element renders nothing, so it never hits this.</p>
+<div class="language-yaml highlight"><span class="filename">tools/validator/testdata/baseline.yaml</span><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">selector</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">matchExpressions</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">name</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">operator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Exists</span>
+</span></code></pre></div>
+<p><code>--extra-values</code> files are appended after <code>values/clusters/&lt;cluster&gt;.yaml</code>, so they win over every
+cascade file. They are never applied to <code>lifecycle/</code>, which ships its own <code>selector</code>. Argo CD
+passes the whole fleet file to <code>lifecycle/</code> as values, so the validator appends the fixture there
+instead. For elements, the validator passes the fixture's <code>version</code> and <code>channel</code> as the
+ApplicationSet does.</p>
+<h2 id="reading-the-output">Reading the output<a class="headerlink" href="#reading-the-output" title="Permanent link">&para;</a></h2>
+<p>Each finding is <code>&lt;severity&gt; &lt;rule&gt; [&lt;element&gt;[/&lt;cluster&gt;]] &lt;message&gt;</code>, then <code>at &lt;file&gt;:&lt;line&gt;:&lt;col&gt;</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>error POLICY022 [metallb] reads config key pools, which is not in stack.metallb.config of the element's values.yaml or the config of a template rendering it
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    at /path/to/policystack/stack/metallb/converters/addressing/pools.yaml:7:19
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>error POLICY033 [metallb] policies.addressing.templates.l2: pruneObjectBehavior with a dependency (the Policy's dependencies): ACM deletes this template whenever the dependency is unmet, and prune deletes its objects
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    at /path/to/policystack/values/clusters/nonprod-west-1.yaml:28:34
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>warning POLICY021 [metallb] converters/metallb-cr.yaml is never rendered: it is not converters/&lt;policy&gt;/&lt;template&gt;.yaml of a template and no templates.&lt;t&gt;.file names it
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    at /path/to/policystack/stack/metallb/converters/metallb-cr.yaml:1
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>2 error(s), 1 warning(s)
+</span></code></pre></div>
+<p>Each points at the file to change: POLICY022 at the converter that reads the missing key, POLICY033
+at the layer that set <code>pruneObjectBehavior</code>, POLICY021 at the stray file. Fixes for these and other
+common findings: <a href="../../reference/rules/#fixing-common-findings">Fixing common findings</a>.</p>
+<p>Only findings about one fixture name it: POLICY001, POLICY002, POLICY050, POLICY051, POLICY082 and
+RENDER000. POLICY033, POLICY037, POLICY080 and POLICY081 leave it out on purpose, so one mistake is
+reported once rather than once per fixture.</p>
+<p>A finding on rendered output points at the last cascade file that sets the field on the entry (a
+<code>policies.&lt;p&gt;</code>, <code>policies.&lt;p&gt;.templates.&lt;t&gt;</code> or <code>operatorPolicies.&lt;k&gt;</code> key), else the file that
+defines the entry, else the template's converter. That is how the POLICY033 above lands on the
+cluster's values file, not the element. If no entry renders the object, it points at the fleet
+file; POLICY080 points at the element's <code>values.yaml</code> instead.</p>
+<table>
+<thead>
+<tr>
+<th>Exit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>No errors. Warnings alone pass</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Errors, or warnings with <code>--severity warning</code></td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>The validator failed, e.g. Helm not on <code>PATH</code> or an unknown <code>--only</code>/<code>--skip</code> rule ID</td>
+</tr>
+</tbody>
+</table>
+<details class="info">
+<summary>Flags, for running the binary by hand</summary>
+<p><code>make</code> fixes the flags it passes, so these only matter when you run
+<code>tools/validator/bin/policystack-validator --repo-root .</code> yourself. <code>--help</code> lists the rest.</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--element</code></td>
+<td>Check and render one chart, by chart name</td>
+</tr>
+<tr>
+<td><code>--cluster</code></td>
+<td>Render one fleet file, by cluster name</td>
+</tr>
+<tr>
+<td><code>--evaluate</code></td>
+<td>With <code>--render-dir</code>, also write <code>&lt;chart&gt;.evaluated.yaml</code></td>
+</tr>
+<tr>
+<td><code>--only</code> / <code>--skip</code></td>
+<td>Comma-separated rule IDs to run / skip</td>
+</tr>
+<tr>
+<td><code>--severity warning</code></td>
+<td>Fail on warnings too</td>
+</tr>
+<tr>
+<td><code>--github</code></td>
+<td>GitHub Actions annotations</td>
+</tr>
+<tr>
+<td><code>--fixtures-dir</code></td>
+<td>Fleet files to render, hubs in its <code>hubs/</code>. Default <code>tools/validator/testdata/clusters</code>; pass 3 passes <code>fleet</code></td>
+</tr>
+<tr>
+<td><code>--extra-values</code></td>
+<td>Comma-separated values files appended to every cascade but <code>lifecycle/</code>'s (<a href="#baseline">Baseline</a>)</td>
+</tr>
+<tr>
+<td><code>--all-on</code></td>
+<td>Turns on every element and every policy, template and operator in it, ranked below <code>--extra-values</code> (<a href="#profiles">Profiles</a>)</td>
+</tr>
+<tr>
+<td><code>--lifecycle-dir</code></td>
+<td>Lifecycle chart, default <code>&lt;repo&gt;/lifecycle</code></td>
+</tr>
+<tr>
+<td><code>--base-branch</code></td>
+<td>The branch a PR merges into, default <code>$GITHUB_BASE_REF</code>. POLICY052 resolves a <code>revision</code> naming it to <code>HEAD</code>, the PR's merge commit</td>
+</tr>
+<tr>
+<td><code>--render-dir</code></td>
+<td>Writes <code>&lt;dir&gt;/&lt;fleet file path without .yaml&gt;/&lt;element&gt;.yaml</code>, a failed render as <code># RENDER000:</code> lines. <a href="../../reference/ci/#render-diff">Render Diff</a> diffs two of these</td>
+</tr>
+</tbody>
+</table>
+<p>Locally <code>$GITHUB_BASE_REF</code> is empty, so a fleet file with <code>revision: main</code> resolves to
+<code>origin/main</code> as of your last <code>git fetch</code>, not your working tree, and a branch you haven't pushed
+fails POLICY052. Pass <code>--base-branch main</code> to make <code>main</code> mean <code>HEAD</code>. POLICY052 also needs full
+history: tags and <code>origin/*</code> branches.</p>
+<p><code>tools/validator/bin/policystack-validator resolve-revision [--branch &lt;b&gt; --at &lt;commit&gt;] -- &lt;revision&gt;</code>
+prints the commit POLICY052 resolves a <code>revision</code> to, exit 1 when it does not resolve.</p>
+</details>
+<h2 id="fixtures">Fixtures<a class="headerlink" href="#fixtures" title="Permanent link">&para;</a></h2>
+<p><code>tools/validator/testdata/clusters</code> holds example <a href="../../reference/fleet/">fleet files</a> for fake
+clusters that exist only for CI. Nothing is deployed. They list real files under <code>values/</code>, so a
+change to a shared layer such as <code>values/environments/prod.yaml</code> changes what every fixture listing
+it renders.</p>
+<div class="admonition note">
+<p class="admonition-title">Upstream only</p>
+<p>copier leaves <code>tools/validator/testdata/clusters</code> and upstream's <code>values/</code> out of your
+repository, so the fixture and profile passes don't run there, and nothing in your <code>values/</code> is
+read by a fixture.</p>
+</div>
+<p>The file name is the cluster name: <code>hubs/acm-dc1.yaml</code> renders as <code>acm-dc1</code> and reads
+<code>values/clusters/acm-dc1.yaml</code>. A fixture that sets <code>hub</code> names the hub that builds it with
+<code>lifecycle/</code> (<a href="../../concepts/lifecycle/">Cluster lifecycle</a>), so the validator also renders
+<code>lifecycle/</code> for it.</p>
+<p>Upstream contributors add a fixture for a new fleet shape, such as a new lifecycle engine. In your
+repository, pass 3 checks your <code>fleet/</code> files; you don't add fixtures for them. <code>TestLoadDir_testdata</code>
+(<code>internal/fixtures</code>) and <code>TestResolve_testdata</code> (<code>internal/cascade</code>) pin the exact list, so add the
+new file to both.</p>
+<details class="info">
+<summary>Fixture list</summary>
+<table>
+<thead>
+<tr>
+<th>Fixture</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prod-east-1</code>, <code>nonprod-west-1</code></td>
+<td>Imported managed clusters, <code>version</code> and <code>channel</code></td>
+</tr>
+<tr>
+<td><code>hubs/acm-dc1</code></td>
+<td>The hub the lifecycle fixtures name</td>
+</tr>
+<tr>
+<td><code>hcp-kubevirt</code>, <code>hcp-agent</code></td>
+<td>HyperShift</td>
+</tr>
+<tr>
+<td><code>hive-aws</code></td>
+<td>Hive on AWS</td>
+</tr>
+<tr>
+<td><code>hive-vsphere</code></td>
+<td>Hive on vSphere, one failure domain, DHCP</td>
+</tr>
+<tr>
+<td><code>sno-edge</code></td>
+<td>SiteConfig single-node</td>
+</tr>
+<tr>
+<td><code>bm-ha</code></td>
+<td>SiteConfig three masters and a worker</td>
+</tr>
+<tr>
+<td><code>hcp-retired</code>, <code>hive-retired</code>, <code>sno-retired</code></td>
+<td><code>state: absent</code></td>
+</tr>
+<tr>
+<td><code>name-budget-30-characters-long</code></td>
+<td>The 30-character name every element must fit (<a href="../../concepts/policies/#naming-limits">Naming limits</a>)</td>
+</tr>
+</tbody>
+</table>
+</details>
+<h2 id="acm-templates">ACM templates<a class="headerlink" href="#acm-templates" title="Permanent link">&para;</a></h2>
+<p>A converter's escaped <code>{{ "{{" }} ... {{ "}}" }}</code> parts are ACM templates: Helm prints them as text,
+and ACM resolves hub templates on the hub and the rest on the managed cluster
+(<a href="../../concepts/elements/#helm-templates-and-acm-templates">Helm templates and ACM templates</a>,
+<a href="../../concepts/acm/#hub-and-managed-cluster-templates">ACM policies in brief</a>). <code>helm template</code>
+never runs them.</p>
+<p>POLICY081 runs both stages with go-template-utils, the library ACM uses, against a fake cluster:</p>
+<ol>
+<li>Hub templates, as the propagator does. Lookups stay in the Policy's namespace, plus the
+   cluster's own ManagedCluster, unless the Policy sets <code>hubTemplateOptions.serviceAccountName</code>.</li>
+<li>Managed templates, as the config-policy-controller does: <code>object-templates-raw</code> as a whole, each
+   <code>object-templates</code> entry separately with <code>skipObject</code>.</li>
+</ol>
+<p>The fake cluster holds no objects and serves only the kinds listed in <code>kinds</code> in
+<code>tools/validator/internal/acmtemplates/acmtemplates.go</code>. The fake hub also holds the
+operator-owned objects listed in <code>hubObjects</code> there: today one, Route <code>stackrox/central</code>, because
+<code>stack/acs/converters/secured/agents.yaml</code> does <code>index</code> into it on the hub.</p>
+<p>It fails on an undefined function (in any branch), a failed call such as <code>index</code> on nil, a hub
+lookup outside the Policy's namespace, a kind the fake cluster does not serve (a misspelled kind or
+apiVersion), and output with <code>&lt;no value&gt;</code> or an object missing <code>apiVersion</code>/<code>kind</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>error POLICY081 [acs] central-console (managed template): resolves to &lt;no value&gt;: a field the template reads is missing
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    at /path/to/policystack/stack/acs/converters/central/console.yaml:10
+</span></code></pre></div>
+<p><strong>Missing objects.</strong> On an empty cluster every lookup misses. How that ends depends on the function:</p>
+<ul>
+<li><code>fromSecret</code>, <code>fromConfigMap</code> and <code>copySecretData</code> of a missing object stop evaluation. That is not
+  a failure, because on a real cluster another policy or operator creates the object. Code after it
+  is parsed but not run, so only an undefined function there is caught; a bad <code>index</code> or missing
+  field after a <code>fromSecret</code> shows up only on the cluster.</li>
+<li><code>lookup</code> of a missing object returns an empty map and evaluation continues, so what you do with the
+  result decides. These fail the same way on a real cluster before the object exists:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$host := (lookup ... "central").spec.host</code> then <code>https://$host</code></td>
+<td>POLICY081: <code>resolves to &lt;no value&gt;</code></td>
+</tr>
+<tr>
+<td><code>$host := index (lookup ... "central") "spec" "host"</code></td>
+<td>POLICY081: <code>index of nil pointer</code></td>
+</tr>
+<tr>
+<td><code>$host := dig "spec" "host" "" (lookup ... "central")</code></td>
+<td>Passes, <code>$host</code> is <code>""</code></td>
+</tr>
+<tr>
+<td><code>.spec.host</code> as above, then <code>skipObject (not $host)</code> before printing it</td>
+<td>Passes, the object is skipped until the Route exists</td>
+</tr>
+</tbody>
+</table>
+<p>ACS uses the last form, because a ConsoleLink with an empty <code>href</code> is worse than none:</p>
+<div class="language-yaml highlight"><span class="filename">stack/acs/converters/central/console.yaml</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">href</span><span class="p">:</span><span class="w"> </span><span class="s">'{{</span><span class="nv"> </span><span class="s">"{{"</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">$host</span><span class="nv"> </span><span class="s">:=</span><span class="nv"> </span><span class="s">(lookup</span><span class="nv"> </span><span class="s">"route.openshift.io/v1"</span><span class="nv"> </span><span class="s">"Route"</span><span class="nv"> </span><span class="s">"stackrox"</span><span class="nv"> </span><span class="s">"central").spec.host</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">"}}"</span><span class="nv"> </span><span class="s">}}{{</span><span class="nv"> </span><span class="s">"{{"</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">skipObject</span><span class="nv"> </span><span class="s">(not</span><span class="nv"> </span><span class="s">$host)</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">"}}"</span><span class="nv"> </span><span class="s">}}https://{{</span><span class="nv"> </span><span class="s">"{{"</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">$host</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">"}}"</span><span class="nv"> </span><span class="s">}}'</span>
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Looking up a new kind, or indexing a new hub object</p>
+<p>Add the kind to <code>kinds</code> in <code>acmtemplates.go</code>, or POLICY081 fails with <code>one or more API resources
+are not installed</code>. A hub template that indexes into an operator-owned hub object needs that
+object in <code>hubObjects</code>.</p>
+</div>
+<h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
+<p>Fixtures leave most elements off, and every optional piece (a policy, template or operator shipped
+<code>enabled: false</code>, <a href="../elements/#optional-pieces">Optional pieces</a>) stays off, so most
+converters never render under the fixtures. Pass 2 of <code>validate</code> turns everything on so POLICY081
+and POLICY001 reach every converter:</p>
+<ul>
+<li><strong>All-on run.</strong> <code>--all-on</code> turns on every element under <code>stack/</code> (and <code>tools/sample-element</code> with
+  <code>--include-sample-element</code>) and every policy, template and operator in it, over any layer that
+  turns one off. The validator builds this from the elements at run time, so a new element or
+  <code>enabled: false</code> entry needs nothing added. <code>tools/validator/testdata/inputs.yaml</code> is layered on
+  top: the inputs below, and the few choices all-on can't make, such as infra-nodes <code>restore</code>.</li>
+<li><strong>One run per file in <code>tools/validator/testdata/profiles/</code></strong>, each layered alone over the baseline,
+  without <code>--all-on</code>. <code>variants.yaml</code> holds settings that can't be on together with the all-on run.
+  Example: infra-nodes <code>workloads</code> and <code>restore</code> exclude each other, so <code>variants.yaml</code> turns
+  <code>workloads</code> off and <code>restore</code> on.</li>
+</ul>
+<p>Every rule but POLICY052 and POLICY071 runs on these, so an optional piece also needs its input. A
+raw-list converter writes <code>object-templates-raw</code> by looping over a <code>config</code> map
+(<a href="../elements/#converter-shapes">Converter shapes</a>): metallb's <code>addressing/pools.yaml</code> ranges over
+<code>config.ipAddressPools</code>. With the map empty it renders <code>object-templates-raw: []</code>, and a Policy
+whose templates are all empty is reported Compliant by ACM while checking nothing, which POLICY082
+fails. <code>inputs.yaml</code> therefore sets <code>metallb.config.ipAddressPools</code> and the other maps:</p>
+<div class="language-yaml highlight"><span class="filename">tools/validator/testdata/inputs.yaml</span><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">metallb</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">ipAddressPools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">addresses</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">192.168.100.1-192.168.100.20</span><span class="p p-Indicator">]}}</span>
+</span></code></pre></div>
+<p>A Policy with only some empty templates passes.</p>
+<p><code>TestProfileCoverage</code>, run by <code>make test</code>, fails for a converter under <code>stack/</code> with ACM templates
+that neither the all-on run nor a profile renders. Profiles never reach <code>lifecycle/</code> (extra values are not applied there), so a
+change to a lifecycle converter's ACM template needs a test case in
+<code>tools/validator/internal/acmtemplates</code> (<code>hypershift_test.go</code>, <code>hive_test.go</code>,
+<code>siteconfig_test.go</code>, ...), which resolves it against fake hub objects so the branches for an
+existing cluster run too.</p>
+<h2 id="crd-schemas">CRD schemas<a class="headerlink" href="#crd-schemas" title="Permanent link">&para;</a></h2>
+<p>The hub's API server validates a Policy, Placement and PlacementBinding at sync, but not the
+ConfigurationPolicy, OperatorPolicy or CertificatePolicy inside <code>policy-templates</code>: the Policy CRD
+declares <code>objectDefinition</code> with <code>x-kubernetes-preserve-unknown-fields</code>. A bad field there passes
+the hub and only fails on the managed cluster. POLICY080 runs the CRD validation for those embedded
+objects at PR time.</p>
+<p>It checks rendered objects against the CRDs ACM 2.16 serves, the oldest release PolicyStack
+supports. The checks run in-process (<code>k8s.io/apiextensions-apiserver</code>) the way the API server's do:
+prune unknown fields, apply defaults, validate. <code>InformOnly</code> is read as <code>inform</code>, because the
+ConfigurationPolicy CRD's enum lacks it and ACM's framework add-on translates it. The CRDs are
+committed in <code>tools/validator/crds/</code> (7 files, about 130 KB), fetched by <code>make crds</code> at the SHAs
+pinned in <code>tools/validator/Makefile</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>Branch</th>
+<th>CRDs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stolostron/governance-policy-propagator</code></td>
+<td><code>release-2.16</code></td>
+<td>Policy, PlacementBinding, PolicySet</td>
+</tr>
+<tr>
+<td><code>stolostron/config-policy-controller</code></td>
+<td><code>release-2.16</code></td>
+<td>ConfigurationPolicy, OperatorPolicy</td>
+</tr>
+<tr>
+<td><code>stolostron/cert-policy-controller</code></td>
+<td><code>release-2.16</code></td>
+<td>CertificatePolicy</td>
+</tr>
+<tr>
+<td><code>open-cluster-management-io/api</code></td>
+<td><code>release-1.2</code> (v1.2.0, what the propagator requires)</td>
+<td>Placement</td>
+</tr>
+</tbody>
+</table>
+<p>Committed, they need no network at validation time, which keeps disconnected sites working.
+<code>--crds-dir</code> overrides the directory. Without CRDs, POLICY080 is skipped with a warning, or fails the
+run when <code>CI</code> is set. The run logs how many objects were validated.</p>
+<details class="note">
+<summary>Bumping and adding</summary>
+<p>Upstream, Renovate moves each <code>*_SHA</code> to its branch head. Moving to a new ACM floor means
+changing the <code>branch=</code> comments and SHAs by hand. To add a CRD, add its raw URL to <code>CRD_URLS</code>, plus a
+<code># renovate:</code> comment and <code>*_SHA</code> line for a new repo. After any of these, run <code>make crds</code> and
+commit <code>tools/validator/crds/</code>: upstream CI refetches the pinned files and fails while they
+differ, so a Renovate SHA bump stays red until someone does. Resolve the SHA with
+<code>git ls-remote https://github.com/&lt;repo&gt; refs/heads/&lt;branch&gt;</code>.</p>
+</details>
+<h2 id="destructive-templates">Destructive templates<a class="headerlink" href="#destructive-templates" title="Permanent link">&para;</a></h2>
+<p>POLICY037 fails a template that is <code>mustonlyhave</code> or <code>mustnothave</code>
+(<a href="../../concepts/acm/#configurationpolicy">ConfigurationPolicy</a>) on an object OpenShift owns (list in
+the <a href="../../reference/rules/#rules">POLICY037</a> row): enforced, it wipes what the installer and
+operators wrote. Use <code>musthave</code>.</p>
+<p>A template that must stay <code>mustonlyhave</code> or <code>mustnothave</code> can only be <code>InformOnly</code> (reported, never
+enforced); an element has no way to enforce it. The validator also honours
+<code>validator.policystk.io/allow-destructive: "&lt;reason&gt;"</code> on a ConfigurationPolicy, but policy-library
+can't set it today.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.tabs.link","navigation.sections","navigation.tabs"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.77dd0ce9.min.js"></script>
+      
+    
+  </body>
+</html>

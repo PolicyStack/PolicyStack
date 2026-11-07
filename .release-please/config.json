@@ -4,7 +4,7 @@
   "include-component-in-tag": false,
   "packages": {
     ".": {
-      "release-as": "1.0.0-rc.1",
+      "release-as": "1.0.0-rc.2",
       "exclude-paths": [
         ".release-please",
         "docs",

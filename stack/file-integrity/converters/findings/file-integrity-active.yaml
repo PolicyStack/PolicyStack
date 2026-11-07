@@ -1,0 +1,11 @@
+{{- /*
+Without this, findings is Compliant when AIDE runs nowhere. Initializing is expected for minutes after
+install, a configuration change and every MachineConfig node update, when the operator re-initializes.
+*/ -}}
+apiVersion: fileintegrity.openshift.io/v1alpha1
+kind: FileIntegrity
+metadata:
+  name: file-integrity
+  namespace: openshift-file-integrity
+status:
+  phase: Active

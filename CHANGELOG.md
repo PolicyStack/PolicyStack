@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-rc.2](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-11-07)
+
+
+### Features
+
+* Added element for the File Integrity Operator ([#63](https://github.com/PolicyStack/PolicyStack/issues/63)) ([030df69](https://github.com/PolicyStack/PolicyStack/commit/030df69546ed8b53e6109989480c2a8b82fa322c))
+
 ## 1.0.0-rc.1 (2026-11-06)
 
 

@@ -3,7 +3,7 @@ module github.com/PolicyStack/PolicyStack/tools/validator
 go 1.26.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	// Pinned to the engine ACM 2.16 runs (floor): config-policy-controller
 	// release-2.16 and release-2.17 both require v7.2.0. Bump with the floor.

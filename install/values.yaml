@@ -4,3 +4,8 @@ gitRepo: ""
 hubName: ""
 # Must equal policyNamespace in the root values.yaml, which the elements read. CI checks it.
 policyNamespace: pstack
+# Name of the Argo CD repository Secret in openshift-gitops that holds gitRepo's credentials. Set it
+# for a private repository: child hubs get a copy under the same name. Set once at install.
+repoSecret: ""
+# Set by the parent hub's Policy on a Global Hub child. Leave empty.
+parent: ""

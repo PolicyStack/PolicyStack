@@ -4,13 +4,13 @@ The rest of the docs assume you know what is in your repository, what PolicyStac
 
 ## The repository
 
-You create your own repository from upstream PolicyStack with copier and pass its URL as `gitRepo` when you install the chart on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one repository; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)).
+You create your own repository from upstream PolicyStack with copier and pass its URL as `gitRepo` when you apply the pointer on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one repository; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)).
 
 copier copies two kinds of things from upstream release tags, each recorded in a `.copier-answers.yml`: the framework, once, at the repository root, and each element you want, into `stack/<element>/`. Everything else is yours. Each path belongs to one owner:
 
 | Path | What it is | Owner | Updated by |
 |---|---|---|---|
-| `install/` | The Helm chart you run once per hub. It creates the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace and RBAC ([Install chart](../reference/install.md)). `install/operators/` renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet. | Framework | A framework update. Don't edit. |
+| `install/` | The Helm chart each hub's Argo CD syncs from your repository, through the pointer you apply once per hub. It creates the pointer, the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace, RBAC and the Policy that installs PolicyStack on Global Hub child hubs ([Install chart](../reference/install.md)). `install/operators/` renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet. | Framework | A framework update. Don't edit. |
 | `lifecycle/` | The chart that builds and destroys clusters ([Cluster lifecycle](lifecycle.md)). | Framework | Same |
 | `lib/` | policy-library, the Helm library chart every element and `lifecycle/` renders through ([How an element is built](elements.md)). | Framework | Same |
 | `tools/` | The validator, the sample element, `create-element.sh` and the README generator. | Framework | Same |
@@ -35,10 +35,12 @@ Every object Argo CD creates is on the hub. Only ACM changes managed clusters, t
 
 | Object | Where | One per | Created by |
 |---|---|---|---|
-| ApplicationSets `policystack` and `policystack-lifecycle` | `openshift-gitops` | Hub | `helm install policystack ./install` |
+| ApplicationSet `policystack-install` (the pointer) and its Application `policystack` | `openshift-gitops` | Hub | You apply the pointer once, by hand; on a Global Hub's `default`-mode child, the parent's Policy `policystack-hubs` does. The pointer generates `policystack`, which syncs `install/` from Git, the pointer included ([The pointer](../reference/install.md#the-pointer)). |
+| ApplicationSets `policystack` and `policystack-lifecycle` | `openshift-gitops` | Hub | The install chart |
 | GitOpsCluster `argo-acm-importer-global`, its Placement `global`, and its Argo CD cluster secrets | `openshift-gitops` | Secret per ManagedCluster, the hub included | The install chart, then ACM. The secrets only let the ApplicationSets list clusters ([ApplicationSets](architecture.md)). |
 | ManagedClusterSetBinding `global` | `openshift-gitops`, `pstack` | Namespace | The install chart. Lets Placements there select clusters; without it they select nothing ([Cluster sets](policies.md#cluster-sets)). |
 | Namespace `pstack`, ClusterRole and ClusterRoleBinding `openshift-gitops-policy-admin` | Cluster | Hub | The install chart. Lets Argo CD manage Policies, Placements and PlacementBindings. |
+| Policy, Placement and PlacementBinding `policystack-hubs` | `openshift-gitops` | Hub | The install chart. On a Global Hub, applies the pointer on each `default`-mode child hub ([Child hubs](../reference/install.md#child-hubs)). |
 | Application `<element>-<cluster>` | `openshift-gitops` | Element directory per cluster with a fleet file, enabled or not. A disabled element's Application renders nothing. | `policystack` |
 | Application `lifecycle-<cluster>` | `openshift-gitops` | Cluster this hub builds | `policystack-lifecycle` ([Cluster lifecycle](lifecycle.md)) |
 | Policies, Placement, PlacementBinding | `pstack` | One Policy per policy the element defines: one per `converters/<policy>/` directory, plus `install` when it manages operators ([How an element is built](elements.md)). One Placement per enabled element per cluster; one PlacementBinding when at least one Policy renders | The Applications |
@@ -57,7 +59,7 @@ Application   openshift-gitops/gitops-prod-east-1
 
 `install` comes from the element's `operatorPolicies`, `instance` and `link` from its `converters/instance/` and `converters/link/` directories.
 
-The Application name is also the Helm release name, and Policy names are `<policy>-<release>` ([Rendered names](elements.md#rendered-names)). On the hub itself, `hubName`, the name you give the hub at `helm install`, takes the cluster's place in the Application name, and the replicated Policies sit in the hub's ManagedCluster namespace, `local-cluster` by default ([The hub](architecture.md#the-hub)).
+The Application name is also the Helm release name, and Policy names are `<policy>-<release>` ([Rendered names](elements.md#rendered-names)). On the hub itself, `hubName`, the name you give the hub when you apply the pointer, takes the cluster's place in the Application name, and the replicated Policies sit in the hub's ManagedCluster namespace, `local-cluster` by default ([The hub](architecture.md#the-hub)).
 
 ## How a change reaches a cluster
 
@@ -109,7 +111,7 @@ valueFiles: # (2)!
 1.  The branch, tag or commit SHA every Application of this cluster renders `stack/` and `values/` from.
 2.  Values layers under `values/`, lowest precedence first. `values/clusters/prod-east-1.yaml` is always added last.
 
-The file decides three things: whether the cluster gets Applications at all, the revision it renders from, and the layers it reads. Optional keys set the OpenShift version and channel, or have a hub build the cluster ([Fleet file keys](../reference/fleet.md#keys)).
+The file decides three things: whether the cluster gets Applications at all, the revision it renders from, and the layers it reads. Optional keys set the OpenShift version and channel, have a hub build the cluster, or, in a hub file, pin the hub's install with `installRevision` ([Fleet file keys](../reference/fleet.md#keys)).
 
 A fleet file does not import a cluster. The cluster must also exist in ACM, imported by you or built by a hub, and have joined. Without `hub: <hubName>`, which asks that hub to build the cluster ([Cluster lifecycle](lifecycle.md)), a fleet file for a cluster ACM doesn't manage does nothing. Once the cluster joins, its Applications appear and its Policies apply without any further commit, so a fleet file written ahead of an import takes effect at import.
 
@@ -122,7 +124,7 @@ What follows from that:
 - `fleet/` on any other branch does nothing.
 - Subdirectories other than `fleet/hubs/` are ignored. `fleet/prod/prod-east-1.yaml` enrolls nothing.
 - Changing the repository's default branch re-points every cluster. A cluster with no file on the new default branch loses its Applications.
-- Deleting a fleet file deletes the cluster's Applications and with them its Policies on the hub. ACM then removes the policies from the cluster; what they created stays unless the template sets `pruneObjectBehavior` ([Removal and pruning](removal.md)). A cluster a hub built is abandoned, not destroyed: it keeps running, unmanaged ([Cluster lifecycle](lifecycle.md)).
+- Deleting a fleet file deletes the cluster's Applications and with them its Policies on the hub. ACM then removes the policies from the cluster; what they created stays unless the template sets `pruneObjectBehavior` ([Removal and pruning](removal.md)). A cluster a hub built is abandoned, not destroyed: it keeps running, unmanaged ([Cluster lifecycle](lifecycle.md)). Deleting a hub file also deletes the hub's Application `policystack`, but none of the install it created: the hub keeps its last install, no longer updated from Git ([The pointer](../reference/install.md#the-pointer)).
 
 A fleet file change lands within about 6 minutes: the ApplicationSet re-reads Git every 3 minutes, and Argo CD remembers which commit a branch points to for 3 minutes. An [ApplicationSet webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Git/#webhook-configuration) makes it immediate, except the fix for a failed generation, which waits for the 3-minute retry.
 
@@ -141,9 +143,9 @@ On every pull request, the CI workflow runs Policy Validate, the [validator](../
 
 | Check | Catches | Blocks merge |
 |---|---|---|
-| `ci` | Policy Validate: invalid fleet files (POLICY050), pins that don't resolve, lack a file the fleet file uses or are on a framework major the hubs can't render (POLICY052), values keys nothing reads (POLICY035), render errors (RENDER000). Also fails if the lint hooks fail. | Once a ruleset requires it |
+| `ci` | Policy Validate: invalid fleet files (POLICY050), pins that don't resolve, lack a file the fleet file uses or are on a framework major the hubs can't render or newer than the install of the hub that renders them (POLICY052), values keys nothing reads (POLICY035), render errors (RENDER000). Also fails if the lint hooks fail. | Once a ruleset requires it |
 | `pr-title` | PR titles that aren't Conventional Commits, such as `feat: enable metallb on prod-east-1` | Once a ruleset requires it |
-| Render Diff | Nothing; comments each fleet cluster's Policy changes, rendering each cluster at its own revision before and after the merge | Never |
+| Render Diff | Nothing; comments each fleet cluster's Policy changes, rendering each cluster at its own revision before and after the merge, and each hub's install when it changes | Never |
 
 Nothing is required until you add a ruleset: [Protect the repository](../start/install.md#protect-the-repository).
 
@@ -154,7 +156,7 @@ Nothing is required until you add a ruleset: [Protect the repository](../start/i
     | Term | Meaning |
     |---|---|
     | The hub | The cluster running ACM, OpenShift GitOps and PolicyStack. ACM also manages it as a cluster, named `local-cluster` by default. |
-    | `hubName` | The hub's name in PolicyStack, set once at `helm install`. Picks `fleet/hubs/<hubName>.yaml` and `values/clusters/<hubName>.yaml`, and names the hub's Applications ([The hub](architecture.md#the-hub)). |
+    | `hubName` | The hub's name in PolicyStack, set once when you apply the pointer. Picks `fleet/hubs/<hubName>.yaml` and `values/clusters/<hubName>.yaml`, and names the hub's Applications ([The hub](architecture.md#the-hub)). |
     | `hub:` in a fleet file | The `hubName` of the hub that builds and destroys that cluster ([Cluster lifecycle](lifecycle.md)). Leave it out for a cluster you import. |
     | `fleet/hubs/` | Hub fleet files ([Fleet files](#fleet-files)). |
 
@@ -162,7 +164,7 @@ Nothing is required until you add a ruleset: [Protect the repository](../start/i
 
     | Term | Meaning |
     |---|---|
-    | `install/` chart | `helm install policystack ./install`, run once per hub ([Install chart](../reference/install.md)). |
+    | `install/` chart | The chart each hub's Argo CD syncs through the pointer, `policystack-install`, applied once per hub ([Install chart](../reference/install.md)). |
     | `install/operators` | Renders ACM and OpenShift GitOps for a new hub ([Installation](../start/install.md)). |
     | The `install` Policy | The Policy an element gets when it manages operators, such as `install-gitops-prod-east-1` ([How an element is built](elements.md)). |
     | `install:` in a fleet file | The cluster a hub builds: engine, platform, nodes ([Lifecycle keys](../reference/lifecycle.md#install-keys)). |
@@ -179,7 +181,7 @@ Nothing is required until you add a ruleset: [Protect the repository](../start/i
 | Term | Meaning |
 |---|---|
 | Answers file | `.copier-answers.yml`, at the repository root for the framework and in each tracked `stack/<element>/`. Records the upstream release tag copier copied ([The repository](#the-repository)). |
-| Application | An Argo CD object that renders one source with Helm and syncs the result. PolicyStack creates `<element>-<cluster>` and `lifecycle-<cluster>`, all with the hub as destination ([ApplicationSets](architecture.md)). |
+| Application | An Argo CD object that renders one source with Helm and syncs the result. PolicyStack creates `<element>-<cluster>`, `lifecycle-<cluster>` and `policystack`, which syncs `install/`, all with the hub as destination ([ApplicationSets](architecture.md)). |
 | ApplicationSet | An Argo CD object that creates Applications from generators, here from cluster secrets, fleet files and `stack/*` directories ([ApplicationSets](architecture.md)). |
 | Cluster secret | An Argo CD Secret registering a cluster. The GitOpsCluster creates one per ManagedCluster so the ApplicationSets can list them ([ApplicationSets](architecture.md)). |
 | ConfigurationPolicy | A policy template listing Kubernetes objects that must, or must not, exist on the cluster ([ACM policies in brief](acm.md)). |
@@ -199,6 +201,7 @@ Nothing is required until you add a ruleset: [Protect the repository](../start/i
 | Managed cluster | A cluster ACM manages, imported by hand or built by a hub. It gets Applications once it has a fleet file ([First cluster](../start/first-cluster.md)). |
 | OperatorPolicy | A policy template that installs and upgrades one OLM operator. An element's `operatorPolicies` create them in its `install` Policy ([ACM policies in brief](acm.md)). |
 | Placement, PlacementBinding | ACM objects that choose clusters and bind Policies to them. Every PolicyStack Placement selects exactly one cluster ([Placement and naming](policies.md)). |
+| Pointer | ApplicationSet `policystack-install`, the one object applied by hand per hub. Its Application `policystack` syncs `install/` from Git ([Install chart](../reference/install.md#the-pointer)). |
 | Policy | ACM's unit of compliance on the hub. It wraps one or more policy templates and carries the remediation action ([ACM policies in brief](acm.md)). |
 | policy-library | The Helm library chart every element depends on, aliased `stack`, in `lib/policy-library`. It discovers converters and renders the Policies and Placement ([How an element is built](elements.md)). |
 | `pstack` | The hub namespace holding every Policy, Placement and PlacementBinding PolicyStack renders (`policyNamespace`) ([Placement and naming](policies.md)). |

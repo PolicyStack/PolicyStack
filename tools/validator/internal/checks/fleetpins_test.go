@@ -157,3 +157,111 @@ func TestPolicy052_FrameworkSkew(t *testing.T) {
 		})
 	}
 }
+
+// TestPolicy052_HubInstall: a hub's install runs its installRevision, or this branch, and must be at
+// least as new as every revision it renders.
+func TestPolicy052_HubInstall(t *testing.T) {
+	dir := t.TempDir()
+	answers := func(commit string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, answersFile), []byte("_commit: "+commit+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	answers("v1.0.0")
+	testenv.Commit(t, dir, "stack/acm/Chart.yaml", "lifecycle/converters/_hypershift/root.yaml")
+	testenv.Git(t, dir, "tag", "at-v1.0.0")
+	answers("v1.1.0")
+	testenv.Commit(t, dir, "install/templates/install.yaml")
+	testenv.Git(t, dir, "tag", "at-v1.1.0")
+	if err := os.Remove(filepath.Join(dir, answersFile)); err != nil {
+		t.Fatal(err)
+	}
+	testenv.Commit(t, dir)
+	testenv.Git(t, dir, "tag", "at-none")
+	answers("v1.2.0")
+	testenv.Commit(t, dir)
+	testenv.Git(t, dir, "tag", "at-v1.2.0")
+
+	hub := func(rev, install string) *fixtures.Cluster {
+		return &fixtures.Cluster{Name: "gh", SourceFile: "fleet/hubs/gh.yaml", IsHub: true, Revision: rev, InstallRevision: install}
+	}
+	spoke := func(rev, builder string) *fixtures.Cluster {
+		return &fixtures.Cluster{Name: "c1", SourceFile: "fleet/c1.yaml", Revision: rev, Hub: builder}
+	}
+	type finding struct {
+		sev Severity
+		msg string
+	}
+	for _, tc := range []struct {
+		name     string
+		clusters []*fixtures.Cluster
+		want     []finding
+	}{
+		{name: "every install on this branch", clusters: []*fixtures.Cluster{hub("at-v1.2.0", ""), spoke("at-v1.2.0", "gh")}},
+		{name: "revisions older than the install", clusters: []*fixtures.Cluster{hub("at-v1.0.0", "at-v1.1.0"), spoke("at-v1.1.0", "gh")}},
+		{
+			name:     "built cluster newer than its hub's install",
+			clusters: []*fixtures.Cluster{hub("at-v1.1.0", "at-v1.1.0"), spoke("at-v1.2.0", "gh")},
+			want: []finding{{SevError, `revision "at-v1.2.0" is framework v1.2.0, newer than hub gh's install, framework v1.1.0 at ` +
+				`installRevision "at-v1.1.0", which renders it: upgrade the hub first`}},
+		},
+		{
+			// An imported Global Hub child's hub file is rendered by its parent, which Git doesn't name.
+			name:     "hub's own revision newer than its install",
+			clusters: []*fixtures.Cluster{hub("at-v1.2.0", "at-v1.1.0")},
+			want: []finding{{SevWarning, `revision "at-v1.2.0" is framework v1.2.0, newer than hub gh's install, framework v1.1.0 at ` +
+				`installRevision "at-v1.1.0", which renders it unless a Global Hub parent does: upgrade the hub first`}},
+		},
+		{
+			// hub-a is built by gh, so it is gh's default-mode child: gh renders its hub file and builds its
+			// clusters, whatever hub-a's own install.
+			name: "Global Hub child built by its parent",
+			clusters: []*fixtures.Cluster{
+				hub("at-v1.1.0", "at-v1.1.0"),
+				{Name: "hub-a", SourceFile: "fleet/hubs/hub-a.yaml", IsHub: true, Revision: "at-v1.2.0", InstallRevision: "at-v1.2.0"},
+				{Name: "hub-a", SourceFile: "fleet/hub-a.yaml", Revision: "at-v1.1.0", Hub: "gh"},
+				{Name: "edge-1", SourceFile: "fleet/edge-1.yaml", Revision: "at-v1.2.0", Hub: "hub-a"},
+			},
+			want: []finding{
+				{SevError, `revision "at-v1.2.0" is framework v1.2.0, newer than hub gh's install, framework v1.1.0 at ` +
+					`installRevision "at-v1.1.0", which renders it as its Global Hub child: upgrade that hub first`},
+				{SevError, `revision "at-v1.2.0" is framework v1.2.0, newer than hub gh's install, framework v1.1.0 at ` +
+					`installRevision "at-v1.1.0", which builds it for its Global Hub child hub-a: upgrade that hub first`},
+			},
+		},
+		{
+			name:     "import-only cluster newer than the oldest hub install",
+			clusters: []*fixtures.Cluster{hub("at-v1.1.0", "at-v1.1.0"), spoke("at-v1.2.0", "")},
+			want: []finding{{SevWarning, `revision "at-v1.2.0" is framework v1.2.0, newer than hub gh's install, framework v1.1.0 at ` +
+				`installRevision "at-v1.1.0", the oldest hub install: upgrade every hub that manages this cluster first`}},
+		},
+		{
+			name:     "installRevision without the pointer",
+			clusters: []*fixtures.Cluster{hub("at-v1.0.0", "at-v1.0.0")},
+			want: []finding{{SevError, `installRevision "at-v1.0.0" has no install/templates/install.yaml, the pointer that keeps ` +
+				`this hub's install in git: pin a release that has it`}},
+		},
+		{
+			name:     "installRevision with no framework release",
+			clusters: []*fixtures.Cluster{hub("at-v1.1.0", "at-none")},
+			want: []finding{{SevWarning, `installRevision "at-none" records no framework release tag in /.copier-answers.yml: ` +
+				`the revisions this hub renders are not checked against it`}},
+		},
+		{
+			name:     "installRevision that does not resolve",
+			clusters: []*fixtures.Cluster{hub("at-v1.0.0", "nope")},
+			want:     []finding{{SevError, `installRevision: revision "nope" is not a tag, branch or commit SHA of this repository`}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []finding
+			for _, f := range (&FleetPinCheck{Root: dir}).Run(Context{Clusters: tc.clusters}) {
+				got = append(got, finding{f.Severity, f.Message})
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("got %+v\nwant %+v", got, tc.want)
+			}
+		})
+	}
+}

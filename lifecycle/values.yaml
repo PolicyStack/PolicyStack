@@ -47,6 +47,10 @@ install:
   # hypershift: NodePool spec per pool, merged over the generated spec. The NodePool is named
   # <cluster>-<pool>.
   nodePools: {}
+  # hive and siteconfig: labels set on the cluster's ManagedCluster and kept, such as
+  # global-hub.open-cluster-management.io/deploy-mode: default for a Global Hub managed hub
+  # (docs/guides/global-hub.md). Removing one here leaves it on the ManagedCluster.
+  labels: {}
   # Extra hub objects, created before the cluster and deleted after it is gone
   manifests: []
   # Only with engine hive, which reads:

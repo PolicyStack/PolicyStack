@@ -1,6 +1,6 @@
 # Installation
 
-PolicyStack runs on the ACM hub: a Helm release from `install/` points the hub's Argo CD at your repository, and ACM delivers the Policies Argo CD renders, hub objects that describe a cluster's configuration ([ACM policies in brief](../concepts/acm.md), [what the release creates](#install-policystack)).
+PolicyStack runs on the ACM hub. The hub's Argo CD syncs `install/` from your repository and renders Policies, hub objects that describe a cluster's configuration, from the rest of it. ACM delivers those Policies to clusters ([ACM policies in brief](../concepts/acm.md), [what the install creates](#install-policystack)). You apply one object by hand; everything after it comes from Git.
 
 - An **element** is a Helm chart under `stack/` that turns settings for one product into Policies. Every element ships off.
 - A **layer** is a values file under `values/` that turns elements on and configures them.
@@ -13,9 +13,10 @@ You create your own repository with [copier](https://copier.readthedocs.io), whi
 3. [Add elements](#add-elements)
 4. [Protect the repository](#protect-the-repository)
 5. [Install the operators](#install-the-operators) (new hubs only)
-6. [Install PolicyStack](#install-policystack)
-7. [Add the hub's fleet file](#add-the-hubs-fleet-file)
-8. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
+6. [Add the hub's fleet file](#add-the-hubs-fleet-file)
+7. [Install PolicyStack](#install-policystack)
+8. [Configure the hub](#configure-the-hub)
+9. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
 
 Run every command from the root of your repository's clone, logged in to the hub as a cluster administrator.
 
@@ -31,9 +32,9 @@ Run every command from the root of your repository's clone, logged in to the hub
 
 - An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
 - copier 9.18 or later, `git` and Python on your workstation: `pipx install copier`. Once the repository exists, `mise install` installs the copier version it pins ([Setup](../contributing.md#setup)).
-- `oc`, and `helm` 3.14 or later: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
+- `oc`, and `helm` 3.14 or later. Your local `helm` only renders the install chart and `install/operators` once, with `helm template`. Argo CD renders everything else with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
 - Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 ([Support](../reference/compatibility.md#support)). Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
-- The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters.
+- The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters. A Global Hub child in `default` mode is the exception: it has no `local-cluster`, and its parent installs PolicyStack on it ([Global Hub](../guides/global-hub.md)).
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`. The install chart creates its objects in that namespace and grants Policy rights to that instance's application controller; another instance has neither.
 - The hub is not a passive DR hub. On a passive DR hub, install PolicyStack only at takeover ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
@@ -189,10 +190,27 @@ Elements you write yourself also go under `stack/`, without an answers file ([Wr
 
     If only one of them runs, install the other from OperatorHub following the Red Hat docs (GitOps: namespace `openshift-gitops-operator`, channel `latest`). Don't run this chart: it renders both, and would create a second Subscription for the one already installed.
 
+## Add the hub's fleet file
+
+A fleet file enrolls a cluster: Argo CD reads it from the default branch, and it names the `revision` (branch, tag or SHA) at which `stack/` and `values/` are read, plus the values layers the cluster gets ([Fleet files](../concepts/overview.md#fleet-files)). The hub reads `fleet/hubs/<hub>.yaml`, never `fleet/<cluster>.yaml`. It also drives the hub's own install, so it comes first.
+
+Start with a file that lists no layers:
+
+```yaml
+# fleet/hubs/<hub>.yaml
+revision: main  # (1)!
+```
+
+1.  A branch the cluster follows, or a tag or SHA it stays on ([Revision](../reference/fleet.md#revision)). Name your default branch if it isn't `main`.
+
+PR it to the default branch and merge. Nothing happens yet: no hub reads the file until the next step.
+
 ## Install PolicyStack
 
+You apply one object by hand, the **pointer**: an ApplicationSet that reads `fleet/hubs/<hub>.yaml` and has the hub's Argo CD sync `install/` from your repository from then on ([Install chart](../reference/install.md#the-pointer)). Upgrades of the install arrive through Git ([Install chart upgrades](../guides/upgrading.md#install-chart)).
+
 ??? info "Private repository: add a repository secret first"
-    Argo CD needs credentials to read a private repo ([Argo CD docs](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)). Without them the ApplicationSets can't read the repository and create no Applications.
+    Argo CD needs credentials to read a private repo ([Argo CD docs](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories)). Without them the pointer and the ApplicationSets can't read the repository and create no Applications.
 
     ```yaml
     apiVersion: v1
@@ -211,14 +229,28 @@ Elements you write yourself also go under `stack/`, without an answers file ([Wr
 
     1.  A fine-grained personal access token with read-only Contents access to this one repository.
 
-    Apply it with `oc apply -f -`. Never commit it.
+    Apply it with `oc apply -f -`. Never commit it. Add `--set repoSecret=policystack-repo` to the command below, so [child hubs](../guides/global-hub.md) get a copy.
+
+Check that Argo CD may create what the chart holds. Every line must print `yes`:
 
 ```sh
-helm install policystack ./install -n openshift-gitops \
-  --set hubName=<hub> --set gitRepo=https://github.com/<org>/<repo>.git
+sa=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller
+for check in "create namespaces" "escalate clusterroles" "bind clusterroles" "create clusterrolebindings" \
+    "create applicationsets -n openshift-gitops" "create gitopsclusters.apps.open-cluster-management.io -n openshift-gitops"; do
+  echo "$check: $(oc auth can-i $check --as=$sa)"
+done
 ```
 
-Both values are required and stored in the release; upgrades reuse them. The release's chart version is the framework release it came from, which [upgrades](../guides/upgrading.md#install-chart) compare against. The release creates ([Install chart](../reference/install.md)):
+`escalate` and `bind` let Argo CD create the ClusterRole that grants it ACM's policy objects ([RBAC](../reference/install.md#rbac)). OpenShift GitOps grants all of them to its default instance. A `no` means your instance's permissions were changed: render the whole chart once as a cluster administrator instead, `helm template policystack ./install ... | oc apply -f -` with the same `--set` flags, and Argo CD takes the objects over.
+
+Apply the pointer from the root of your clone, on the default branch:
+
+```sh
+helm template policystack ./install --show-only templates/install.yaml \
+  --set hubName=<hub> --set gitRepo=https://github.com/<org>/<repo>.git | oc apply -f -
+```
+
+`hubName` and `gitRepo` are required and stored in the pointer ([Values](../reference/install.md#values)). Within about 3 minutes the pointer generates the Application `policystack`, which creates ([Objects](../reference/install.md#objects)):
 
 | Object | Why |
 |---|---|
@@ -228,48 +260,51 @@ Both values are required and stored in the release; upgrades reuse them. The rel
 | GitOpsCluster `argo-acm-importer-global`, Placement `global` | Create the Argo CD cluster secret for every ManagedCluster ([Cluster secrets](../concepts/architecture.md#cluster-secrets)). |
 | ManagedClusterSetBinding `global` | ACM lets a Placement choose only from cluster sets bound into its namespace. `global` is ACM's built-in set containing every ManagedCluster. Bound in `openshift-gitops` (for the GitOpsCluster) and `pstack` (for the element Placements). |
 | ClusterRole and binding `openshift-gitops-policy-admin` | Let Argo CD manage Policies, Placements and PlacementBindings. |
+| Policy `policystack-hubs` | Installs PolicyStack on Global Hub child hubs. Places nothing until a ManagedCluster carries `global-hub.open-cluster-management.io/deploy-mode=default` ([Global Hub](../guides/global-hub.md)). |
 
-Verify:
+Within about 6 minutes every directory under `stack/` also gets an Application named `<element>-<hub>`, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`.
 
 ```sh
 oc get applicationsets -n openshift-gitops
 # NAME                    AGE
-# policystack             10s
-# policystack-lifecycle   10s
+# policystack             2m
+# policystack-install     3m
+# policystack-lifecycle   2m
+oc get applications.argoproj.io -n openshift-gitops  # (1)!
+# NAME           SYNC STATUS   HEALTH STATUS
+# acm-<hub>      Synced        Healthy
+# gitops-<hub>   Synced        Healthy
+# policystack    Synced        Healthy
+# ...
 oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster
 # one secret per ManagedCluster, including the hub
 ```
 
-No secret for the hub means it doesn't manage itself ([Prerequisites](#prerequisites)).
-
-??? failure "`... exists and cannot be imported into the current release: invalid ownership metadata`"
-    An object of the same name already exists. Hubs set up with the ACM GitOps guide often have ManagedClusterSetBinding `global` in `openshift-gitops` and ClusterRole/ClusterRoleBinding `openshift-gitops-policy-admin`. Rerun with `--take-ownership` (Helm 3.17 or later) to adopt them. Adoption replaces their spec with the chart's.
-
-## Add the hub's fleet file
-
-A fleet file enrolls a cluster: Argo CD reads it from the default branch, and it names the `revision` (branch, tag or SHA) at which `stack/` and `values/` are read, plus the values layers the cluster gets ([Fleet files](../concepts/overview.md#fleet-files)). The hub reads `fleet/hubs/<hub>.yaml`, never `fleet/<cluster>.yaml`.
-
-Start with a file that lists no layers:
-
-```yaml
-# fleet/hubs/<hub>.yaml
-revision: main  # (1)!
-```
-
-1.  A branch the cluster follows, or a tag or SHA it stays on ([Revision](../reference/fleet.md#revision)). Name your default branch if it isn't `main`.
-
-PR it to the default branch and merge. Within about 6 minutes (the ApplicationSet polls Git every 3 minutes) every directory under `stack/` gets an Application named `<element>-<hub>`, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`.
-
-```sh
-oc get applications.argoproj.io -n openshift-gitops | grep <hub>  # (1)!
-# acm-<hub>      Synced   Healthy
-# gitops-<hub>   Synced   Healthy
-# ...
-```
-
 1.  ACM installs a second `applications` kind, so use the full name.
 
-Then turn elements on through layers. A layer sets `stack.<element>.enabled`; the key is the element name in camelCase ([Enable an element](first-cluster.md#enable-an-element)):
+No secret for the hub means it doesn't manage itself ([Prerequisites](#prerequisites)).
+
+??? failure "No Applications after 6 minutes"
+    Read the ApplicationSet's error first:
+
+    ```sh
+    oc get applicationset policystack-install policystack -n openshift-gitops \
+      -o jsonpath='{range .items[*]}{.metadata.name}: {.status.conditions[?(@.type=="ErrorOccurred")].message}{"\n"}{end}'
+    ```
+
+    | Cause | Symptom |
+    |---|---|
+    | File name differs from `hubName`, or the file isn't on the default branch | No error, and no Application `policystack`: the pointer generated nothing. |
+    | YAML error, no `revision`, or a revision that doesn't exist | Error above. A YAML error in the hub file also stops `policystack-install`, so there is no Application `policystack`. No cluster on this hub gets Application changes until it is fixed ([One bad fleet file stops the hub](../concepts/overview.md#one-bad-fleet-file-stops-the-hub)). |
+    | Private repository without a repository secret | Error above: authentication or repository not found. |
+    | Hub doesn't manage itself | No hub cluster secret ([Prerequisites](#prerequisites)). |
+
+??? failure "Application `policystack` shows `... is forbidden`"
+    The application controller lacks a permission from the check above. Render the whole chart once as a cluster administrator (above). Argo CD then only updates objects that exist, which its own ClusterRole allows.
+
+## Configure the hub
+
+Turn elements on through layers. A layer sets `stack.<element>.enabled`; the key is the element name in camelCase ([Enable an element](first-cluster.md#enable-an-element)):
 
 ```yaml
 # values/environments/hub.yaml
@@ -300,21 +335,6 @@ error POLICY052 revision "main" has no values/acm/hub-east.yaml, which Argo CD s
 ```
 
 Commit the layer in the same PR, or leave the entry out until you need it.
-
-??? failure "No Applications after 6 minutes"
-    Read the ApplicationSet's error first:
-
-    ```sh
-    oc get applicationset policystack -n openshift-gitops \
-      -o jsonpath='{.status.conditions[?(@.type=="ErrorOccurred")].message}'
-    ```
-
-    | Cause | Symptom |
-    |---|---|
-    | File name differs from `hubName`, or the file isn't on the default branch | No error. Nothing happens. |
-    | YAML error, no `revision`, or a revision that doesn't exist | Error above. No cluster on this hub gets Application changes until it is fixed ([One bad fleet file stops the hub](../concepts/overview.md#one-bad-fleet-file-stops-the-hub)). |
-    | Private repository without a repository secret | Error above: authentication or repository not found. |
-    | Hub doesn't manage itself | No hub cluster secret ([Prerequisites](#prerequisites)). |
 
 Check the Policies the hub got and whether they comply. The Policies Argo CD syncs from Git (root Policies) are in `pstack`. ACM copies each (a replicated Policy) into the namespace of the hub's ManagedCluster, which carries the per-cluster compliance ([Check compliance](first-cluster.md#check-compliance)). Both are empty until a layer enables an element:
 
@@ -420,23 +440,27 @@ ACM and GitOps upgrades now follow the hub's fleet `revision` like any other ele
 ## Teardown
 
 ```sh
+oc delete applicationset policystack-install -n openshift-gitops  # (1)!
 oc delete applicationset policystack policystack-lifecycle -n openshift-gitops
 ```
 
-This deletes every Application, and each Application deletes the Policies it rendered. ACM then stops applying them, but what they created on the clusters stays, operators included ([What happens on the managed cluster](../concepts/removal.md#what-happens-on-the-managed-cluster)). Clusters this hub built keep running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+1.  The pointer. Its Application `policystack` goes with it and deletes nothing ([Deletion safety](../reference/install.md#deletion-safety)), but without it Argo CD would recreate what you delete next. On a Global Hub child, first remove its `deploy-mode` label on the parent, or the parent's Policy recreates the pointer.
 
-Every other chart object carries `helm.sh/resource-policy: keep`, so `helm uninstall` removes only the release record. Once `oc get policies.policy.open-cluster-management.io -n pstack` returns nothing, remove the rest. Skip any object you created yourself and adopted with `--take-ownership`:
+The second command deletes every Application, and each Application deletes the Policies it rendered. ACM then stops applying them, but what they created on the clusters stays, operators included ([What happens on the managed cluster](../concepts/removal.md#what-happens-on-the-managed-cluster)). Clusters this hub built keep running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+
+Once `oc get policies.policy.open-cluster-management.io -n pstack` returns nothing, remove the rest of what the install created. Skip any object you created yourself before the install:
 
 ```sh
-helm uninstall policystack -n openshift-gitops
-oc delete gitopscluster argo-acm-importer-global -n openshift-gitops  # (1)!
+oc delete policy.policy.open-cluster-management.io,placement,placementbinding policystack-hubs -n openshift-gitops  # (1)!
+oc delete gitopscluster argo-acm-importer-global -n openshift-gitops  # (2)!
 oc delete placement global -n openshift-gitops
 oc delete managedclustersetbinding global -n openshift-gitops
 oc delete clusterrolebinding,clusterrole openshift-gitops-policy-admin
 oc delete namespace pstack
 ```
 
-1.  ACM then removes the cluster secrets it created, unless another GitOpsCluster selects the same clusters.
+1.  Child hubs keep their pointer and install, which still follow Git. Only the copy of `repoSecret` and the enforcement of the pointer stop ([Child hubs](../reference/install.md#child-hubs)).
+2.  ACM then removes the cluster secrets it created, unless another GitOpsCluster selects the same clusters.
 
 !!! note "`--cascade=orphan` is not a way to stop"
     It deletes only the ApplicationSets. The Applications keep syncing from Git, so PolicyStack keeps managing every cluster. Use it to recreate the ApplicationSets without touching the Policies.

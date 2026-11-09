@@ -32,7 +32,7 @@ Upstream ships no live fleet files; your repository adds them. Working examples 
       - platforms/kubevirt.yaml # (3)!
     ```
 
-    1.  Names the hub that builds this cluster by its `hubName`, the name the hub got at install (`helm install ... --set hubName=acm-dc1`) ([Cluster lifecycle](../concepts/lifecycle.md)). CI requires `fleet/hubs/acm-dc1.yaml` to exist, so a typo here can't leave the cluster with no hub to build or destroy it.
+    1.  Names the hub that builds this cluster by its `hubName`, the name the hub got at install (`--set hubName=acm-dc1` on the pointer) ([Cluster lifecycle](../concepts/lifecycle.md)). CI requires `fleet/hubs/acm-dc1.yaml` to exist, so a typo here can't leave the cluster with no hub to build or destroy it.
     2.  Required with `hub`: it is the release the hub installs.
     3.  Sets `install` (platform KubeVirt, two workers) for every cluster that lists it. A fleet file's own `install` is merged over it ([Install keys](lifecycle.md#install-keys)).
 
@@ -40,16 +40,18 @@ Upstream ships no live fleet files; your repository adds them. Working examples 
 
     ```yaml
     # fleet/hubs/acm-dc1.yaml
-    revision: main
-    valueFiles: # (1)!
+    revision: v1.4.0
+    installRevision: v1.5.0 # (1)!
+    valueFiles: # (2)!
       - environments/prod.yaml
       - datacenters/dc1.yaml
       - platforms/baremetal.yaml
-      - acm/acm-dc1.yaml # (2)!
+      - acm/acm-dc1.yaml # (3)!
     ```
 
-    1.  The hub is a cluster like any other: every element these layers enable, at the action they set, runs on the hub too.
-    2.  Settings for the hub's own `acm` and `gitops` elements ([Hand the operators to PolicyStack](../start/install.md#hand-the-operators-to-policystack)). Listed last, so only `values/clusters/acm-dc1.yaml` overrides it. Hubs in one datacenter, such as an active hub and its DR hub, can list the same file.
+    1.  Optional. The revision of the hub's own install, `install/`, at least as new as `revision` ([installRevision](#installrevision)). Without it the install follows the default branch.
+    2.  The hub is a cluster like any other: every element these layers enable, at the action they set, runs on the hub too.
+    3.  Settings for the hub's own `acm` and `gitops` elements ([Hand the operators to PolicyStack](../start/install.md#hand-the-operators-to-policystack)). Listed last, so only `values/clusters/acm-dc1.yaml` overrides it. Hubs in one datacenter, such as an active hub and its DR hub, can list the same file.
 
 ## File name
 
@@ -57,7 +59,7 @@ Upstream ships no live fleet files; your repository adds them. Working examples 
 
 ## Keys
 
-Two ApplicationSets on the hub read fleet files ([ApplicationSets](../concepts/architecture.md)). `policystack` creates the element Applications that configure a running cluster and reads `revision`, `valueFiles`, `version` and `channel`. `policystack-lifecycle` builds and destroys clusters and reads every key, but only in files that set `hub`.
+Three ApplicationSets on the hub read fleet files ([ApplicationSets](../concepts/architecture.md)). `policystack` creates the element Applications that configure a running cluster and reads `revision`, `valueFiles`, `version` and `channel`. `policystack-lifecycle` builds and destroys clusters and reads every key, but only in files that set `hub`. `policystack-install`, the pointer, reads only the hub's own file and its `installRevision` ([Install chart](install.md#the-pointer)).
 
 | Key | Required | Effect |
 |---|---|---|
@@ -68,6 +70,7 @@ Two ApplicationSets on the hub read fleet files ([ApplicationSets](../concepts/a
 | `install` | No | What to build: engine, platform, nodes ([Install keys](lifecycle.md#install-keys)). Values layers can set `install` too, for keys shared by many clusters; the fleet file's `install` is applied above all of them. Elements ignore it. Requires `hub`. |
 | `version` | With `hub` | OpenShift release, `x.y.z`. With `hub` it picks the release the hub installs; leaving it out fails the `lifecycle-<cluster>` render with `version is required`. After install, and on every imported cluster or hub, a release newer than the running one starts an upgrade: the hub upgrades HyperShift-built clusters, the `upgrade` element every other cluster, including those built by `hive` or `siteconfig` ([OpenShift upgrades](../guides/upgrades.md)). |
 | `channel` | No | Update channel. On HyperShift-built clusters the hub sets HostedCluster `spec.channel`; everywhere else the `upgrade` element enforces ClusterVersion `spec.channel`. Unset, the cluster's channel is left alone. |
+| `installRevision` | No, hub files only | Branch, tag or SHA of the hub's install, `install/` ([installRevision](#installrevision)). Unset, the default branch. |
 
 `version` and `channel` are accepted only in fleet files; POLICY034 rejects them in a values layer. That way the clusters a merge upgrades are exactly the fleet files it changes, each one listed in the PR's [Render Diff](ci.md#render-diff).
 
@@ -85,10 +88,10 @@ POLICY050 checks every fleet file before merge, in your repository's CI and in `
 - a `hub` with no `fleet/hubs/<hub>.yaml`, or a `hub` that names the cluster itself;
 - `state` other than `present` or `absent`, or an `install` that is not a map;
 - `state` or `install` without `hub`;
-- `hub`, `state` or `install` in a hub file;
+- `hub`, `state` or `install` in a hub file, or `installRevision` in any other file;
 - a cluster with `hub` whose name is not a DNS label, since the hub names the HostedCluster after it.
 
-POLICY052 then checks the `revision` itself ([Revision](#revision)).
+POLICY052 then checks `revision` and `installRevision` themselves ([Revision](#revision), [installRevision](#installrevision)).
 
 ### Quote numbers and booleans
 
@@ -116,6 +119,29 @@ Two rules read oddly at first:
 - **A pin to the PR's base branch is checked against the merge commit.** In a PR to `main`, `revision: main` resolves to what `main` will be after the merge. A PR that adds both a fleet file and the values it lists therefore passes.
 - **A `values/clusters/<name>.yaml` that no `fleet/<name>.yaml` or `fleet/hubs/<name>.yaml` reads is a warning, not an error.** For a tag-pinned cluster, `values/clusters/<name>.yaml` is merged and tagged before the fleet PR that pins that tag, so for a while no fleet file reads it ([First cluster](../start/first-cluster.md)). Once your repository has its first fleet file, every file in `values/clusters/` that no fleet file reads shows this warning. Delete those you don't use.
 
+### installRevision
+
+A hub file's `installRevision` is the revision at which the hub's own Argo CD syncs `install/`: the pointer, the two ApplicationSets that generate every Application, and their supporting objects ([Install chart](install.md)). Unset, the hub follows the default branch, and a framework update reaches it as soon as it merges. Pin a tag to upgrade hubs one at a time:
+
+```yaml title="fleet/hubs/acm-lab.yaml"
+revision: v1.4.0 # (1)!
+installRevision: v1.5.0 # (2)!
+```
+
+1.  A hub that pins its install pins its own Day-2 too: `revision: main` would take each framework update before the install does, and POLICY052 fails the update PR.
+2.  Move it to the next tag on a lab hub first, then on the others. Remove it to follow the default branch again.
+
+It is separate from `revision` because the install serves every cluster on the hub, not just the hub itself. A hub renders each cluster's Applications with its own install, whatever `revision` that cluster pins, so the install must be at least as new as every revision the hub renders ([Hub and revision skew](compatibility.md#hub-and-revision-skew)). A hub with a tag `installRevision` can therefore only render clusters pinned to that tag or an older one. POLICY052 checks it where Git says which hub renders a cluster:
+
+| Fleet file | Rendered by | A `revision` newer than that hub's install |
+|---|---|---|
+| `fleet/hubs/<child>.yaml` of a hub another hub builds, so its `fleet/<child>.yaml` sets `hub: <parent>` | The parent, its Global Hub | Error |
+| Any other `fleet/hubs/<hub>.yaml` | That hub, or its Global Hub if imported in default mode | Warning |
+| `fleet/<cluster>.yaml` with `hub:` | The hub it names, and that hub's parent when the parent builds it | Error |
+| `fleet/<cluster>.yaml` without `hub:` | Whichever hub imported it | Warning, against the oldest hub install |
+
+It also fails an `installRevision` that doesn't resolve, or whose commit has no `install/templates/install.yaml`: a release before the pointer existed would leave the hub's install no longer following Git. One whose commit records no framework release only warns, and its clusters go unchecked.
+
 ### When a revision breaks
 
 CI checks the pin only at merge. A branch deleted later, including a PR branch GitHub deletes on merge, stops Application generation for the whole hub ([One bad fleet file stops the hub](../concepts/overview.md#one-bad-fleet-file-stops-the-hub)). Pin tags, SHAs or protected branches.
@@ -128,15 +154,15 @@ oc get applicationset policystack policystack-lifecycle -n openshift-gitops \
 
 ## Hub file
 
-A hub reads `fleet/hubs/<hubName>.yaml`, never `fleet/<cluster>.yaml`. It may not set `hub`, `state` or `install`: a hub cannot build itself, and `policystack-lifecycle` never reads `fleet/hubs/`.
+A hub reads `fleet/hubs/<hubName>.yaml`, never `fleet/<cluster>.yaml`. It may not set `hub`, `state` or `install`: a hub cannot build itself, and `policystack-lifecycle` never reads `fleet/hubs/`. The file must exist before the hub's install: the pointer reads it, and deleting it freezes the hub's install ([Install chart](install.md#the-pointer)).
 
-A managed hub imported into a Global Hub in default mode has no `local-cluster` of its own. The global hub's `policystack` ApplicationSet reads `fleet/hubs/<cluster>.yaml` for it, where `<cluster>` is the managed hub's ManagedCluster name on the global hub ([Global Hub](../guides/global-hub.md#layout)).
+A managed hub imported into a Global Hub in default mode has no `local-cluster` of its own. The global hub reads `fleet/hubs/<cluster>.yaml` for it, where `<cluster>` is the managed hub's ManagedCluster name on the global hub: it renders the managed hub's Day-2 from it and installs PolicyStack on it, whose pointer reads the same file ([Global Hub](../guides/global-hub.md#layout)).
 
 Files in any other subdirectory, such as `fleet/prod/edge-1.yaml`, are read by nothing, and CI doesn't flag them.
 
 ## Labels
 
-PolicyStack reads five labels and ignores every other. The ApplicationSets read them from the cluster's Argo CD Secret in `openshift-gitops`, which ACM's GitOpsCluster creates from the ManagedCluster; the Placement reads `name` from the ManagedCluster itself. You only ever set the last one.
+PolicyStack reads five labels and ignores every other. The ApplicationSets read them from the cluster's Argo CD Secret in `openshift-gitops`, which ACM's GitOpsCluster creates from the ManagedCluster; the Placements read `name` and `deploy-mode` from the ManagedCluster itself. You only ever set the last one.
 
 | Label | Set by | Effect |
 |---|---|---|
@@ -144,6 +170,6 @@ PolicyStack reads five labels and ignores every other. The ApplicationSets read 
 | `local-cluster` | ACM, on the hub | Switches to the hub file ([Hub file](#hub-file)) and uses `hubName` instead of the cluster name for the Application names and the `values/clusters/` file. The Placement still selects the ManagedCluster by its real name. |
 | `name` | ACM | The Placement selects the cluster by it ([Placement](../concepts/policies.md#placement)). |
 | `apps.open-cluster-management.io/cluster-name` | ACM GitOpsCluster, on the Secret only | Matches `hub` to a managed hub imported into a Global Hub in default mode ([Global Hub](../guides/global-hub.md#lifecycle)). |
-| `global-hub.open-cluster-management.io/deploy-mode` | You, when importing a managed hub into a Global Hub | `default` switches that hub to `fleet/hubs/<cluster>.yaml` ([Global Hub](../guides/global-hub.md)). |
+| `global-hub.open-cluster-management.io/deploy-mode` | You, when importing a managed hub into a Global Hub, or `install.labels` on a hub the global hub builds | `default` switches that hub to `fleet/hubs/<cluster>.yaml` and installs PolicyStack on it ([Global Hub](../guides/global-hub.md)). |
 
 PolicyStack installs no RBAC around these labels. Anyone who can label ManagedClusters or edit Secrets in `openshift-gitops` can change what a cluster runs, for example by adding `local-cluster` to a spoke so it reads the hub's file. Keep those rights to hub admins. Who may change `fleet/` itself is set in your repository ([Protect the repository](../start/install.md#protect-the-repository)).

@@ -1,6 +1,6 @@
 {{- /*
-ClusterDeployment, then the ManagedCluster and KlusterletAddonConfig ACM imports it with once
-Hive marks it installed. Without the KlusterletAddonConfig the cluster gets no policy, application
+ClusterDeployment, then the ManagedCluster, carrying install.labels, and KlusterletAddonConfig ACM
+imports it with once Hive marks it installed. Without the KlusterletAddonConfig the cluster gets no policy, application
 or search add-ons.
 
 Hive rejects changes to provisioning, so releaseImage is read back from the live object: a later
@@ -39,6 +39,9 @@ password blank: the CRD requires both, and Hive takes credentials only from Secr
     metadata:
       name: {{ $c }}
       annotations: {{- include "lifecycle.marker" . | nindent 8 }}
+      {{- with .Values.install.labels }}
+      labels: {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       hubAcceptsClient: true
 - complianceType: musthave

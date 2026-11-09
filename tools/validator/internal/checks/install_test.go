@@ -70,6 +70,55 @@ func TestPolicy071_Install(t *testing.T) {
 			},
 		},
 		{
+			name: "child Policy without the backup-exclude label",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/hubs.yaml", `"velero.io/exclude-from-backup" "true"`, `"velero.io/exclude-from-backup" "false"`)
+			},
+			want: []string{
+				`Placement policystack-hubs has no velero.io/exclude-from-backup: "true" label`,
+				`PlacementBinding policystack-hubs has no velero.io/exclude-from-backup: "true" label`,
+				`Policy policystack-hubs has no velero.io/exclude-from-backup: "true" label`,
+			},
+		},
+		{
+			name: "object Argo CD could prune",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/ns.yaml", "argocd.argoproj.io/sync-options: Prune=false,Delete=false", "example.com/other: x")
+			},
+			want: []string{"Namespace pstack has no argocd.argoproj.io/sync-options: Prune=false,Delete=false annotation"},
+		},
+		{
+			name: "pointer Application prunes",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/_helpers.tpl", "prune: false", "prune: true")
+			},
+			want: []string{"ApplicationSet policystack-install generates an Application with a finalizer or prune"},
+		},
+		{
+			name: "pointer rendered only on a child",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/install.yaml", "if not .Values.parent", "if .Values.parent")
+			},
+			want: []string{
+				"renders 0 ApplicationSet policystack-install, want 1",
+				"renders ApplicationSet policystack-install with parent set",
+			},
+		},
+		{
+			name: "GitOpsCluster with the GitOps add-on",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/gitopscluster.yaml", "  argoServer:", "  gitopsAddon:\n    enabled: true\n  argoServer:")
+			},
+			want: []string{"GitOpsCluster argo-acm-importer-global enables gitopsAddon"},
+		},
+		{
+			name: "child Policy hub template ACM cannot resolve",
+			mutate: func(t *testing.T, root string) {
+				replace(t, root, "install/templates/hubs.yaml", `copySecretData "openshift-gitops"`, `copySecretDat "openshift-gitops"`)
+			},
+			want: []string{"policystack-hubs-repo: ACM cannot resolve its template"},
+		},
+		{
 			name: "hubName not required",
 			mutate: func(t *testing.T, root string) {
 				replace(t, root, "install/templates/*.yaml", `required "hubName must be set (--set hubName=<name>)" .Values.hubName`, ".Values.hubName")

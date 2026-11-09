@@ -9,6 +9,7 @@ metadata:
     velero.io/exclude-from-backup: "true"
   annotations:
     "helm.sh/resource-policy": keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   clusterSets:
     - global
@@ -27,6 +28,7 @@ metadata:
     velero.io/exclude-from-backup: "true"
   annotations:
     "helm.sh/resource-policy": keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   argoServer:
     cluster: notused

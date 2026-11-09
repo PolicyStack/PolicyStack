@@ -352,7 +352,7 @@ hub templates is covered in [Secrets](../develop/elements.md#secrets).
 ## Rendered names
 
 `<release>` is the Application name, `<element>-<cluster>`; on the hub itself, `hubName` (the name
-given at `helm install`, since ACM calls the hub `local-cluster`) stands in for the cluster name
+given to the hub's install, since ACM calls the hub `local-cluster`) stands in for the cluster name
 ([The hub](architecture.md#the-hub)).
 
 | Object | Name | gitops on `c1` |

@@ -46,7 +46,7 @@ flowchart LR
 | Replicated Policies in `<cluster>` | ACM's copy of each Policy in the cluster's namespace on the hub. Where you read that cluster's compliance. |
 | Governance add-on | ACM's policy controllers on the managed cluster. They apply the Policy (`enforce`) or only report differences (`inform`), and send the status back. |
 
-The install chart also creates a second ApplicationSet, `policystack-lifecycle`, which builds and destroys clusters whose fleet file has `hub:` ([Cluster lifecycle](concepts/lifecycle.md)). It does nothing for clusters you import.
+The install chart also creates a second ApplicationSet, `policystack-lifecycle`, which builds and destroys clusters whose fleet file has `hub:` ([Cluster lifecycle](concepts/lifecycle.md)). It does nothing for clusters you import. A third, `policystack-install`, is the one object you apply by hand: it has the hub's Argo CD sync the install chart itself from your repository ([The pointer](reference/install.md#the-pointer)).
 
 ## Why it works this way
 

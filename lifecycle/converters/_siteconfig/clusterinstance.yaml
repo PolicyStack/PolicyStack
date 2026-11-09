@@ -34,8 +34,8 @@ on the cluster. A host whose newest Agent, the one BMAC acts on, is bound and ha
 is refused, as its drain would loop until SiteConfig's timeout pauses the ClusterInstance: the
 drain-timeout annotation is the manual way past.
 
-The marker reaches the ManagedCluster through extraAnnotations, since SiteConfig renders
-and owns it. The stock ai KlusterletAddonConfig turns application-manager off, without which ACM
+The marker reaches the ManagedCluster through extraAnnotations, and install.labels through
+extraLabels, which SiteConfig lets change after provisioning, since SiteConfig renders and owns it. The stock ai KlusterletAddonConfig turns application-manager off, without which ACM
 never creates the cluster's Argo CD secret, so it is suppressed and rendered here with every add-on
 on, as the hive engine does.
 */ -}}
@@ -76,6 +76,7 @@ on, as the hive engine does.
 {{- if and $vips (ne (len $s.apiVIPs) (len $s.ingressVIPs)) }}{{ fail "install.siteconfig: apiVIPs and ingressVIPs need the same number of entries" }}{{ end }}
 {{- if and (eq $masters 1) (eq $t "ai") (not $s.machineNetwork) }}{{ fail "install.siteconfig.machineNetwork is required with one master" }}{{ end }}
 {{- $spec := merge (dict "clusterName" $c "baseDomain" (required "install.baseDomain is required" .Values.install.baseDomain) "clusterImageSetNameRef" (printf "lifecycle-%s" $c) "pullSecretRef" (dict "name" (printf "%s-pull-secret" $c)) "templateRefs" (list (dict "name" (printf "%s-cluster-templates-v1" $t) "namespace" $ns)) "extraAnnotations" (dict "ManagedCluster" (include "lifecycle.marker" . | fromYaml)) "suppressedManifests" (list "KlusterletAddonConfig") "clusterType" (ternary "HighlyAvailableArbiter" (ternary "SNO" "HighlyAvailable" (eq $masters 1)) (gt $arbiters 0))) (pick $s "clusterNetwork" "apiVIPs" "ingressVIPs" "proxy") }}
+{{- with .Values.install.labels }}{{ $_ := set $spec "extraLabels" (dict "ManagedCluster" .) }}{{ end }}
 {{- if $s.fips }}{{ $_ := set $spec "installConfigOverrides" (dict "fips" true | toJson) }}{{ end }}
 {{- if $s.cpuPartitioning }}{{ $_ := set $spec "cpuPartitioningMode" "AllNodes" }}{{ end }}
 {{- with $s.ntpSources }}{{ $_ := set $spec "additionalNTPSources" . }}{{ end }}

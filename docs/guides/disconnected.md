@@ -225,8 +225,8 @@ The hub needs the mirrored catalog before PolicyStack exists to apply it, becaus
     ```
 
 3. [Install the operators](../start/install.md#install-the-operators), adding the site layer with `-f values/datacenters/dc2.yaml`. Its `global.catalogSources` points the ACM and GitOps Subscriptions at the mirrored catalog.
-4. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git ([Before you start](#before-you-start)).
-5. List `datacenters/dc2.yaml` in the hub's fleet file, `fleet/hubs/<hubName>.yaml` (`hubName` is the name you installed the hub with, [Hub file](../reference/fleet.md#hub-file)). The `disconnected` element then enforces the same objects by name, so ACM manages the ones you applied instead of creating copies. If they differ from `clusterResources`, the Policy changes them to match.
+4. Merge the hub's fleet file, `fleet/hubs/<hubName>.yaml`, listing `datacenters/dc2.yaml` ([Add the hub's fleet file](../start/install.md#add-the-hubs-fleet-file), [Hub file](../reference/fleet.md#hub-file)). The `disconnected` element then enforces the same objects by name, so ACM manages the ones you applied instead of creating copies. If they differ from `clusterResources`, the Policy changes them to match.
+5. [Install PolicyStack](../start/install.md#install-policystack) with `--set gitRepo=<your internal Git URL>`, once Argo CD can reach Git ([Before you start](#before-you-start)).
 
 ## What the element applies
 

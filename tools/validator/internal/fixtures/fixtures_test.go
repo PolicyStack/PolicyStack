@@ -202,6 +202,47 @@ func TestLoadDir_hub(t *testing.T) {
 	}
 }
 
+// TestLoadDir_installRevision: installRevision is read from hub files only, where the pointer reads
+// it, and must be a string Argo CD templates as written.
+func TestLoadDir_installRevision(t *testing.T) {
+	dir := writeFiles(t, map[string]string{
+		"hubs/gh.yaml":    "revision: main\ninstallRevision: v1.2.0\n",
+		"hubs/hub-a.yaml": "revision: main\n",
+		"hubs/hub-b.yaml": "revision: main\ninstallRevision: 1.10\n",
+		"c1.yaml":         "revision: main\ninstallRevision: v1.2.0\n",
+	})
+	got, err := LoadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]struct {
+		hub      bool
+		revision string
+		issue    string
+	}{
+		"c1.yaml":         {false, "", "installRevision is allowed only in a hub file"},
+		"hubs/gh.yaml":    {true, "v1.2.0", ""},
+		"hubs/hub-a.yaml": {true, "", ""},
+		"hubs/hub-b.yaml": {true, "", "installRevision is read by Argo CD as 1.1 (float64)"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d clusters, want %d", len(got), len(want))
+	}
+	for _, c := range got {
+		rel, _ := filepath.Rel(dir, c.SourceFile)
+		w := want[rel]
+		if c.IsHub != w.hub || c.InstallRevision != w.revision {
+			t.Errorf("%s: IsHub %v InstallRevision %q, want %v %q", rel, c.IsHub, c.InstallRevision, w.hub, w.revision)
+		}
+		switch {
+		case w.issue == "" && len(c.Issues) > 0:
+			t.Errorf("%s: unexpected issues %+v", rel, c.Issues)
+		case w.issue != "" && (len(c.Issues) != 1 || c.Issues[0].Line != 2 || !strings.Contains(c.Issues[0].Message, w.issue)):
+			t.Errorf("%s: issues %+v, want one on line 2 containing %q", rel, c.Issues, w.issue)
+		}
+	}
+}
+
 func TestLoadDir_missingDir(t *testing.T) {
 	if _, err := LoadDir(filepath.Join(t.TempDir(), "nope")); err == nil {
 		t.Fatal("expected an error for a missing dir")
@@ -304,13 +345,13 @@ func TestParse(t *testing.T) {
 			name:     "unknown key",
 			in:       "revision: main\nlabels:\n  a: b\n",
 			revision: "main",
-			issues:   []Issue{{Line: 2, Message: "unknown key labels: only revision, valueFiles, hub, state, version, channel and install are allowed"}},
+			issues:   []Issue{{Line: 2, Message: "unknown key labels: only revision, valueFiles, hub, state, version, channel, install and installRevision are allowed"}},
 		},
 		{
 			name:     "old config key",
 			in:       "revision: main\nconfig:\n  environment.10: prod\n",
 			revision: "main",
-			issues:   []Issue{{Line: 2, Message: "unknown key config: only revision, valueFiles, hub, state, version, channel and install are allowed"}},
+			issues:   []Issue{{Line: 2, Message: "unknown key config: only revision, valueFiles, hub, state, version, channel, install and installRevision are allowed"}},
 		},
 		{
 			name: "misspelt revision",

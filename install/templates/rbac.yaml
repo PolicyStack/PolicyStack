@@ -6,6 +6,7 @@ metadata:
   name: openshift-gitops-policy-admin
   annotations:
     "helm.sh/resource-policy": keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 rules:
   - apiGroups: [policy.open-cluster-management.io]
     resources: [policies, configurationpolicies, certificatepolicies, operatorpolicies, policysets, placementbindings]
@@ -16,6 +17,18 @@ rules:
   - apiGroups: [cluster.open-cluster-management.io]
     resources: [placements, placements/status, placementdecisions, placementdecisions/status]
     verbs: [get, list, watch, create, update, patch, delete]
+  # Argo CD syncs install/ itself (templates/install.yaml): the GitOpsCluster, and the global
+  # ManagedClusterSetBindings, which ACM admits only with bind on the set.
+  - apiGroups: [apps.open-cluster-management.io]
+    resources: [gitopsclusters]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cluster.open-cluster-management.io]
+    resources: [managedclustersetbindings]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cluster.open-cluster-management.io]
+    resources: [managedclustersets/bind]
+    resourceNames: [global]
+    verbs: [create]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -23,6 +36,7 @@ metadata:
   name: openshift-gitops-policy-admin
   annotations:
     "helm.sh/resource-policy": keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

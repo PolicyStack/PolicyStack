@@ -2,7 +2,10 @@
 
 Read this only if your ACM hubs are, or will be, imported into a [Multicluster Global Hub](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index). PolicyStack does not need one: several hubs can share one repository, each installed with its own `hubName`.
 
-Import each managed hub in **hosted mode** (a Global Hub import mode, unrelated to hosted control planes; see [Import modes](#import-modes)) unless you want the global hub to configure and build clusters for it. In hosted mode every hub keeps running PolicyStack for itself and nothing in the repo changes. Default mode removes the managed hub's `local-cluster`, rules out `hypershift` on it, and makes its hub templates resolve on the global hub.
+Two import modes (a Global Hub term, unrelated to hosted control planes; see [Import modes](#import-modes)):
+
+- **Default mode**: the global hub installs ACM, OpenShift GitOps and PolicyStack on the managed hub, configures it and builds clusters for it, all from `fleet/hubs/<hub>.yaml`. Only the global hub is installed by hand. The managed hub loses its `local-cluster`, can't run `hypershift`, and its hub templates resolve on the global hub.
+- **Hosted mode** keeps every hub independent: each runs PolicyStack for itself, installed by hand, and nothing in the repo changes.
 
 ## What Global Hub does
 
@@ -36,7 +39,7 @@ metadata:
     global-hub.open-cluster-management.io/deploy-mode: default # (2)!
 ```
 
-1.  Use the managed hub's `hubName`. In default mode the global hub knows the hub only by this name: it reads `fleet/hubs/<name>.yaml` and `values/clusters/<name>.yaml`, and fleet `hub:` keys must use it. hub-a's own PolicyStack install still needs a `hubName`, but in default mode hub-a has no `local-cluster`, so it renders nothing for itself and never reads that value. Set it to the same name anyway, so the files work in both modes and Global Hub's dashboards match.
+1.  Use the managed hub's `hubName`. In default mode the global hub knows the hub only by this name: it reads `fleet/hubs/<name>.yaml` and `values/clusters/<name>.yaml`, fleet `hub:` keys must use it, and the global hub installs PolicyStack on hub-a with it as `hubName`. A hosted-mode hub is installed by hand: use the same name, so the files work in both modes and Global Hub's dashboards match.
 2.  `default` or `hosted`.
 
 | | `default` | `hosted` |
@@ -46,6 +49,7 @@ metadata:
 | Global hub's Policies reach the managed hub | Yes | No. Global Hub's admission webhook turns off the policy and application add-ons for that hub |
 | Renders the managed hub's Day-2, from `fleet/hubs/<managed-hub>.yaml` | Global hub | Managed hub |
 | Builds clusters whose `hub` is the managed hub | Global hub, Policies placed on the managed hub ([Lifecycle](#lifecycle)) | Managed hub |
+| Installs PolicyStack on the managed hub | Global hub, from `fleet/hubs/<managed-hub>.yaml` ([Child hubs](../reference/install.md#child-hubs)) | You, by hand ([Install PolicyStack](../start/install.md#install-policystack)) |
 | `hypershift` engine on the managed hub | No | Yes |
 | When to set the label | Any time | Before import. An already-imported cluster is ignored |
 
@@ -57,16 +61,18 @@ metadata:
 
 ## Layout
 
-Install PolicyStack on the global hub and on every managed hub, all with the same `gitRepo` and each with its own `hubName` ([Install PolicyStack](../start/install.md#install-policystack)). All hubs read the same `fleet/`.
+Install PolicyStack by hand on the global hub and on every hosted-mode managed hub, all with the same `gitRepo` and each with its own `hubName` ([Install PolicyStack](../start/install.md#install-policystack)). The global hub installs every default-mode managed hub. All hubs read the same `fleet/`.
 
 ```text
 fleet/
-  hubs/gh.yaml      # the global hub; Day-2 rendered by gh
-  hubs/hub-a.yaml   # default-mode managed hub; Day-2 rendered by gh
-  hubs/hub-b.yaml   # hosted-mode managed hub; Day-2 rendered by hub-b
+  hubs/gh.yaml      # the global hub; Day-2 rendered by gh, installed by hand
+  hubs/hub-a.yaml   # default-mode managed hub; Day-2 rendered and PolicyStack installed by gh
+  hubs/hub-b.yaml   # hosted-mode managed hub; Day-2 rendered by hub-b, installed by hand
   edge-1.yaml       # hub: hub-a; Day-2 rendered by hub-a, built by gh on hub-a
   edge-2.yaml       # hub: hub-b; Day-2 rendered and built by hub-b
 ```
+
+For a private repository, install the global hub with `--set repoSecret=<name>`, so default-mode hubs get a copy of its repository Secret ([Values](../reference/install.md#values)).
 
 ## Import a managed hub
 
@@ -79,37 +85,87 @@ fleet/
 
 === "Default mode"
 
-    For hub-a:
+    hub-a needs a hub file whose layers turn on the `acm` and `gitops` elements with self-management off:
 
-    1. Install PolicyStack on hub-a and commit `fleet/hubs/hub-a.yaml`, as for any hub. An existing PolicyStack hub has both. hub-a's PolicyStack applies step 2 and keeps rendering Day-2 for hub-a's managed clusters.
-    2. Turn off self-management in hub-a's layer. The `acm` element must be on, which means [handing the operators to PolicyStack](../start/install.md#hand-the-operators-to-policystack) first:
+    ```yaml
+    # fleet/hubs/hub-a.yaml
+    revision: main
+    valueFiles:
+      - acm/hub-a.yaml
+    ```
 
-        ```yaml
-        # values/acm/hub-a.yaml, listed in fleet/hubs/hub-a.yaml
-        stack:
-          acm:
-            enabled: true
-            config:
-              selfManaged: false
-        ```
+    ```yaml
+    # values/acm/hub-a.yaml
+    stack:
+      acm:
+        enabled: true
+        config:
+          selfManaged: false # (1)!
+      gitops:
+        enabled: true
+        policies:
+          instance:
+            enabled: false # (2)!
+          link:
+            enabled: false
+    ```
 
-        Merge. hub-a's own PolicyStack sets `disableHubSelfManagement: true` and ACM removes `local-cluster`. With it go hub-a's Applications for itself (the Policies are deleted, what they created stays) and its `lifecycle-<cluster>` Applications: clusters with `hub: hub-a` are abandoned, not destroyed, until step 4. `oc get managedcluster local-cluster` on hub-a returns `NotFound` when done.
+    1.  Sets `disableHubSelfManagement: true` on the MultiClusterHub, which Global Hub's default mode requires.
+    2.  The `openshift-gitops` instance runs hub-a's PolicyStack. As on any hub, never let PolicyStack reconcile it ([Enable the elements](../start/install.md#enable-the-elements)).
 
-        From here until step 4, nothing enforces hub-a's own Policies or runs its builds. Do steps 3 and 4 together.
+    Then, by how hub-a comes to exist:
 
-    3. Import hub-a into the global hub ([Red Hat's procedure](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index)).
-    4. Label it on the global hub:
+    **New cluster, imported.** Merge both files, import hub-a into the global hub with the label `global-hub.open-cluster-management.io/deploy-mode=default` ([Red Hat's procedure](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index)), and wait. The global hub reads `fleet/hubs/hub-a.yaml`: its `acm` and `gitops` elements install both operators and the MultiClusterHub on hub-a, and its Policy `policystack-hubs` installs PolicyStack there once OpenShift GitOps runs ([Child hubs](../reference/install.md#child-hubs)).
+
+    **New cluster, built by the global hub.** Also add `fleet/hub-a.yaml` with `hub: gh` and the lifecycle keys ([Cluster lifecycle](lifecycle.md)), and set the label from Git, so hub-a is imported in default mode:
+
+    ```yaml
+    # fleet/hub-a.yaml
+    revision: main
+    hub: gh
+    version: 4.20.8
+    install:
+      engine: hive
+      labels:
+        global-hub.open-cluster-management.io/deploy-mode: default # (1)!
+      # ...
+    ```
+
+    1.  `install.labels` works with `hive` and `siteconfig` ([Install keys](../reference/lifecycle.md#install-keys)). A default-mode hub can't run `hypershift`.
+
+    Both files carry a `version`, and each drives [upgrades](upgrades.md) while the global hub reads it: `fleet/hub-a.yaml` until the label is on the ManagedCluster, `fleet/hubs/hub-a.yaml` after. Keep them equal.
+
+    **Existing PolicyStack hub.** hub-a already has PolicyStack and its hub file.
+
+    1. Turn off self-management in hub-a's layer, as above. The `acm` element must be on, which means [handing the operators to PolicyStack](../start/install.md#hand-the-operators-to-policystack) first. Merge. hub-a's own PolicyStack sets `disableHubSelfManagement: true` and ACM removes `local-cluster`. With it go hub-a's Applications for itself (the Policies are deleted, what they created stays) and its `lifecycle-<cluster>` Applications: clusters with `hub: hub-a` are abandoned, not destroyed, until step 3. hub-a's install keeps following Git: its pointer doesn't need `local-cluster`. `oc get managedcluster local-cluster` on hub-a returns `NotFound` when done.
+
+        From here until step 3, nothing enforces hub-a's own Policies or runs its builds. Do steps 2 and 3 together.
+
+    2. Import hub-a into the global hub ([Red Hat's procedure](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.17/html/multicluster_global_hub/index)).
+    3. Label it on the global hub:
 
         ```sh
         oc label managedcluster hub-a global-hub.open-cluster-management.io/deploy-mode=default
         ```
 
-        The global hub now reads `fleet/hubs/hub-a.yaml`, creates `<element>-hub-a` Applications, and takes over building the clusters with `hub: hub-a`. It re-adopts the abandoned ones by their [ownership marker](../concepts/lifecycle.md#ownership).
+        The global hub now reads `fleet/hubs/hub-a.yaml`, creates `<element>-hub-a` Applications, and takes over building the clusters with `hub: hub-a`. It re-adopts the abandoned ones by their [ownership marker](../concepts/lifecycle.md#ownership). Its Policy `policystack-hubs` adopts hub-a's pointer and sets `parent`, so hub-a stops rendering its own.
 
-    A hub the global hub builds with `hive` or `siteconfig` has two fleet files: `fleet/hub-a.yaml`, holding its lifecycle keys, and `fleet/hubs/hub-a.yaml`. Until the label is set, the global hub renders hub-a's Day-2 from `fleet/hub-a.yaml`; after, from `fleet/hubs/hub-a.yaml`. Both carry a `version`, and each drives [upgrades](upgrades.md) while the global hub reads it: `fleet/hub-a.yaml` before the label, `fleet/hubs/hub-a.yaml` after. Keep them equal, and label hub-a as soon as it is imported.
+    Verify on hub-a:
+
+    ```sh
+    oc get application.argoproj.io policystack -n openshift-gitops  # Synced, Healthy
+    oc get applicationset policystack-install -n openshift-gitops \
+      -o jsonpath='{.spec.template.spec.source.helm.valuesObject.parent}'  # gh
+    ```
+
+    !!! warning "hub-a's ManagedCluster name is its `hubName`"
+        The global hub passes the ManagedCluster name to hub-a's install as `hubName`, and reads `fleet/hubs/<name>.yaml` for it. Name it after the hub file.
+
+    !!! note "The label before ACM"
+        Red Hat's procedure imports a hub that already runs ACM with self-management off. A new cluster gets the label first and ACM afterwards, with self-management off from the start. Until ACM runs, the Global Hub agent add-on on hub-a reports degraded.
 
     !!! danger "The label picks the fleet file"
-        With the label, the global hub reads `fleet/hubs/hub-a.yaml`; without it, `fleet/hub-a.yaml`. Removing the label deletes hub-a's Day-2 Policies and the `lifecycle-<cluster>` Applications for every cluster with `hub: hub-a`, which leaves those clusters abandoned ([What deletes an Application](../concepts/removal.md#what-deletes-an-application)). Restoring the label re-adopts them.
+        With the label, the global hub reads `fleet/hubs/hub-a.yaml`; without it, `fleet/hub-a.yaml`. Removing the label deletes hub-a's Day-2 Policies and the `lifecycle-<cluster>` Applications for every cluster with `hub: hub-a`, which leaves those clusters abandoned ([What deletes an Application](../concepts/removal.md#what-deletes-an-application)). Restoring the label re-adopts them. hub-a's own install keeps running, no longer updated by the global hub.
 
     !!! warning "Hub templates resolve on the global hub"
         An ACM hub template (`{{hub ... hub}}`) resolves on the hub that delivers the Policy. hub-a's own Day-2 Policies now come from the global hub, so the `acs` element on hub-a registers hub-a with the global hub's Central, and fails if the global hub runs none. Either run Central on the global hub, or keep `stack.acs.enabled: false` in hub-a's layer. hub-a's managed clusters still use hub-a's Central. `acs` is the only element that uses hub templates.
@@ -164,7 +220,7 @@ Fleet files stay where they are. Detach means deleting hub-a's ManagedCluster on
 === "Hosted to default"
 
     1. Detach hub-a from the global hub.
-    2. Run steps 2 to 4 of [Default mode](#import-a-managed-hub). hub-a's own PolicyStack still runs, so it applies `selfManaged: false`.
+    2. Run the steps for an existing PolicyStack hub under [Default mode](#import-a-managed-hub). hub-a's own PolicyStack still runs, so it applies `selfManaged: false`.
 
 === "Default to hosted"
 
@@ -181,12 +237,24 @@ Fleet files stay where they are. Detach means deleting hub-a's ManagedCluster on
 
         `local-cluster` returns. hub-a's PolicyStack reads `fleet/hubs/hub-a.yaml` again and adopts its clusters.
 
-    4. Re-import hub-a with the `hosted` label set before import.
+    4. Replace the pointer on hub-a with one that has no `parent`, so hub-a manages its own install again. `oc apply` would keep the global hub's `parent`; `oc replace` doesn't:
+
+        ```sh
+        helm template policystack ./install --show-only templates/install.yaml --set hubName=hub-a \
+          --set gitRepo=https://github.com/<org>/<repo>.git | oc replace -f -
+        oc get applicationset policystack-install -n openshift-gitops \
+          -o jsonpath='{.spec.template.spec.source.helm.valuesObject.parent}'  # prints nothing
+        ```
+
+        Add `--set repoSecret=<name>` if the global hub's install sets it.
+    5. Re-import hub-a with the `hosted` label set before import.
 
 ## Do not
 
-- Label a PolicyStack hub `global-hub.open-cluster-management.io/hub-role`. That turns on Hub HA, Global Hub's active/standby feature, which copies the ApplicationSets, Applications, Policies and `ArgoCD` CR to the standby, where they enforce the same Policies and build the same clusters. PolicyStack's recovery path is ACM backup plus a reinstall with the same `hubName` ([Hub disaster recovery](lifecycle.md#hub-disaster-recovery)).
-- Enable the ACM gitops-addon or Argo CD Agent on a managed hub. They replace `openshift-gitops`, which runs that hub's PolicyStack.
+- Label a PolicyStack hub `global-hub.open-cluster-management.io/hub-role`. That turns on Hub HA, Global Hub's active/standby feature, which copies the ApplicationSets, Applications, Policies and `ArgoCD` CR to the standby, where they enforce the same Policies and build the same clusters. PolicyStack's recovery path is ACM backup plus applying the pointer with the same `hubName` ([Hub disaster recovery](lifecycle.md#hub-disaster-recovery)).
+- Enable the ACM gitops-addon or Argo CD Agent on a managed hub. They replace `openshift-gitops`, which runs that hub's PolicyStack. Enabling the add-on on the GitOpsCluster `argo-acm-importer-global` also turns off the push model for every Application; POLICY071 fails it.
+- Import a passive DR cluster into the global hub under a default-mode hub's name. The global hub installs PolicyStack on it, and it builds the same clusters as the active one.
+- Label a cluster `deploy-mode=default` on an ACM hub without Global Hub. Red Hat doesn't support one ACM hub managing another outside Global Hub, and the hub would install PolicyStack on it anyway.
 - Name a managed cluster after the hub that manages it, in default mode. ACM puts a cluster's Policies in a namespace named after that cluster: the global hub's Policies for hub-a land in namespace `hub-a` on hub-a, and hub-a keeps the Policies for each of its own clusters in a namespace named after that cluster, so a managed cluster `hub-a` would share it.
 - Reuse a cluster name across hubs. `fleet/` is shared, and migration needs unique names.
 - Migrate a lifecycle-built cluster with `ManagedClusterMigration`. It moves the ManagedCluster, not its Policies or Applications, and `hypershift` clusters cannot migrate. Imported clusters migrate cleanly: the source hub deletes their Argo CD secret, and with it their Applications and Policies, pruning nothing on the cluster ([What happens on the managed cluster](../concepts/removal.md#what-happens-on-the-managed-cluster)). The target hub pairs its new secret with the same `fleet/<cluster>.yaml` and recreates them. If `acs` is enabled, run steps 2-3 of [Re-register a cluster](../elements/acs.md#re-register-a-cluster), since Central is now the target hub's.

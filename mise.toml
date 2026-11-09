@@ -1,13 +1,13 @@
 # Every tool version lives here; Go libraries live in tools/validator/go.mod. CI installs these with
 # mise-action, contributors with `mise install` (docs/contributing.md).
 [tools]
-go = "1.26"
+go = "1.27.3"
 # The Helm that OpenShift GitOps 1.18 (Argo CD 3.1.6), the supported floor, renders with. Moves only
 # with the floor, so upstream's Renovate leaves it alone.
 helm = "3.18.4"
 # helm-unittest as a standalone binary, so no Helm plugin install is needed: `untt <chart>`.
 "github:helm-unittest/helm-unittest" = { version = "1.2.1", rename_exe = "untt" }
-python = "3.14"
+python = "3.15.2"
 prek = "0.5.9"
 golangci-lint = "2.15.0"
 "aqua:rhysd/actionlint" = "1.7.12"

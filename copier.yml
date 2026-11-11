@@ -37,7 +37,6 @@ _exclude:
     /docs
     /site
     /zensical.toml
-    /diagrams
     /lib/ct.yaml
     /lib/tests
     /tools/requirements-docs.txt

@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0-rc.2](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-11-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* Updated ACS auth to allow for role mapping beyond just the admin group ([#66](https://github.com/PolicyStack/PolicyStack/issues/66))
+
+### Features
+
+* Added element for the File Integrity Operator ([#63](https://github.com/PolicyStack/PolicyStack/issues/63)) ([030df69](https://github.com/PolicyStack/PolicyStack/commit/030df69546ed8b53e6109989480c2a8b82fa322c))
+* Updated ACS auth to allow for role mapping beyond just the admin group ([#66](https://github.com/PolicyStack/PolicyStack/issues/66)) ([a02abbd](https://github.com/PolicyStack/PolicyStack/commit/a02abbd7c256177d7fa3cfa6b07861628f670b94))
+* Updated elements to streamline code and remove dependency on rawTemplates ([#70](https://github.com/PolicyStack/PolicyStack/issues/70)) ([c39fb79](https://github.com/PolicyStack/PolicyStack/commit/c39fb7944868043fd2f362510add0f1504793a52))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/masterminds/semver/v3 to v3.5.0 ([#68](https://github.com/PolicyStack/PolicyStack/issues/68)) ([b8a71a8](https://github.com/PolicyStack/PolicyStack/commit/b8a71a8a7e387ff05a647efb2ba4a3e8b471dc0b))
+* Updated go to 1.27.4 for security fix ([#75](https://github.com/PolicyStack/PolicyStack/issues/75)) ([7e9e9bc](https://github.com/PolicyStack/PolicyStack/commit/7e9e9bc2a3d3f1af44e7de5912941a24899f6d92))
+
 ## 1.0.0-rc.1 (2026-11-06)
 
 

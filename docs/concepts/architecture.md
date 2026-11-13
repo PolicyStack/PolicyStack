@@ -19,10 +19,11 @@ PolicyStack uses four generator types:
 
 A `selector` on a generator drops parameter sets that do not match, like a label selector on the parameters.
 
-`helm install` of the [install chart](../reference/install.md) creates two ApplicationSets in `openshift-gitops`:
+The [install chart](../reference/install.md) creates three ApplicationSets in `openshift-gitops`. You apply the first, the **pointer**, by hand once per hub ([Install PolicyStack](../start/install.md#install-policystack)). The pointer's Application `policystack` syncs everything in `install/` from Git, the pointer included:
 
 | ApplicationSet | Creates | Who needs it |
 |---|---|---|
+| `policystack-install` | Application `policystack`, which renders `install/` at the hub file's `installRevision`, or the default branch when unset ([The pointer](../reference/install.md#the-pointer)). | Everyone. A Global Hub applies it on its `default`-mode child hubs ([Child hubs](../reference/install.md#child-hubs)). |
 | `policystack` | One Application per element per cluster: Day-2 configuration of clusters that already run. | Everyone |
 | `policystack-lifecycle` | One Application per cluster this hub builds, from fleet files with `hub: <hubName>` ([Cluster lifecycle](lifecycle.md)). | Only hubs that build clusters. Fleet files without `hub` never match it. |
 
@@ -279,7 +280,9 @@ Your repository's CI renders every element for every fleet file and checks every
 
 ## Deletion
 
-Both ApplicationSets set `preserveResourcesOnDeletion: false`, so each Application gets Argo CD's resources finalizer and deleting it deletes its Policies, Placement and PlacementBinding from `pstack`. Applications are deleted when their generator stops producing them, for example when a fleet file is deleted ([What deletes an Application](removal.md#what-deletes-an-application)). ACM then removes the policies from the cluster; what they created stays unless a template prunes ([What happens on the managed cluster](removal.md#what-happens-on-the-managed-cluster)). No lifecycle template prunes, so deleting `lifecycle-<cluster>` leaves the cluster running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+`policystack` and `policystack-lifecycle` set `preserveResourcesOnDeletion: false`, so each Application gets Argo CD's resources finalizer and deleting it deletes its Policies, Placement and PlacementBinding from `pstack`. Applications are deleted when their generator stops producing them, for example when a fleet file is deleted ([What deletes an Application](removal.md#what-deletes-an-application)). ACM then removes the policies from the cluster; what they created stays unless a template prunes ([What happens on the managed cluster](removal.md#what-happens-on-the-managed-cluster)). No lifecycle template prunes, so deleting `lifecycle-<cluster>` leaves the cluster running, unmanaged ([Abandon](../guides/lifecycle.md#abandon)).
+
+The pointer's Application `policystack` is the exception: it has no finalizer and never prunes, so deleting it, or a merged change that drops an install object, deletes nothing ([Deletion safety](../reference/install.md#deletion-safety)).
 
 Every Policy sets `copyPolicyMetadata: false`, so Argo CD never treats ACM's replicated copies as its own and never prunes them ([Removal and pruning](removal.md)).
 
@@ -293,7 +296,7 @@ A commit to `values/clusters/prod-east-1.yaml` therefore re-renders only prod-ea
 
 ## The hub
 
-ACM manages the hub as a ManagedCluster too, named `local-cluster` by default and labelled `local-cluster`. PolicyStack configures it like any cluster, with one difference: it is known by `hubName`, the name you give it at `helm install` ([Install chart](../reference/install.md)). The secret with the `local-cluster` label switches the generator to the hub's names:
+ACM manages the hub as a ManagedCluster too, named `local-cluster` by default and labelled `local-cluster`. PolicyStack configures it like any cluster, with one difference: it is known by `hubName`, the name you give it when you apply the pointer ([Install chart](../reference/install.md#values)). The secret with the `local-cluster` label switches the generator to the hub's names:
 
 | | Managed cluster | Hub |
 |---|---|---|
@@ -314,17 +317,19 @@ For the hub's compliance, run `oc get policies.policy.open-cluster-management.io
 
 Each hub only sees cluster secrets for the ManagedClusters it imports. `fleet/prod-east-1.yaml` therefore renders only on the hub that manages prod-east-1, and a lifecycle fleet file only on the hub its `hub` names. Every active hub needs its own `hubName`, because they all share the name `local-cluster`. Two active hubs with the same `hubName` both read `fleet/hubs/<hubName>.yaml` and both try to build every cluster whose fleet file names that hub.
 
-A DR hub is the exception: it does not run PolicyStack while passive, and at takeover it is installed with the `hubName` of the hub it replaces, so it reads the same hub file and adopts the restored clusters ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
+A DR hub is the exception: it does not run PolicyStack while passive, and at takeover you apply the pointer on it with the `hubName` of the hub it replaces, so it reads the same hub file and adopts the restored clusters ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
-A managed hub imported into a Global Hub in `default` mode has no `local-cluster`. The Global Hub reads `fleet/hubs/<cluster>.yaml` for it and names its Applications `<element>-<cluster>`. Name its ManagedCluster after its `hubName` so both modes read the same file ([Global Hub](../guides/global-hub.md#import-modes)).
+A managed hub imported into a Global Hub in `default` mode has no `local-cluster`. The Global Hub reads `fleet/hubs/<cluster>.yaml` for it and names its Applications `<element>-<cluster>`. Name its ManagedCluster after its `hubName` so both modes read the same file ([Global Hub](../guides/global-hub.md#import-modes)). The Global Hub also installs PolicyStack on it, with the ManagedCluster name as `hubName` ([Child hubs](../reference/install.md#child-hubs)).
 
 ### Changing `hubName`
 
 !!! warning
     The hub's Applications are renamed, so they and their Policies are deleted and recreated under the new name. Fleet files with `hub: <old>` stop matching; their `lifecycle-<cluster>` Applications are deleted and those clusters keep running, unmanaged, until the fleet files name the new hub.
 
-Check the current value with `helm get values policystack -n openshift-gitops`. To change it:
+Check the current value with `oc get applicationset policystack-install -n openshift-gitops -o jsonpath='{.spec.template.spec.source.helm.valuesObject}'`. To change it:
 
 1. Merge copies of `fleet/hubs/<old>.yaml` and `values/clusters/<old>.yaml` under the new name, and change `hub: <old>` to the new name in lifecycle fleet files.
-2. `helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values --set hubName=<new>`.
+2. Re-apply the pointer with the new name and the same `gitRepo` (and `repoSecret`, if set): `helm template policystack ./install --show-only templates/install.yaml --set hubName=<new> --set gitRepo=<url> | oc apply -f -` ([Install PolicyStack](../start/install.md#install-policystack)). Check it with the command above; if it still shows the old name, apply it again ([Values](../reference/install.md#values)).
 3. Delete the old files.
+
+A Global Hub child's `hubName` is its ManagedCluster name on the parent, so it changes only with that name.

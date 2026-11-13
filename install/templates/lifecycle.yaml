@@ -10,6 +10,7 @@ metadata:
     velero.io/exclude-from-backup: "true"
   annotations:
     helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   # Deleting a fleet file, or its hub key, deletes the Application and with it the Policies. No
   # lifecycle policy sets pruneObjectBehavior, so the cluster is abandoned, never destroyed.

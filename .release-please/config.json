@@ -8,7 +8,6 @@
       "exclude-paths": [
         ".release-please",
         "docs",
-        "diagrams",
         "values",
         "lib/tests",
         "tools/validator/testdata/clusters",

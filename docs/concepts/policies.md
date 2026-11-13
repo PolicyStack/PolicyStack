@@ -101,9 +101,9 @@ Keep them. `placement.tolerations: []` in any layer removes them, and nothing va
 
 ### Cluster sets
 
-A Placement only selects clusters from ManagedClusterSets bound to its own namespace by a ManagedClusterSetBinding. ACM's built-in set `global` contains every ManagedCluster. The [install chart](../reference/install.md) creates ManagedClusterSetBinding `global` in `pstack`, and keeps it on uninstall so removing PolicyStack doesn't unbind Placements still in use. If it is missing, every Placement selects nothing and no Policy reaches any cluster, while Argo CD still shows every Application Synced.
+A Placement only selects clusters from ManagedClusterSets bound to its own namespace by a ManagedClusterSetBinding. ACM's built-in set `global` contains every ManagedCluster. The [install chart](../reference/install.md) creates ManagedClusterSetBinding `global` in `pstack`, and never deletes it, so removing PolicyStack doesn't unbind Placements still in use ([Deletion safety](../reference/install.md#deletion-safety)). If it is missing, every Placement selects nothing and no Policy reaches any cluster, while Argo CD still shows every Application Synced.
 
-Check with `oc get managedclustersetbinding global -n pstack`. Without it, each Placement's `PlacementSatisfied` condition is False with reason `NoManagedClusterSetBindings`. A `helm upgrade` of the install chart recreates it.
+Check with `oc get managedclustersetbinding global -n pstack`. Without it, each Placement's `PlacementSatisfied` condition is False with reason `NoManagedClusterSetBindings`. The hub's Application `policystack`, which syncs the install chart, recreates it within about 3 minutes.
 
 ### Overriding the Placement
 
@@ -144,7 +144,7 @@ The `lifecycle-<cluster>` Application's Policies build a cluster by creating obj
 
 ## Where Policies live
 
-Argo CD creates every Policy, Placement and PlacementBinding in `pstack` on the hub, the `policyNamespace` set in the root [`values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/values.yaml). The install chart creates the namespace and keeps it on uninstall. ACM then copies each Policy to every cluster its Placement selects ([ACM policies in brief](acm.md)):
+Argo CD creates every Policy, Placement and PlacementBinding in `pstack` on the hub, the `policyNamespace` set in the root [`values.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/values.yaml). The install chart creates the namespace and never deletes it. ACM then copies each Policy to every cluster its Placement selects ([ACM policies in brief](acm.md)):
 
 | Copy | Cluster | Namespace | Name | Look with |
 |---|---|---|---|---|

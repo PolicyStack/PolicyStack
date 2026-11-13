@@ -1,12 +1,16 @@
 package checks
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/revision"
@@ -14,10 +18,17 @@ import (
 
 // FleetPinCheck (POLICY052) resolves each fleet file's revision in git as Argo CD does and checks
 // that the commit has what the file uses. Argo CD skips a valueFiles entry missing at the revision,
-// so the cluster silently loses it. In a copier copy (a root .copier-answers.yml), it also checks the
-// framework release each revision records against this branch's: a hub runs this branch's install
-// chart, which renders its own major and the one before. A revision without the file predates the
-// copy and is not checked. Root and Branch are set by run.buildRegistry.
+// so the cluster silently loses it. A hub file's installRevision must resolve to a commit with the
+// pointer, install/templates/install.yaml.
+//
+// In a copier copy (a root .copier-answers.yml), it also checks the framework release each revision
+// records: against this branch's, which renders its own major and the one before, and against the
+// install of the hub that renders it, its installRevision or else this branch, which must be at least
+// as new (docs/reference/compatibility.md#hub-and-revision-skew). A hub file is rendered by its hub
+// and a file with hub: by that hub, so a newer revision there is an error. Any other cluster may be
+// managed by any hub, so it is compared with the oldest hub install, as a warning. A revision
+// without the file predates the copy and is not checked. Root and Branch are set by
+// run.buildRegistry.
 type FleetPinCheck struct {
 	// Root is the repository. Branch is the branch HEAD lands on, a PR's base branch: a revision
 	// naming it resolves to HEAD, the merge commit, which is what it resolves to once merged.
@@ -40,6 +51,13 @@ func (c *FleetPinCheck) Run(ctx Context) []Finding {
 	// Not a copier copy, or its framework release is unreadable, which POLICY061 reports: no skew check.
 	data, _ := os.ReadFile(filepath.Join(c.Root, answersFile))
 	headTag, head, copied := frameworkMajor(data)
+	installs := c.installs(bg, ctx.Clusters, copied, report)
+	builtBy := map[string]string{}
+	for _, cl := range ctx.Clusters {
+		if !cl.IsHub && cl.Hub != "" {
+			builtBy[cl.Name] = cl.Hub
+		}
+	}
 	for _, cl := range ctx.Clusters {
 		if cl.Revision == "" {
 			continue // POLICY050
@@ -70,6 +88,10 @@ func (c *FleetPinCheck) Run(ctx Context) []Finding {
 		if copied {
 			if msg := c.skew(bg, at, headTag, head); msg != "" {
 				report(cl.SourceFile, cl.Name, SevError, fmt.Sprintf("revision %q %s", cl.Revision, msg))
+			} else {
+				for _, f := range hubSkew(cl, c.framework(bg, at), installs, builtBy) {
+					report(cl.SourceFile, cl.Name, f.sev, fmt.Sprintf("revision %q %s", cl.Revision, f.msg))
+				}
 			}
 		}
 		if len(needs) > 0 {
@@ -114,4 +136,101 @@ func (c *FleetPinCheck) skew(ctx context.Context, commit, headTag string, head u
 			"the one before only. Move the revision forward", tag, headTag)
 	}
 	return ""
+}
+
+// hubInstall is the framework release a hub's install runs.
+type hubInstall struct {
+	hub, ref string // ref is the installRevision, or "" for this branch
+	version  *semver.Version
+}
+
+func (h hubInstall) String() string {
+	at := "this branch"
+	if h.ref != "" {
+		at = fmt.Sprintf("installRevision %q", h.ref)
+	}
+	return fmt.Sprintf("hub %s's install, framework v%s at %s", h.hub, h.version, at)
+}
+
+// installs resolves each hub file's installRevision, reporting one that doesn't resolve or has no
+// pointer, and returns the framework release each hub's install runs, by hubName. A hub whose install
+// records no release is left out; in a copier copy, a pinned one is reported, since its clusters go
+// unchecked.
+func (c *FleetPinCheck) installs(ctx context.Context, clusters []*fixtures.Cluster, copied bool, report func(file, cluster string, sev Severity, msg string)) map[string]hubInstall {
+	out := map[string]hubInstall{}
+	for _, h := range clusters {
+		if !h.IsHub {
+			continue
+		}
+		at, err := revision.Resolve(ctx, c.Root, cmp.Or(h.InstallRevision, "HEAD"), c.Branch, "HEAD")
+		switch {
+		case err != nil:
+			report(h.SourceFile, h.Name, SevError, "installRevision: "+err.Error()+" of this repository")
+			continue
+		case h.InstallRevision != "" && !revision.Has(ctx, c.Root, at, "install/templates/install.yaml"):
+			report(h.SourceFile, h.Name, SevError, fmt.Sprintf("installRevision %q has no install/templates/install.yaml, the pointer "+
+				"that keeps this hub's install in git: pin a release that has it", h.InstallRevision))
+			continue
+		}
+		switch v := c.framework(ctx, at); {
+		case v != nil:
+			out[h.Name] = hubInstall{h.Name, h.InstallRevision, v}
+		case copied && h.InstallRevision != "":
+			report(h.SourceFile, h.Name, SevWarning, fmt.Sprintf("installRevision %q records no framework release tag in /%s: "+
+				"the revisions this hub renders are not checked against it", h.InstallRevision, answersFile))
+		}
+	}
+	return out
+}
+
+// framework returns the framework release commit records, nil when it records none.
+func (c *FleetPinCheck) framework(ctx context.Context, commit string) *semver.Version {
+	data, err := revision.Show(ctx, c.Root, commit, answersFile)
+	if err != nil {
+		return nil
+	}
+	tag, _, _ := frameworkMajor(data)
+	v, _ := release(tag)
+	return v
+}
+
+// skewFinding is one way a cluster's revision is newer than a hub install that renders it.
+type skewFinding struct {
+	sev Severity
+	msg string
+}
+
+// hubSkew reports each hub install that renders cl and is older than cl's framework release v.
+// builtBy maps a cluster to the hub that builds it, its fleet file's hub. A hub built by another is
+// that hub's Global Hub child in default mode (docs/guides/global-hub.md), so the parent renders its
+// hub file and the lifecycle of the clusters it names in hub. Where Git doesn't say, as for a hub
+// file of a hub nobody builds, which may be an imported default-mode child, or a cluster without
+// hub, the finding is a warning.
+func hubSkew(cl *fixtures.Cluster, v *semver.Version, installs map[string]hubInstall, builtBy map[string]string) []skewFinding {
+	if v == nil || len(installs) == 0 {
+		return nil
+	}
+	var out []skewFinding
+	check := func(hub string, sev Severity, advice string) {
+		if h, ok := installs[hub]; ok && v.GreaterThan(h.version) {
+			out = append(out, skewFinding{sev, fmt.Sprintf("is framework v%s, newer than %s, %s", v, h, advice)})
+		}
+	}
+	switch {
+	case cl.IsHub && builtBy[cl.Name] != "":
+		check(builtBy[cl.Name], SevError, "which renders it as its Global Hub child: upgrade that hub first")
+	case cl.IsHub:
+		check(cl.Name, SevWarning, "which renders it unless a Global Hub parent does: upgrade the hub first")
+	case cl.Hub != "":
+		check(cl.Hub, SevError, "which renders it: upgrade the hub first")
+		if p := builtBy[cl.Hub]; p != "" {
+			check(p, SevError, "which builds it for its Global Hub child "+cl.Hub+": upgrade that hub first")
+		}
+	default:
+		oldest := slices.MinFunc(slices.Collect(maps.Values(installs)), func(a, b hubInstall) int {
+			return cmp.Or(a.version.Compare(b.version), strings.Compare(a.hub, b.hub))
+		})
+		check(oldest.hub, SevWarning, "the oldest hub install: upgrade every hub that manages this cluster first")
+	}
+	return out
 }

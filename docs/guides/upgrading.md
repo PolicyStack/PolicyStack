@@ -22,7 +22,7 @@ Each part reaches your clusters on its own path:
 | Elements, `lifecycle/`, policy-library (`lib/`) | Argo CD, from your repository at each fleet file's `revision` | Clusters pinned to the default branch, often the hub: within minutes of the merge. Clusters pinned to a tag or SHA: when you [move the pin](#roll-it-out). |
 | Validator and CI | GitHub Actions in your repository | On the update PR itself |
 | ACM and GitOps operators | The `acm` and `gitops` elements, after [handover](../start/install.md#hand-the-operators-to-policystack) | Like any element, at the hub's `revision` ([ACM and GitOps](#acm-and-gitops)) |
-| Install chart (`install/`) | `helm upgrade`, run by you on each hub | When you run it, for every cluster on that hub at once ([Install chart](#install-chart)) |
+| Install chart (`install/`) | Each hub's own Argo CD, at the hub file's `installRevision` | Hubs that follow the default branch: within minutes of the merge. Hubs with a tag `installRevision`: when you move it. Either way, for every cluster on that hub at once ([Install chart](#install-chart)) |
 
 ## Checking for updates
 
@@ -97,22 +97,22 @@ Review each diff, resolve any conflict markers ([Resolving conflicts](#resolving
 
 Open the PR as in [Taking an update](#taking-an-update), then:
 
-1.  **Read the release notes** of every release between your `_commit` and the new tag ([releases](https://github.com/PolicyStack/PolicyStack/releases)). A note about hubs, the install chart or lifecycle applies to step 4.
+1.  **Read the release notes** of every release between your `_commit` and the new tag ([releases](https://github.com/PolicyStack/PolicyStack/releases)). A note about hubs, the install chart or lifecycle applies to every hub once it takes the new install.
 2.  **Fix what CI reports.** The PR runs the new validator against your fleet and values. A new error, such as [POLICY035](../reference/rules.md) for a key an element dropped, is fixed in the same PR. Warnings such as POLICY039 (a deprecated key) can wait until the version they name. A conflict means you edited a framework file ([Resolving conflicts](#resolving-conflicts)).
-3.  **Read the [Render Diff](#reading-render-diff).**
-4.  **Upgrade the install chart on every hub from the PR branch** ([Install chart](#install-chart)).
-5.  **Merge.**
+3.  **Read the [Render Diff](#reading-render-diff).** It includes each hub's install.
+4.  **Merge.** Hubs that follow the default branch take the new install, and clusters that follow it take the new framework, within minutes ([Install chart](#install-chart)).
+5.  **Move hubs with a tag `installRevision`** to a tag of the merge, one hub at a time. Such a hub pins its own `revision`, and every fleet file it renders, to tags too: POLICY052 fails the update PR for one that follows the default branch ([installRevision](../reference/fleet.md#installrevision)).
 6.  **Move tag-pinned clusters** to a revision that has the update ([Roll it out](#roll-it-out)).
 
 !!! warning "Hubs before pins"
-    Within a major, a hub is only guaranteed to render revisions up to its own install chart's release. Upgrade every hub before you move any pin to a revision with a newer framework. A pin moved first can fail its render on a hub still on the older install chart ([Hub and revision skew](../reference/compatibility.md#hub-and-revision-skew)). Clusters that follow the default branch move the moment you merge, which is why step 4 comes before step 5.
+    Within a major, a hub is only guaranteed to render revisions up to its own install's release. Move every hub's install before you move any pin to a revision with a newer framework. A pin moved first can fail its render on a hub still on the older install ([Hub and revision skew](../reference/compatibility.md#hub-and-revision-skew)). POLICY052 fails such a pin where the fleet file says which hub renders it, and warns otherwise ([installRevision](../reference/fleet.md#installrevision)).
 
 ### Majors
 
 Take majors one at a time. A hub on major N is only guaranteed to render revisions on N and on the last N-1 release ([Hub and revision skew](../reference/compatibility.md#hub-and-revision-skew)):
 
 1.  Take the last release of your current major, for the framework and every element, and move every fleet pin to a revision that has it.
-2.  Take the next major for the framework and every element in one PR: upgrade every hub from the update's PR branch, then merge it. POLICY061 fails the PR while any element is still on the older major.
+2.  Take the next major for the framework and every element in one PR, and merge it. Hubs that follow the default branch take the new install at once; move the others' `installRevision`. POLICY061 fails the PR while any element is still on the older major.
 3.  Move pins to the new major, cluster by cluster.
 
 POLICY052 checks only the major: on the update PR, a fleet file whose `revision` is more than one major behind, or on a newer major than the branch, fails. It can't tell whether an N-1 revision is the last N-1 release, so step 1 is yours to check. `copier update` without `--vcs-ref` takes the newest release, whatever its major. For step 1, or when the newest release is two majors ahead, name the tag from the [releases page](https://github.com/PolicyStack/PolicyStack/releases): `copier update --defaults --vcs-ref v1.9.2 .`.
@@ -175,7 +175,7 @@ On an update PR, [Render Diff](../reference/ci.md#render-diff) shows what the me
 
 - `removes Policy` names a Policy the update deletes. A rename shows as a removal plus an addition: the Policy is recreated and its compliance history starts over ([Policy names](../reference/compatibility.md#policy-names)).
 - **render failed** means the update breaks that cluster. The error is in the cluster's block. Fix it in the PR.
-- `install/` is not rendered. Read its diff in the PR ([Install chart](#install-chart)).
+- A hub whose install changes shows a `policystack-install` row: the install as its pointer renders it, with placeholder `gitRepo` ([Install chart](#install-chart)).
 
 ## Roll it out
 
@@ -196,24 +196,20 @@ After handover, the channel is `subscription.channel` of the element's `operator
 
 ## Install chart
 
-`install/` holds the two ApplicationSets and their supporting objects ([Install chart](../reference/install.md)). No Argo CD Application reads it, so merging a framework update changes nothing on a hub until someone runs `helm upgrade` there. From then on, the new ApplicationSets generate the Applications of every cluster on that hub, whatever `revision` each pins. Render Diff does not render `install/`, so read its diff on the update PR.
+`install/` holds the pointer, the two ApplicationSets and their supporting objects ([Install chart](../reference/install.md)). Each hub's own Argo CD syncs it, through the Application `policystack`, at the hub file's `installRevision`, or at the default branch when it sets none ([installRevision](../reference/fleet.md#installrevision)). From then on, the new ApplicationSets generate the Applications of every cluster on that hub, whatever `revision` each pins.
 
-The release's chart version is the framework release it was installed from. Compare it with the framework update's PR branch, or with the default branch once the update is merged:
+| Hub file | The hub takes a framework update |
+|---|---|
+| No `installRevision` | When the update merges. Every such hub at once. |
+| `installRevision: <tag>` | When you move the tag. Move a lab hub first, then the rest. |
 
-```sh
-git fetch origin && git switch --detach origin/<branch>   # the PR branch, or main
-helm list -n openshift-gitops   # CHART: policystack-1.2.0
-grep '^version' install/Chart.yaml
-```
-
-If they differ, upgrade, in the hub's kube context:
+Check what a hub runs:
 
 ```sh
-helm upgrade policystack ./install -n openshift-gitops --reset-then-reuse-values
+oc get application.argoproj.io policystack -n openshift-gitops \
+  -o jsonpath='{.status.sync.revision} {.status.sync.status} {.status.health.status}{"\n"}'
 ```
 
-`--reset-then-reuse-values` (Helm 3.14 or later) takes the new chart's defaults and keeps every value set at install or a later upgrade, normally just `hubName` and `gitRepo`.
+Within a major the ApplicationSets only add injected values, so clusters pinned to older revisions keep rendering. The exception is a fleet file's `install`, passed through as written: a key newer than the cluster's `revision` fails that revision's lifecycle schema ([Lifecycle](../reference/compatibility.md#lifecycle)). A policy-library major is checked at render: the install passes `policystack.libraryMajors`, and a revision built on a library major the hub's install doesn't list fails its render with a ComparisonError that says to move the pin or the hub's install.
 
-Within a major the ApplicationSets only add injected values, so clusters pinned to older revisions keep rendering. The exception is a fleet file's `install`, passed through as written: a key newer than the cluster's `revision` fails that revision's lifecycle schema ([Lifecycle](../reference/compatibility.md#lifecycle)). A policy-library major is checked at render: the chart passes `policystack.libraryMajors`, and a revision built on a library major the hub's chart doesn't list fails its render with a ComparisonError that says to move the pin or upgrade the hub.
-
-Roll back with `helm rollback policystack <revision> -n openshift-gitops`.
+Roll back by moving `installRevision` back to the previous tag, or reverting the merge for hubs that follow the default branch. A release that drops an install object leaves it on the hub ([Deletion safety](../reference/install.md#deletion-safety)); its release notes say what to delete.

@@ -10,6 +10,7 @@ metadata:
     velero.io/exclude-from-backup: "true"
   annotations:
     helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
   # Deleting an Application deletes its Policies, so disabling or removing an element or a fleet file
   # cleans up the hub. The destination is always the hub, and a generator error deletes nothing.

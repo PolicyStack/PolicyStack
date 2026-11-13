@@ -33,11 +33,16 @@ type Cluster struct {
 	// Version and Channel drive upgrades; empty when unset. Every Application
 	// for the cluster receives them in valuesObject.
 	Version, Channel string
-	SourceFile       string
+	// IsHub marks a hub file, hubs/<hubName>.yaml. InstallRevision is the
+	// revision its pointer syncs install/ at, empty for the default branch.
+	IsHub           bool
+	InstallRevision string
+	SourceFile      string
 	// Issues lists problems in the file. POLICY050 reports them.
 	Issues []Issue
 
-	hubLine int // line of the hub key, 0 when absent
+	hubLine             int // line of the hub key, 0 when absent
+	installRevisionLine int // line of the installRevision key, 0 when absent
 }
 
 // Issue is a problem in a fleet file.
@@ -55,6 +60,8 @@ type fleetFile struct {
 	Version    yaml.Node   `yaml:"version"`
 	Channel    yaml.Node   `yaml:"channel"`
 	Install    yaml.Node   `yaml:"install"`
+	// InstallRevision is read only by a hub's pointer (install/templates/install.yaml).
+	InstallRevision yaml.Node `yaml:"installRevision"`
 }
 
 // argoFile is the file as Argo CD's git files generator reads it:
@@ -68,6 +75,8 @@ type argoFile struct {
 	Version    any   `json:"version"`
 	Channel    any   `json:"channel"`
 	Install    any   `json:"install"`
+	// InstallRevision is read by the pointer's git files generator.
+	InstallRevision any `json:"installRevision"`
 }
 
 // release is the x.y.z form lifecycle/values.schema.json requires of version.
@@ -88,12 +97,17 @@ func LoadDir(dir string) ([]*Cluster, error) {
 		return nil, err
 	}
 	for _, h := range hubs {
+		h.IsHub = true
 		if h.hubLine != 0 {
 			h.Issues = append(h.Issues, Issue{Line: h.hubLine, Message: "hub is not allowed in a hub file: a hub cannot build itself"})
 			h.Hub = "" // the lifecycle ApplicationSet skips hub files
 		}
 	}
 	for _, c := range spokes {
+		if c.InstallRevision != "" {
+			c.Issues = append(c.Issues, Issue{Line: c.installRevisionLine, Message: "installRevision is allowed only in a hub file, hubs/<hubName>.yaml: only a hub runs install/"})
+			c.InstallRevision = ""
+		}
 		if c.Hub == "" {
 			continue
 		}
@@ -205,6 +219,8 @@ func parse(data []byte) *Cluster {
 		c.Issues = append(c.Issues, Issue{Line: f.Version.Line, Message: fmt.Sprintf("version %q must be an x.y.z release", c.Version)})
 	}
 	c.Channel = optionalString(c, "channel", f.Channel, a.Channel)
+	c.installRevisionLine = f.InstallRevision.Line
+	c.InstallRevision = optionalString(c, "installRevision", f.InstallRevision, a.InstallRevision)
 	switch in := a.Install.(type) {
 	case map[string]any:
 		if _, ok := in["version"]; ok {
@@ -262,7 +278,7 @@ func yamlIssue(msg string) Issue {
 	}
 	if field, ok := strings.CutPrefix(is.Message, "field "); ok {
 		if name, _, ok := strings.Cut(field, " not found in type "); ok {
-			is.Message = "unknown key " + name + ": only revision, valueFiles, hub, state, version, channel and install are allowed"
+			is.Message = "unknown key " + name + ": only revision, valueFiles, hub, state, version, channel, install and installRevision are allowed"
 		}
 	}
 	return is

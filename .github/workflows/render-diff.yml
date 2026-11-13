@@ -10,6 +10,7 @@ on:
     paths:
       - 'stack/**'
       - 'lifecycle/**'
+      - 'install/**'
       - 'lib/**'
       - 'values/**'
       - 'values.yaml'

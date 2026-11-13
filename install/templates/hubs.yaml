@@ -1,0 +1,98 @@
+{{- /*
+Installs PolicyStack on every Global Hub managed hub this hub manages in default mode
+(docs/guides/global-hub.md). The Policy enforces the child's pointer (_helpers.tpl) with its
+ManagedCluster name as hubName, and, for a private repository, a copy of repoSecret. The child's own
+Argo CD then syncs install/ from fleet/hubs/<child>.yaml. A labelled cluster without a hub file gets
+a pointer that generates nothing. The Policy lives in openshift-gitops: copySecretData reads only the
+Policy's namespace.
+
+The pointer's ConfigurationPolicy disables managed templates, so the Argo CD templates in it pass
+through ACM; the hub template naming the child still resolves on this hub. mustonlyhave, because
+musthave merges lists: a changed gitRepo would add a second generator instead of replacing the first.
+Nothing else writes the pointer's spec on a child. pruneObjectBehavior None: removing the Policy, the
+label or this hub never uninstalls a child.
+*/ -}}
+{{- $hub := required "hubName must be set (--set hubName=<name>)" .Values.hubName }}
+{{- $meta := dict "labels" (dict "velero.io/exclude-from-backup" "true") "annotations" (dict "argocd.argoproj.io/sync-options" "Prune=false,Delete=false") }}
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: policystack-hubs
+  namespace: openshift-gitops
+  {{- toYaml $meta | nindent 2 }}
+spec:
+  disabled: false
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policystack-hubs-install
+          annotations:
+            policy.open-cluster-management.io/disable-templates: "true"
+        spec:
+          remediationAction: enforce
+          pruneObjectBehavior: None
+          severity: high
+          object-templates:
+            - complianceType: mustonlyhave
+              objectDefinition:
+                {{- include "policystack.pointer" (dict "root" . "hubName" (print "{{hub .ManagedClusterName hub}}") "parent" $hub) | nindent 16 }}
+    {{- with .Values.repoSecret }}
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policystack-hubs-repo
+        spec:
+          remediationAction: enforce
+          pruneObjectBehavior: None
+          severity: high
+          object-templates:
+            - complianceType: mustonlyhave
+              objectDefinition:
+                apiVersion: v1
+                kind: Secret
+                type: Opaque
+                metadata:
+                  name: {{ . }}
+                  namespace: openshift-gitops
+                  labels:
+                    argocd.argoproj.io/secret-type: repository
+                data: '{{ "{{hub" }} copySecretData "openshift-gitops" {{ . | quote }} {{ "hub}}" }}'
+    {{- end }}
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: policystack-hubs
+  namespace: openshift-gitops
+  {{- toYaml $meta | nindent 2 }}
+spec:
+  clusterSets:
+    - global
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            global-hub.open-cluster-management.io/deploy-mode: default
+  tolerations:
+    - key: cluster.open-cluster-management.io/unreachable
+      operator: Exists
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: policystack-hubs
+  namespace: openshift-gitops
+  {{- toYaml $meta | nindent 2 }}
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: policystack-hubs
+subjects:
+  - apiGroup: policy.open-cluster-management.io
+    kind: Policy
+    name: policystack-hubs

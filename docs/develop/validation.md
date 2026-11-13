@@ -137,7 +137,7 @@ failure fails the target. Passes 1 and 2 render the fixtures, so they run only w
     converter ([Profiles](#profiles)).
 3.  **Your fleet.** Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exists, which upstream never
     has. It renders the real fleet files and is the only pass that runs POLICY052 against real
-    `revision` pins. Without fixtures, it also runs POLICY071, so an adopter's copy checks
+    `revision` and `installRevision` pins. Without fixtures, it also runs POLICY071, so an adopter's copy checks
     `install/` once it has a fleet file.
 
 Upstream, a clean run prints `ok: no findings` three times (fixtures, all-on, `variants`). An

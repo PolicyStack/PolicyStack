@@ -10,6 +10,7 @@ target, since HyperShift does not hold a NodePool back itself. A new NodePool st
 target image. HostedCluster and NodePool release are always managed here.
 */ -}}
 {{- $i := .Values.install }}
+{{- if $i.labels }}{{ fail "install.labels needs engine hive or siteconfig: the hypershift-addon imports a hosted cluster itself" }}{{ end }}
 {{- $c := include "lifecycle.cluster" . }}
 {{- $p := required "install.platform is required" $i.platform }}
 {{- $image := include "lifecycle.releaseImage" . }}

@@ -41,7 +41,7 @@ It shows only clusters whose rendered output changes. A change to `stack/` or `v
 No comment means no fleet cluster changes, but only if the **Render diff** check ran and passed. It is also absent when:
 
 - the render job failed: the comment job depends on it, so check the run;
-- the PR touches none of `stack/`, `lifecycle/`, `values/`, `values.yaml`, `fleet/` (`install/` is never rendered, see [Upgrading PolicyStack](upgrading.md#install-chart));
+- the PR touches none of `stack/`, `lifecycle/`, `install/`, `values/`, `values.yaml`, `fleet/` (`install/` is rendered once per hub whose install changes, see [Upgrading PolicyStack](upgrading.md#install-chart));
 - the PR targets a branch other than the default branch;
 - your repository has no fleet files yet;
 - the PR comes from another repository, such as a personal fork of your repository: its result goes to the run's job summary instead.
@@ -197,4 +197,4 @@ done
 ```
 
 !!! note
-    `helm upgrade` of the install chart does not remove the patch; resume by hand. The field has no effect if the Argo CD ApplicationSet controller runs with an explicit `--policy`, which takes precedence.
+    Argo CD's sync of the install chart (Application `policystack`) does not remove the patch, because the chart never sets `applicationsSync`; resume by hand. The field has no effect if the Argo CD ApplicationSet controller runs with an explicit `--policy`, which takes precedence.

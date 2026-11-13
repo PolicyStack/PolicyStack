@@ -52,6 +52,25 @@ for k in "${!blob[@]}"; do
   mkdir -p "$work/fleet/$side/${sha[$k]}/hubs"
   git cat-file blob "${blob[$k]}" > "$work/fleet/$side/${sha[$k]}/$c.yaml"
 done
+# Hub installs: each hub's pointer syncs install/ at its installRevision, the default branch when
+# unset. A hub whose install/ tree differs gets it rendered on both sides, below.
+declare -A inst=() tree=()
+for side in before after; do
+  at=$base
+  [ "$side" = before ] || at=$merge
+  for f in $(git ls-tree --name-only "$at" -- fleet/hubs/ | grep '\.yaml$' || true); do
+    h=${f#fleet/hubs/} h=${h%.yaml}
+    ir=$(git cat-file blob "$at:$f" | yq '.installRevision | select(tag == "!!str")' - 2>/dev/null) || ir=
+    inst[$side/$h]=$(resolve "$at" "${ir:-$DEFAULT_BRANCH}") || inst[$side/$h]=-
+    tree[$side/$h]=$(git rev-parse -q --verify "${inst[$side/$h]}:install" 2>/dev/null) || tree[$side/$h]=-
+  done
+done
+installs=()
+for k in "${!inst[@]}"; do
+  h=${k#after/}
+  [ "$k" != "$h" ] && [ "${tree[$k]}" != - ] && [ "${tree[$k]}" != "${tree[before/$h]:-}" ] || continue
+  installs+=("$h") clusters[hubs/$h]=1
+done
 [ ${#clusters[@]} -gt 0 ] || finish false "No cluster's rendered Policies change."
 
 # One worktree per commit, shared by both sides.
@@ -72,6 +91,21 @@ for group in "$work"/fleet/*/*; do
       [ ! -f "$f" ] || broken[$side/${rel%.yaml}]=$rc
     done
   fi
+done
+
+# install/ as a hub's pointer renders it, as one more file next to the hub's elements: as a root, with
+# a placeholder gitRepo and repoSecret set so the child Policy's repository template shows.
+for h in "${installs[@]}"; do
+  for side in before after; do
+    c=${inst[$side/$h]:-}
+    [ -n "$c" ] && [ "$c" != - ] || continue
+    mkdir -p "$work/install/$c" "$work/$side/hubs/$h"
+    [ -d "$work/install/$c/install" ] || git archive "$c" install | tar -x -C "$work/install/$c" 2>/dev/null || continue
+    out=$work/$side/hubs/$h/policystack-install.yaml
+    helm template policystack "$work/install/$c/install" --set hubName="$h" --set gitRepo=https://example.invalid/repo.git --set repoSecret=repo \
+      > "$out" 2> "$out.err" || sed 's/^/# RENDER000 /' "$out.err" > "$out"
+    rm -f "$out.err"
+  done
 done
 
 cd "$work"

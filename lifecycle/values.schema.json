@@ -79,6 +79,7 @@
           }
         },
         "nodePools": {"type": "object", "additionalProperties": {"type": "object"}},
+        "labels": {"type": "object", "additionalProperties": {"type": "string"}},
         "manifests": {
           "type": "array",
           "items": {"type": "object", "required": ["apiVersion", "kind", "metadata"]}

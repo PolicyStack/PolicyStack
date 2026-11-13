@@ -12,7 +12,7 @@ guard the framework.
 | [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook or the validator fails | Runs |
 | [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit | Runs |
 | [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart | Runs, including the `fleet/` pass |
-| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
+| [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `install/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
 | [Upstream](#upstream) (`upstream.yml`) | Every PR and `main` push | The policy-library lint or tests, a validator lint or test, a stale CRD, the doc generator tests or the site build fails | Absent: copier leaves it out |
 
 A new push to a PR cancels its running CI, Upstream and Render Diff checks. CI, Upstream and Policy
@@ -162,12 +162,16 @@ pinned to tag `v1.0` is validated against the PR's code. POLICY052 checks the pi
 resolves and that its commit has what the fleet file uses ([Revision](fleet.md#revision)). In a
 copier copy it also reads the framework release in `.copier-answers.yml` at that commit: a revision
 a major newer than the PR's, or more than one major older, fails, since the hub's install chart
-renders only its own major and the one before. To see what a pinned cluster actually gets, read
-[Render Diff](#render-diff).
+renders only its own major and the one before. A revision newer than the install of the hub that
+renders it fails too where Git names that hub: a file with `hub`, or the hub file of a hub another
+builds. Elsewhere it is a warning. A hub file's `installRevision` must resolve to a commit with
+`install/templates/install.yaml` ([installRevision](fleet.md#installrevision)). To see what a pinned
+cluster actually gets, read [Render Diff](#render-diff).
 
 ### Install chart (POLICY071)
 
-`install/` is run by hand on each hub, so nothing else renders it. Upstream checks it in the
+Each hub's Argo CD syncs `install/` through its pointer and applies a merged change on its own
+([Install chart](install.md#the-pointer)); no element Application renders it. Upstream checks it in the
 fixtures pass; your repository checks it in the `fleet/` pass, so only once `fleet/` has a file.
 It reads `stack/acm` and `stack/gitops`, which every repository needs. The check fails when:
 
@@ -175,15 +179,23 @@ It reads `stack/acm` and `stack/gitops`, which every repository needs. The check
 - `helm template install` succeeds with an empty `hubName` or `gitRepo`. Neither has a usable
   default: `hubName` picks the hub's own fleet file and the clusters it builds, `gitRepo` is the repository Argo CD reads.
 - `policyNamespace` differs between `install/values.yaml` and `values.yaml`, which the elements read.
-- An ApplicationSet (or its Application template), the GitOpsCluster or its Placement lacks
-  `velero.io/exclude-from-backup: "true"`. ACM backup restores onto a passive hub, where a restored
+- An object lacks `argocd.argoproj.io/sync-options: Prune=false,Delete=false`, the pointer
+  `policystack-install` is not rendered exactly once, it is rendered when `parent` is set, or the
+  Application it generates has a finalizer or prunes. Each lets a merged change delete what the
+  install created, or stop the hub's install following Git ([Deletion safety](install.md#deletion-safety)).
+- The GitOpsCluster enables `gitopsAddon`, or a hub template in the `policystack-hubs` Policy
+  doesn't resolve.
+- An ApplicationSet (or its Application template), the GitOpsCluster, its Placement, or the `policystack-hubs`
+  Policy or PlacementBinding lacks `velero.io/exclude-from-backup: "true"`. ACM backup
+  restores onto a passive hub, where a restored
   ApplicationSet would rebuild the old hub's clusters ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 - `install/operators` doesn't render the ACM and GitOps operators plus a MultiClusterHub
   ([Installation](../start/install.md)).
 
 ## Render Diff
 
-Comments on the PR with what the merge changes in each `fleet/` cluster's rendered Policies. Upstream
+Comments on the PR with what the merge changes in each `fleet/` cluster's rendered Policies and in
+each hub's install. Upstream
 ships no fleet files, so this only does something in your repository. It never blocks a merge.
 
 ```markdown
@@ -206,8 +218,10 @@ once before and once after the merge (`.github/scripts/render-diff.sh`). A clust
 when its resolved commit or its fleet file changes. So a cluster pinned to `main` or `HEAD` shows the
 PR's changes, and a cluster pinned to a tag shows changes only when the PR edits its fleet file
 (`revision`, `valueFiles`, `version`, `channel`, `install`, `hub`). `lifecycle/` is rendered for
-fleet files that set `hub`. `install/` is not rendered: a change there reaches every cluster at the
-next `helm upgrade` ([Install chart](../guides/upgrading.md#install-chart)).
+fleet files that set `hub`. `install/` is rendered for each hub file whose install commit changes,
+its `installRevision` or else the default branch, as the hub's pointer renders it: the hub gets a row
+with a `policystack-install` element. A hub that follows the default branch applies the change
+within about 3 minutes of the merge ([Install chart](../guides/upgrading.md#install-chart)).
 
 It renders with the [baseline](../develop/validation.md#baseline) selector, so Placements show
 `name Exists`, not the per-cluster selector. It checks only that the render succeeds: findings come

@@ -14,13 +14,13 @@ Five fleet-file keys drive lifecycle. Only Application `lifecycle-<cluster>` ([b
 
 | Key | What it does |
 |---|---|
-| `hub` | The `hubName` of the hub that builds the cluster, as set at `helm install` on that hub. That hub also imports it. CI fails (POLICY050) when `fleet/hubs/<hub>.yaml` does not exist, which catches typos. |
+| `hub` | The `hubName` of the hub that builds the cluster, as set on that hub's install ([Install chart](../reference/install.md#values)). That hub also imports it. CI fails (POLICY050) when `fleet/hubs/<hub>.yaml` does not exist, which catches typos. |
 | `state` | `present` (default) builds the cluster, then keeps applying the changes the engine accepts ([Immutable fields](#immutable-fields)). `absent` destroys it. |
 | `version` | OpenShift release, `x.y.z`. Required while `state: present`: the render fails with `version is required`. Bumping it upgrades the cluster ([OpenShift upgrades](../guides/upgrades.md#how-it-works)). |
 | `channel` | Upgrade channel, such as `stable-4.20`. Optional. On `hypershift`, a bump waits until the channel's update graph offers `version` ([Upgrades](../guides/lifecycle.md#upgrades)). |
 | `install` | What to build: [engine](#pick-an-engine), credential, domain, nodes. Any [values layer](values.md) can set `install` defaults; the fleet file's `install` wins over every layer. |
 
-`version` and `channel` go only in the fleet file. The two ApplicationSets (`policystack` for Day-2, `policystack-lifecycle`) pass them from there to the lifecycle chart and to the `upgrade` element, the Day-2 element that upgrades a running cluster. A layer value would silently upgrade every cluster that reads the layer, so CI rejects it (POLICY034, [why](../guides/upgrades.md#how-it-works)).
+`version` and `channel` go only in the fleet file. Two ApplicationSets (`policystack` for Day-2, `policystack-lifecycle`) pass them from there to the lifecycle chart and to the `upgrade` element, the Day-2 element that upgrades a running cluster. A layer value would silently upgrade every cluster that reads the layer, so CI rejects it (POLICY034, [why](../guides/upgrades.md#how-it-works)).
 
 The fleet file name is the cluster name: a DNS label of at most 30 characters, so every element's Policy names fit ([Naming limits](policies.md#naming-limits)).
 
@@ -220,5 +220,7 @@ A cluster the hub builds gets Day-2 config the same way as an imported one:
 1. The ManagedCluster appears. `hypershift`: the hypershift-addon creates it once the HostedCluster is available, and runs the cluster's klusterlet (ACM's agent for that cluster) on the hub in hosted mode. `hive`: the `cluster` step created it, and ACM imports it once Hive marks the install done. `siteconfig`: SiteConfig created it, and ACM imports it.
 2. Like every ManagedCluster, it joins ACM's `global` ManagedClusterSet. The install chart's GitOpsCluster turns that into an Argo CD cluster secret ([Install chart](../reference/install.md)). Once the cluster reports in, ACM labels it with its `clusterID`, and only then does the Day-2 ApplicationSet select it, so a cluster still installing gets no Day-2 Applications.
 3. The Day-2 ApplicationSet pairs the secret with the same fleet file and creates one `<element>-<cluster>` Application per element, at the fleet file's `revision` with its `valueFiles`.
+
+A hub that a Global Hub builds is the exception. With `global-hub.open-cluster-management.io/deploy-mode: default` in `install.labels` (`hive` and `siteconfig` only), it is imported in default mode: the global hub reads its Day-2 from `fleet/hubs/<cluster>.yaml` instead, and installs PolicyStack on it ([Global Hub](../guides/global-hub.md#import-a-managed-hub)).
 
 `hive` and `siteconfig` render their own KlusterletAddonConfig with every add-on on, replacing SiteConfig's stock one, which turns off the application manager that ACM needs to create the cluster's Argo CD secret.

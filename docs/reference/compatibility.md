@@ -39,17 +39,20 @@ Within a framework major these change only by addition, except where an item say
 key, value, name or behaviour listed here is never removed, renamed or given a new meaning before
 the next major.
 
-1.  **Install chart.** The values `gitRepo`, `hubName` and `policyNamespace`, the release name
-    `policystack` in `openshift-gitops`, and the names of the objects it creates
-    ([Install chart](install.md)).
+1.  **Install chart.** The values `gitRepo`, `hubName`, `policyNamespace` and `repoSecret`, the
+    pointer ApplicationSet `policystack-install` in `openshift-gitops`, the Application `policystack`
+    it generates and its Helm release name `policystack`, and the names of the objects the chart
+    creates ([Install chart](install.md)). The value `parent` is internal.
 2.  **Values the ApplicationSets inject.** `version`, `channel`, `selector` and
     `policystack.libraryMajors` into every Application; `hub`, `state` and `install` into
     lifecycle Applications ([Order](../concepts/values.md#order)).
 3.  **Values cascade.** The element's `values.yaml`, the root `values.yaml`, each `valueFiles`
     entry, then `values/clusters/<cluster>.yaml`, in that order. A missing file is skipped.
 4.  **Fleet files.** `fleet/<cluster>.yaml` and `fleet/hubs/<hubName>.yaml`, with the keys
-    `revision`, `valueFiles`, `hub`, `state`, `install`, `version` and `channel`
-    ([Fleet files](fleet.md)). The top-level key `apiVersion` is reserved; a file without it is v1.
+    `revision`, `valueFiles`, `hub`, `state`, `install`, `version`, `channel` and, in hub files,
+    `installRevision` ([Fleet files](fleet.md)). A Global Hub parent installs PolicyStack on each child
+    labelled `deploy-mode=default`, whose install reads `fleet/hubs/<child>.yaml`. The top-level key
+    `apiVersion` is reserved; a file without it is v1.
 5.  **Values schema.** The top-level keys `stack`, `global`, `placement`, `install` and
     `policyNamespace`, and every key policy-library's schema accepts under `stack.<element>`
     ([policy-library reference](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#reference)).
@@ -176,14 +179,16 @@ to a new library major when you take the framework major that ships it.
 
 ## Hub and revision skew
 
-A hub runs one install chart, upgraded by hand, and renders every cluster at the revision its
-fleet file pins. Those revisions can be on older framework releases than the hub.
+A hub's own Argo CD syncs its install at the hub file's `installRevision`, or at the default branch
+when it sets none ([installRevision](fleet.md#installrevision)). The hub renders every cluster at
+the revision its fleet file pins. Those revisions can be on older framework releases than the hub's
+install.
 
-- **Same major:** a hub on `X.Y` renders every revision from `X.0` to `X.Y`. Upgrade the hub before
-  moving any pin to a newer release: an element from that release may read a value only the newer
-  install chart injects.
+- **Same major:** a hub on `X.Y` renders every revision from `X.0` to `X.Y`. Move the hub's install
+  before moving any pin to a newer release: an element from that release may read a value only the
+  newer install chart injects.
 - **Across majors:** a hub on `N` renders revisions on `N` and on the latest `N-1` release. Move every
-  pin to the latest `N-1` release, upgrade the hubs to `N`, then move pins to `N`.
+  pin to the latest `N-1` release, move every hub's install to `N`, then move pins to `N`.
 
 The order and commands: [Framework updates](../guides/upgrading.md#framework-updates).
 
@@ -295,7 +300,8 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 |---|---|
 | An element gets the library it needs | Helm's `^4.N.0` constraint on the `file://` dependency. Helm's error is generic (`can't get a valid version for 1 subchart(s)`); POLICY060 names the fix |
 | The library version moves with every library change | `ct lint --check-version-increment` in upstream CI. It checks that `version` rose, not by how much: the `lib/tests` snapshot diff and review decide patch, minor or major |
-| Fleet pins stay inside the skew window | POLICY052 reads `/.copier-answers.yml` at each `revision`: newer than the branch's major, or more than one major older, fails. Yours to check: that an N-1 pin is the latest N-1 release, and that hubs are upgraded before pins move |
+| Fleet pins stay inside the skew window | POLICY052 reads `/.copier-answers.yml` at each `revision`: newer than the branch's major, or more than one major older, fails. A revision newer than the install of the hub that renders it fails where Git names that hub (a file with `hub`, or the hub file of a hub another hub builds) and warns elsewhere ([installRevision](fleet.md#installrevision)). Yours to check: that an N-1 pin is the latest N-1 release |
+| An install change never deletes what it created | POLICY071 renders `install/`: every object carries `Prune=false,Delete=false`, the pointer renders exactly once and never on a child, its Application has no finalizer and never prunes, every ApplicationSet, GitOpsCluster, Placement, Policy and PlacementBinding carries the backup-exclude label, the GitOpsCluster leaves the GitOps add-on off, and the child Policy's hub templates resolve |
 | A hub never renders a library major it wasn't built for | The install chart injects `policystack.libraryMajors`; policy-library fails the render when its own major isn't listed |
 | Answers files say what was copied | POLICY061: every `_commit` is a `vX.Y.Z` tag, each element's names its own directory, and no element's is newer than the root's or on another major |
 | Stability is `stable` or `preview` | `tools/doc-generator.py`, run by the `element-readmes` hook, fails on any other value. It skips elements with a `.copier-answers.yml`, so in your repository it checks only elements you wrote or ejected |
@@ -311,9 +317,9 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 PolicyStack is community-supported. Red Hat supports OpenShift, ACM and OpenShift GitOps, not
 PolicyStack.
 
-| PolicyStack | OpenShift | ACM | OpenShift GitOps | Helm |
-|---|---|---|---|---|
-| 1.x | 4.20 or later | 2.16 or later | 1.18 or later (Argo CD 3.1) | 3.18.4, as bundled in GitOps 1.18. Helm 4 is tested, advisory |
+| PolicyStack | OpenShift | ACM | OpenShift GitOps | Helm | Multicluster Global Hub |
+|---|---|---|---|---|---|
+| 1.x | 4.20 or later | 2.16 or later | 1.18 or later (Argo CD 3.1) | 3.18.4, as bundled in GitOps 1.18. Helm 4 is tested, advisory | 1.7.3 or later, only on a hub with child hubs ([Global Hub](../guides/global-hub.md)) |
 
 CI runs no cluster. It renders with Helm 3.18.4, plus Helm 4.2.1 as an advisory leg, and validates
 the output against the ACM 2.16 CRDs. OpenShift and OpenShift GitOps are not tested. Later versions

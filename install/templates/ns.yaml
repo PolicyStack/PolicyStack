@@ -4,3 +4,4 @@ metadata:
   name: {{ .Values.policyNamespace }}
   annotations:
     "helm.sh/resource-policy": keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false

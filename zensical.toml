@@ -6,6 +6,8 @@ repo_url = "https://github.com/PolicyStack/PolicyStack"
 # Inferred wrongly from repo_url otherwise: repo_name as "GitHub", edit_uri as edit/master/docs.
 repo_name = "PolicyStack/PolicyStack"
 edit_uri = "edit/main/docs/"
+# Source files kept beside the docs, not published. README.md links the diagram on GitHub.
+exclude_docs = "diagrams/"
 # Zensical does not check nav: a missing target ships as a dead link.
 nav = [
   { "Home" = "index.md" },

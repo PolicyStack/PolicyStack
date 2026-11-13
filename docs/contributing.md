@@ -103,7 +103,7 @@ the last release.
 
 | Tag | Counts commits that change | Version written to |
 |---|---|---|
-| `vX.Y.Z` | Anything except `.release-please/`, `docs/`, `diagrams/`, `values/`, `lib/tests/` and the validator fixtures | `CHANGELOG.md`, and the `version` lines of `install/Chart.yaml` and `lifecycle/Chart.yaml` marked `x-release-please-version` |
+| `vX.Y.Z` | Anything except `.release-please/`, `docs/`, `values/`, `lib/tests/` and the validator fixtures | `CHANGELOG.md`, and the `version` lines of `install/Chart.yaml` and `lifecycle/Chart.yaml` marked `x-release-please-version` |
 
 The squash commit's type sets the bump: `fix` a patch, `feat` a minor, `!` a major. `docs`, `chore`,
 `ci`, `test` and `refactor` commits release nothing. The scope becomes the release-note prefix, so

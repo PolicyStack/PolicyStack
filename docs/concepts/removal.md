@@ -121,4 +121,4 @@ Turn the template into a deletion first, then remove it:
 !!! warning
     If the template includes the Namespace, `mustnothave` deletes it and everything in it.
 
-This only works for converters that emit plain documents. Open the converter: if it emits `- complianceType:` entries, it is a raw list, and the values key is ignored without an error (metallb's `addressing` templates are). For those, disable the template and delete the objects with `oc delete`. For operators, use the OperatorPolicy's own `mustnothave` ([Stopping and uninstalling](../guides/operators.md#stopping-and-uninstalling)).
+This only works for converters that emit plain documents. Open the converter: if it emits `- complianceType:` entries, it is a raw list, and the values key is ignored without an error (acs `central` `hub-access` is). For those, disable the template and delete the objects with `oc delete`. For operators, use the OperatorPolicy's own `mustnothave` ([Stopping and uninstalling](../guides/operators.md#stopping-and-uninstalling)).

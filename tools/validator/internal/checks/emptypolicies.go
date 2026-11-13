@@ -7,8 +7,8 @@ import (
 
 // EmptyPolicyCheck (POLICY082) reports a rendered Policy that checks nothing: every template is a
 // ConfigurationPolicy without objects. ACM reports such a Policy Compliant. policy-library renders a
-// raw converter that outputs nothing as `[]`, which is what an element looks like when the values
-// map its converter ranges over is empty. A Policy with only some empty templates is not reported.
+// converter that outputs nothing as `[]`, which is what an element looks like when the values map
+// its converter ranges over is empty. A Policy with only some empty templates is not reported.
 type EmptyPolicyCheck struct{}
 
 func (EmptyPolicyCheck) ID() string   { return "POLICY082" }

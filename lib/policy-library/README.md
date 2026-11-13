@@ -150,28 +150,33 @@ The rendered output picks the field:
 - `complianceType`, `metadataComplianceType`, `recordDiff`, `recreateOption` and `objectSelector` apply to
   every document of the template.
 - A raw list must be the template's only output. A raw file in a multi-entry `file` list fails the render.
-- A raw converter emits the full `- complianceType: / objectDefinition:` entries itself. Use it when the object
-  count is decided on the managed cluster (ACM `lookup` + `range`).
+- A raw converter emits the full `- complianceType: / objectDefinition:` entries itself, and ACM resolves the
+  list as one string. Use it only when the managed cluster decides how many objects exist (ACM `range` over
+  `lookup`), or whether an object or field exists and `skipObject` in a field can't express it; when
+  several ACM statements compute a number or boolean; when objects share ACM variables or must apply all or
+  nothing; or when objects need different `complianceType`. A Helm `range` or `if` renders documents.
 
 Braces meant for ACM are escaped from Helm. Here Helm resolves the `range` over values at render time, and the
 escaped `lookup` reaches the managed cluster:
 
 ```yaml
 {{- range $zone, $cfg := .Config.zones }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: machine.openshift.io/v1beta1
-    kind: MachineSet
-    metadata:
-      name: {{ "{{" }} (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}-{{ $zone }}
-      namespace: openshift-machine-api
-    spec:
-      replicas: {{ $cfg.replicas }}
+---
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: {{ $.Config.role }}-{{ $zone }}
+  namespace: openshift-machine-api
+  labels:
+    machine.openshift.io/cluster-api-cluster: '{{ "{{" }} (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.infrastructureName {{ "}}" }}'
+spec:
+  replicas: {{ $cfg.replicas }}
 {{- end }}
 ```
 
 `disableTemplating` is unrelated. It sets `policy.open-cluster-management.io/disable-templates` for manifests
-whose `{{ }}` belongs to another engine.
+whose `{{ }}` belongs to another engine. It works on documents only: ACM never parses `object-templates-raw` with
+templates disabled, so a raw list with `disableTemplating` fails the render.
 
 ## Operators
 
@@ -382,6 +387,7 @@ that needs the change raises its `^4.N.0` floor.
 | 4.0.0 | Converter discovery, maps, defaults chain, shape detection. See below. |
 | 4.1.0 | Fails the render when `policystack.libraryMajors`, which PolicyStack's install chart injects, is set and lacks the library's major |
 | 4.1.1 | Public API wording matches PolicyStack's compatibility rules. No output change |
+| 4.1.2 | Fails the render when `disableTemplating` is set on a raw list, which ACM would never evaluate |
 
 ## Upgrading from 3.x
 

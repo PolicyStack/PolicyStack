@@ -1,26 +1,14 @@
 {{- /*
 Inform-only readiness gate. Compares each StatefulSet's readyReplicas to its spec.replicas, which
-is only known on the managed cluster, so this is entirely ACM templating.
+is only known on the managed cluster, so the value is an ACM template.
 */ -}}
-{{ "{{" }}- $prom := (lookup "apps/v1" "StatefulSet" "openshift-user-workload-monitoring" "prometheus-user-workload") | default dict {{ "}}" }}
-{{ "{{" }}- $promReplicas := (index ($prom.spec | default dict) "replicas" | default 1 | toInt) {{ "}}" }}
-{{ "{{" }}- $thanos := (lookup "apps/v1" "StatefulSet" "openshift-user-workload-monitoring" "thanos-ruler-user-workload") | default dict {{ "}}" }}
-{{ "{{" }}- $thanosReplicas := (index ($thanos.spec | default dict) "replicas" | default 1 | toInt) {{ "}}" }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    metadata:
-      name: prometheus-user-workload
-      namespace: openshift-user-workload-monitoring
-    status:
-      readyReplicas: {{ "{{" }} $promReplicas {{ "}}" }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    metadata:
-      name: thanos-ruler-user-workload
-      namespace: openshift-user-workload-monitoring
-    status:
-      readyReplicas: {{ "{{" }} $thanosReplicas {{ "}}" }}
+{{- range list "prometheus-user-workload" "thanos-ruler-user-workload" }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ . }}
+  namespace: openshift-user-workload-monitoring
+status:
+  readyReplicas: '{{ "{{" }} index ((lookup "apps/v1" "StatefulSet" "openshift-user-workload-monitoring" "{{ . }}").spec | default dict) "replicas" | default 1 | toInt {{ "}}" }}'
+{{- end }}

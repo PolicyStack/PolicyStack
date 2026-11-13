@@ -136,7 +136,12 @@ func TestCIMMirror(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := filepath.Join(repoRoot, "stack/cim")
-	objs := resolve(t, renderRaw(t, dir, "cim-acm-dc1", append(slices.Clone(allOn), f))["hub-cim-mirror"])
+	objs := resolveTemplate(t, dir, "cim-acm-dc1", append(slices.Clone(allOn), f), "hub-cim-mirror")
+	for _, o := range objs {
+		if o.ComplianceType != "mustonlyhave" {
+			t.Errorf("%s complianceType %q, want mustonlyhave", o.ObjectDefinition.GetName(), o.ComplianceType)
+		}
+	}
 	mirror := find(t, objs, "ConfigMap", "assisted-mirror")
 	const conf = `[[registry]]
   prefix = ""
@@ -184,7 +189,7 @@ func TestCIMMirror(t *testing.T) {
 	}
 
 	// all-on alone: a CatalogSource and trustedCA, but no mirror set or osImages.
-	if objs := resolve(t, cimRaw(t)["hub-cim-mirror"]); len(objs) != 0 {
+	if objs := resolveTemplate(t, dir, "cim-acm-dc1", allOn, "hub-cim-mirror"); len(objs) != 0 {
 		t.Errorf("no mirrors: %+v", objs)
 	}
 	od := objectDefinition(t, dir, "AgentServiceConfig", "agent")

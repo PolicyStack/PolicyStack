@@ -25,7 +25,7 @@ import (
 
 const repoRoot = "../../../.."
 
-// object is one resolved object-templates-raw entry.
+// object is one resolved object template.
 type object struct {
 	ComplianceType         string                    `json:"complianceType"`
 	MetadataComplianceType string                    `json:"metadataComplianceType"`
@@ -194,15 +194,7 @@ func resolve(t *testing.T, raw string, live ...string) []object {
 // tryResolve is resolve, returning the error the config-policy-controller would report.
 func tryResolve(t *testing.T, raw string, live ...string) ([]object, error) {
 	t.Helper()
-	var objs []runtime.Object
-	for _, l := range live {
-		u := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(l), &u.Object); err != nil {
-			t.Fatalf("live object: %v", err)
-		}
-		objs = append(objs, u)
-	}
-	r, err := NewResolver(templates.Config{}, objs...)
+	r, err := NewResolver(templates.Config{}, liveObjects(t, live...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,6 +207,52 @@ func tryResolve(t *testing.T, raw string, live ...string) ([]object, error) {
 		t.Fatalf("resolved output: %v: %s", err, res.ResolvedJSON)
 	}
 	return out, nil
+}
+
+// liveObjects parses YAML documents into fake-cluster objects.
+func liveObjects(t *testing.T, live ...string) []runtime.Object {
+	t.Helper()
+	var objs []runtime.Object
+	for _, l := range live {
+		u := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(l), &u.Object); err != nil {
+			t.Fatalf("live object: %v", err)
+		}
+		objs = append(objs, u)
+	}
+	return objs
+}
+
+// resolveTemplate runs helm template on the chart in dir and returns the objects ConfigurationPolicy
+// name applies, object-templates or object-templates-raw, resolved as Resolve does with live objects
+// (YAML documents) in the fake cluster.
+func resolveTemplate(t *testing.T, dir, release string, valueFiles []string, name string, live ...string) []object {
+	t.Helper()
+	resolved, failures, err := Resolve(helmTemplate(t, dir, release, valueFiles), "local-cluster", liveObjects(t, live...)...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range failures {
+		if f.ConfigPolicy == name {
+			t.Fatalf("%s template %d: %s", name, f.Template, f.Err)
+		}
+	}
+	var out []object
+	for _, o := range resolved {
+		if o.ConfigPolicy != name {
+			continue
+		}
+		if o.Missing {
+			t.Fatalf("%s looks up an object the fake cluster lacks", name)
+		}
+		var obj object
+		obj.ComplianceType = o.ComplianceType
+		if err := json.Unmarshal(o.Definition, &obj.ObjectDefinition.Object); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, obj)
+	}
+	return out
 }
 
 // find returns the resolved object of kind and name, failing the test when absent.

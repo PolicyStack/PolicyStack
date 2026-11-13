@@ -364,7 +364,7 @@ and POLICY001 reach every converter:
   `workloads` off and `restore` on.
 
 Every rule but POLICY052 and POLICY071 runs on these, so an optional piece also needs its input. A
-raw-list converter writes `object-templates-raw` by looping over a `config` map
+converter that loops over a `config` map renders nothing when the map is empty
 ([Converter shapes](elements.md#converter-shapes)): metallb's `addressing/pools.yaml` ranges over
 `config.ipAddressPools`. With the map empty it renders `object-templates-raw: []`, and a Policy
 whose templates are all empty is reported Compliant by ACM while checking nothing, which POLICY082

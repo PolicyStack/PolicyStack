@@ -194,6 +194,19 @@ tests:
       - failedTemplate:
           errorPattern: "base-test-cm renders a raw object list next to other documents"
 
+  - it: rejects disableTemplating on a raw list
+    set:
+      stack.policyStackTest.policies.base.templates.test-cm.file: _cases/raw-list
+      stack.policyStackTest.policies.base.templates.test-cm.config:
+        role: infra
+        zones:
+          a:
+            replicas: 1
+      stack.policyStackTest.policies.base.templates.test-cm.disableTemplating: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "base-test-cm sets disableTemplating but renders a raw object list"
+
   - it: rejects orderManifests naming no template of the policy
     set:
       stack.policyStackTest.policies.base.orderManifests:

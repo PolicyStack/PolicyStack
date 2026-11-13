@@ -15,21 +15,17 @@ the classes existing is the precondition they need.
 
 Live health is reported by the `health` policy in this element, which nothing depends on.
 */ -}}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: storage.k8s.io/v1
-    kind: StorageClass
-    metadata:
-      name: {{ .Config.name }}-ceph-rbd
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: storage.k8s.io/v1
-    kind: StorageClass
-    metadata:
-      name: {{ .Config.name }}-cephfs
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: storage.k8s.io/v1
-    kind: StorageClass
-    metadata:
-      name: openshift-storage.noobaa.io
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Config.name }}-ceph-rbd
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Config.name }}-cephfs
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openshift-storage.noobaa.io

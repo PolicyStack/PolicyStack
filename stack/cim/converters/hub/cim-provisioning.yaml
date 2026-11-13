@@ -2,7 +2,7 @@
 Provisioning provisioning-configuration, which deploys metal3. watchAllNamespaces lets it reconcile
 the BareMetalHosts SiteConfig renders into each cluster's namespace. musthave leaves the other
 fields alone, so a bare-metal hub keeps its provisioning network; only a hub without the CR is
-created with none.
+created with none. A raw list because ACM decides whether provisioningNetwork is set.
 */ -}}
 - complianceType: musthave
   objectDefinition:

@@ -1,16 +1,13 @@
 {{- /*
 BGPPeer objects, one per entry in config.bgpPeers. The key is the object name and the value is the
 spec verbatim, so addressing stays reviewable in values.
-
-Object count follows the map, hence a raw list.
 */ -}}
 {{- range $name, $spec := .Config.bgpPeers }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: metallb.io/v1beta1
-    kind: BGPPeer
-    metadata:
-      name: {{ $name }}
-      namespace: metallb-system
-    spec:{{ toYaml $spec | nindent 6 }}
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPPeer
+metadata:
+  name: {{ $name }}
+  namespace: metallb-system
+spec: {{- toYaml $spec | nindent 2 }}
 {{- end }}

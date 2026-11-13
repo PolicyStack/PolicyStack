@@ -10,20 +10,6 @@ emitted with toYaml.
 */ -}}
 {{- $cfg := .Config }}
 {{- $sc := $cfg.storageClass }}
-
-{{ "{{" }}- $cm := (lookup "v1" "ConfigMap" "openshift-monitoring" "cluster-monitoring-config") | default dict {{ "}}" }}
-{{ "{{" }}- $existing := (index ($cm.data | default dict) "config.yaml" | default "" | fromYaml) | default dict {{ "}}" }}
-{{ "{{" }}- $_ := set $existing "enableUserWorkload" true {{ "}}" }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: cluster-monitoring-config
-      namespace: openshift-monitoring
-    data:
-      config.yaml: |
-        {{ "{{" }} $existing | toYaml | autoindent {{ "}}" }}
 {{- /* Build the UWM config as a dict and emit it with toYaml to guarantee valid YAML. */ -}}
 {{- $prom := dict "retention" $cfg.prometheus.retention
       "volumeClaimTemplate" (dict "spec" (dict "resources" (dict "requests" (dict "storage" $cfg.prometheus.storage)))) }}
@@ -50,13 +36,23 @@ emitted with toYaml.
 {{- with $cfg.alertmanager.resources }}{{- $_ := set $am "resources" . }}{{- end }}
 {{- $_ := set $uwm "alertmanager" $am }}
 {{- end }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: user-workload-monitoring-config
-      namespace: openshift-user-workload-monitoring
-    data:
-      config.yaml: |
-{{ $uwm | toYaml | indent 8 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    {{ "{{" }}- $cm := lookup "v1" "ConfigMap" "openshift-monitoring" "cluster-monitoring-config" {{ "}}" }}
+    {{ "{{" }}- $existing := index ($cm.data | default dict) "config.yaml" | default "" | fromYaml | default dict {{ "}}" }}
+    {{ "{{" }} set $existing "enableUserWorkload" true | toYaml | autoindent {{ "}}" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
+data:
+  config.yaml: |
+{{ $uwm | toYaml | indent 4 }}

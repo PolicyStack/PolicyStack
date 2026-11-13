@@ -1,0 +1,2440 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/guides/disconnected/">
+      
+      
+      
+        <link rel="prev" href="../upgrades/">
+      
+      
+        <link rel="next" href="../global-hub/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.1.0">
+    
+    
+      
+        <title>Disconnected clusters - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Disconnected clusters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../elements/acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Before you start
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Before you start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-to-mirror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What to mirror
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#policystack-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PolicyStack releases
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#git-and-the-hubs-argo-cd" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Git and the hub's Argo CD
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#site-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Site layer
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Site layer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Check it
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hub" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The hub
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-element-applies" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What the element applies
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What the element applies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trusted-cas" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        trusted-cas
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-site-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changing the site data
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#update-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Update Service
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clusters-the-hub-builds" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Clusters the hub builds
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Clusters the hub builds">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hosted-clusters" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hosted clusters
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hive-clusters" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hive clusters
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bare-metal" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bare metal
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/guides/disconnected.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="disconnected-clusters">Disconnected clusters<a class="headerlink" href="#disconnected-clusters" title="Permanent link">&para;</a></h1>
+<p>Read <a href="../../concepts/overview/">How PolicyStack works</a> and <a href="../../start/install/">Installation</a> first; this page changes those steps for a site with no internet.</p>
+<p>A disconnected cluster cannot reach the internet. PolicyStack normally pulls from five places on the internet, and each one is replaced by something you run at the site:</p>
+<table>
+<thead>
+<tr>
+<th>Normally reached</th>
+<th>By</th>
+<th>Disconnected replacement</th>
+<th>Set up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub</td>
+<td>Argo CD on the hub, your repository's CI, and copier</td>
+<td>Internal Git. policy-library, the chart every element renders through, is in the repo (<code>lib/</code>), so Git is all Argo CD reads</td>
+<td>By hand (<a href="#policystack-releases">PolicyStack releases</a>)</td>
+</tr>
+<tr>
+<td>Container images and operator catalogs</td>
+<td>Every cluster</td>
+<td>oc-mirror's mirror sets and CatalogSources, applied by the <code>disconnected</code> element; <code>global.catalogSources</code> points every operator at the mirrored catalog</td>
+<td><a href="#site-layer">Site layer</a></td>
+</tr>
+<tr>
+<td>Public certificate authorities</td>
+<td>Every cluster</td>
+<td>Your mirror registry's CA and your internal servers' CAs, applied by the <code>disconnected</code> element</td>
+<td><a href="#site-layer">Site layer</a></td>
+</tr>
+<tr>
+<td>Red Hat's upgrade graph</td>
+<td>Every cluster's CVO</td>
+<td>Your OSUS, set by the <code>upgrade</code> element or the HostedCluster</td>
+<td><a href="#update-service">Update Service</a></td>
+</tr>
+<tr>
+<td>Release images and RHCOS ISOs on quay.io and mirror.openshift.com</td>
+<td>The hub, for clusters it builds</td>
+<td><code>install.releaseRepository</code>, and per-engine mirror settings</td>
+<td><a href="#clusters-the-hub-builds">Clusters the hub builds</a></td>
+</tr>
+</tbody>
+</table>
+<p>Terms used on this page:</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>oc-mirror</td>
+<td><a href="https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/disconnected_environments/mirroring-in-disconnected-environments">v2</a> copies release images and operator catalogs into your registry and writes the cluster objects that point clusters at it into <code>working-dir/cluster-resources/</code>. You run it; PolicyStack applies its output.</td>
+</tr>
+<tr>
+<td>CVO</td>
+<td>Cluster Version Operator. Runs on every cluster, reads ClusterVersion, fetches the upgrade graph and performs upgrades.</td>
+</tr>
+<tr>
+<td>OSUS</td>
+<td>OpenShift Update Service. Serves a local copy of the upgrade graph. You run it; PolicyStack only points clusters at it.</td>
+</tr>
+<tr>
+<td>Site layer</td>
+<td>A <a href="../../concepts/values/">values layer</a> holding one datacenter's mirror data, such as <code>values/datacenters/dc2.yaml</code>. Every cluster at the site lists it in its fleet file's <code>valueFiles</code>.</td>
+</tr>
+<tr>
+<td>HostedCluster, standalone</td>
+<td>A HostedCluster is the hub object describing a hosted control plane cluster, whose control plane runs as pods on the hub. Any other cluster is standalone.</td>
+</tr>
+</tbody>
+</table>
+<p>Other terms: <a href="../../concepts/overview/#glossary">Glossary</a>.</p>
+<p>Order of work: mirror, set up Git, write the site layer, bring up the hub, then add spokes.</p>
+<h2 id="before-you-start">Before you start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
+<h3 id="what-to-mirror">What to mirror<a class="headerlink" href="#what-to-mirror" title="Permanent link">&para;</a></h3>
+<p>The mirrored operator catalog must hold every package, at the channel, that the elements you enable subscribe to. Otherwise that element's <code>install</code> OperatorPolicy stays NonCompliant, with the Subscription reporting that no operator was found in the channel. No tool generates the list; read it from the elements:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>yq<span class="w"> </span>-N<span class="w"> </span><span class="s1">'.stack[].operatorPolicies[] | .subscription.name + " " + .subscription.channel'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>stack/<span class="o">{</span>acm,gitops,metallb<span class="o">}</span>/values.yaml<span class="w">  </span><span class="c1"># the elements you enable</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># advanced-cluster-management release-2.17</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># openshift-gitops-operator latest</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># metallb-operator stable</span>
+</span></code></pre></div>
+<p>The elements you enable are the <code>stack.&lt;key&gt;.enabled: true</code> entries in the layers your fleet files list. A layer that overrides a channel sets <code>stack.&lt;key&gt;.operatorPolicies.&lt;op&gt;.subscription.channel</code>; mirror that channel too. Two more things go in the list:</p>
+<ul>
+<li>Every package an operator requires. ODF's <code>odf-operator</code>, for one, pulls in <code>ocs-operator</code>, <code>mcg-operator</code> and more; take the list from the product's disconnected docs.</li>
+<li>Every version a layer pins. A missing version fails the same way. A channel listed without <code>minVersion</code>/<code>maxVersion</code> keeps only its newest bundle, so a layer that pins <code>versions</code> (<a href="../operators/#pinning">Operator versions</a>) needs a range on that channel covering the pin.</li>
+</ul>
+<p>Every shipped element subscribes from <code>redhat-operators</code>; your own elements may use <code>certified-operators</code> or others, which then need their catalog mirrored too.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># imageset-config.yaml</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ImageSetConfiguration</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.openshift.io/v2alpha1</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">mirror</span><span class="p">:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">platform</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">channels</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stable-4.20</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">        </span><span class="nt">minVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.20.8</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nt">maxVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.20.12</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">architectures</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">multi</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">graph</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># (3)!</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">operators</span><span class="p">:</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">catalog</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.redhat.io/redhat/redhat-operator-index:v4.20</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">      </span><span class="nt">packages</span><span class="p">:</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">advanced-cluster-management</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">          </span><span class="nt">channels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">release-2.17</span><span class="p p-Indicator">}]</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">multicluster-engine</span><span class="w"> </span><span class="c1"># (4)!</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">          </span><span class="nt">channels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">stable-2.12</span><span class="p p-Indicator">}]</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openshift-gitops-operator</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">          </span><span class="nt">channels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">latest</span><span class="p p-Indicator">}]</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb-operator</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">          </span><span class="nt">channels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="nv">stable</span><span class="p p-Indicator">}]</span>
+</span></code></pre></div>
+<ol>
+<li>Cover every <code>version</code> a fleet file targets and every hop on the way. A version outside the range is not in your OSUS graph, so its bump waits at the guard (<a href="#update-service">Update Service</a>).</li>
+<li>The payload architecture your clusters run (<code>amd64</code> in oc-mirror is the <code>x86_64</code> release tag). Clusters the hub builds with <code>hypershift</code> or <code>hive</code> run <code>multi</code>, <code>siteconfig</code> clusters run <code>amd64</code> (<a href="#clusters-the-hub-builds">Clusters the hub builds</a>). Imported clusters keep the payload they were installed with. List both when you have both.</li>
+<li>Mirrors the graph data your OSUS serves, and makes oc-mirror write an <code>updateService.yaml</code> for it.</li>
+<li>ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: <code>stable-2.12</code> for ACM 2.17 (ACM release notes).</li>
+</ol>
+<h3 id="policystack-releases">PolicyStack releases<a class="headerlink" href="#policystack-releases" title="Permanent link">&para;</a></h3>
+<p>Your repository is created and updated from upstream's Git tags (<a href="../../start/install/#create-your-repository">Installation</a>), so the site needs a copy of upstream's repository, tags included. policy-library is in it (<code>lib/</code>); there is no chart repository to mirror.</p>
+<ol>
+<li>
+<p>Mirror upstream on a connected machine, then carry it across and push it to your Git server. Repeat to pick up new releases:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--mirror<span class="w"> </span>https://github.com/PolicyStack/PolicyStack.git
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>-C<span class="w"> </span>PolicyStack.git<span class="w"> </span>push<span class="w"> </span>--mirror<span class="w"> </span>https://git.example.internal/mirrors/PolicyStack.git
+</span></code></pre></div>
+</li>
+<li>
+<p>On every machine that runs copier, send the upstream URL to the mirror:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>url.<span class="s2">"https://git.example.internal/mirrors/PolicyStack.git"</span>.insteadOf<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>https://github.com/PolicyStack/PolicyStack.git
+</span></code></pre></div>
+<p>copier reaches upstream only through <code>git</code>, so the answers files keep the upstream URL in <code>_src_path</code> and every command in <a href="../../start/install/">Installation</a> and <a href="../upgrading/">Upgrading PolicyStack</a> works unchanged.</p>
+<div class="admonition warning">
+<p class="admonition-title">Global or system config only</p>
+<p>copier clones upstream into a temporary directory, where your repository's own <code>.git/config</code> doesn't apply. Set the rewrite with <code>--global</code> or <code>--system</code>, or for one shell with <code>GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.&lt;mirror&gt;.insteadOf GIT_CONFIG_VALUE_0=&lt;upstream&gt;</code>. A rewrite in your repository's own config is ignored, and copier tries GitHub.</p>
+</div>
+</li>
+<li>
+<p>Install copier from your Python package mirror: <code>pipx install copier</code> with <code>PIP_INDEX_URL</code> pointing at it. <code>mise install</code> installs the pinned copier the same way.</p>
+</li>
+</ol>
+<p>CI in your repository needs the tools in <code>mise.toml</code> and the validator's Go modules (<code>GOPROXY</code> pointing at your Go module proxy). The CRDs the validator checks against are committed in <code>tools/validator/crds/</code>, so it needs nothing else from the internet (<a href="../../develop/validation/#crd-schemas">CRD schemas</a>).</p>
+<h3 id="git-and-the-hubs-argo-cd">Git and the hub's Argo CD<a class="headerlink" href="#git-and-the-hubs-argo-cd" title="Permanent link">&para;</a></h3>
+<p>Argo CD on the hub reads your repository before any Policy exists, and PolicyStack never manages that Argo CD instance (the hub layer turns off the <code>gitops</code> element's <code>instance</code> policy, <a href="../../start/install/#hand-the-operators-to-policystack">Installation</a>). So <code>trustedCA</code> below never reaches it. If your Git server uses a private CA, add it to Argo CD by hand, as a <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/">repository TLS certificate</a>.</p>
+<h2 id="site-layer">Site layer<a class="headerlink" href="#site-layer" title="Permanent link">&para;</a></h2>
+<p>One file holds everything about the site's mirror. Every cluster at the site lists it in its fleet file:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># fleet/prod-west-1.yaml</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">revision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">valueFiles</span><span class="p">:</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">environments/prod.yaml</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">datacenters/dc2.yaml</span>
+</span></code></pre></div>
+<p>Build <code>clusterResources</code> from oc-mirror's output, which it writes under the directory you passed as <code>--workspace</code> or <code>file://</code>. Each object becomes one list item:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">cd</span><span class="w"> </span>&lt;dir&gt;/working-dir/cluster-resources
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>yq<span class="w"> </span>ea<span class="w"> </span>-p<span class="w"> </span>yaml<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span>-P<span class="w"> </span><span class="s1">'[.] | map(del(.status)) | {"clusterResources": .}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="k">$(</span>ls<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>updateService<span class="w"> </span>-e<span class="w"> </span>signature-configmap.yaml<span class="k">)</span>
+</span></code></pre></div>
+<ul>
+<li><code>updateService.yaml</code> is an UpdateService, which needs the OSUS operator, so <code>resources</code> goes NonCompliant on any cluster without it. Apply it by hand on the cluster that runs OSUS.</li>
+<li>oc-mirror writes the signature ConfigMap twice, as <code>signature-configmap.json</code> and <code>signature-configmap.yaml</code>. The command keeps the JSON copy; <code>-p yaml</code> reads it, as JSON is valid YAML.</li>
+</ul>
+<p>Paste the output, indented, as <code>stack.disconnected.config.clusterResources</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># values/datacenters/dc2.yaml</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">global</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">catalogSources</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">redhat-operators</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cs-redhat-operator-index-v4-20</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">disconnected</span><span class="p">:</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span><span class="nt">clusterResources</span><span class="p">:</span><span class="w"> </span><span class="c1"># (3)!</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">config.openshift.io/v1</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ImageDigestMirrorSet</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">          </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">idms-operator-0</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">          </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">            </span><span class="nt">imageDigestMirrors</span><span class="p">:</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">              </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/redhat</span><span class="p p-Indicator">]</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">                </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.redhat.io/redhat</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">operators.coreos.com/v1alpha1</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CatalogSource</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">          </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cs-redhat-operator-index-v4-20</span>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">            </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openshift-marketplace</span>
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">          </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">            </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443/redhat/redhat-operator-index:v4.20</span>
+</span><span id="__span-6-26"><a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">            </span><span class="nt">sourceType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">grpc</span>
+</span><span id="__span-6-27"><a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="w">      </span><span class="nt">registryCAs</span><span class="p">:</span>
+</span><span id="__span-6-28"><a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">        </span><span class="nt">mirror.dc2.example.com..8443</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"> </span><span class="c1"># (4)!</span>
+</span><span id="__span-6-29"><a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">          </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-6-30"><a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">          </span><span class="no">...</span>
+</span><span id="__span-6-31"><a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="w">      </span><span class="nt">trustedCA</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w"> </span><span class="c1"># (5)!</span>
+</span><span id="__span-6-32"><a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">        </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-6-33"><a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">        </span><span class="no">...</span>
+</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">  </span><span class="nt">remediations</span><span class="p">:</span>
+</span><span id="__span-6-35"><a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="w">      </span><span class="nt">allowedRegistries</span><span class="p">:</span><span class="w"> </span><span class="c1"># (6)!</span>
+</span><span id="__span-6-37"><a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443</span>
+</span><span id="__span-6-38"><a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io</span>
+</span><span id="__span-6-39"><a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.redhat.io</span>
+</span><span id="__span-6-40"><a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">image-registry.openshift-image-registry.svc:5000</span>
+</span><span id="__span-6-41"><a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a><span class="w">      </span><span class="nt">allowedRegistriesForImport</span><span class="p">:</span>
+</span><span id="__span-6-42"><a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">domainName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443</span>
+</span><span id="__span-6-43"><a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a><span class="w">          </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-6-44"><a id="__codelineno-6-44" name="__codelineno-6-44" href="#__codelineno-6-44"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">domainName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io</span>
+</span><span id="__span-6-45"><a id="__codelineno-6-45" name="__codelineno-6-45" href="#__codelineno-6-45"></a><span class="w">          </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-6-46"><a id="__codelineno-6-46" name="__codelineno-6-46" href="#__codelineno-6-46"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">domainName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.redhat.io</span>
+</span><span id="__span-6-47"><a id="__codelineno-6-47" name="__codelineno-6-47" href="#__codelineno-6-47"></a><span class="w">          </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-6-48"><a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a><span class="w">  </span><span class="nt">upgrade</span><span class="p">:</span>
+</span><span id="__span-6-49"><a id="__codelineno-6-49" name="__codelineno-6-49" href="#__codelineno-6-49"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-6-50"><a id="__codelineno-6-50" name="__codelineno-6-50" href="#__codelineno-6-50"></a><span class="w">      </span><span class="nt">upstream</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://osus.dc2.example.com/api/upgrades_info/v1/graph</span><span class="w"> </span><span class="c1"># (7)!</span>
+</span></code></pre></div>
+<ol>
+<li>Every Subscription names its catalog, and every shipped element names <code>redhat-operators</code>, which oc-mirror does not create: it names the mirrored catalog <code>cs-&lt;index&gt;-&lt;tag&gt;</code>. This map renames the source in every OperatorPolicy the elements render, and in the hub's bootstrap Subscriptions. With it, <code>metallb</code> renders <code>source: cs-redhat-operator-index-v4-20</code>. Add one key per catalog you mirror.</li>
+<li><code>global</code> applies to every cluster that lists this layer, whether or not it enables the element. Enabling the element in the same file keeps the mapping and the CatalogSource it points to together. Otherwise a cluster that lists the layer but leaves the element off has every operator pointed at a catalog it does not have, and no operator installs or upgrades. Your repository's CI validator (<a href="../../reference/rules/#rules">POLICY038</a>) only checks that a source is a known catalog name or a <code>catalogSources</code> key, not that the CatalogSource exists on the cluster.</li>
+<li>The <code>yq</code> output. Applied as is, with <code>musthave</code>: the listed fields are set and nothing else on the object is touched (<a href="../../concepts/acm/#configurationpolicy">ACM policies in brief</a>).</li>
+<li>The mirror registry's CA, keyed by host. A ConfigMap key cannot contain <code>:</code>, so OpenShift reads <code>..</code> as the port separator.</li>
+<li>CAs of your other internal HTTPS servers: Git, Helm, OSUS, the RHCOS image server.</li>
+<li>The <code>remediations</code> element restricts which registries the cluster may pull from. It only takes effect where it is enabled, and then blocks every registry not listed, the mirror included. Keep the source registries: pods still reference images by their source name and the mirror sets redirect the pull. Lists replace across layers (<a href="../../concepts/values/#merge-rules">Merge rules</a>), so restate the element's defaults.</li>
+<li>Your OSUS graph URL (<a href="#update-service">Update Service</a>). The <code>upgrade</code> element ships enabled, so this repoints every standalone cluster that lists the layer, the hub included, at once.</li>
+</ol>
+<div class="admonition info">
+<p class="admonition-title">registryCAs or trustedCA</p>
+<p><code>registryCAs</code> becomes ConfigMap <code>openshift-config/registry-cas</code>, referenced by the cluster image config's <code>additionalTrustedCA</code>: trusted for image pulls, builds and image stream imports. <code>trustedCA</code> goes into the cluster-wide trust bundle through the Proxy's <code>trustedCA</code>, which the CVO, operators and every ConfigMap labelled <code>config.openshift.io/inject-trusted-cabundle</code> use. Put the mirror registry's CA in <code>registryCAs</code> and every other internal server's CA in <code>trustedCA</code>. A server used both ways goes in both. The CVO trusts only the cluster trust bundle, so an OSUS CA in <code>registryCAs</code> alone leaves <code>RetrievedUpdates=False</code>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Before you enable the element</p>
+<ul>
+<li><strong>Existing image config CA.</strong> An image config whose <code>additionalTrustedCA</code> names another ConfigMap is repointed at <code>registry-cas</code>, and that ConfigMap's registries stop being trusted for pulls. Copy its keys into <code>config.registryCAs</code> first: <code>oc get image.config cluster -o jsonpath={.spec.additionalTrustedCA.name}</code>.</li>
+<li><strong>Default catalogs disappear.</strong> The <code>operatorhub</code> policy sets <code>disableAllDefaultSources: true</code>, so <code>redhat-operators</code> and the other default CatalogSources go away. Any Subscription not renamed by <code>global.catalogSources</code>, including ones created by hand, stops resolving. Put the mapping and the mirrored CatalogSource in place in the same commit that enables the element.</li>
+<li><strong>Release signatures.</strong> Before an upgrade the CVO checks the release image's signature. A disconnected cluster reads it from ConfigMap <code>openshift-config-managed/mirrored-release-signatures</code>, which oc-mirror writes when it mirrors releases. Without a signature for the release, the upgrade stops with ClusterVersion <code>ReleaseAccepted=False</code> and a message that the release cannot be verified. Each oc-mirror run writes that ConfigMap with only its own releases (<a href="#changing-the-site-data">Changing the site data</a>).</li>
+</ul>
+</div>
+<h3 id="check-it">Check it<a class="headerlink" href="#check-it" title="Permanent link">&para;</a></h3>
+<p>On the hub, <code>oc get policies.policy.open-cluster-management.io -n &lt;cluster&gt;</code> lists <code>pstack.resources-disconnected-&lt;cluster&gt;</code>, <code>pstack.registry-ca-disconnected-&lt;cluster&gt;</code>, <code>pstack.trusted-ca-disconnected-&lt;cluster&gt;</code> and <code>pstack.operatorhub-disconnected-&lt;cluster&gt;</code>, all Compliant. A NonCompliant one names the object at fault (<a href="../../concepts/acm/#compliance-states">Compliance states</a>). On the cluster:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>oc<span class="w"> </span>get<span class="w"> </span>imagedigestmirrorsets,catalogsources<span class="w"> </span>-A
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>oc<span class="w"> </span>get<span class="w"> </span>packagemanifests<span class="w"> </span>-n<span class="w"> </span>openshift-marketplace<span class="w"> </span>-l<span class="w"> </span><span class="nv">catalog</span><span class="o">=</span>cs-redhat-operator-index-v4-20<span class="w"> </span><span class="c1"># the mirrored packages</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>oc<span class="w"> </span>get<span class="w"> </span>mcp<span class="w"> </span><span class="c1"># nodes take new mirror sets through a pool update; wait for UPDATED True</span>
+</span></code></pre></div>
+<h2 id="the-hub">The hub<a class="headerlink" href="#the-hub" title="Permanent link">&para;</a></h2>
+<p>The hub needs the mirrored catalog before PolicyStack exists to apply it, because the bootstrap installs ACM and GitOps from it.</p>
+<ol>
+<li>Install the hub disconnected, following Red Hat's docs, with the mirror registry's CA in the install-config <code>additionalTrustBundle</code>. The steps below apply no CA, so the hub must already trust the mirror.</li>
+<li>
+<p>Apply oc-mirror's output by hand, except the UpdateService:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>working-dir/cluster-resources
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>ls<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span>updateService<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>oc<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><a href="../../start/install/#install-the-operators">Install the operators</a>, adding the site layer with <code>-f values/datacenters/dc2.yaml</code>. Its <code>global.catalogSources</code> points the ACM and GitOps Subscriptions at the mirrored catalog.</p>
+</li>
+<li><a href="../../start/install/#install-policystack">Install PolicyStack</a> with <code>--set gitRepo=&lt;your internal Git URL&gt;</code>, once Argo CD can reach Git (<a href="#before-you-start">Before you start</a>).</li>
+<li>List <code>datacenters/dc2.yaml</code> in the hub's fleet file, <code>fleet/hubs/&lt;hubName&gt;.yaml</code> (<code>hubName</code> is the name you installed the hub with, <a href="../../reference/fleet/#hub-file">Hub file</a>). The <code>disconnected</code> element then enforces the same objects by name, so ACM manages the ones you applied instead of creating copies. If they differ from <code>clusterResources</code>, the Policy changes them to match.</li>
+</ol>
+<h2 id="what-the-element-applies">What the element applies<a class="headerlink" href="#what-the-element-applies" title="Permanent link">&para;</a></h2>
+<p>Every policy is on; turn one off with <code>policies.&lt;policy&gt;.enabled: false</code>. With empty input, <code>resources</code>, <code>registry-ca</code> and <code>trusted-ca</code> apply nothing; the Policy stays, Compliant.</p>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Applies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resources</code></td>
+<td><code>config.clusterResources</code>, as is.</td>
+</tr>
+<tr>
+<td><code>registry-ca</code></td>
+<td>ConfigMap <code>openshift-config/registry-cas</code> from <code>config.registryCAs</code>, and <code>additionalTrustedCA</code> on <code>image.config.openshift.io/cluster</code>.</td>
+</tr>
+<tr>
+<td><code>trusted-ca</code></td>
+<td>ConfigMap <code>openshift-config/trusted-cas</code>, with the Proxy's <code>trustedCA</code> pointing at it. Lands in every injected trust bundle, including the one the <code>gitops</code> element mounts into the repo server of an Argo CD instance it manages (not the hub's own, <a href="#git-and-the-hubs-argo-cd">above</a>).</td>
+</tr>
+<tr>
+<td><code>operatorhub</code></td>
+<td><code>OperatorHub</code> <code>disableAllDefaultSources: true</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="trusted-cas">trusted-cas<a class="headerlink" href="#trusted-cas" title="Permanent link">&para;</a></h3>
+<p><code>trusted-cas</code> = <code>user-ca-bundle</code> (the installer's <code>additionalTrustBundle</code>) + <code>config.trustedCA</code>. The <code>user-ca-bundle</code> part is an ACM template that the cluster evaluates on every check, so a later change to <code>user-ca-bundle</code> is picked up. <code>user-ca-bundle</code> itself is never written.</p>
+<div class="admonition warning">
+<p class="admonition-title">Existing Proxy trustedCA</p>
+<p>A Proxy pointing at a ConfigMap other than <code>user-ca-bundle</code> is repointed, and its CAs leave the trust bundle. Copy them into <code>config.trustedCA</code> first.</p>
+</div>
+<details class="info">
+<summary>Turning trusted-ca off</summary>
+<p>Turning <code>trusted-ca</code> off or emptying <code>config.trustedCA</code> leaves the Proxy on a stale <code>trusted-cas</code>, still trusted. Clean up by hand:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>oc<span class="w"> </span>patch<span class="w"> </span>proxy/cluster<span class="w"> </span>--type<span class="w"> </span>merge<span class="w"> </span>-p<span class="w"> </span><span class="s1">'{"spec":{"trustedCA":{"name":"user-ca-bundle"}}}'</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>oc<span class="w"> </span>delete<span class="w"> </span>configmap<span class="w"> </span>trusted-cas<span class="w"> </span>-n<span class="w"> </span>openshift-config
+</span></code></pre></div>
+<ol>
+<li>Use <code>"name":""</code> if <code>user-ca-bundle</code> does not exist.</li>
+</ol>
+</details>
+<h2 id="changing-the-site-data">Changing the site data<a class="headerlink" href="#changing-the-site-data" title="Permanent link">&para;</a></h2>
+<p>No template sets <code>pruneObjectBehavior</code> (ACM's setting that deletes what a policy created once the policy goes, <a href="../../concepts/removal/">Removal and pruning</a>). So an object dropped from <code>clusterResources</code>, a policy turned off, or the element disabled stays on the cluster: an old CatalogSource keeps its pod running and the OperatorHub stays disabled. The two CA ConfigMaps are <code>mustonlyhave</code>, so a removed key does disappear, but emptying <code>registryCAs</code> or <code>trustedCA</code> leaves the last ConfigMap and its reference in place. Delete them by hand.</p>
+<ul>
+<li><strong>A new oc-mirror run.</strong> Regenerate the list and replace <code>clusterResources</code> whole: oc-mirror v2's mirror sets cover the entire image set on every run, and a list in a later layer replaces the earlier one rather than adding to it, so a second layer cannot hold "the new objects".</li>
+<li><strong>Old signatures.</strong> Each run writes one ConfigMap, <code>mirrored-release-signatures</code>, with only that run's releases. Clusters keep keys they already have (<code>musthave</code> never removes them), but a new cluster gets only the current run's. Keep <code>minVersion</code> low enough to cover every release a cluster may still upgrade to, or copy the earlier run's <code>binaryData</code> entries into the new ConfigMap.</li>
+<li><strong>A new catalog version</strong> (<code>v4-20</code> to <code>v4-21</code>, when clusters move minor):<ol>
+<li>Mirror the new index and add its CatalogSource to <code>clusterResources</code>, next to the old one.</li>
+<li>Once a cluster finishes its upgrade to 4.21, set <code>global.catalogSources.redhat-operators: cs-redhat-operator-index-v4-21</code> in <code>values/clusters/&lt;cluster&gt;.yaml</code>. The new index may hold bundles that need 4.21. Maps merge, so this one key overrides the site's.</li>
+<li>Once every cluster has moved, change the site mapping, drop the cluster overrides and the old CatalogSource, then <code>oc delete catalogsource cs-redhat-operator-index-v4-20 -n openshift-marketplace</code> on each cluster.</li>
+</ol>
+</li>
+</ul>
+<h2 id="update-service">Update Service<a class="headerlink" href="#update-service" title="Permanent link">&para;</a></h2>
+<p>The <code>upgrade</code> element holds a fleet <code>version</code> until it appears in the ClusterVersion's <code>availableUpdates</code>, which the CVO fills from the upgrade graph (<a href="../upgrades/#the-upgrade-element">The upgrade element</a>). A disconnected cluster gets no graph unless <code>stack.upgrade.config.upstream</code> points at your OSUS (<a href="#site-layer">Site layer</a>), so every <code>version</code> bump waits forever. Hosted clusters take it from the HostedCluster instead (<a href="#hosted-clusters">Hosted clusters</a>).</p>
+<p>OSUS only offers releases in your mirror. <code>availableUpdates</code> empty or missing the target means one of:</p>
+<ul>
+<li>The target is outside the mirrored <code>minVersion</code>/<code>maxVersion</code>.</li>
+<li>oc-mirror did not mirror the cluster's payload architecture (<a href="#what-to-mirror">What to mirror</a>), so the graph has no entries for it.</li>
+<li>The CVO cannot reach or trust OSUS: <code>oc get clusterversion version -o jsonpath='{.status.conditions[?(@.type=="RetrievedUpdates")]}'</code> says why.</li>
+</ul>
+<h2 id="clusters-the-hub-builds">Clusters the hub builds<a class="headerlink" href="#clusters-the-hub-builds" title="Permanent link">&para;</a></h2>
+<p>The credential, the hub Secret named by <code>install.credential</code> (<a href="../../reference/lifecycle/#install-keys">Install keys</a>), must have the mirror registry's auth in its <code>pullSecret</code>, for every engine.</p>
+<p>Every engine pulls the release image by tag, as <code>&lt;install.releaseRepository&gt;:&lt;version&gt;-&lt;arch&gt;</code> (<code>-x86_64</code> or <code>-multi</code>). An ImageDigestMirrorSet only redirects pulls by digest, so it does not cover this one. Point <code>releaseRepository</code> at the repository oc-mirror put the release images in:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># values/datacenters/dc2.yaml</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">install</span><span class="p">:</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">releaseRepository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443/openshift/release-images</span>
+</span></code></pre></div>
+<p><code>install</code> in a layer is read only by the <code>lifecycle-&lt;cluster&gt;</code> Application of a cluster the hub builds, so imported clusters at the site ignore it. Set it before the hub builds a cluster: on a running <code>hypershift</code> cluster a new <code>releaseRepository</code> changes the HostedCluster's and NodePools' release image, which rolls the control plane and replaces or updates every node. Each engine also needs the mirrors and the mirror CA for the install itself, set as below.</p>
+<h3 id="hosted-clusters">Hosted clusters<a class="headerlink" href="#hosted-clusters" title="Permanent link">&para;</a></h3>
+<p>HyperShift writes a hosted cluster's image config, Proxy, node mirror configuration and, with the default <code>olmCatalogPlacement: management</code>, its OperatorHub from the HostedCluster, so policies writing them inside the guest would fight it. Set them on the HostedCluster, through <code>install.hostedCluster</code>. On the guest, the <code>disconnected</code> element keeps only the CatalogSource. For the same reason, turn off the <code>remediations</code> element's <code>registries</code> policy on guests and set the allowlist in <code>install.hostedCluster.spec.configuration.image</code> (<code>registrySources</code>, <code>allowedRegistriesForImport</code>).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Site layer</label><label for="__tabbed_1_2">Cluster values</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># values/datacenters/dc2.yaml</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">install</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">releaseRepository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443/openshift/release-images</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">hostedCluster</span><span class="p">:</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">      </span><span class="nt">imageContentSources</span><span class="p">:</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/openshift-release-dev/ocp-release</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">          </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/openshift/release-images</span><span class="p p-Indicator">]</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/openshift-release-dev/ocp-v4.0-art-dev</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">          </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/openshift/release</span><span class="p p-Indicator">]</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">registry.redhat.io/redhat</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">          </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/redhat</span><span class="p p-Indicator">]</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">        </span><span class="c1"># ...one entry per imageDigestMirrors item in oc-mirror's idms-oc-mirror.yaml</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">      </span><span class="nt">configuration</span><span class="p">:</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">        </span><span class="nt">operatorhub</span><span class="p">:</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">          </span><span class="nt">disableAllDefaultSources</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">      </span><span class="nt">updateService</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://osus.dc2.example.com/api/upgrades_info/v1/graph</span><span class="w"> </span><span class="c1"># (3)!</span>
+</span></code></pre></div>
+<ol>
+<li>Copy every entry of oc-mirror's ImageDigestMirrorSets (<code>source</code>/<code>mirrors</code> keep the same shape). Missing the <code>ocp-v4.0-art-dev</code> entry fails the install while pulling payload images.</li>
+<li>Replaces the guest's <code>operatorhub</code> policy, turned off in the cluster values.</li>
+<li>The hosted CVO runs on the hub, so use an OSUS URL the hub reaches. Without it, a <code>version</code> bump with <code>channel</code> set is held forever. <code>hive</code> and <code>siteconfig</code> clusters ignore <code>install.hostedCluster</code>.</li>
+</ol>
+</div>
+<div class="tabbed-block">
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># values/clusters/hcp-agent.yaml</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">install</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">hostedCluster</span><span class="p">:</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">      </span><span class="nt">additionalTrustBundle</span><span class="p">:</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-agent-mirror-ca</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span><span class="nt">manifests</span><span class="p">:</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ConfigMap</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">      </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-agent-mirror-ca</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">        </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">clusters</span><span class="w"> </span><span class="c1"># (3)!</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">      </span><span class="nt">data</span><span class="p">:</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">        </span><span class="nt">ca-bundle.crt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">          </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">          </span><span class="no">...</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">  </span><span class="nt">disconnected</span><span class="p">:</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">      </span><span class="nt">registry-ca</span><span class="p">:</span>
+</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">      </span><span class="nt">trusted-ca</span><span class="p">:</span>
+</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="w">      </span><span class="nt">operatorhub</span><span class="p">:</span>
+</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-12-27"><a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a><span class="w">      </span><span class="nt">clusterResources</span><span class="p">:</span><span class="w"> </span><span class="c1"># (4)!</span>
+</span><span id="__span-12-28"><a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">operators.coreos.com/v1alpha1</span>
+</span><span id="__span-12-29"><a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a><span class="w">          </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CatalogSource</span>
+</span><span id="__span-12-30"><a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a><span class="w">          </span><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-12-31"><a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a><span class="w">            </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cs-redhat-operator-index-v4-20</span>
+</span><span id="__span-12-32"><a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a><span class="w">            </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openshift-marketplace</span>
+</span><span id="__span-12-33"><a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a><span class="w">          </span><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-12-34"><a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a><span class="w">            </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mirror.dc2.example.com:8443/redhat/redhat-operator-index:v4.20</span>
+</span><span id="__span-12-35"><a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a><span class="w">            </span><span class="nt">sourceType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">grpc</span>
+</span></code></pre></div>
+<ol>
+<li>A hub ConfigMap with key <code>ca-bundle.crt</code>, in the HostedCluster's namespace. Name it per cluster: <code>install.manifests</code> are deleted when their cluster is destroyed, so a ConfigMap two clusters share disappears with the first one.</li>
+<li>Hub objects created before the cluster (<a href="../../reference/lifecycle/#install-keys">Install keys</a>). A list, so it replaces any <code>manifests</code> from another layer, and the fleet file's <code>install</code> overrides this file's. Keep all of a cluster's manifests in one place.</li>
+<li><code>install.namespace</code>, <code>clusters</code> by default.</li>
+<li>Replaces the site's list, CatalogSources only. Restate each in full: without this, the guest inherits the site's mirror sets and signature ConfigMap.</li>
+</ol>
+</div>
+</div>
+</div>
+<h3 id="hive-clusters">Hive clusters<a class="headerlink" href="#hive-clusters" title="Permanent link">&para;</a></h3>
+<p>The OpenShift installer takes the mirrors and the mirror CA from the install-config. <code>install.hive.installConfig</code> is merged into it as is:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># values/platforms/vmware.yaml, or the cluster's own file</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">install</span><span class="p">:</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">hive</span><span class="p">:</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">installConfig</span><span class="p">:</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">      </span><span class="nt">imageDigestSources</span><span class="p">:</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/openshift-release-dev/ocp-release</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">          </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/openshift/release-images</span><span class="p p-Indicator">]</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/openshift-release-dev/ocp-v4.0-art-dev</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">          </span><span class="nt">mirrors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">mirror.dc2.example.com</span><span class="p p-Indicator">:</span><span class="nv">8443/openshift/release</span><span class="p p-Indicator">]</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">        </span><span class="c1"># ...one entry per imageDigestMirrors item in oc-mirror's idms-oc-mirror.yaml</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">      </span><span class="nt">additionalTrustBundle</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">        </span><span class="no">...</span>
+</span></code></pre></div>
+<ol>
+<li>Copy every entry of oc-mirror's ImageDigestMirrorSets (<code>source</code>/<code>mirrors</code> keep the same shape). Missing the <code>ocp-v4.0-art-dev</code> entry fails the install while pulling payload images. Once the cluster is built and imported, the <code>disconnected</code> element manages its mirror sets like any other cluster's.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Keep <code>install.hive</code> out of layers that other engines read. The lifecycle schema rejects it on a <code>hypershift</code> or <code>siteconfig</code> cluster, and its <code>lifecycle-&lt;cluster&gt;</code> Application shows a ComparisonError: <code>install.hive: Must have at most 0 properties</code>.</p>
+</div>
+<h3 id="bare-metal">Bare metal<a class="headerlink" href="#bare-metal" title="Permanent link">&para;</a></h3>
+<p><code>siteconfig</code> clusters install through the hub's assisted service, the multicluster engine component that builds the discovery ISO each host boots to install (<a href="../../concepts/lifecycle/#pick-an-engine">Cluster lifecycle</a>). So the hub holds their mirrors. The <a href="https://github.com/PolicyStack/PolicyStack/tree/main/stack/cim"><code>cim</code></a> element, which configures the assisted service through AgentServiceConfig <code>agent</code>, reads the <code>disconnected</code> config from the hub's own layers, whether or not <code>disconnected</code> is enabled there:</p>
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ImageDigestMirrorSet</code>s in <code>clusterResources</code> (ImageTagMirrorSets are ignored: the installer pulls by digest)</td>
+<td><code>registries.conf</code> in ConfigMap <code>multicluster-engine/assisted-mirror</code>, referenced as AgentServiceConfig <code>mirrorRegistryRef</code></td>
+</tr>
+<tr>
+<td><code>registryCAs</code></td>
+<td><code>ca-bundle.crt</code> in the same ConfigMap</td>
+</tr>
+<tr>
+<td><code>trustedCA</code>, only when <code>osImages</code> is set: the image service needs it only to download your self-hosted ISOs over HTTPS</td>
+<td>ConfigMap <code>image-service-additional-ca</code>, referenced as <code>OSImageCACertRef</code></td>
+</tr>
+</tbody>
+</table>
+<p>Assisted writes the mirrors and CAs into the discovery ISO and into each spoke's install-config, so the spoke installs from the mirror with its ImageDigestMirrorSet in place.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># values/clusters/&lt;hubName&gt;.yaml</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">cim</span><span class="p">:</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">      </span><span class="nt">osImages</span><span class="p">:</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">        </span><span class="s">"4.20"</span><span class="p p-Indicator">:</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">          </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9.6.20251015-1</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://images.dc2.example.com/rhcos-4.20-x86_64-live.iso</span>
+</span></code></pre></div>
+<ol>
+<li>Replaces the default list, which points at mirror.openshift.com. List every version the hub's <code>siteconfig</code> clusters install, and host the ISOs yourself.</li>
+<li>RHCOS version of the ISO.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Limits of hub-side mirrors</p>
+<ul>
+<li>One mirror set per hub: every <code>siteconfig</code> cluster it builds gets the hub's mirrors, even one at another site. The stock SiteConfig templates have no per-cluster mirror.</li>
+<li><code>ibi</code> (image-based install) does not use the assisted service, so <code>mirrorRegistryRef</code> never reaches it. Put an ImageDigestMirrorSet in a ConfigMap through <code>install.manifests</code> and list that ConfigMap in <code>siteconfig.extraManifests</code>.</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Removing entries</p>
+<p>The AgentServiceConfig is <code>musthave</code>, which never removes fields. A removed <code>osImages</code> entry, or a <code>mirrorRegistryRef</code> once no mirrors remain, stays on it. Remove it with <code>oc edit agentserviceconfig agent</code>.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../upgrades/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OpenShift upgrades">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                OpenShift upgrades
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../global-hub/" class="md-footer__link md-footer__link--next" aria-label="Next: Global Hub">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Global Hub
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      
+<div class="md-progress" data-md-component="progress" role="progressbar" aria-label="Loading"></div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","search.highlight","toc.integrate"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d31f0ffa.min.js"></script>
+      
+    
+  </body>
+</html>

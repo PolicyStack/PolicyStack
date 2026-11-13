@@ -1,0 +1,2152 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/guides/upgrading/">
+      
+      
+      
+        <link rel="prev" href="../global-hub/">
+      
+      
+        <link rel="next" href="../../elements/acs/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.1.0">
+    
+    
+      
+        <title>Upgrading PolicyStack - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Upgrading PolicyStack
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../elements/acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-releases-are-versioned" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How releases are versioned
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checking-for-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Checking for updates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#taking-an-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Taking an update
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#framework-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Framework updates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Framework updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#majors" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Majors
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#element-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Element updates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip-freeze-eject-roll-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Skip, freeze, eject, roll back
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#answers-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Answers files
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolving-conflicts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Resolving conflicts
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-render-diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reading Render Diff
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roll-it-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Roll it out
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acm-and-gitops" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ACM and GitOps
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install chart
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/guides/upgrading.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="upgrading-policystack">Upgrading PolicyStack<a class="headerlink" href="#upgrading-policystack" title="Permanent link">&para;</a></h1>
+<p>Your repository was created with copier from an upstream release tag (<a href="../../start/install/#create-your-repository">Installation</a>). Upgrading means running <code>copier update</code> to merge a newer release into a branch, the framework first and then each element you want, opening a PR, then rolling the result out like any other change. No bot, script or hosted service is involved. Argo CD never reads upstream.</p>
+<h2 id="how-releases-are-versioned">How releases are versioned<a class="headerlink" href="#how-releases-are-versioned" title="Permanent link">&para;</a></h2>
+<p>Upstream has one tag line, <code>vX.Y.Z</code>, semver. Each release tag holds the framework and every element. Your repository records which release each part came from, in its own answers file:</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Recorded in</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td><code>/.copier-answers.yml</code></td>
+<td><code>install/</code>, <code>lifecycle/</code>, policy-library in <code>lib/</code>, <code>tools/</code>, the CI workflows and hooks</td>
+</tr>
+<tr>
+<td>Element</td>
+<td><code>stack/&lt;element&gt;/.copier-answers.yml</code></td>
+<td>That element only</td>
+</tr>
+</tbody>
+</table>
+<p>Because each part has its own record, you can update them at different times: the framework to <code>v1.3.0</code> this week, <code>odf</code> next month, <code>acm</code> not at all. One rule orders them: an element is never on a newer release than the framework, so take the framework first. An element on an older release than the framework keeps working within the same major (<a href="../../reference/compatibility/#versions">Versions</a>).</p>
+<p>A major breaks something you depend on, and its release notes say what to change. A stable element breaks only in a major; a preview element may break in a minor, with notes. Each element's <code>README.md</code> shows which it is (<a href="../../reference/compatibility/#element-stability">Element stability</a>). Lifecycle engines and platforms are all preview.</p>
+<p>Each part reaches your clusters on its own path:</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Delivered by</th>
+<th>Reaches clusters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Elements, <code>lifecycle/</code>, policy-library (<code>lib/</code>)</td>
+<td>Argo CD, from your repository at each fleet file's <code>revision</code></td>
+<td>Clusters pinned to the default branch, often the hub: within minutes of the merge. Clusters pinned to a tag or SHA: when you <a href="#roll-it-out">move the pin</a>.</td>
+</tr>
+<tr>
+<td>Validator and CI</td>
+<td>GitHub Actions in your repository</td>
+<td>On the update PR itself</td>
+</tr>
+<tr>
+<td>ACM and GitOps operators</td>
+<td>The <code>acm</code> and <code>gitops</code> elements, after <a href="../../start/install/#hand-the-operators-to-policystack">handover</a></td>
+<td>Like any element, at the hub's <code>revision</code> (<a href="#acm-and-gitops">ACM and GitOps</a>)</td>
+</tr>
+<tr>
+<td>Install chart (<code>install/</code>)</td>
+<td><code>helm upgrade</code>, run by you on each hub</td>
+<td>When you run it, for every cluster on that hub at once (<a href="#install-chart">Install chart</a>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="checking-for-updates">Checking for updates<a class="headerlink" href="#checking-for-updates" title="Permanent link">&para;</a></h2>
+<p><code>copier check-update</code> compares one answers file's <code>_commit</code> with upstream's tags:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>copier<span class="w"> </span>check-update<span class="w"> </span>.<span class="w">            </span><span class="c1"># the framework</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>copier<span class="w"> </span>check-update<span class="w"> </span>stack/odf<span class="w">    </span><span class="c1"># one element</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Current version is 1.0.0, latest version is 1.2.0.
+</span></code></pre></div>
+<p>To check the framework and every tracked element at once, loop over them. With <code>--quiet</code>, copier prints nothing and exits <code>2</code> when a newer release exists:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">for</span><span class="w"> </span>d<span class="w"> </span><span class="k">in</span><span class="w"> </span>.<span class="w"> </span>stack/*/<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="o">[</span><span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$d</span><span class="s2">/.copier-answers.yml"</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">continue</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>copier<span class="w"> </span>check-update<span class="w"> </span>--quiet<span class="w"> </span><span class="s2">"</span><span class="nv">$d</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$?</span><span class="w"> </span>-ne<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"update available: </span><span class="nv">$d</span><span class="s2">"</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">done</span>
+</span></code></pre></div>
+<ol>
+<li>Elements you wrote or ejected have no answers file and are skipped.</li>
+</ol>
+<p>copier asks the Git server in <code>_src_path</code> for its tags, so this works against an internal mirror too (<a href="../disconnected/#policystack-releases">Disconnected clusters</a>). It only reads. Prereleases, such as <code>v1.3.0-rc.1</code>, are ignored unless you pass <code>--prereleases</code>.</p>
+<p>Nothing checks for releases on its own. Run the loop when you plan updates, or watch upstream's <a href="https://github.com/PolicyStack/PolicyStack/releases">releases</a> on GitHub.</p>
+<h2 id="taking-an-update">Taking an update<a class="headerlink" href="#taking-an-update" title="Permanent link">&para;</a></h2>
+<p>Use copier at the version <code>mise.toml</code> pins (<code>mise install</code>). Start from an up-to-date default branch:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>update/v1.2.0
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>copier<span class="w"> </span>update<span class="w"> </span>--defaults<span class="w"> </span>.<span class="w">                                 </span><span class="c1"># (1)!</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>git<span class="w"> </span>add<span class="w"> </span>-A<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(deps): update framework to v1.2.0"</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">fw</span><span class="o">=</span><span class="k">$(</span>sed<span class="w"> </span>-n<span class="w"> </span><span class="s1">'s/^_commit: //p'</span><span class="w"> </span>.copier-answers.yml<span class="k">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>copier<span class="w"> </span>update<span class="w"> </span>--defaults<span class="w"> </span>--vcs-ref<span class="w"> </span><span class="s2">"</span><span class="nv">$fw</span><span class="s2">"</span><span class="w"> </span>stack/odf<span class="w">          </span><span class="c1"># (2)!</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>git<span class="w"> </span>add<span class="w"> </span>-A<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(deps): update odf to </span><span class="nv">$fw</span><span class="s2">"</span>
+</span></code></pre></div>
+<ol>
+<li>The framework, to the newest release. Add <code>--vcs-ref vX.Y.Z</code> for another one.</li>
+<li>An element, to the framework's release. Without <code>--vcs-ref</code> copier takes the newest release, which is newer than your framework unless you just updated it to the newest.</li>
+</ol>
+<p>Review each diff, resolve any conflict markers (<a href="#resolving-conflicts">Resolving conflicts</a>), then push the branch and open a PR. <code>ci</code> and <a href="#reading-render-diff">Render Diff</a> run on it like on any PR, and <code>pr-title</code> needs a Conventional Commit title such as the ones above.</p>
+<p><code>copier update</code> merges upstream's changes between your <code>_commit</code> and the new release with your edits, and moves <code>_commit</code>. One update covers any number of releases. It leaves the result uncommitted.</p>
+<ul>
+<li>copier refuses to update a path that has uncommitted changes in it. For the framework that path is the whole repository, so commit each update before the next.</li>
+<li>Give the framework its own PR when you can: it has steps before the merge (<a href="#framework-updates">Framework updates</a>). Elements can share a PR, but one PR per element keeps each Render Diff to that element and lets you merge or drop each on its own.</li>
+<li>copier prints <code>Make sure Git &gt;= 2.24 is installed to improve updates.</code> on every update, whatever your Git version. Ignore it.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title"><code>OSError: [Errno 39] Directory not empty: '/tmp/copier._main.new_copy...'</code></p>
+<p>A framework update sometimes ends with this traceback and exit code 1. Git's automatic housekeeping is still writing to copier's temporary clone when copier deletes it. The update itself has been applied: <code>git status</code> shows the changes and <code>_commit</code> names the new release. Review it as usual, and delete the leftover directory. To avoid it, turn housekeeping off for the command:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">GIT_CONFIG_COUNT</span><span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="nv">GIT_CONFIG_KEY_0</span><span class="o">=</span>gc.auto<span class="w"> </span><span class="nv">GIT_CONFIG_VALUE_0</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nv">GIT_CONFIG_KEY_1</span><span class="o">=</span>maintenance.auto<span class="w"> </span><span class="nv">GIT_CONFIG_VALUE_1</span><span class="o">=</span><span class="nb">false</span><span class="w"> </span>copier<span class="w"> </span>update<span class="w"> </span>--defaults<span class="w"> </span>.
+</span></code></pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Always pass <code>--vcs-ref</code> for an element</p>
+<p>Unless your framework is on the newest release, <code>copier update</code> without <code>--vcs-ref</code> takes the element past it. POLICY061 fails the PR, because an element newer than the framework may need framework code you don't have yet. Update the framework first, or take the element back with <code>--vcs-ref</code> and the framework's tag.</p>
+</div>
+<h2 id="framework-updates">Framework updates<a class="headerlink" href="#framework-updates" title="Permanent link">&para;</a></h2>
+<p><code>copier update .</code> applies upstream's changes between your <code>_commit</code> and the new release to every framework file, and moves <code>_commit</code>. It never touches <code>stack/</code>, <code>fleet/</code> or <code>values/</code>. A file upstream deleted is deleted in your repository too.</p>
+<div class="admonition warning">
+<p class="admonition-title">A framework file you deleted stays deleted</p>
+<p>copier doesn't recreate it, and drops upstream's later changes to it without a conflict or a message. Delete a framework file only if you never want it back.</p>
+</div>
+<p>Open the PR as in <a href="#taking-an-update">Taking an update</a>, then:</p>
+<ol>
+<li><strong>Read the release notes</strong> of every release between your <code>_commit</code> and the new tag (<a href="https://github.com/PolicyStack/PolicyStack/releases">releases</a>). A note about hubs, the install chart or lifecycle applies to step 4.</li>
+<li><strong>Fix what CI reports.</strong> The PR runs the new validator against your fleet and values. A new error, such as <a href="../../reference/rules/">POLICY035</a> for a key an element dropped, is fixed in the same PR. Warnings such as POLICY039 (a deprecated key) can wait until the version they name. A conflict means you edited a framework file (<a href="#resolving-conflicts">Resolving conflicts</a>).</li>
+<li><strong>Read the <a href="#reading-render-diff">Render Diff</a>.</strong></li>
+<li><strong>Upgrade the install chart on every hub from the PR branch</strong> (<a href="#install-chart">Install chart</a>).</li>
+<li><strong>Merge.</strong></li>
+<li><strong>Move tag-pinned clusters</strong> to a revision that has the update (<a href="#roll-it-out">Roll it out</a>).</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Hubs before pins</p>
+<p>Within a major, a hub is only guaranteed to render revisions up to its own install chart's release. Upgrade every hub before you move any pin to a revision with a newer framework. A pin moved first can fail its render on a hub still on the older install chart (<a href="../../reference/compatibility/#hub-and-revision-skew">Hub and revision skew</a>). Clusters that follow the default branch move the moment you merge, which is why step 4 comes before step 5.</p>
+</div>
+<h3 id="majors">Majors<a class="headerlink" href="#majors" title="Permanent link">&para;</a></h3>
+<p>Take majors one at a time. A hub on major N is only guaranteed to render revisions on N and on the last N-1 release (<a href="../../reference/compatibility/#hub-and-revision-skew">Hub and revision skew</a>):</p>
+<ol>
+<li>Take the last release of your current major, for the framework and every element, and move every fleet pin to a revision that has it.</li>
+<li>Take the next major for the framework and every element in one PR: upgrade every hub from the update's PR branch, then merge it. POLICY061 fails the PR while any element is still on the older major.</li>
+<li>Move pins to the new major, cluster by cluster.</li>
+</ol>
+<p>POLICY052 checks only the major: on the update PR, a fleet file whose <code>revision</code> is more than one major behind, or on a newer major than the branch, fails. It can't tell whether an N-1 revision is the last N-1 release, so step 1 is yours to check. <code>copier update</code> without <code>--vcs-ref</code> takes the newest release, whatever its major. For step 1, or when the newest release is two majors ahead, name the tag from the <a href="https://github.com/PolicyStack/PolicyStack/releases">releases page</a>: <code>copier update --defaults --vcs-ref v1.9.2 .</code>.</p>
+<h2 id="element-updates">Element updates<a class="headerlink" href="#element-updates" title="Permanent link">&para;</a></h2>
+<p><code>copier update stack/odf</code> merges upstream's changes to <code>odf</code> since your <code>_commit</code> with yours and moves <code>_commit</code>. Nothing outside <code>stack/odf/</code> changes.</p>
+<ul>
+<li>Read the element's entries in the release notes, prefixed with its name (<code>odf:</code>), and the Render Diff. For a preview element any minor may rename keys or Policies; search those entries for <code>breaking:</code>.</li>
+<li>If the element needs a newer policy-library than your framework has, its render fails and <a href="../../reference/rules/">POLICY060</a> says so. Taking the element at the framework's release, as above, avoids it.</li>
+<li>A file upstream deleted is deleted from <code>stack/odf/</code> too, even if you edited it, without a conflict. Check the PR diff for deleted files and move any edit you need into a values layer.</li>
+<li>An element upstream removed (POLICY092 warned while it was deprecated) can't be updated: <code>copier update</code> fails with a <code>FileNotFoundError</code> naming <code>stack/&lt;element&gt;</code> in copier's temporary clone. <a href="#skip-freeze-eject-roll-back">Eject</a> it to keep it as yours, or remove it.</li>
+<li>Elements update independently, so merge their PRs in any order.</li>
+</ul>
+<h2 id="skip-freeze-eject-roll-back">Skip, freeze, eject, roll back<a class="headerlink" href="#skip-freeze-eject-roll-back" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>To</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Skip a release</td>
+<td>Don't take it, or take a later one with <code>--vcs-ref</code>. <code>copier check-update</code> keeps reporting the newest release until you take it.</td>
+</tr>
+<tr>
+<td>Freeze an element</td>
+<td>Don't run <code>copier update</code> on it. It keeps working on newer framework releases of the same major. A framework major ends the freeze: POLICY061 fails until the element is on the new major.</td>
+</tr>
+<tr>
+<td>Eject an element</td>
+<td><code>git rm stack/odf/.copier-answers.yml</code>. copier and the check loop stop tracking it, the validator stops checking its answers file, and the element is yours (<a href="../../reference/compatibility/#tiers">Tiers</a>). <code>copier update stack/odf</code> then fails with a Python traceback ending in <code>TypeError: Template not found</code>. To track it again, delete the directory and copy it again (<a href="../../start/install/#add-elements">Add elements</a>).</td>
+</tr>
+<tr>
+<td>Remove an element</td>
+<td><code>git rm -r stack/odf</code>. Its Applications and Policies are deleted (<a href="../rollout/#removing-an-element">Removing an element</a>).</td>
+</tr>
+<tr>
+<td>Roll back</td>
+<td><code>git revert</code> the update's merge commit. The answers file reverts with it, so <code>copier check-update</code> reports the update again. Clusters pinned to a tag never had it.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="answers-files">Answers files<a class="headerlink" href="#answers-files" title="Permanent link">&para;</a></h2>
+<p><code>.copier-answers.yml</code> at the root and in each tracked element is copier's record of what it copied: <code>_commit</code> is the release tag, <code>_src_path</code> the upstream URL, and <code>element</code> the element, empty for the framework. copier rebuilds the old release from <code>_commit</code> to work out what you changed, <code>copier check-update</code> reads both to find newer releases, POLICY052 reads the root file at each fleet <code>revision</code> to check skew, and POLICY061 checks every one.</p>
+<div class="admonition danger">
+<p class="admonition-title">Never edit an answers file by hand</p>
+<p>A <code>_commit</code> that doesn't match the files makes the next update merge against the wrong base: your changes are reported as conflicts, or upstream changes are skipped. Change it only with <code>copier update</code>, or <code>git revert</code> an update. POLICY061 fails a <code>_commit</code> that isn't a release tag, an element answers file whose <code>element</code> isn't its directory, and an element newer than the framework.</p>
+</div>
+<h2 id="resolving-conflicts">Resolving conflicts<a class="headerlink" href="#resolving-conflicts" title="Permanent link">&para;</a></h2>
+<p>copier merges three versions of each file: the old release, the new release and yours. Where you and upstream changed the same lines, it leaves both in the file, between conflict markers:</p>
+<div class="admonition example">
+<p class="admonition-title">A conflict in <code>stack/odf/values.yaml</code></p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="l l-Scalar l-Scalar-Plain">&lt;&lt;&lt;&lt;&lt;&lt;&lt; before updating</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">storageClassName</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fast-ssd</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="l l-Scalar l-Scalar-Plain">=======</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">storageClassName</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocs-storagecluster-ceph-rbd</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p p-Indicator">&gt;</span><span class="err">&gt;&gt;&gt;&gt;&gt;&gt; after updating</span>
+</span></code></pre></div>
+</div>
+<p><code>before updating</code> is your repository, <code>after updating</code> is the new release. The <code>ci</code> check fails while a marker is left (the <code>check-merge-conflict</code> hook), so a conflicted PR can't merge. Resolve them before you commit:</p>
+<ol>
+<li><code>git diff --check</code> lists every file and line with a marker.</li>
+<li>Edit each file to what you want, deleting the markers. In a framework file, take <code>after updating</code>: a framework you modified is not supported, and the conflict comes back on every update.</li>
+<li>Run <code>git diff --check</code> again until it prints nothing, then commit. Don't touch the answers file.</li>
+</ol>
+<p>A conflict in an element you edited means the edit and upstream's change overlap. If they keep overlapping, move the setting to a values layer, where updates never reach it, or <a href="#skip-freeze-eject-roll-back">eject</a> the element.</p>
+<div class="admonition tip">
+<p class="admonition-title">Change settings in layers, not in elements</p>
+<p>Every setting an element exposes can be set from <code>values/</code>. Editing an element's <code>values.yaml</code> or converters instead makes it yours to merge on every update.</p>
+</div>
+<h2 id="reading-render-diff">Reading Render Diff<a class="headerlink" href="#reading-render-diff" title="Permanent link">&para;</a></h2>
+<p>On an update PR, <a href="../../reference/ci/#render-diff">Render Diff</a> shows what the merge changes for every cluster pinned to the default branch. A framework update shows changes from <code>lib/</code> and <code>lifecycle/</code> across elements; an element update, that element only. Tag-pinned clusters show theirs on the PR that <a href="#roll-it-out">moves their pin</a>.</p>
+<ul>
+<li><code>removes Policy</code> names a Policy the update deletes. A rename shows as a removal plus an addition: the Policy is recreated and its compliance history starts over (<a href="../../reference/compatibility/#policy-names">Policy names</a>).</li>
+<li><strong>render failed</strong> means the update breaks that cluster. The error is in the cluster's block. Fix it in the PR.</li>
+<li><code>install/</code> is not rendered. Read its diff in the PR (<a href="#install-chart">Install chart</a>).</li>
+</ul>
+<h2 id="roll-it-out">Roll it out<a class="headerlink" href="#roll-it-out" title="Permanent link">&para;</a></h2>
+<p>Clusters pinned to the default branch already run the update. For the rest, tag the merge commit in your repository and move pins cluster by cluster (<a href="../rollout/#promoting-and-rolling-back">Promoting and rolling back</a>):</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>git<span class="w"> </span>tag<span class="w"> </span>v1.5.0<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v1.5.0
+</span></code></pre></div>
+<p>These are your repository's tags, unrelated to upstream's. POLICY052 reads the framework release from each pinned commit's answers file, not from the tag name.</p>
+<h2 id="acm-and-gitops">ACM and GitOps<a class="headerlink" href="#acm-and-gitops" title="Permanent link">&para;</a></h2>
+<p>Before handover, <code>install/operators</code> created the Subscriptions with automatic approval on the channel <code>stack/acm/values.yaml</code> and <code>stack/gitops/values.yaml</code> named at the time. OLM upgrades within that channel; a new channel from an element update does not reach the hub. Hand the operators over, or rerun <a href="../../start/install/#install-the-operators">Install the operators</a> with the new values.</p>
+<p>After handover, the channel is <code>subscription.channel</code> of the element's <code>operatorPolicies</code> entry. An element update that changes it, or your own layer, moves the hub's Subscription to that channel once the hub's fleet <code>revision</code> includes it. Nothing steps through minors for you, and ACM upgrades only from the previous minor. To go from <code>release-2.15</code> to <code>release-2.17</code>, set <code>release-2.16</code> in the hub's layer, wait until <code>oc get csv -n open-cluster-management</code> shows the 2.16 CSV <code>Succeeded</code>, then set <code>release-2.17</code> or take the <code>acm</code> update. Pin or hold versions as in <a href="../operators/">Operator versions</a>.</p>
+<h2 id="install-chart">Install chart<a class="headerlink" href="#install-chart" title="Permanent link">&para;</a></h2>
+<p><code>install/</code> holds the two ApplicationSets and their supporting objects (<a href="../../reference/install/">Install chart</a>). No Argo CD Application reads it, so merging a framework update changes nothing on a hub until someone runs <code>helm upgrade</code> there. From then on, the new ApplicationSets generate the Applications of every cluster on that hub, whatever <code>revision</code> each pins. Render Diff does not render <code>install/</code>, so read its diff on the update PR.</p>
+<p>The release's chart version is the framework release it was installed from. Compare it with the framework update's PR branch, or with the default branch once the update is merged:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>fetch<span class="w"> </span>origin<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>switch<span class="w"> </span>--detach<span class="w"> </span>origin/&lt;branch&gt;<span class="w">   </span><span class="c1"># the PR branch, or main</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>helm<span class="w"> </span>list<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w">   </span><span class="c1"># CHART: policystack-1.2.0</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>grep<span class="w"> </span><span class="s1">'^version'</span><span class="w"> </span>install/Chart.yaml
+</span></code></pre></div>
+<p>If they differ, upgrade, in the hub's kube context:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>policystack<span class="w"> </span>./install<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span>--reset-then-reuse-values
+</span></code></pre></div>
+<p><code>--reset-then-reuse-values</code> (Helm 3.14 or later) takes the new chart's defaults and keeps every value set at install or a later upgrade, normally just <code>hubName</code> and <code>gitRepo</code>.</p>
+<p>Within a major the ApplicationSets only add injected values, so clusters pinned to older revisions keep rendering. The exception is a fleet file's <code>install</code>, passed through as written: a key newer than the cluster's <code>revision</code> fails that revision's lifecycle schema (<a href="../../reference/compatibility/#lifecycle">Lifecycle</a>). A policy-library major is checked at render: the chart passes <code>policystack.libraryMajors</code>, and a revision built on a library major the hub's chart doesn't list fails its render with a ComparisonError that says to move the pin or upgrade the hub.</p>
+<p>Roll back with <code>helm rollback policystack &lt;revision&gt; -n openshift-gitops</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../global-hub/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Global Hub">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Global Hub
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../elements/acs/" class="md-footer__link md-footer__link--next" aria-label="Next: ACS">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                ACS
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      
+<div class="md-progress" data-md-component="progress" role="progressbar" aria-label="Loading"></div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","search.highlight","toc.integrate"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d31f0ffa.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2386 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/start/install/">
+      
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../first-cluster/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.1.0">
+    
+    
+      
+        <title>Installation - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Installation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="././" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../elements/acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create-your-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Create your repository
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add-elements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Add elements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protect-the-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Protect the repository
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install the operators
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-policystack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install PolicyStack
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add-the-hubs-fleet-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Add the hub's fleet file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hand-the-operators-to-policystack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hand the operators to PolicyStack
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hand the operators to PolicyStack">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#existing-hub-check-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Existing hub: check compatibility
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-elements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Enable the elements
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#teardown" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Teardown
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../elements/file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/start/install.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<p>PolicyStack runs on the ACM hub: a Helm release from <code>install/</code> points the hub's Argo CD at your repository, and ACM delivers the Policies Argo CD renders, hub objects that describe a cluster's configuration (<a href="../../concepts/acm/">ACM policies in brief</a>, <a href="#install-policystack">what the release creates</a>).</p>
+<ul>
+<li>An <strong>element</strong> is a Helm chart under <code>stack/</code> that turns settings for one product into Policies. Every element ships off.</li>
+<li>A <strong>layer</strong> is a values file under <code>values/</code> that turns elements on and configures them.</li>
+<li>A <strong>fleet file</strong>, <code>fleet/&lt;cluster&gt;.yaml</code>, enrolls one cluster and lists the layers it reads. The hub is itself a managed cluster, enrolled by <code>fleet/hubs/&lt;hub&gt;.yaml</code>.</li>
+</ul>
+<p>You create your own repository with <a href="https://copier.readthedocs.io">copier</a>, which copies the framework and each element you want from an upstream release tag <code>vX.Y.Z</code>, and records what it copied. Later, <code>copier update</code> merges a newer release with your changes, for you to open as a PR (<a href="../../guides/upgrading/">Upgrading PolicyStack</a>). Full model: <a href="../../concepts/overview/">How PolicyStack works</a>.</p>
+<ol>
+<li><a href="#prerequisites">Check the prerequisites</a></li>
+<li><a href="#create-your-repository">Create your repository</a></li>
+<li><a href="#add-elements">Add elements</a></li>
+<li><a href="#protect-the-repository">Protect the repository</a></li>
+<li><a href="#install-the-operators">Install the operators</a> (new hubs only)</li>
+<li><a href="#install-policystack">Install PolicyStack</a></li>
+<li><a href="#add-the-hubs-fleet-file">Add the hub's fleet file</a></li>
+<li><a href="#hand-the-operators-to-policystack">Hand the operators to PolicyStack</a> (later, once the stack is proven)</li>
+</ol>
+<p>Run every command from the root of your repository's clone, logged in to the hub as a cluster administrator.</p>
+<table>
+<thead>
+<tr>
+<th>Placeholder</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;hub&gt;</code></td>
+<td>The hub's name in PolicyStack (<code>hubName</code>). Every hub's own ManagedCluster is called <code>local-cluster</code>, so PolicyStack needs a unique name to pick the hub's files (<a href="../../concepts/architecture/#the-hub">The hub</a>). Lowercase DNS label, at most 30 characters (<a href="../../concepts/policies/#naming-limits">Naming limits</a>).</td>
+<td><code>hub-east</code></td>
+</tr>
+<tr>
+<td><code>&lt;org&gt;/&lt;repo&gt;</code></td>
+<td>Your GitHub org and repository</td>
+<td><code>acme/fleet</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Choose <code>hubName</code> once</p>
+<p>Changing it deletes and recreates the hub's own Applications and Policies, and abandons the clusters this hub built until their fleet files name the new hub (<a href="../../concepts/architecture/#the-hub">The hub</a>). Two active hubs with one <code>hubName</code> apply the same hub file and build the same clusters.</p>
+</div>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li>An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.</li>
+<li>copier 9.18 or later, <code>git</code> and Python on your workstation: <code>pipx install copier</code>. Once the repository exists, <code>mise install</code> installs the copier version it pins (<a href="../../contributing/#setup">Setup</a>).</li>
+<li><code>oc</code>, and <code>helm</code> 3.14 or later: <a href="../../guides/upgrading/#install-chart">upgrades</a> use <code>--reset-then-reuse-values</code>, added in 3.14. You need 3.17 or later only if the install hits an <a href="#install-policystack">ownership conflict</a>. Your local <code>helm</code> runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.</li>
+<li>Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 (<a href="../../reference/compatibility/#support">Support</a>). Cluster lifecycle has extra requirements (<a href="../../guides/lifecycle/#prerequisites">Cluster lifecycle prerequisites</a>).</li>
+<li>The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (<code>local-cluster</code> by default), which carries the <code>local-cluster</code> label. Without it the hub never picks up <code>fleet/hubs/&lt;hub&gt;.yaml</code>, gets no Applications and builds no clusters.</li>
+<li>A hub that already runs OpenShift GitOps must use its default Argo CD instance, <code>openshift-gitops</code>. The install chart creates its objects in that namespace and grants Policy rights to that instance's application controller; another instance has neither.</li>
+<li>The hub is not a passive DR hub. On a passive DR hub, install PolicyStack only at takeover (<a href="../../guides/lifecycle/#hub-disaster-recovery">Hub disaster recovery</a>).</li>
+</ul>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>copier<span class="w"> </span>--version<span class="w">                         </span><span class="c1"># copier 9.18.0 or later</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>version<span class="w"> </span>--short<span class="w">                     </span><span class="c1"># v3.14.0 or later</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>oc<span class="w"> </span>auth<span class="w"> </span>can-i<span class="w"> </span><span class="s1">'*'</span><span class="w"> </span><span class="s1">'*'</span><span class="w"> </span>--all-namespaces<span class="w">   </span><span class="c1"># yes</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>oc<span class="w"> </span>get<span class="w"> </span>managedclusters<span class="w"> </span>-l<span class="w"> </span>local-cluster<span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># NAME            HUB ACCEPTED   ...   AVAILABLE</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># local-cluster   true           ...   True</span>
+</span></code></pre></div>
+<p>The last command applies to a hub that already runs ACM. A new hub creates <code>local-cluster</code> in <a href="#install-the-operators">Install the operators</a>.</p>
+<h2 id="create-your-repository">Create your repository<a class="headerlink" href="#create-your-repository" title="Permanent link">&para;</a></h2>
+<p>Argo CD reads only your repository. Upstream ships no fleet files and no live configuration.</p>
+<p>Pick the newest framework release, a tag <code>vX.Y.Z</code> on the <a href="https://github.com/PolicyStack/PolicyStack/releases">releases page</a>, and copy it:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">url</span><span class="o">=</span>https://github.com/PolicyStack/PolicyStack.git
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>copier<span class="w"> </span>copy<span class="w"> </span>--vcs-ref<span class="w"> </span>v1.0.0<span class="w"> </span><span class="s2">"</span><span class="nv">$url</span><span class="s2">"</span><span class="w"> </span>&lt;repo&gt;<span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">cd</span><span class="w"> </span>&lt;repo&gt;
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>git<span class="w"> </span>init<span class="w"> </span>-b<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>add<span class="w"> </span>-A<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore: PolicyStack v1.0.0"</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>origin<span class="w"> </span>https://github.com/&lt;org&gt;/&lt;repo&gt;.git
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>main
+</span></code></pre></div>
+<ol>
+<li>Without <code>--vcs-ref</code>, copier takes the newest release. Name the release so the copy is the one you picked.</li>
+</ol>
+<p>You now have the framework (<code>install/</code>, <code>lifecycle/</code>, <code>lib/</code>, <code>tools/</code>, the CI workflows and hooks, <code>mise.toml</code>, the root <code>values.yaml</code>) and <code>.copier-answers.yml</code>, which records the release you copied:</p>
+<div class="language-yaml highlight"><span class="filename">.copier-answers.yml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Changes here will be overwritten by Copier; NEVER EDIT MANUALLY</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">_commit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1.0.0</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">_src_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://github.com/PolicyStack/PolicyStack.git</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">element</span><span class="p">:</span><span class="w"> </span><span class="s">''</span>
+</span></code></pre></div>
+<p><code>copier update</code> reads <code>_commit</code> to know what to merge, and the validator reads it to check every fleet pin (POLICY052) and every element's release (POLICY061). Never edit it by hand (<a href="../../guides/upgrading/#answers-files">Answers files</a>).</p>
+<p>copier leaves out <code>stack/</code>, which you fill in the next step, and everything that stays upstream: the docs, the upstream README and CODEOWNERS, and the example <code>values/</code> files (<a href="../../concepts/values/#example-files">Example files</a>). Who owns each path from here on: <a href="../../concepts/overview/#the-repository">The repository</a>.</p>
+<h2 id="add-elements">Add elements<a class="headerlink" href="#add-elements" title="Permanent link">&para;</a></h2>
+<p>Each element is copied on its own into <code>stack/&lt;element&gt;/</code>, from the same release tag as the framework, and gets its own <code>.copier-answers.yml</code>. Every repository needs <code>acm</code>, <code>gitops</code> and <code>upgrade</code>: <a href="#install-the-operators">Install the operators</a> reads the first two, and <code>upgrade</code> applies a fleet file's <code>version</code> and <code>channel</code>. Add any others the same way, now or later:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">url</span><span class="o">=</span>https://github.com/PolicyStack/PolicyStack.git
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">for</span><span class="w"> </span>el<span class="w"> </span><span class="k">in</span><span class="w"> </span>acm<span class="w"> </span>gitops<span class="w"> </span>upgrade<span class="w"> </span>cert-manager<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>copier<span class="w"> </span>copy<span class="w"> </span>--vcs-ref<span class="w"> </span>v1.0.0<span class="w"> </span>-d<span class="w"> </span><span class="nv">element</span><span class="o">=</span><span class="s2">"</span><span class="nv">$el</span><span class="s2">"</span><span class="w"> </span><span class="s2">"</span><span class="nv">$url</span><span class="s2">"</span><span class="w"> </span><span class="s2">"stack/</span><span class="nv">$el</span><span class="s2">"</span><span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">done</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>git<span class="w"> </span>add<span class="w"> </span>stack<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: add acm, gitops, upgrade and cert-manager"</span>
+</span></code></pre></div>
+<ol>
+<li>The <code>_commit</code> in your root <code>.copier-answers.yml</code>. An element added later takes that tag too: an element may be older than your framework, never newer. An element that first ships in a newer release needs the framework updated to that release first (<a href="../../guides/upgrading/#framework-updates">Framework updates</a>); until then <code>copier copy</code> fails with <code>FileNotFoundError: ... stack/&lt;element&gt;</code>.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Pass <code>--vcs-ref</code> for every element</p>
+<p>Without it copier copies the newest release, which can be newer than your framework. That element may then need framework code you don't have yet, and POLICY061 fails it. Delete the directory and copy it again with your framework's tag.</p>
+</div>
+<p>Each element is either stable or preview, shown at the top of its <code>README.md</code>. A preview element may change incompatibly in a framework minor (<a href="../../reference/compatibility/#element-stability">Element stability</a>). Each element's settings are in its <code>README.md</code>.</p>
+<p>Some elements depend on another: <code>odf</code>, for one, waits on Policies of <code>storage-nodes</code>. Copy both. Once the first fleet file exists, CI fails a missing dependency with <a href="../../reference/rules/">POLICY011</a>, naming it. In your repository the validator checks elements and values only through the clusters in <code>fleet/</code> (<a href="../../develop/validation/#what-validate-runs">What <code>validate</code> runs</a>).</p>
+<p>Elements you write yourself also go under <code>stack/</code>, without an answers file (<a href="../../develop/elements/">Writing an element</a>).</p>
+<h2 id="protect-the-repository">Protect the repository<a class="headerlink" href="#protect-the-repository" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Protect <code>fleet/</code>. A fleet file decides which revision and layers a cluster reads, and a fleet file with <code>hub:</code> and <code>state: absent</code> makes the hub delete that cluster (<a href="../../concepts/lifecycle/">Cluster lifecycle</a>). Clusters pinned to a branch also take every merge to <code>values/</code> and <code>stack/</code> on that branch, so if production follows <code>main</code>, own those paths too, or pin production to tags (<a href="../../guides/rollout/#choosing-a-pin">Rolling out changes</a>). Write your own <code>CODEOWNERS</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># .github/CODEOWNERS
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>/fleet/ @&lt;org&gt;/&lt;team&gt;
+</span></code></pre></div>
+<p>The team needs write access to the repository. To protect only production, own <code>/fleet/prod-*.yaml</code> and <code>/fleet/hubs/</code> instead.</p>
+</li>
+<li>
+<p>Add a ruleset on the default branch (<strong>Settings &gt; Rules &gt; Rulesets</strong>). Without one nothing blocks a merge:</p>
+<ul>
+<li>Require a pull request with code owner review.</li>
+<li>Require the status checks <code>ci</code> and <code>pr-title</code>. The picker lists only checks that have run, so open one PR first (the fleet PR in <a href="#add-the-hubs-fleet-file">Add the hub's fleet file</a> works), or type the names.</li>
+<li>Block force pushes and deletion.</li>
+</ul>
+<p>These checks run on every PR (<a href="../../reference/ci/">CI workflows</a>, <a href="../../reference/rules/">Validator rules</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>What it does for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ci</code></td>
+<td>Runs the lint hooks from <code>.pre-commit-config.yaml</code> (a hook that rewrites a file fails and prints the diff) and the <a href="../../develop/validation/">validator</a>. The validator renders every fleet cluster the way Argo CD will and checks the result, each fleet file and its <code>revision</code> (POLICY050, POLICY052), and every values key (POLICY035).</td>
+</tr>
+<tr>
+<td><code>pr-title</code></td>
+<td>The PR title must be a Conventional Commit, such as <code>feat: enable gitops on prod-east-1</code>.</td>
+</tr>
+<tr>
+<td>Render Diff</td>
+<td>On PRs to the default branch, comments the Policies each fleet cluster gains, loses or changes. It only reports and never blocks.</td>
+</tr>
+</tbody>
+</table>
+</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Label rights change what clusters run</p>
+<p>Anyone who can label ManagedClusters or edit the cluster Secrets in <code>openshift-gitops</code> can switch a cluster to another fleet file. Keep both rights to hub admins (<a href="../../reference/fleet/#labels">Labels</a>).</p>
+</div>
+<h2 id="install-the-operators">Install the operators<a class="headerlink" href="#install-the-operators" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">New hub</label><label for="__tabbed_1_2">Hub that already runs ACM and GitOps</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Installs ACM and OpenShift GitOps and creates the MultiClusterHub. The chart renders a Namespace, OperatorGroup and Subscription for each operator (ACM on channel <code>release-2.17</code>, GitOps on <code>latest</code>, both with automatic approval) plus the MultiClusterHub. These are the same names and specs the <code>acm</code> and <code>gitops</code> elements enforce, so <a href="#hand-the-operators-to-policystack">handover</a> later adopts them in place. <code>helm template | oc apply</code> leaves no Helm release, so after handover only the elements own these objects.</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">until</span><span class="w"> </span>helm<span class="w"> </span>template<span class="w"> </span>install/operators<span class="w"> </span>-f<span class="w"> </span>stack/acm/values.yaml<span class="w"> </span>-f<span class="w"> </span>stack/gitops/values.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">      </span><span class="p">|</span><span class="w"> </span>oc<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>oc<span class="w"> </span>get<span class="w"> </span>argocd/openshift-gitops<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">30</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
+</span></code></pre></div>
+<p>The first passes fail with <code>no matches for kind "MultiClusterHub"</code> until ACM registers its CRD. The loop ends once the GitOps operator has created its default Argo CD instance, <code>openshift-gitops</code>. If it never ends, stop it and read the <code>oc</code> error. The usual cause is an unreachable catalog:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>oc<span class="w"> </span>get<span class="w"> </span>packagemanifest<span class="w"> </span>advanced-cluster-management<span class="w"> </span>openshift-gitops-operator<span class="w"> </span>-n<span class="w"> </span>openshift-marketplace
+</span></code></pre></div>
+<p><code>NotFound</code> means the <code>redhat-operators</code> catalog isn't reachable. On a disconnected hub, pass the <code>global.catalogSources</code> layer (below).</p>
+<p>Verify. The MultiClusterHub takes about 10 minutes:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>oc<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>mch/multiclusterhub<span class="w"> </span>-n<span class="w"> </span>open-cluster-management<span class="w"> </span>--for<span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.phase}'</span><span class="o">=</span>Running<span class="w"> </span>--timeout<span class="o">=</span>20m
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># multiclusterhub.operator.open-cluster-management.io/multiclusterhub condition met</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>oc<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>argocd/openshift-gitops<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span>--for<span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.phase}'</span><span class="o">=</span>Available<span class="w"> </span>--timeout<span class="o">=</span>10m
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># argocd.argoproj.io/openshift-gitops condition met</span>
+</span></code></pre></div>
+<p>The chart installs the newest version in each channel. It fails with <code>versions and upgradeApproval pins apply only after handover</code> if the values you pass pin a version, because a plain Subscription with automatic approval can't hold one. Pin after handover (<a href="../../guides/operators/">Operator versions</a>).</p>
+<details class="info">
+<summary>Single node or disconnected hub</summary>
+<p>Write a values layer: a YAML file under <code>values/</code> that the hub's fleet file will list. Settings for the <code>acm</code> element go under <code>stack.acm</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># values/acm/&lt;hub&gt;.yaml</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">acm</span><span class="p">:</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">availabilityConfig</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Basic</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li>Single replicas, for lab and single node hubs. The default is <code>High</code>.</li>
+</ol>
+<p>Pass it with <code>-f</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">until</span><span class="w"> </span>helm<span class="w"> </span>template<span class="w"> </span>install/operators<span class="w"> </span>-f<span class="w"> </span>stack/acm/values.yaml<span class="w"> </span>-f<span class="w"> </span>stack/gitops/values.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">      </span>-f<span class="w"> </span>values/acm/&lt;hub&gt;.yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>oc<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>oc<span class="w"> </span>get<span class="w"> </span>argocd/openshift-gitops<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">30</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
+</span></code></pre></div>
+<p>Commit this file and list it in the <a href="#add-the-hubs-fleet-file">hub's fleet file</a>. At handover the <code>acm</code> element enforces <code>availabilityConfig</code> on the MultiClusterHub, and without this layer it switches the hub to <code>High</code>.</p>
+<p>On a disconnected hub, also pass the layer that sets <code>global.catalogSources</code>, which points each Subscription at your mirrored catalog, such as <code>-f values/datacenters/&lt;dc&gt;.yaml</code> (<a href="../../guides/disconnected/#the-hub">Disconnected clusters</a>).</p>
+</details>
+</div>
+<div class="tabbed-block">
+<p>Skip this step. Your operators keep running as they are. Run the <a href="#existing-hub-check-compatibility">compatibility checks</a> before enabling the <code>acm</code> or <code>gitops</code> element.</p>
+<p>If only one of them runs, install the other from OperatorHub following the Red Hat docs (GitOps: namespace <code>openshift-gitops-operator</code>, channel <code>latest</code>). Don't run this chart: it renders both, and would create a second Subscription for the one already installed.</p>
+</div>
+</div>
+</div>
+<h2 id="install-policystack">Install PolicyStack<a class="headerlink" href="#install-policystack" title="Permanent link">&para;</a></h2>
+<details class="info">
+<summary>Private repository: add a repository secret first</summary>
+<p>Argo CD needs credentials to read a private repo (<a href="https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#repositories">Argo CD docs</a>). Without them the ApplicationSets can't read the repository and create no Applications.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">policystack-repo</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openshift-gitops</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nt">argocd.argoproj.io/secret-type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">repository</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">git</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://github.com/&lt;org&gt;/&lt;repo&gt;.git</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;user&gt;</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;token&gt;</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li>A fine-grained personal access token with read-only Contents access to this one repository.</li>
+</ol>
+<p>Apply it with <code>oc apply -f -</code>. Never commit it.</p>
+</details>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>helm<span class="w"> </span>install<span class="w"> </span>policystack<span class="w"> </span>./install<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--set<span class="w"> </span><span class="nv">hubName</span><span class="o">=</span>&lt;hub&gt;<span class="w"> </span>--set<span class="w"> </span><span class="nv">gitRepo</span><span class="o">=</span>https://github.com/&lt;org&gt;/&lt;repo&gt;.git
+</span></code></pre></div>
+<p>Both values are required and stored in the release; upgrades reuse them. The release's chart version is the framework release it came from, which <a href="../../guides/upgrading/#install-chart">upgrades</a> compare against. The release creates (<a href="../../reference/install/">Install chart</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ApplicationSet <code>policystack</code></td>
+<td>One Application per element per cluster, named <code>&lt;element&gt;-&lt;cluster&gt;</code>. Each renders the element's Policies into <code>pstack</code>.</td>
+</tr>
+<tr>
+<td>ApplicationSet <code>policystack-lifecycle</code></td>
+<td>One Application per cluster this hub builds. Creates nothing until a fleet file sets <code>hub: &lt;hub&gt;</code> (<a href="../../concepts/lifecycle/">Cluster lifecycle</a>).</td>
+</tr>
+<tr>
+<td>Namespace <code>pstack</code></td>
+<td>Holds the Policies.</td>
+</tr>
+<tr>
+<td>GitOpsCluster <code>argo-acm-importer-global</code>, Placement <code>global</code></td>
+<td>Create the Argo CD cluster secret for every ManagedCluster (<a href="../../concepts/architecture/#cluster-secrets">Cluster secrets</a>).</td>
+</tr>
+<tr>
+<td>ManagedClusterSetBinding <code>global</code></td>
+<td>ACM lets a Placement choose only from cluster sets bound into its namespace. <code>global</code> is ACM's built-in set containing every ManagedCluster. Bound in <code>openshift-gitops</code> (for the GitOpsCluster) and <code>pstack</code> (for the element Placements).</td>
+</tr>
+<tr>
+<td>ClusterRole and binding <code>openshift-gitops-policy-admin</code></td>
+<td>Let Argo CD manage Policies, Placements and PlacementBindings.</td>
+</tr>
+</tbody>
+</table>
+<p>Verify:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>oc<span class="w"> </span>get<span class="w"> </span>applicationsets<span class="w"> </span>-n<span class="w"> </span>openshift-gitops
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># NAME                    AGE</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># policystack             10s</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># policystack-lifecycle   10s</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>oc<span class="w"> </span>get<span class="w"> </span>secrets<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span>-l<span class="w"> </span>argocd.argoproj.io/secret-type<span class="o">=</span>cluster
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># one secret per ManagedCluster, including the hub</span>
+</span></code></pre></div>
+<p>No secret for the hub means it doesn't manage itself (<a href="#prerequisites">Prerequisites</a>).</p>
+<details class="failure">
+<summary><code>... exists and cannot be imported into the current release: invalid ownership metadata</code></summary>
+<p>An object of the same name already exists. Hubs set up with the ACM GitOps guide often have ManagedClusterSetBinding <code>global</code> in <code>openshift-gitops</code> and ClusterRole/ClusterRoleBinding <code>openshift-gitops-policy-admin</code>. Rerun with <code>--take-ownership</code> (Helm 3.17 or later) to adopt them. Adoption replaces their spec with the chart's.</p>
+</details>
+<h2 id="add-the-hubs-fleet-file">Add the hub's fleet file<a class="headerlink" href="#add-the-hubs-fleet-file" title="Permanent link">&para;</a></h2>
+<p>A fleet file enrolls a cluster: Argo CD reads it from the default branch, and it names the <code>revision</code> (branch, tag or SHA) at which <code>stack/</code> and <code>values/</code> are read, plus the values layers the cluster gets (<a href="../../concepts/overview/#fleet-files">Fleet files</a>). The hub reads <code>fleet/hubs/&lt;hub&gt;.yaml</code>, never <code>fleet/&lt;cluster&gt;.yaml</code>.</p>
+<p>Start with a file that lists no layers:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># fleet/hubs/&lt;hub&gt;.yaml</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">revision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li>A branch the cluster follows, or a tag or SHA it stays on (<a href="../../reference/fleet/#revision">Revision</a>). Name your default branch if it isn't <code>main</code>.</li>
+</ol>
+<p>PR it to the default branch and merge. Within about 6 minutes (the ApplicationSet polls Git every 3 minutes) every directory under <code>stack/</code> gets an Application named <code>&lt;element&gt;-&lt;hub&gt;</code>, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except <code>upgrade</code>, which acts only when a fleet file sets <code>version</code> or <code>channel</code>.</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>oc<span class="w"> </span>get<span class="w"> </span>applications.argoproj.io<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>&lt;hub&gt;<span class="w">  </span><span class="c1"># (1)!</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1"># acm-&lt;hub&gt;      Synced   Healthy</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># gitops-&lt;hub&gt;   Synced   Healthy</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># ...</span>
+</span></code></pre></div>
+<ol>
+<li>ACM installs a second <code>applications</code> kind, so use the full name.</li>
+</ol>
+<p>Then turn elements on through layers. A layer sets <code>stack.&lt;element&gt;.enabled</code>; the key is the element name in camelCase (<a href="../first-cluster/#enable-an-element">Enable an element</a>):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># values/environments/hub.yaml</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">certManager</span><span class="p">:</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<p>List each layer under <code>valueFiles</code>, lowest precedence first (<a href="../../concepts/values/#order">Order</a>). A <code>values/clusters/&lt;hub&gt;.yaml</code>, if you add one, is always read last, without being listed, and holds hub-only settings:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># fleet/hubs/&lt;hub&gt;.yaml</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">revision</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nt">valueFiles</span><span class="p">:</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">environments/hub.yaml</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li>Add <code>acm/&lt;hub&gt;.yaml</code> too if you wrote it under <a href="#install-the-operators">Single node or disconnected hub</a>.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Listed layers apply at once, with <code>enforce</code></p>
+<p>Every shipped element enforces by default, so the hub changes as soon as the PR merges. If you copied a layer from upstream's examples (<a href="../../concepts/values/#example-files">Example files</a>), read it first: they turn elements on. Or put <code>global.remediationAction: inform</code> in <code>values/clusters/&lt;hub&gt;.yaml</code> to report without changing anything (<a href="../../guides/rollout/#dry-run">Dry run</a>).</p>
+</div>
+<p>Every <code>valueFiles</code> entry must exist at the revision. Argo CD skips a missing file silently, but CI fails the PR:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>error POLICY050 invalid fleet file: valueFiles "acm/hub-east.yaml": not a file under values/
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>error POLICY052 revision "main" has no values/acm/hub-east.yaml, which Argo CD skips
+</span></code></pre></div>
+<p>Commit the layer in the same PR, or leave the entry out until you need it.</p>
+<details class="failure">
+<summary>No Applications after 6 minutes</summary>
+<p>Read the ApplicationSet's error first:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>oc<span class="w"> </span>get<span class="w"> </span>applicationset<span class="w"> </span>policystack<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.conditions[?(@.type=="ErrorOccurred")].message}'</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>Symptom</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File name differs from <code>hubName</code>, or the file isn't on the default branch</td>
+<td>No error. Nothing happens.</td>
+</tr>
+<tr>
+<td>YAML error, no <code>revision</code>, or a revision that doesn't exist</td>
+<td>Error above. No cluster on this hub gets Application changes until it is fixed (<a href="../../concepts/overview/#one-bad-fleet-file-stops-the-hub">One bad fleet file stops the hub</a>).</td>
+</tr>
+<tr>
+<td>Private repository without a repository secret</td>
+<td>Error above: authentication or repository not found.</td>
+</tr>
+<tr>
+<td>Hub doesn't manage itself</td>
+<td>No hub cluster secret (<a href="#prerequisites">Prerequisites</a>).</td>
+</tr>
+</tbody>
+</table>
+</details>
+<p>Check the Policies the hub got and whether they comply. The Policies Argo CD syncs from Git (root Policies) are in <code>pstack</code>. ACM copies each (a replicated Policy) into the namespace of the hub's ManagedCluster, which carries the per-cluster compliance (<a href="../first-cluster/#check-compliance">Check compliance</a>). Both are empty until a layer enables an element:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>oc<span class="w"> </span>get<span class="w"> </span>policies.policy.open-cluster-management.io<span class="w"> </span>-n<span class="w"> </span>pstack
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>oc<span class="w"> </span>get<span class="w"> </span>policies.policy.open-cluster-management.io<span class="w"> </span>-n<span class="w"> </span>local-cluster
+</span></code></pre></div>
+<p>Managed clusters follow the same pattern with <code>fleet/&lt;cluster&gt;.yaml</code> (<a href="../first-cluster/">First cluster</a>).</p>
+<h2 id="hand-the-operators-to-policystack">Hand the operators to PolicyStack<a class="headerlink" href="#hand-the-operators-to-policystack" title="Permanent link">&para;</a></h2>
+<p>Optional. Without it, both operators keep their Subscriptions as installed (Install the operators sets automatic approval, so they upgrade on their own within their channels), and PolicyStack can't pin their versions. Handover enables the <code>acm</code> and <code>gitops</code> elements on the hub. Their <code>install</code> Policy, generated from each element's <code>operatorPolicies</code> (<a href="../../concepts/elements/#the-install-policy">The install Policy</a>), then enforces the operators' Subscription and OperatorGroup: channel, approved versions and upgrades. The <code>acm</code> element's <code>hub</code> Policy enforces the MultiClusterHub.</p>
+<p>Wait until the hub's other Applications have stayed Synced and Healthy through a few changes. PolicyStack is delivered by this ACM and this Argo CD, so a bad value in these two elements can break the path that would deliver the fix.</p>
+<h3 id="existing-hub-check-compatibility">Existing hub: check compatibility<a class="headerlink" href="#existing-hub-check-compatibility" title="Permanent link">&para;</a></h3>
+<p>The <code>install</code> Policy's OperatorPolicy (the ACM template that manages a Subscription and OperatorGroup, <a href="../../concepts/acm/#operatorpolicy">OperatorPolicy</a>) names its Subscription after the operator package and finds it by namespace and that name. An element adopts an operator only when the namespace, OperatorGroup name and Subscription name match the element.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A namespace or Subscription name mismatch makes the OperatorPolicy create a second Subscription.</p>
+</div>
+<ol>
+<li>
+<p>List the operators' Subscriptions, OperatorGroups and the MultiClusterHub:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>oc<span class="w"> </span>get<span class="w"> </span>subscriptions.operators.coreos.com<span class="w"> </span>-A<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>-o<span class="w"> </span>custom-columns<span class="o">=</span>NS:.metadata.namespace,NAME:.metadata.name,PACKAGE:.spec.name,CHANNEL:.spec.channel<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">'advanced-cluster-management|openshift-gitops-operator'</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>oc<span class="w"> </span>get<span class="w"> </span>operatorgroups<span class="w"> </span>-n<span class="w"> </span>&lt;NS&gt;<span class="w">   </span><span class="c1"># &lt;NS&gt; from the first command</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>oc<span class="w"> </span>get<span class="w"> </span>mch<span class="w"> </span>-A
+</span></code></pre></div>
+</li>
+<li>
+<p>Compare them with the names each element expects:</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Namespace</th>
+<th>OperatorGroup</th>
+<th>Subscription</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>acm</code></td>
+<td><code>open-cluster-management</code></td>
+<td><code>open-cluster-management</code></td>
+<td><code>advanced-cluster-management</code></td>
+</tr>
+<tr>
+<td><code>gitops</code></td>
+<td><code>openshift-gitops-operator</code></td>
+<td><code>openshift-gitops-operator</code></td>
+<td><code>openshift-gitops-operator</code></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>Fix each mismatch in <code>values/acm/&lt;hub&gt;.yaml</code>, the same layer <a href="#enable-the-elements">the next step</a> enables both elements in. Short keys in the Fix column are under <code>stack.&lt;element&gt;.operatorPolicies.&lt;element&gt;</code>, for example <code>stack.acm.operatorPolicies.acm.subscription.channel</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Mismatch</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NAME differs from PACKAGE</td>
+<td>Leave that element off. The OperatorPolicy would create a second Subscription for the same package.</td>
+</tr>
+<tr>
+<td>NS differs, such as GitOps in <code>openshift-operators</code></td>
+<td>Set <code>namespace</code> and <code>operatorGroup.name</code> to match, or leave the element off. Otherwise the Policy creates a second Subscription and OperatorGroup in the element's namespace, which OLM refuses to install, and the Policy stays NonCompliant.</td>
+</tr>
+<tr>
+<td>Console-created OperatorGroup, <code>&lt;ns&gt;-xxxxx</code></td>
+<td>Set <code>operatorGroup.name</code> to it. Another name makes the Policy NonCompliant.</td>
+</tr>
+<tr>
+<td>Older channel</td>
+<td>Set <code>subscription.channel</code> to it, then move one minor at a time.</td>
+</tr>
+<tr>
+<td>MultiClusterHub not <code>multiclusterhub</code> in <code>open-cluster-management</code></td>
+<td>Leave <code>acm</code> off. The <code>hub</code> Policy manages only that name.</td>
+</tr>
+<tr>
+<td>MultiClusterHub on <code>Basic</code></td>
+<td>Set <code>stack.acm.config.availabilityConfig: Basic</code>, or handover switches it to <code>High</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>For example, GitOps in <code>openshift-operators</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># values/acm/&lt;hub&gt;.yaml</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">gitops</span><span class="p">:</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">operatorPolicies</span><span class="p">:</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">      </span><span class="nt">gitops</span><span class="p">:</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">        </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openshift-operators</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">        </span><span class="nt">operatorGroup</span><span class="p">:</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">global-operators</span>
+</span></code></pre></div>
+</li>
+</ol>
+<h3 id="enable-the-elements">Enable the elements<a class="headerlink" href="#enable-the-elements" title="Permanent link">&para;</a></h3>
+<p>Enable both elements in the hub's layer, and list that layer in <code>fleet/hubs/&lt;hub&gt;.yaml</code> in the same PR:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># values/acm/&lt;hub&gt;.yaml</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">acm</span><span class="p">:</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span><span class="nt">gitops</span><span class="p">:</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">      </span><span class="nt">instance</span><span class="p">:</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># (1)!</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">      </span><span class="nt">link</span><span class="p">:</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># (2)!</span>
+</span></code></pre></div>
+<ol>
+<li><code>instance</code> and <code>link</code> are the <code>gitops</code> element's other Policies, from <code>converters/instance/</code> and <code>converters/link/</code> (<a href="../../concepts/elements/#reading-an-elements-readme">Reading an element's README</a>, <a href="https://github.com/PolicyStack/PolicyStack/blob/main/stack/gitops/README.md">gitops README</a>). <code>instance</code> manages the Argo CD instance that delivers PolicyStack. Never let PolicyStack reconcile it: a bad value there breaks the path that fixes it.</li>
+<li>The console link depends on <code>instance</code>. Left on, it would stay Pending.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Don't rerun Install the operators after handover</p>
+<p><code>oc apply</code> writes the channel and automatic approval from whatever values you pass. The <code>install</code> Policy changes them back, but in between OLM can follow the wrong channel or approve an upgrade past a <code>versions</code> pin.</p>
+</div>
+<p>Verify:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>oc<span class="w"> </span>get<span class="w"> </span>policies.policy.open-cluster-management.io<span class="w"> </span>-n<span class="w"> </span>local-cluster<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">'acm|gitops'</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># pstack.hub-acm-&lt;hub&gt;          enforce   Compliant</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="c1"># pstack.install-acm-&lt;hub&gt;      enforce   Compliant</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c1"># pstack.install-gitops-&lt;hub&gt;   enforce   Compliant</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>oc<span class="w"> </span>get<span class="w"> </span>csv<span class="w"> </span>-n<span class="w"> </span>open-cluster-management<span class="w">   </span><span class="c1"># the same CSV as before, not a reinstall</span>
+</span></code></pre></div>
+<p>All three turn Compliant within a few minutes. NonCompliant on <code>install</code> means a name in the compatibility table doesn't match: read the template's message (<a href="../first-cluster/#check-compliance">Check compliance</a>) and fix the override.</p>
+<p>ACM and GitOps upgrades now follow the hub's fleet <code>revision</code> like any other element (<a href="../../guides/operators/">Operator versions</a>).</p>
+<h2 id="teardown">Teardown<a class="headerlink" href="#teardown" title="Permanent link">&para;</a></h2>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>oc<span class="w"> </span>delete<span class="w"> </span>applicationset<span class="w"> </span>policystack<span class="w"> </span>policystack-lifecycle<span class="w"> </span>-n<span class="w"> </span>openshift-gitops
+</span></code></pre></div>
+<p>This deletes every Application, and each Application deletes the Policies it rendered. ACM then stops applying them, but what they created on the clusters stays, operators included (<a href="../../concepts/removal/#what-happens-on-the-managed-cluster">What happens on the managed cluster</a>). Clusters this hub built keep running, unmanaged (<a href="../../guides/lifecycle/#abandon">Abandon</a>).</p>
+<p>Every other chart object carries <code>helm.sh/resource-policy: keep</code>, so <code>helm uninstall</code> removes only the release record. Once <code>oc get policies.policy.open-cluster-management.io -n pstack</code> returns nothing, remove the rest. Skip any object you created yourself and adopted with <code>--take-ownership</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>policystack<span class="w"> </span>-n<span class="w"> </span>openshift-gitops
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>oc<span class="w"> </span>delete<span class="w"> </span>gitopscluster<span class="w"> </span>argo-acm-importer-global<span class="w"> </span>-n<span class="w"> </span>openshift-gitops<span class="w">  </span><span class="c1"># (1)!</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>oc<span class="w"> </span>delete<span class="w"> </span>placement<span class="w"> </span>global<span class="w"> </span>-n<span class="w"> </span>openshift-gitops
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>oc<span class="w"> </span>delete<span class="w"> </span>managedclustersetbinding<span class="w"> </span>global<span class="w"> </span>-n<span class="w"> </span>openshift-gitops
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>oc<span class="w"> </span>delete<span class="w"> </span>clusterrolebinding,clusterrole<span class="w"> </span>openshift-gitops-policy-admin
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>oc<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>pstack
+</span></code></pre></div>
+<ol>
+<li>ACM then removes the cluster secrets it created, unless another GitOpsCluster selects the same clusters.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title"><code>--cascade=orphan</code> is not a way to stop</p>
+<p>It deletes only the ApplicationSets. The Applications keep syncing from Git, so PolicyStack keeps managing every cluster. Use it to recreate the ApplicationSets without touching the Policies.</p>
+</div>
+<p>Next: <a href="../first-cluster/">First cluster</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../.." class="md-footer__link md-footer__link--prev" aria-label="Previous: Home">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Home
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../first-cluster/" class="md-footer__link md-footer__link--next" aria-label="Next: First cluster">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                First cluster
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      
+<div class="md-progress" data-md-component="progress" role="progressbar" aria-label="Loading"></div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","search.highlight","toc.integrate"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d31f0ffa.min.js"></script>
+      
+    
+  </body>
+</html>

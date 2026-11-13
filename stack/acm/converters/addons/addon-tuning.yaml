@@ -4,29 +4,26 @@ rate limits as annotations, resource requests and limits as an AddOnDeploymentCo
 
 At fleet scale the stock defaults are the usual cause of slow policy evaluation.
 */ -}}
-{{- $cfg := .Config.addons }}
-{{- range $addon, $spec := $cfg }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: addon.open-cluster-management.io/v1alpha1
-    kind: ClusterManagementAddOn
-    metadata:
-      name: {{ $addon }}
-      annotations:
-        addon.open-cluster-management.io/policy-evaluation-concurrency: {{ $spec.evaluationConcurrency | quote }}
-        addon.open-cluster-management.io/client-qps: {{ $spec.clientQPS | quote }}
-        addon.open-cluster-management.io/client-burst: {{ $spec.clientBurst | quote }}
-- complianceType: musthave
-  objectDefinition:
-    apiVersion: addon.open-cluster-management.io/v1alpha1
-    kind: AddOnDeploymentConfig
-    metadata:
-      name: {{ $addon }}
-      namespace: open-cluster-management
-    spec:
-      resourceRequirements:
-        - containerID: "deployments:*:*"
-          resources:
-            requests: {{ toYaml $spec.requests | nindent 14 }}
-            limits: {{ toYaml $spec.limits | nindent 14 }}
+{{- range $addon, $spec := .Config.addons }}
+---
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: ClusterManagementAddOn
+metadata:
+  name: {{ $addon }}
+  annotations:
+    addon.open-cluster-management.io/policy-evaluation-concurrency: {{ $spec.evaluationConcurrency | quote }}
+    addon.open-cluster-management.io/client-qps: {{ $spec.clientQPS | quote }}
+    addon.open-cluster-management.io/client-burst: {{ $spec.clientBurst | quote }}
+---
+apiVersion: addon.open-cluster-management.io/v1alpha1
+kind: AddOnDeploymentConfig
+metadata:
+  name: {{ $addon }}
+  namespace: open-cluster-management
+spec:
+  resourceRequirements:
+    - containerID: "deployments:*:*"
+      resources:
+        requests: {{- toYaml $spec.requests | nindent 10 }}
+        limits: {{- toYaml $spec.limits | nindent 10 }}
 {{- end }}

@@ -23,29 +23,25 @@ image service trusts it for HTTPS osImages. It takes exactly one key.
 {{- range keys . | sortAlpha }}{{ $cas = append $cas (get $d.registryCAs . | trim) }}{{ end }}
 {{- $_ := set $data "ca-bundle.crt" (printf "%s\n" (join "\n" $cas)) }}
 {{- end }}
-- complianceType: mustonlyhave
-  metadataComplianceType: musthave
-  objectDefinition:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: assisted-mirror
-      namespace: multicluster-engine
-      labels:
-        app: assisted-service
-    data: {{- toYaml $data | nindent 6 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: assisted-mirror
+  namespace: multicluster-engine
+  labels:
+    app: assisted-service
+data: {{- toYaml $data | nindent 2 }}
 {{- end }}
 {{- if .Config.osImages }}
 {{- with $d.trustedCA }}
-- complianceType: mustonlyhave
-  metadataComplianceType: musthave
-  objectDefinition:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: image-service-additional-ca
-      namespace: multicluster-engine
-    data:
-      ca-bundle.crt: {{ . | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: image-service-additional-ca
+  namespace: multicluster-engine
+data:
+  ca-bundle.crt: {{ . | quote }}
 {{- end }}
 {{- end }}

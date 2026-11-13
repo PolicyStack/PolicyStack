@@ -2,7 +2,8 @@
 KubeletConfig for the infra pool, sized from the element's config block (.Config).
 
 podsPerCore is derived from the node CPU count, which is only known on the managed cluster, so it
-uses an escaped ACM template.
+uses an escaped ACM template. A raw list because that takes several ACM statements and podsPerCore is
+an integer, which a block scalar can't produce.
 */ -}}
 {{- $cfg := .Config }}
 {{ "{{" }}- $cores := 0 {{ "}}" }}

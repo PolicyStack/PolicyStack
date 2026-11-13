@@ -68,6 +68,8 @@ stack:
         templates:
           policies:
             description: "Generated NodeNetworkConfigurationPolicies"
+            # Exact match, so settings removed from values are removed from the NNCPs
+            complianceType: mustonlyhave
 
     operatorPolicies:
       nmstate:

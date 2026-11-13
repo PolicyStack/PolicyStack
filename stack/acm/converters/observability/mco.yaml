@@ -3,6 +3,9 @@ Observability: the pull secret, the Thanos object storage config and the MultiCl
 
 The pull secret and bucket credentials exist only on the managed cluster, so they are read with ACM
 templating; sizing comes from values.
+
+A raw list so ACM resolves it all or nothing: a failed bucket lookup applies nothing, and the
+MultiClusterObservability never exists without its Thanos secret.
 */ -}}
 {{- $o := .Config.observability }}
 {{- $ns := $o.namespace }}

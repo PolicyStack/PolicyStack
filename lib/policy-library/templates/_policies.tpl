@@ -100,6 +100,10 @@ spec:
   {{- $objects = append $objects . }}
   {{- end }}
   {{- end }}
+  {{- /* ACM skips object-templates-raw entirely when templates are disabled, so it would apply nothing */}}
+  {{- if and $raw $tv.disableTemplating }}
+  {{- fail (printf "policy-library: %s sets disableTemplating but renders a raw object list, which ACM then never evaluates - render documents instead" $configName) }}
+  {{- end }}
   {{- if not (or $raw $objects) }}{{ $raw = "[]" }}{{ end }}
   {{- $depsYaml := include "policy-library.subPolicyDependencies" (dict "root" $root "component" $component "policyRef" $policyName "subPolicy" $tv "prev" (ternary $prevManifest dict $orderManifests)) -}}
   {{- $prevManifest = dict "name" $configName "kind" "ConfigurationPolicy" -}}

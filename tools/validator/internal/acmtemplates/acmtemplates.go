@@ -173,7 +173,7 @@ type Object struct {
 	ConfigPolicy   string // metadata.name of the ConfigurationPolicy
 	ComplianceType string
 	Definition     json.RawMessage
-	// Missing reports a template that looks up an object the empty cluster lacks. Definition is then
+	// Missing reports a template that looks up an object the fake cluster lacks. Definition is then
 	// as rendered, or nil for object-templates-raw.
 	Missing bool
 }
@@ -188,13 +188,13 @@ func Evaluate(rendered []byte, cluster string) ([]Failure, error) {
 }
 
 // Resolve is Evaluate that also returns the objects every ConfigurationPolicy in rendered applies,
-// as ACM resolves them. An object template that fails is left out.
-func Resolve(rendered []byte, cluster string) ([]Object, []Failure, error) {
+// as ACM resolves them. An object template that fails is left out. live seeds the managed cluster.
+func Resolve(rendered []byte, cluster string, live ...runtime.Object) ([]Object, []Failure, error) {
 	hub, err := NewResolver(templates.Config{AdditionalIndentation: 8, DisabledFunctions: []string{}, StartDelim: "{{hub", StopDelim: "hub}}"}, hubObjects...)
 	if err != nil {
 		return nil, nil, err
 	}
-	managed, err := NewResolver(templates.Config{})
+	managed, err := NewResolver(templates.Config{}, live...)
 	if err != nil {
 		return nil, nil, err
 	}

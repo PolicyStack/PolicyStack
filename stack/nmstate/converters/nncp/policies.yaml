@@ -70,13 +70,12 @@ An interface declared under a host is rendered only per-host, not cluster-wide.
 {{- end }}
 {{- $spec := dict "desiredState" (dict "interfaces" (list $iface)) }}
 {{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: nmstate.io/v1
-    kind: NodeNetworkConfigurationPolicy
-    metadata:
-      name: nmstate-{{ $type }}-{{ $id }}
-    spec:{{ toYaml $spec | nindent 6 }}
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nmstate-{{ $type }}-{{ $id }}
+spec: {{- toYaml $spec | nindent 2 }}
 {{- end }}
 {{- end }}
 
@@ -92,13 +91,12 @@ An interface declared under a host is rendered only per-host, not cluster-wide.
 {{- $iface := dict "name" ($br.name | default (printf "ovs-br-%s" $id)) "type" "ovs-bridge" "state" "up" "bridge" $bridge }}
 {{- $spec := dict "desiredState" (dict "interfaces" (list $iface)) }}
 {{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: nmstate.io/v1
-    kind: NodeNetworkConfigurationPolicy
-    metadata:
-      name: nmstate-ovs-bridge-{{ $id }}
-    spec:{{ toYaml $spec | nindent 6 }}
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nmstate-ovs-bridge-{{ $id }}
+spec: {{- toYaml $spec | nindent 2 }}
 {{- end }}
 
 {{- /* ---- shared routes / dns / ovn bridge-mappings ---- */ -}}
@@ -130,13 +128,12 @@ An interface declared under a host is rendered only per-host, not cluster-wide.
 {{- end }}
 {{- $spec := dict "desiredState" $desired }}
 {{- if $sharedSelector }}{{- $_ := set $spec "nodeSelector" $sharedSelector }}{{- end }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: nmstate.io/v1
-    kind: NodeNetworkConfigurationPolicy
-    metadata:
-      name: nmstate-network-config
-    spec:{{ toYaml $spec | nindent 6 }}
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nmstate-network-config
+spec: {{- toYaml $spec | nindent 2 }}
 {{- end }}
 
 {{- /* ---- per-host overrides ---- */ -}}
@@ -186,19 +183,18 @@ An interface declared under a host is rendered only per-host, not cluster-wide.
 {{- if $hDns.search }}{{- $_ := set $dc "search" $hDns.search }}{{- end }}
 {{- $_ := set $desired "dns-resolver" (dict "config" $dc) }}
 {{- end }}
-- complianceType: mustonlyhave
-  objectDefinition:
-    apiVersion: nmstate.io/v1
-    kind: NodeNetworkConfigurationPolicy
-    metadata:
-      name: nmstate-host-{{ $hostname }}
-    spec:
-      nodeSelector:
-        {{- if $host.hostname }}
-        kubernetes.io/hostname: {{ $host.hostname }}
-        {{- else }}
-        kubernetes.io/hostname: {{ $hostname }}.{{ "{{" }} ((lookup "config.openshift.io/v1" "DNS" "" "cluster").spec.baseDomain | default "") {{ "}}" }}
-        {{- end }}
-      desiredState:{{ toYaml $desired | nindent 8 }}
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nmstate-host-{{ $hostname }}
+spec:
+  nodeSelector:
+    {{- if $host.hostname }}
+    kubernetes.io/hostname: {{ $host.hostname }}
+    {{- else }}
+    kubernetes.io/hostname: {{ $hostname }}.{{ "{{" }} ((lookup "config.openshift.io/v1" "DNS" "" "cluster").spec.baseDomain | default "") {{ "}}" }}
+    {{- end }}
+  desiredState: {{- toYaml $desired | nindent 4 }}
 {{- end }}
 {{- end }}

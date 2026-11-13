@@ -1,4 +1,8 @@
-{{- /* Default ScanSetting. Raw result storage is optional and its class varies per cluster. */ -}}
+{{- /*
+Default ScanSetting. Raw result storage is optional and its class varies per cluster.
+
+A raw list because the objects need different complianceType.
+*/ -}}
 {{- $cfg := .Config }}
 - complianceType: musthave
   objectDefinition:

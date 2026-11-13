@@ -46,6 +46,10 @@ stack:
           # Renders nothing unless the hub's layers set stack.disconnected.config mirrors or trustedCA
           cim-mirror:
             description: "Mirror registries and OS image CA for the assisted service"
+            # Exact match, so data keys removed from values are removed from the objects
+            complianceType: mustonlyhave
+            # Labels and annotations other controllers add stay
+            metadataComplianceType: musthave
 
           cim-agent:
             description: "AgentServiceConfig agent"

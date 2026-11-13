@@ -4,6 +4,8 @@ ConfigMap labelled config.openshift.io/inject-trusted-cabundle, the gitops eleme
 user-ca-bundle holds the installer's additionalTrustBundle, so it is left alone: trusted-cas is
 user-ca-bundle's ca-bundle.crt, read on the managed cluster, followed by config.trustedCA, and the
 Proxy points at it. Renders nothing when config.trustedCA is empty.
+
+A raw list because the objects need different complianceType.
 */ -}}
 {{- with .Config.trustedCA }}
 - complianceType: mustonlyhave

@@ -1,6 +1,8 @@
 {{- /*
 Resolves the secured policy's hub templates. Without it the propagator limits hub lookups to the
 policy namespace, and the CRS and Central's Route live in hubNamespace.
+
+A raw list because the objects need different complianceType.
 */ -}}
 - complianceType: musthave
   objectDefinition:

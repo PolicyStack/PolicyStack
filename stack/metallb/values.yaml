@@ -62,15 +62,23 @@ stack:
         templates:
           pools:
             description: "IPAddressPools"
+            # Exact match, so a spec field removed from config is removed from the object
+            complianceType: mustonlyhave
 
           l2:
             description: "L2Advertisements"
+            # Exact match, so a spec field removed from config is removed from the object
+            complianceType: mustonlyhave
 
           bgp:
             description: "BGPAdvertisements"
+            # Exact match, so a spec field removed from config is removed from the object
+            complianceType: mustonlyhave
 
           peers:
             description: "BGPPeers"
+            # Exact match, so a spec field removed from config is removed from the object
+            complianceType: mustonlyhave
 
     operatorPolicies:
       metallb:

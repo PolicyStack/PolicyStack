@@ -354,18 +354,22 @@ ConfigurationPolicy field:
 
     ```yaml
     {{- range $name, $data := .Config.maps }}
+    ---
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: {{ $name }}
       namespace: my-element
     data: {{- toYaml $data | nindent 2 }}
-    ---
     {{- end }}
     ```
 
-    The file starts with `{{- range`, but Helm consumes that action, so the output starts with
-    `apiVersion` and this is not raw.
+    Helm consumes the `{{- range` action, so the output starts with `---`, not `-`, and this is
+    not raw. Put `---` first inside a `range` or `if`, and between objects elsewhere. The
+    template's `complianceType`, `metadataComplianceType`, `recordDiff`, `recreateOption` and
+    `objectSelector` apply to every document: set them on `policies.<p>.templates.<t>`, as
+    `stack/metallb` does with `complianceType: mustonlyhave`. A Helm `range` or `if` is never a
+    reason for a raw list.
 
     !!! note
         A `---` must start the line and stand alone to separate documents. A leading `---` and
@@ -377,8 +381,23 @@ ConfigurationPolicy field:
 === "Raw list"
 
     Output starting with `-`, `[` or `{{` goes verbatim into `object-templates-raw`, a string ACM
-    evaluates on the managed cluster. Use it when the cluster decides how many objects there are.
-    In practice a leading `{{` after Helm comes from an escaped ACM template
+    evaluates on the managed cluster as a whole. Use it only when:
+
+    - the cluster decides how many objects there are (an ACM `range` over a `lookup`),
+    - the cluster decides whether an object exists and the condition takes more than a line.
+      A short condition is `skipObject` inside one of the object's fields
+      (`stack/acs/converters/central/console.yaml`),
+    - the cluster decides whether a field exists (an ACM `if` around a key,
+      `stack/cim/converters/hub/cim-provisioning.yaml`),
+    - several ACM statements compute a number or boolean (`podsPerCore` in the kubelet
+      converters). A block scalar always yields a string, so the logic can't move into the field,
+    - one object must not apply unless another's lookups succeed, or ACM variables are shared
+      between objects. With documents, ACM resolves each object on its own and a failed object
+      doesn't stop the others,
+    - objects in one template need different `complianceType` or other entry options.
+
+    Say which in the converter's header comment. In practice a leading `{{` after Helm comes from
+    an escaped ACM template
     ([Helm templates and ACM templates](../concepts/elements.md#helm-templates-and-acm-templates)):
 
     ```yaml
@@ -398,7 +417,9 @@ ConfigurationPolicy field:
     template's `complianceType`, `metadataComplianceType`, `recordDiff`, `recreateOption` and
     `objectSelector` don't apply. A raw list must be the template's only output; next to another
     document, or in a `file` list, it fails with
-    `renders a raw object list next to other documents`.
+    `renders a raw object list next to other documents`. `disableTemplating` on a raw list fails
+    with `sets disableTemplating but renders a raw object list`: ACM never parses
+    `object-templates-raw` with templates disabled, so the template would apply nothing.
 
 Output that is empty renders `object-templates-raw` as the string `[]` (an empty raw list). ACM
 reports a ConfigurationPolicy with no objects as Compliant without checking anything, so a Policy
@@ -416,6 +437,23 @@ use a setting inside an ACM expression, leave that part unescaped so Helm fills 
 `{{ lookup "v1" "ConfigMap" "my-ns" "x" }}`. Escaped, ACM receives `.Config`, which it doesn't
 have, and POLICY081 fails. `make preview` shows both stages: `<element>.yaml` after Helm,
 `.evaluated.yaml` after ACM.
+
+ACM logic that feeds one value goes inside that value, so the object stays a document. A short
+expression is one quoted action, as in `stack/user-monitoring/converters/ready/statefulsets.yaml`.
+Longer logic goes in a block scalar as `{{-` lines, ending with one action without the dash that
+prints the value (`stack/user-monitoring/converters/config/enable.yaml`):
+
+```yaml
+data:
+  config.yaml: |
+    {{ "{{" }}- $cm := lookup "v1" "ConfigMap" "openshift-monitoring" "cluster-monitoring-config" {{ "}}" }}
+    {{ "{{" }}- $existing := index ($cm.data | default dict) "config.yaml" | default "" | fromYaml | default dict {{ "}}" }}
+    {{ "{{" }} set $existing "enableUserWorkload" true | toYaml | autoindent {{ "}}" }}
+```
+
+Each `{{-` removes the line break before it, so the value holds only the last action's output.
+The result is always a string. A number or boolean needs one quoted action ending in `| toInt` or
+`| toBool`, which ACM unquotes; if that doesn't fit on a line, keep the raw list.
 
 ## Partials and file reuse
 

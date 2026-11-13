@@ -1,6 +1,8 @@
 {{- /*
 Trusts each mirror registry's CA for image pulls. Renders nothing when config.registryCAs is
 empty, so the policy is compliant without touching the image config.
+
+A raw list because the objects need different complianceType.
 */ -}}
 {{- with .Config.registryCAs }}
 - complianceType: mustonlyhave

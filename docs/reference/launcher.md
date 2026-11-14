@@ -35,16 +35,19 @@ mise runs every task from the directory that holds `mise.toml`, wherever you cal
 ### install
 
 ```text
-mise run ps -- install [--src URL] [--to vX.Y.Z] [--elements a,b] [--examples values/x.yaml,...] DIR
+policystack install [--src URL] [--to vX.Y.Z] [--pre] [--elements a,b] [--examples values/x.yaml,...] DIR
 ```
 
-Run it from a clone of an upstream release ([Create your repository](../start/install.md#create-your-repository)).
+Your repository doesn't exist yet, so `install` runs from the launcher fetched from an upstream
+release, with `uv run --frozen --no-dev --project <fetched>/tools/policystack policystack install`
+([Create your repository](../start/install.md#create-your-repository)).
 
 | Flag | Default | Effect |
 |---|---|---|
 | `DIR` | Required | The new repository. Must be empty or absent, and not inside a Git work tree |
 | `--src` | `https://github.com/PolicyStack/PolicyStack.git` | Upstream. Recorded as `_src_path` in every answers file. To use a mirror, keep this default and rewrite it with `url.insteadOf`. copier reads a URL as git only if it ends in `.git` (or starts `git@`, `git://` or `git+`), so another URL fails with `Local template must be a directory` |
-| `--to` | A picker; without a terminal, the newest release that isn't blocked | The release to copy |
+| `--to` | A picker; without a terminal, the newest release that isn't blocked | The release to copy. May name a prerelease, `vX.Y.Z-rc.N`, without `--pre` |
+| `--pre` | Off | Also list prereleases in the picker, and take the newest of them as the default without a terminal |
 | `--elements` | A picker. Required without a terminal; may be `''` | Comma-separated elements |
 | `--examples` | A picker; without a terminal, none | Comma-separated files from upstream's `values/` |
 
@@ -79,12 +82,13 @@ policystack: newel first ships in v1.1.0; update the framework first: mise run u
 ### update
 
 ```text
-mise run ps -- update [--to vX.Y.Z] [element...]
+mise run ps -- update [--to vX.Y.Z] [--pre] [element...]
 ```
 
 | Argument | Default | Effect |
 |---|---|---|
-| `--to` | A picker. Required without a terminal | The release to move to. Your current release updates only elements behind the framework |
+| `--to` | A picker. Required without a terminal | The release to move to. Your current release updates only elements behind the framework. May name a prerelease without `--pre` |
+| `--pre` | Off | Also list prereleases in the picker. From a prerelease, the releases after it are listed either way |
 | `element...` | A picker of the changed elements, all ticked; without a terminal, every changed element | Elements to update. The framework always moves |
 
 An element is changed when a file of it differs upstream between its `_commit` and the target, or
@@ -113,7 +117,7 @@ Refuses, before any change:
 
 - Any uncommitted change or untracked file in the repository, unmerged paths, or a conflict marker
   (a line starting `<<<<<<< `) committed in any file.
-- A target that is blocked, past a required stop, a prerelease, or not a release.
+- A target that is blocked, past a required stop, or not a release or prerelease after yours.
 - A release tag that moved upstream since this machine last fetched it, or a release commit that
   carries a second tag ([Releases](../contributing.md#releases)).
 - Branch `policystack/update-<tag>` existing while you are not on it.

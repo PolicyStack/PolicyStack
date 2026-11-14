@@ -5,7 +5,7 @@ description = "Install, add and update a PolicyStack repository with copier."
 # copier 9.19.1 supports 3.10-3.14 and every dependency ships 3.14 wheels; the pin keeps the
 # interpreter uv picks deterministic (mise python 3.14).
 requires-python = "==3.14.*"
-dependencies = ["copier==9.19.1", "questionary>=2.1", "ruamel.yaml==0.19.1"]
+dependencies = ["copier==9.19.1", "packaging>=24", "questionary>=2.1", "ruamel.yaml==0.19.1"]
 
 [project.scripts]
 policystack = "policystack.cli:main"

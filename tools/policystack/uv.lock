@@ -193,6 +193,7 @@ version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
+    { name = "packaging" },
     { name = "questionary" },
     { name = "ruamel-yaml" },
 ]
@@ -205,6 +206,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = "==9.19.1" },
+    { name = "packaging", specifier = ">=24" },
     { name = "questionary", specifier = ">=2.1" },
     { name = "ruamel-yaml", specifier = "==0.19.1" },
 ]

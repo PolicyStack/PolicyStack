@@ -233,7 +233,7 @@ def test_install(installed, up):
     ("argv", "err"),
     [
         (("--to", "v1.2.0"), "blocked: odf waits forever; use v1.2.1"),
-        (("--to", "v2.0.0-rc.1"), "not a release you can move to"),
+        (("--to", "v2.0.0-rc.1"), "copier would record v2.0.0 for this commit"),  # one commit
         (("--to", "latest"), "(you can move to: v2.0.0, v1.2.1, v1.1.0, v1.0.0)"),
         (("--elements", "odf, odff"), "unknown elements: odff (did you mean odf?)"),
         (("--examples", "values/x.yaml"), "unknown example files: values/x.yaml"),
@@ -248,6 +248,21 @@ def test_install_refusals(up, tmp_path, capsys, argv, err):
 def test_install_default_is_newest(up, tmp_path):
     assert cli.main(["install", "--src", up, "--elements", "", str(tmp_path / "x")]) == 0
     assert commit_of(tmp_path / "x") == "v2.0.0"
+
+
+def test_install_and_update_a_prerelease(up, tmp_path, monkeypatch, capsys):
+    """--to names a prerelease without --pre, and update moves it on to the release. As
+    release-please cuts them, the candidate and the release are separate commits."""
+    u = tmp_path / "up.git"
+    shutil.copytree(up.removeprefix("file://"), u, symlinks=True)
+    release(u, "v2.0.1-rc.1", {"stack/acm/rc.txt": "rc\n"})
+    release(u, "v2.0.1", {"stack/acm/rc.txt": "final\n"})
+    ad, src = tmp_path / "x", f"file://{u}"
+    argv = ["install", "--src", src, "--to", "v2.0.1-rc.1", "--elements", "", str(ad)]
+    assert cli.main(argv) == 0 and commit_of(ad) == "v2.0.1-rc.1"
+    monkeypatch.chdir(ad)
+    assert ps(capsys, "update", "--to", "v2.0.1")[0] == 0
+    assert commit_of(ad) == commit_of(ad, "stack/acm") == "v2.0.1"
 
 
 def test_install_interrupted_removes_everything(up, tmp_path, monkeypatch, capsys):

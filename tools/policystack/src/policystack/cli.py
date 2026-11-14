@@ -111,7 +111,7 @@ def _commit(root: Path, scope: str) -> str:
     tag = repo.answers(root, scope)["_commit"]
     if not cat.TAG.fullmatch(str(tag)):
         raise Refused(
-            f"{Path(scope, ANSWERS)}: _commit {tag} is not a vX.Y.Z release; set it to "
+            f"{Path(scope, ANSWERS)}: _commit {tag} is not a release tag; set it to "
             "the release that scope was copied from"
         )
     return tag
@@ -150,7 +150,7 @@ def install(a) -> None:
     if a.elements is None:
         _need("pass --elements (comma-separated; may be empty)")
     mirror = repo.mirror(a.src)
-    releases = cat.tags(mirror)
+    releases = cat.tags(mirror, a.pre or cat.prerelease(a.to))
     rows = cat.targets(releases, None, {}, cat.blocked(mirror, releases[-1]))
     newest = next((t for t, why, _ in rows if not why), "")
     tag = a.to or (_pick_tag(rows) if _tty() else newest)
@@ -203,7 +203,7 @@ def add(a) -> None:
     picked = set(a.elements or _checkbox("Elements to add", rows))
     missing = picked - set(elements)
     later = {}  # element -> the first release after tag that has it
-    for t in cat.tags(mirror) if missing else []:
+    for t in cat.tags(mirror, cat.prerelease(tag)) if missing else []:
         if cat.version(t) > cat.version(tag):
             later |= {e: t for e in missing & set(cat.names(mirror, t)) - later.keys()}
     if later:
@@ -246,7 +246,7 @@ def _plan(root: Path, mirror: Path, tracked: list[str], tag: str):
             continue
         moved = repo.changes(mirror, old, tag, scope) if old != tag else []
         # Elements share the framework's major.
-        major = cat.version(old)[0] < cat.version(tag)[0]
+        major = cat.version(old).major < cat.version(tag).major
         if moved or major:
             detail = _detail(root, mirror, old, tag, scope, moved)
             changed.append((el, detail, elements[el].description, major))
@@ -257,7 +257,7 @@ def _plan(root: Path, mirror: Path, tracked: list[str], tag: str):
 
 def update(a) -> int:
     root, _, current, mirror = _open(None if a.to else "pass --to <release>")
-    releases = cat.tags(mirror)
+    releases = cat.tags(mirror, a.pre or cat.prerelease(a.to))
     block = cat.blocked(mirror, releases[-1])
     rows = cat.targets(releases, current, cat.stops(mirror, releases, block), block)
     rows.append((current, None, "current: elements behind it only"))
@@ -274,11 +274,11 @@ def update(a) -> int:
         )
     tracked = sorted(p.parent.name for p in root.glob(f"stack/*/{ANSWERS}"))
     elements, changed, unchanged, removed = _plan(root, mirror, tracked, tag)
-    major = cat.version(current)[0] < cat.version(tag)[0]
+    major = cat.version(current).major < cat.version(tag).major
     if major and removed:
         raise Refused(
             f"removed upstream by {tag}: {', '.join(removed)}. POLICY061 fails while "
-            f"they stay on v{cat.version(current)[0]}: delete stack/<element>, or only "
+            f"they stay on v{cat.version(current).major}: delete stack/<element>, or only "
             f"its {ANSWERS} to keep it as yours, commit, then rerun"
         )
     applied = cat.steps(mirror, current)
@@ -407,12 +407,14 @@ def main(argv: list[str] | None = None) -> int:
     i.add_argument("dir", help="directory for the new repository (empty or absent)")
     i.add_argument("--src", default=URL, help="upstream URL (default %(default)s)")
     i.add_argument("--to", help="release; default: pick one, or the newest")
+    i.add_argument("--pre", action="store_true", help="also list prereleases (vX.Y.Z-rc.N)")
     i.add_argument("--elements", type=_csv, help="comma-separated element names")
     i.add_argument("--examples", type=_csv, help="comma-separated values/ files")
     s = sub.add_parser("add", help="add elements at the framework's release")
     s.add_argument("elements", nargs="*")
     u = sub.add_parser("update", help="update on branch policystack/update-<release>")
     u.add_argument("--to", help="release")
+    u.add_argument("--pre", action="store_true", help="also list prereleases (vX.Y.Z-rc.N)")
     u.add_argument("elements", nargs="*", help="default: every changed element")
     a = p.parse_args(argv)
     a.to = getattr(a, "to", None) or None  # --to '' is not a release

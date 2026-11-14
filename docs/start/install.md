@@ -66,7 +66,7 @@ uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack \
   policystack install ~/<repo> # (3)!
 ```
 
-1.  The newest release. Prereleases such as `v1.3.0-rc.1` are skipped. The launcher it fetches can install any release; it asks which.
+1.  The newest release. Prereleases such as `v1.3.0-rc.1` are skipped ([Release candidates](#release-candidates)). The launcher it fetches can install any release; it asks which.
 2.  One commit, and only the launcher's files: well under 1 MB. A Git server without partial clone support ignores `--filter` and sends the whole release, about 3 MB; the commands still work.
 3.  Not inside `~/policystack-<tag>`: the launcher refuses a directory inside a Git work tree. `--frozen` installs the exact packages `uv.lock` pins; `--no-dev` leaves out the launcher's test tools.
 
@@ -127,6 +127,19 @@ element: ''
 `mise run update` reads `_commit` to know what to merge, and the validator reads it to check every fleet pin (POLICY052) and every element's release (POLICY061). Never edit it by hand ([Answers files](../guides/upgrading.md#answers-files)).
 
 Left out: everything that stays upstream, such as the docs, the upstream README and CODEOWNERS, and the example `values/` files you didn't pick. Who owns each path from here on: [The repository](../concepts/overview.md#the-repository).
+
+### Release candidates
+
+A prerelease, `vX.Y.Z-rc.N`, is for trying a release before it ships; the [contract](../reference/compatibility.md#versions) doesn't cover it. Set `tag` to the candidate instead of the `ls-remote` line, fetch the launcher the same way, and name the candidate:
+
+```sh
+tag=v1.0.0-rc.2
+# git clone and sparse-checkout as above, then:
+uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack \
+  policystack install --to "$tag" ~/<repo> # (1)!
+```
+
+1.  Or `--pre` in place of `--to "$tag"`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` predates the launcher. Later, `mise run update` moves the repository from the candidate to the release.
 
 ## Add elements
 

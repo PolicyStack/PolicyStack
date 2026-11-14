@@ -36,6 +36,35 @@ def test_tags_sorted_semver_without_prereleases(up):
     assert cat.tags(up) == ["v1.0.0", "v1.1.0", "v1.2.0", "v1.2.1", "v1.10.0", "v2.0.0"]
 
 
+def test_tags_with_prereleases(up):
+    assert cat.tags(up, pre=True)[-3:] == ["v1.10.0", "v2.0.0-rc.1", "v2.0.0"]
+
+
+def test_prerelease_order():
+    order = ["v1.0.0-rc.1", "v1.0.0-rc.2", "v1.0.0-rc.10", "v1.0.0", "v1.0.1-rc.1"]
+    shuffled = ["v1.0.1-rc.1", "v1.0.0", "v1.0.0-rc.10", "v1.0.0-rc.1", "v1.0.0-rc.2"]
+    assert sorted(shuffled, key=cat.version) == order  # rc.10 after rc.2, unlike a string sort
+    assert [cat.prerelease(t) for t in order] == [True, True, True, False, True]
+
+
+def test_only_prereleases(tmp_path):
+    """Before the first release, the refusal names the candidates and how to take one."""
+    u = init(tmp_path)
+    release(u, "v1.0.0-rc.1")
+    release(u, "v1.0.0-rc.2")
+    with pytest.raises(cat.Refused, match=r"prereleases: v1.0.0-rc.1, v1.0.0-rc.2 \(pass --pre"):
+        cat.tags(u)
+    assert cat.tags(u, pre=True) == ["v1.0.0-rc.1", "v1.0.0-rc.2"]
+
+
+def test_stop_is_never_a_prerelease(tmp_path):
+    """The last v1 stop is the last v1 release, never a v1 candidate after it."""
+    u = init(tmp_path)
+    for t in ("v1.0.0", "v1.1.0-rc.1", "v2.0.0-rc.1"):
+        release(u, t)
+    assert cat.stops(u, cat.tags(u, pre=True), {}) == {"v1.0.0": "last v1 release before v2"}
+
+
 def test_stops(up):
     assert cat.stops(up, cat.tags(up), {}) == {
         "v1.1.0": "hub annotation",
@@ -74,9 +103,11 @@ def test_blocked_last_of_major_does_not_strand_later_releases():
     )
 
 
-@pytest.mark.parametrize("tag", ["v2.0.0-rc.1", "v1.2.1-3-gabcdef0", "policy-library-4.1.3", None])
+@pytest.mark.parametrize(
+    "tag", ["v1.2.1-3-gabcdef0", "v1.0.0-rc.1.x", "policy-library-4.1.3", None]
+)
 def test_version_refuses_non_release(tag):
-    with pytest.raises(cat.Refused, match="not a vX.Y.Z release"):
+    with pytest.raises(cat.Refused, match="not a vX.Y.Z release or vX.Y.Z-rc.N prerelease"):
         cat.version(tag)
 
 

@@ -5,26 +5,45 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from packaging.version import InvalidVersion, Version
+
 from .repo import Refused, git, load, read
 
 # Every repository needs them (docs/start/install.md).
 LOCKED = ("acm", "gitops", "upgrade")
-TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)")  # releases only: prereleases never match
+TAG = re.compile(r"v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?")  # a release, or a prerelease: v1.0.0-rc.1
 BLOCKED = "upgrades/blocked.yaml"
 
 
-def version(tag: str) -> tuple[int, ...]:
-    if m := TAG.fullmatch(str(tag)):
-        return tuple(map(int, m.groups()))
-    raise Refused(f"{tag}: not a vX.Y.Z release")
+def _parse(tag) -> Version | None:
+    if TAG.fullmatch(str(tag)):
+        try:
+            return Version(tag[1:])  # orders v1.0.0-rc.1 < v1.0.0-rc.2 < v1.0.0
+        except InvalidVersion:
+            pass
+    return None
 
 
-def tags(gitdir: Path) -> list[str]:
-    """Releases, oldest first."""
-    if out := [t for t in git("tag", "-l", "v*", cwd=gitdir).split() if TAG.fullmatch(t)]:
-        return sorted(out, key=version)
-    url = git("config", "remote.origin.url", cwd=gitdir).strip()
-    raise Refused(f"{url}: no vX.Y.Z release tags")
+def version(tag: str) -> Version:
+    if v := _parse(tag):
+        return v
+    raise Refused(f"{tag}: not a vX.Y.Z release or vX.Y.Z-rc.N prerelease")
+
+
+def prerelease(tag) -> bool:
+    return bool((v := _parse(tag)) and v.is_prerelease)
+
+
+def tags(gitdir: Path, pre: bool = False) -> list[str]:
+    """Releases, oldest first; prereleases too with pre."""
+    found = sorted(
+        (t for t in git("tag", "-l", "v*", cwd=gitdir).split() if _parse(t)), key=version
+    )
+    if out := [t for t in found if pre or not prerelease(t)]:
+        return out
+    url = git("config", "remote.origin.url", cwd=gitdir, ok=(1,)).strip() or gitdir
+    hint = f"; prereleases: {', '.join(found)} (pass --pre, or --to one of them)" if found else ""
+    raise Refused(f"{url}: no vX.Y.Z release tags{hint}")
 
 
 def steps(gitdir: Path, tag: str) -> dict[str, dict]:
@@ -50,10 +69,12 @@ def stops(gitdir: Path, releases: list[str], block: dict[str, str]) -> dict[str,
     blocked release is never a stop: its role moves to the newest unblocked release before it,
     or the first after it."""
     releases = [t for t in releases if t not in block]
+    majors = sorted({version(t).major for t in releases})
+    last = {version(t).major: t for t in releases if not prerelease(t)}  # a stop is never an rc
     out = {
-        a: f"last v{version(a)[0]} release before v{version(b)[0]}"
-        for a, b in itertools.pairwise(releases)
-        if version(a)[0] != version(b)[0]
+        last[a]: f"last v{a} release before v{b}"
+        for a, b in itertools.pairwise(majors)
+        if a in last
     }
     seen: set[str] = set()
     for t in releases:

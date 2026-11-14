@@ -10,7 +10,7 @@ nothing here.
 
 | Repository | Holds | Versioned by |
 |---|---|---|
-| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework, the starter elements and the policy-library chart (`lib/`) | Release tags `vX.Y.Z`, one tag line for the framework and every element, cut by release-please ([Releases](#releases)). Adopters copy and update from them with copier. policy-library has its own chart version in `lib/policy-library/Chart.yaml` ([Library changes](#library-changes)) |
+| [PolicyStack](https://github.com/PolicyStack/PolicyStack) | The framework, the starter elements and the policy-library chart (`lib/`) | Release tags `vX.Y.Z`, one tag line for the framework and every element, cut by release-please ([Releases](#releases)). Adopters copy and update from them with the launcher ([Launcher](reference/launcher.md)). policy-library has its own chart version in `lib/policy-library/Chart.yaml` ([Library changes](#library-changes)) |
 | [PolicyStack/.github](https://github.com/PolicyStack/.github) | Org defaults, including the Renovate preset | Not versioned |
 
 Element versions, deprecating a key or an element, and when to contribute instead of ejecting:
@@ -23,7 +23,7 @@ each cluster (`<element>-<cluster>`), and a PolicyStack GitHub release.
 ## Setup
 
 Tool versions live in `mise.toml`. [mise](https://mise.jdx.dev) installs each at the version CI
-uses: Go, Helm, Python, copier, prek (the hook runner) and the linters.
+uses: Go, Helm, Python, uv, prek (the hook runner) and the linters.
 
 ```sh
 git clone https://github.com/<you>/PolicyStack.git && cd PolicyStack
@@ -45,6 +45,7 @@ prek run --all-files                       # lint
 make -C tools/validator validate           # validate (Helm floor leg)
 make -C tools/validator lint test          # validator
 helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test && untt --strict lib/tests/fixtures/policy-stack-test   # library
+uv run --frozen --project tools/policystack pytest -q tools/policystack/tests   # launcher
 python -m unittest tools/test_doc_generator.py && zensical build --strict   # docs
 ```
 
@@ -116,6 +117,16 @@ those directories: `README.md`, `zensical.toml`, `.github/workflows/upstream.yml
 `tools/test_doc_generator.py` and the rest of the upstream-only list in `copier.yml`. A `fix` or
 `feat` that changes only those still cuts a release, and adopters get an update that changes
 nothing but the version. Title those PRs `docs`, `ci`, `test` or `chore`.
+
+A release commit carries only its `vX.Y.Z` tag. copier records whatever `git describe --tags`
+names, so the launcher refuses a release whose commit has a second tag. One release-please package
+keeps it that way.
+
+A release that renames or moves a values key can ship an upgrade step, and a release found broken
+after it shipped is listed in `upgrades/blocked.yaml` on `main`, so the next release blocks it
+([Upgrade steps](reference/launcher.md#upgrade-steps), [Blocked releases](reference/launcher.md#blocked-releases)).
+Changes to the launcher itself go in `tools/policystack` with its tests; `uv lock` after changing
+`pyproject.toml`.
 
 A new element needs no release setup. `tools/create-element.sh` adds copier's answers template, and
 the element ships in the next release.

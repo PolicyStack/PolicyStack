@@ -8,6 +8,7 @@ This directory contains automation utilities for PolicyStack development and doc
 - [create-element.sh](#create-elementsh)
 - [doc-generator.py](#doc-generatorpy)
 - [migrate-4.0.py](#migrate-40py)
+- [policystack/](#policystack)
 - [CI/CD Integration](#cicd-integration)
 - [Best Practices](#best-practices)
 
@@ -69,9 +70,34 @@ Converts elements and values layers from policy-library 3.x to 4.0. Idempotent: 
 already 4.0. Prints what it could not convert; review the result with `git diff` and Render Diff.
 Without uv, `pip install 'ruamel.yaml>=0.18'` first.
 
+## policystack/
+
+The launcher. It creates a PolicyStack repository, adds elements to it, and updates it to a newer
+release. It calls copier's Python API with the copier version `uv.lock` pins, so nothing but mise
+and git 2.43 or later is needed. Run `install` from a clone of upstream PolicyStack, and the other
+commands from your repository's root:
+
+```bash
+mise run ps -- install ~/fleet                  # pick release, elements, example values files
+mise run ps -- install --to v1.4.0 --elements odf,loki --examples values/clusters/prod-east-1.yaml ~/fleet
+mise run ps -- add loki                         # copy elements at the framework's release
+mise run update                                 # ps update, then validate
+mise run ps -- update --to v1.5.0 odf           # update only odf; refused if another element must move too
+```
+
+Commands, exit codes, the update branch and the `upgrades/` and `blocked.yaml` formats:
+[Launcher reference](https://policystk.io/reference/launcher/).
+
+Tests run in upstream only (`tests/` is not copied). `test_flows.py` runs install, add and update
+end to end through copier against a synthetic upstream, which takes about a minute:
+
+```bash
+mise x -- uv run --project tools/policystack pytest tools/policystack/tests
+```
+
 ## CI/CD Integration
 
-Upstream's `upstream.yml` runs the generator tests. The `element-readmes` prek hook, run by `ci.yml`,
+Upstream's `upstream.yml` runs the generator tests, and the launcher's tests and `uv lock --check`. The `element-readmes` prek hook, run by `ci.yml`,
 regenerates `stack/*/README.md` and fails when one is stale. See
 [Hooks](https://policystk.io/reference/ci/#hooks).
 

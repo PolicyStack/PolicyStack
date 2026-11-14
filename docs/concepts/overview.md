@@ -4,26 +4,27 @@ The rest of the docs assume you know what is in your repository, what PolicyStac
 
 ## The repository
 
-You create your own repository from upstream PolicyStack with copier and pass its URL as `gitRepo` when you install the chart on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one repository; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)).
+You create your own repository from upstream PolicyStack with the launcher (`mise run ps`) and pass its URL as `gitRepo` when you install the chart on the hub ([Installation](../start/install.md)). Upstream ships no fleet files, so it configures no cluster until you add yours. Several hubs can read one repository; each acts only on the fleet files of clusters it manages or builds, plus its own `fleet/hubs/<hubName>.yaml` ([Several hubs, one repo](architecture.md#several-hubs-one-repo)).
 
-copier copies two kinds of things from upstream release tags, each recorded in a `.copier-answers.yml`: the framework, once, at the repository root, and each element you want, into `stack/<element>/`. Everything else is yours. Each path belongs to one owner:
+The launcher copies two kinds of things from upstream release tags with copier, each recorded in a `.copier-answers.yml`: the framework, once, at the repository root, and each element you want, into `stack/<element>/`. Everything else is yours. Each path belongs to one owner:
 
 | Path | What it is | Owner | Updated by |
 |---|---|---|---|
 | `install/` | The Helm chart you run once per hub. It creates the two ApplicationSets, a GitOpsCluster that registers every ACM managed cluster with Argo CD (so the ApplicationSets can list them), the `pstack` namespace and RBAC ([Install chart](../reference/install.md)). `install/operators/` renders ACM, OpenShift GitOps and a MultiClusterHub for a hub that doesn't run them yet. | Framework | A framework update. Don't edit. |
 | `lifecycle/` | The chart that builds and destroys clusters ([Cluster lifecycle](lifecycle.md)). | Framework | Same |
 | `lib/` | policy-library, the Helm library chart every element and `lifecycle/` renders through ([How an element is built](elements.md)). | Framework | Same |
-| `tools/` | The validator, the sample element, `create-element.sh` and the README generator. | Framework | Same |
-| `.github/workflows/`, `.pre-commit-config.yaml`, `mise.toml` | CI workflows, lint hooks and pinned tool versions ([CI workflows](../reference/ci.md)). | Framework | Same |
+| `tools/` | The validator, the launcher (`tools/policystack`), the sample element, `create-element.sh` and the README generator. | Framework | Same |
+| `.github/workflows/`, `.pre-commit-config.yaml`, `mise.toml` | CI workflows, lint hooks, pinned tool versions and the `ps`, `update` and `validate` tasks ([CI workflows](../reference/ci.md), [Launcher](../reference/launcher.md)). | Framework | Same |
+| `upgrades/` | Present once a release ships one: upgrade steps and blocked releases. The launcher reads them from upstream, not from your copy ([Upgrade steps](../reference/launcher.md#upgrade-steps)). | Framework | Same |
 | `/.copier-answers.yml` | The framework release you have, such as `_commit: v1.2.0`. | copier | A framework update. Never edit by hand. |
 | `stack/<element>/` with a `.copier-answers.yml` | A tracked element, copied from a release tag `vX.Y.Z` no newer than the framework's. | Upstream, until you edit it | An element update, which merges upstream's changes with your edits. |
 | `stack/<element>/` without one | An element you wrote, or one you ejected from tracking. | You | You |
-| `fleet/` | One fleet file per cluster. | You | You |
-| `values/` | Values layers, such as `environments/prod.yaml` or `clusters/<cluster>.yaml`. | You | You |
+| `fleet/` | One fleet file per cluster. | You | You, and upgrade steps on an update branch |
+| `values/` | Values layers, such as `environments/prod.yaml` or `clusters/<cluster>.yaml`. | You | You, and upgrade steps on an update branch |
 | `values.yaml` | Values every cluster gets. It holds only `policyNamespace: pstack`, the namespace the install chart creates. Don't edit it: changing that key renames, so deletes and recreates, every Policy ([Where Policies live](policies.md#where-policies-live)), and fleet-wide settings go in a layer ([Order](values.md#order)). | Framework | A framework update |
 | `.github/CODEOWNERS`, `README.md` | Reviewers, your own notes. | You | You |
 
-You take updates by hand: `copier update` merges a newer release of the framework or of one element into a branch, you open it as a PR, and the merge reaches clusters like any other ([Upgrading PolicyStack](../guides/upgrading.md)). Upstream promises compatibility only for the framework and for elements you haven't edited ([Compatibility](../reference/compatibility.md)). Settings belong in `values/`: an element you edit is yours to merge on every update.
+You take updates by hand: `mise run update` merges a newer release of the framework and the elements you pick into a branch, you open it as a PR, and the merge reaches clusters like any other ([Upgrading PolicyStack](../guides/upgrading.md)). Upstream promises compatibility only for the framework and for elements you haven't edited ([Compatibility](../reference/compatibility.md)). Settings belong in `values/`: an element you edit is yours to merge on every update.
 
 Every element ships with `enabled: false` except `upgrade`, which renders nothing until a fleet file sets `version` or `channel`, or a layer sets `stack.upgrade.config.upstream`. Then it enforces them on merge: `version` starts an OpenShift upgrade ([OpenShift upgrades](../guides/upgrades.md)). A cluster gets nothing from an element until a values layer it reads sets `stack.<elementKey>.enabled: true`, where the key is the element name in camelCase: `cert-manager` reads `stack.certManager` ([How an element is built](elements.md)).
 

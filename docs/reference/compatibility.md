@@ -13,10 +13,10 @@ number it carries and what upstream promises about it.
 
 | Tier | Paths | Version | Promise |
 |---|---|---|---|
-| Framework | `install/`, `lifecycle/`, `lib/`, `tools/`, the copied workflows and hooks, the root `values.yaml`, plus the surfaces in [Public API](#public-api) | `vX.Y.Z`, recorded in `/.copier-answers.yml` | A breaking change is a framework major, except where [Maturity](#maturity) lets a preview lifecycle engine change in a minor. You MUST NOT modify these paths: every framework update has to merge your edits, and a modified framework is not supported. |
+| Framework | `install/`, `lifecycle/`, `lib/`, `tools/`, `upgrades/`, the copied workflows and hooks, the root `values.yaml`, plus the surfaces in [Public API](#public-api) | `vX.Y.Z`, recorded in `/.copier-answers.yml` | A breaking change is a framework major, except where [Maturity](#maturity) lets a preview lifecycle engine change in a minor. You MUST NOT modify these paths: every framework update has to merge your edits, and a modified framework is not supported. |
 | Stable element | Each `stack/<element>` whose `Chart.yaml` sets `policystk.io/stability: stable` (`acm`, `gitops`, `upgrade`), unmodified | `vX.Y.Z`, the release it was copied from, recorded in `stack/<element>/.copier-answers.yml` | A breaking change is a framework major ([Element stability](#element-stability)). |
 | Preview element | Every other upstream element, `policystk.io/stability: preview` | Same | A framework minor MAY change values keys, Policy names or output, except the Policy names in [Public API](#public-api) item 10. The release notes say how. |
-| Yours | `fleet/`, `values/`, `.github/CODEOWNERS`, `README.md`, and every element you modified, ejected or wrote | Yours | None. Upstream never writes these after the first copy. |
+| Yours | `fleet/`, `values/`, `.github/CODEOWNERS`, `README.md`, and every element you modified, ejected or wrote | Yours | None. Upstream never writes these after the first copy, with one exception: `mise run update` applies upstream's [upgrade steps](launcher.md#upgrade-steps) to `values/` and `fleet/`, as a separate commit on the update branch that you review before merging. |
 
 An element counts as unmodified while its files equal the tag in its answers file. Once you edit
 one, it is yours: updates still arrive, and your edits are merged with them
@@ -24,7 +24,8 @@ one, it is yours: updates still arrive, and your edits are merged with them
 if the problem reproduces on the unmodified element. To compare:
 
 ```sh
-copier copy --vcs-ref "$(sed -n 's/^_commit: //p' stack/odf/.copier-answers.yml)" -d element=odf \
+mise x -- uv run --frozen --no-dev --project tools/policystack copier copy -d element=odf \
+  --vcs-ref "$(sed -n 's/^_commit: //p' stack/odf/.copier-answers.yml)" \
   https://github.com/PolicyStack/PolicyStack.git /tmp/odf
 diff -r -x .copier-answers.yml -x charts -x Chart.lock /tmp/odf stack/odf # (1)!
 ```
@@ -69,9 +70,12 @@ the next major.
     cluster labels in [Labels](fleet.md#labels).
 9.  **Tooling.** Validator rule IDs, the make targets `validate`, `preview` and `deps`,
     `tools/create-element.sh`, the required checks `ci` and `pr-title`, the copier question
-    `element`, and the tag format `vX.Y.Z`. A rule may be narrowed or retired in a minor; a change
-    that makes it fail a repository that passes today follows [Deprecation](#deprecation). A retired
-    ID is never reused.
+    `element`, and the tag format `vX.Y.Z`, with each release commit carrying only its own
+    `vX.Y.Z` tag. The [launcher](launcher.md): its commands, flags and exit codes, the mise tasks
+    `ps`, `update` and `validate`, and the formats of `upgrades/<name>.yaml` and
+    `upgrades/blocked.yaml`. A rule may be narrowed or retired in a minor; a change that makes it
+    fail a repository that passes today follows [Deprecation](#deprecation). A retired ID is never
+    reused.
 10. **Stable elements.** Their `config` keys and types, the names of their `policies`,
     `templates` and `operatorPolicies` entries, Policy names other elements depend on, which
     entries are on by default, and the enforcement defaults `enabled`, `remediationAction`,
@@ -85,9 +89,11 @@ These MAY change in any release:
 
 - Output of preview elements, even for unchanged values.
 - Internal library defines, and the internals of `tools/*.py` and `tools/*.sh`.
-- Validator message text. Rule IDs are covered; wording is not.
+- Validator and launcher message text, the update plan included. Rule IDs and exit codes are
+  covered; wording is not.
 - New validator warnings. A warning never fails a PR.
-- This documentation, and the example files under upstream's `values/`, which copier doesn't copy.
+- This documentation, and the example files under upstream's `values/`. `install` copies the
+  ones you pick, and from then on they are yours.
 - A change a security fix can't make compatibly. It is a `fix` without `!`, with a subject that
   starts with `breaking:`, and the release notes say what changed and why.
 
@@ -200,9 +206,9 @@ maturity.
   fleet file that still sets it ([Deprecating a key](../develop/elements.md#deprecating-a-key-or-an-element)).
 - **Elements:** a deprecated element sets `deprecated: true` in its `Chart.yaml` and keeps working
   until a release removes it: any later minor for a preview element, a major for a stable one.
-  POLICY092 warns on every values file that turns it on. Once it is removed, `copier update` on it
-  fails: [eject](../guides/upgrading.md#skip-freeze-eject-roll-back) it to keep it as yours, or
-  remove it.
+  POLICY092 warns on every values file that turns it on. Once it is removed, updates skip it and
+  list it as `removed upstream`, and an update to a new major is refused until you
+  [eject](../guides/upgrading.md#skip-freeze-eject-roll-back) it to keep it as yours, or remove it.
 - **Validator rules:** a new rule, or a new error case of an existing rule, that can fail a
   repository that passes today ships as a warning for at least one minor before it becomes an
   error. A rule that prevents an outage or a security problem MAY be an error at once. Rule IDs are
@@ -303,8 +309,10 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 | Deprecation windows | Review only. POLICY039 warns on a deprecated key, but doesn't check the version its comment names |
 | A new error ships as a warning first | Review only |
 | A preview break says `breaking:` | Review only. `pr-title` accepts any subject |
-| Tags never move | GitHub tag rulesets on `v*` in upstream |
-| Conflict markers never merge | The `check-merge-conflict` hook in `ci`, over every file except `tools/validator/crds/`, and the render in `validate` |
+| Tags never move | GitHub tag rulesets on `v*` in upstream. The launcher refuses a release tag that moved since this machine last fetched it |
+| A release commit carries only its tag | The launcher refuses a release whose commit carries a second tag, because copier would record that one. release-please tags one package |
+| Conflict markers never merge | The launcher refuses to commit one or to start while one is committed; the `check-merge-conflict` hook in `ci`, over every file except `tools/validator/crds/`; and the render in `validate` |
+| Majors one at a time | The launcher makes the last release of each major a required stop and moves every element on a major ([Required stops](launcher.md#required-stops)) |
 
 ## Support
 
@@ -314,6 +322,9 @@ PolicyStack.
 | PolicyStack | OpenShift | ACM | OpenShift GitOps | Helm |
 |---|---|---|---|---|
 | 1.x | 4.20 or later | 2.16 or later | 1.18 or later (Argo CD 3.1) | 3.18.4, as bundled in GitOps 1.18. Helm 4 is tested, advisory |
+
+On the workstation that runs the [launcher](launcher.md#requirements): git 2.43 or later, and mise,
+which installs the Python (3.14) and uv that `mise.toml` pins.
 
 CI runs no cluster. It renders with Helm 3.18.4, plus Helm 4.2.1 as an advisory leg, and validates
 the output against the ACM 2.16 CRDs. OpenShift and OpenShift GitOps are not tested. Later versions

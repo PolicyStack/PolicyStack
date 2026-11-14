@@ -625,7 +625,7 @@ rename deletes and recreates every Policy it renders. Add the new element and de
 ### Eject or contribute
 
 An element copied from upstream is tracked: its `.copier-answers.yml` names the release, and
-`copier update` merges each upstream release you take with your edits
+`mise run update` merges each upstream release you take with your edits
 ([Element updates](../guides/upgrading.md#element-updates)).
 
 - **Change it through values** when you can. Every `config` key, policy, template and operator can be
@@ -637,7 +637,7 @@ An element copied from upstream is tracked: its `.copier-answers.yml` names the 
   element is then yours like one you wrote; no updates arrive, and upstream no longer supports it
   ([Tiers](../reference/compatibility.md#tiers)).
 
-An element you write with `create-element.sh` has no answers file, so copier never touches it.
+An element you write with `create-element.sh` has no answers file, so updates never touch it.
 
 ## Element reference
 

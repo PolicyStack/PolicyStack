@@ -332,7 +332,7 @@ global:
 
 ## Example files
 
-Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) holds examples for the example clusters in the docs, and the layers the validator's test fleet files in `tools/validator/testdata/clusters/` read. copier copies neither into your repository, so your `values/` starts empty. Copy an example by hand if it fits, and read it first.
+Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values) holds examples for the example clusters in the docs, and the layers the validator's test fleet files in `tools/validator/testdata/clusters/` read. Your `values/` starts with only the example files you picked at [install](../start/install.md#example-files), which are yours from then on: updates never merge upstream's changes into them. Only an [upgrade step](../reference/launcher.md#upgrade-steps) renames a key in them, in its own commit on the update branch. Copy another by hand if it fits, and read it first.
 
 !!! warning "The examples enforce"
     Listing a layer applies it on the next sync, and the elements it turns on enforce, so a cluster that lists a copy of `environments/prod.yaml` changes at once. Start a new cluster with an empty `valueFiles`, or set `global.remediationAction: inform` in its cluster file first.

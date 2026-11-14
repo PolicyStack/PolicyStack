@@ -65,8 +65,12 @@ make -C tools/validator validate ELEMENT=metallb # (2)!
 2.  Every rule, for one element. Repo-phase rules still load everything but report only this
     element's findings, so findings that belong to no element (POLICY052, POLICY071) don't show.
 
-Before opening a PR, run `validate`, which is what `ci` runs in your repository. For a PR to
-upstream PolicyStack, run its validator CI instead (every CI job: [Setup](../contributing.md#setup)):
+Before opening a PR, run `validate`, which is what `ci` runs in your repository. In your
+repository, `mise run validate` runs it with `BASE_BRANCH=main`, so a fleet file pinned to `main`
+resolves to your working branch, and `mise run update` runs it after every update
+([Taking an update](../guides/upgrading.md#taking-an-update)). If your default branch has another
+name, set it: `BASE_BRANCH=prod mise run validate`. For a PR to upstream PolicyStack, run its
+validator CI instead (every CI job: [Setup](../contributing.md#setup)):
 
 ```sh
 make -C tools/validator ci # (1)!
@@ -145,7 +149,7 @@ adopter's copy prints it once, for `fleet/`.
 
 | Target | Runs |
 | ------ | ---- |
-| `validate [ELEMENT=<chart>]` | The three passes above |
+| `validate [ELEMENT=<chart>] [BASE_BRANCH=<branch>]` | The three passes above. `BASE_BRANCH` passes `--base-branch` (see the flags below) |
 | `preview ELEMENT=<chart> [CLUSTER=<name>] [PREVIEW=<dir>]` | [Preview](#preview) |
 | `crds` | Refetches the committed [CRD schemas](#crd-schemas) in `tools/validator/crds/` from the pinned SHAs. Run it by hand after a pin changes, then commit the result |
 | `test` | Upstream only. `go test -race ./...`. Tests that need Helm skip without it. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
@@ -249,8 +253,9 @@ file; POLICY080 points at the element's `values.yaml` instead.
 
     Locally `$GITHUB_BASE_REF` is empty, so a fleet file with `revision: main` resolves to
     `origin/main` as of your last `git fetch`, not your working tree, and a branch you haven't pushed
-    fails POLICY052. Pass `--base-branch main` to make `main` mean `HEAD`. POLICY052 also needs full
-    history: tags and `origin/*` branches.
+    fails POLICY052. Pass `--base-branch main` (`BASE_BRANCH=main` with `make`) to make `main` mean
+    `HEAD`; a repository with no `origin` remote needs it. POLICY052 also needs full history: tags
+    and `origin/*` branches.
 
     `tools/validator/bin/policystack-validator resolve-revision [--branch <b> --at <commit>] -- <revision>`
     prints the commit POLICY052 resolves a `revision` to, exit 1 when it does not resolve.

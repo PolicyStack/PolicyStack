@@ -1,0 +1,26 @@
+[project]
+name = "policystack"
+version = "0.0.0"
+description = "Install, add and update a PolicyStack repository with copier."
+# copier 9.19.1 supports 3.10-3.14 and every dependency ships 3.14 wheels; the pin keeps the
+# interpreter uv picks deterministic (mise python 3.14).
+requires-python = "==3.14.*"
+dependencies = ["copier==9.19.1", "questionary>=2.1", "ruamel.yaml==0.19.1"]
+
+[project.scripts]
+policystack = "policystack.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+# Tracks the uv pin in mise.toml: a uv inside this range builds the project offline.
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+# The import sorter finds policystack as first-party from any working directory (prek runs at the
+# repository root).
+# 100 columns, as the validator's Go code and this package's docstrings.
+[tool.ruff]
+src = ["src"]
+line-length = 100

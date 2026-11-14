@@ -6,7 +6,7 @@ A disconnected cluster cannot reach the internet. PolicyStack normally pulls fro
 
 | Normally reached | By | Disconnected replacement | Set up |
 |---|---|---|---|
-| GitHub | Argo CD on the hub, your repository's CI, and copier | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
+| GitHub | Argo CD on the hub, your repository's CI, and the launcher | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
 | Container images and operator catalogs | Every cluster | oc-mirror's mirror sets and CatalogSources, applied by the `disconnected` element; `global.catalogSources` points every operator at the mirrored catalog | [Site layer](#site-layer) |
 | Public certificate authorities | Every cluster | Your mirror registry's CA and your internal servers' CAs, applied by the `disconnected` element | [Site layer](#site-layer) |
 | Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
@@ -88,19 +88,28 @@ Your repository is created and updated from upstream's Git tags ([Installation](
     git -C PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git
     ```
 
-2.  On every machine that runs copier, send the upstream URL to the mirror:
+2.  On every machine that runs the launcher, send the upstream URL to the mirror:
 
     ```sh
     git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
       https://github.com/PolicyStack/PolicyStack.git
     ```
 
-    copier reaches upstream only through `git`, so the answers files keep the upstream URL in `_src_path` and every command in [Installation](../start/install.md) and [Upgrading PolicyStack](upgrading.md) works unchanged.
+    The launcher and copier reach upstream only through `git`, so the answers files keep the upstream URL in `_src_path`, and every command in [Installation](../start/install.md) and [Upgrading PolicyStack](upgrading.md) works unchanged, the bootstrap `git ls-remote` and `git clone` included. Don't pass the mirror as `--src`: it would be recorded in `_src_path` instead.
 
     !!! warning "Global or system config only"
-        copier clones upstream into a temporary directory, where your repository's own `.git/config` doesn't apply. Set the rewrite with `--global` or `--system`, or for one shell with `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.<mirror>.insteadOf GIT_CONFIG_VALUE_0=<upstream>`. A rewrite in your repository's own config is ignored, and copier tries GitHub.
+        The launcher fetches upstream into its cache, and copier clones it into a temporary directory; your repository's own `.git/config` applies to neither. Set the rewrite with `--global` or `--system`, or for one shell with `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.<mirror>.insteadOf GIT_CONFIG_VALUE_0=<upstream>`. A rewrite in your repository's own config is ignored, and the fetch goes to GitHub.
 
-3.  Install copier from your Python package mirror: `pipx install copier` with `PIP_INDEX_URL` pointing at it. `mise install` installs the pinned copier the same way.
+3.  Carry the launcher's Python packages. `tools/policystack/uv.lock` pins every package by its download URL on `files.pythonhosted.org`, so a PyPI mirror set as uv's index is not used. Fill a uv cache on a connected machine with the same OS and CPU architecture, carry the directory across, and point uv at it:
+
+    ```sh
+    # connected machine, in a clone of the release you install or update to
+    UV_CACHE_DIR=~/uv-cache mise x -- uv sync --frozen --no-dev --project tools/policystack
+    # site machine, in your shell profile
+    export UV_CACHE_DIR=~/uv-cache UV_OFFLINE=1
+    ```
+
+    Refill it when a framework update changes `uv.lock`. Python and uv themselves are tools in `mise.toml`, like the rest below. To create a repository before mise is set up, install uv and Python 3.14 on the site machine yourself: offline, uv can't download Python.
 
 CI in your repository needs the tools in `mise.toml` and the validator's Go modules (`GOPROXY` pointing at your Go module proxy). The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
 

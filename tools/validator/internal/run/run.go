@@ -209,6 +209,8 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		name    string
 	}
 	dupAccum := map[clusterKey][]rendered{}
+	// Policies some fleet file's render holds, per chart, for POLICY011.
+	renderedPolicies := map[string]map[string]bool{}
 	var dupMu sync.Mutex
 
 	sem := make(chan struct{}, opts.Jobs)
@@ -247,13 +249,20 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 				}
 				addFindings(fs)
 			}
-			// Record parent policy names for cross-element POLICY002.
+			// Record parent policy names for cross-element POLICY002, and rendered Policies for POLICY011.
 			if c.Element != nil && c.Element.Values != nil && c.Element.Values.Component != nil {
 				ns := c.Element.Values.PolicyNamespace
 				rel := c.Cluster.ReleaseName
 				key := clusterKey{policyNs: ns, clusterName: c.Cluster.ClusterName}
 				comp := c.Element.Values.Component
+				keys := checks.PolicyKeys(c)
 				dupMu.Lock()
+				for _, k := range keys {
+					if renderedPolicies[c.Element.ChartName] == nil {
+						renderedPolicies[c.Element.ChartName] = map[string]bool{}
+					}
+					renderedPolicies[c.Element.ChartName][k] = true
+				}
 				for _, pol := range comp.Policies {
 					if pol.Name == "" {
 						continue
@@ -311,7 +320,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 			fleet = append(fleet, checks.FleetFile{Name: cl.Name, Hub: cl.Hub, Files: append(r.ValueFiles, cl.SourceFile)})
 		}
 	}
-	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Clusters: clusters, Logger: opts.Logger}
+	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Clusters: clusters, RenderedPolicies: renderedPolicies, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue

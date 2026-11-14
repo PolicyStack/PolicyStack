@@ -6,17 +6,19 @@ Documentation: https://policystk.io/ (source in [`docs/`](docs/)). Each element'
 
 ## Quick start
 
-To use PolicyStack, create your own repository with [copier](https://copier.readthedocs.io), copying the framework and each element you want from one release `vX.Y.Z`, then install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
+To use PolicyStack, create your own repository from one release `vX.Y.Z` with the launcher, `tools/policystack`, which needs git and [uv](https://docs.astral.sh/uv/). Your repository then needs [mise](https://mise.jdx.dev). Install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
 
-1. Create the repository and add the required elements:
+1. Fetch only the launcher from the newest release, and create the repository with it:
    ```sh
    url=https://github.com/PolicyStack/PolicyStack.git
-   copier copy --vcs-ref v1.0.0 "$url" my-fleet && cd my-fleet
-   for el in acm gitops upgrade; do
-     copier copy --vcs-ref v1.0.0 -d element="$el" "$url" "stack/$el"
-   done
+   tag=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' \
+     | sed -n 's|.*refs/tags/\(v[0-9]*\.[0-9]*\.[0-9]*\)$|\1|p' | head -1)
+   git clone -q --depth 1 --filter=blob:none --sparse --branch "$tag" "$url" ~/policystack-"$tag"
+   git -C ~/policystack-"$tag" sparse-checkout set tools/policystack
+   uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack policystack install ~/my-fleet
+   cd ~/my-fleet && mise trust && mise install
    ```
-   Commit it to a Git repository Argo CD can read. Take later releases with `copier update`, the framework first ([Upgrading PolicyStack](https://policystk.io/guides/upgrading/)).
+   The launcher asks for the release and the elements; `acm`, `gitops` and `upgrade` are always included. Push the repository somewhere Argo CD can read. Take later releases with `mise run update`, from your repository ([Upgrading PolicyStack](https://policystk.io/guides/upgrading/)).
 2. Install ACM and OpenShift GitOps, unless the hub already runs them:
    ```sh
    until helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \

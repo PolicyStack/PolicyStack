@@ -1,9 +1,10 @@
 name: Upstream
 
-# Checks of PolicyStack itself (policy-library, the validator, the docs site), then its docs publish
-# and releases. copier leaves this file out of a copy, so an adopter's repository runs only ci.yml,
-# render-diff.yml and pr-title.yml. Upstream's main ruleset requires upstream, the check job here,
-# next to ci and pr-title (docs/reference/ci.md#upstream). No paths filter, for the reason in ci.yml.
+# Checks of PolicyStack itself (policy-library, the validator, the launcher, the docs site), then
+# its docs publish and releases. copier leaves this file out of a copy, so an adopter's repository
+# runs only ci.yml, render-diff.yml and pr-title.yml. Upstream's main ruleset requires upstream, the
+# check job here, next to ci and pr-title (docs/reference/ci.md#upstream). No paths filter, for the
+# reason in ci.yml.
 on:
   pull_request:
   push:
@@ -94,6 +95,26 @@ jobs:
             exit 1
           fi
 
+  # tools/policystack: uv.lock matches pyproject.toml, and the tests pass. The catalog tests read
+  # this checkout's stack/ and values/; the flow tests run install, add and update through copier
+  # against a synthetic upstream built with this checkout's copier.yml.
+  launcher:
+    name: launcher
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: python uv
+
+      - run: uv lock --check --project tools/policystack
+
+      - run: uv run --frozen --project tools/policystack pytest -q tools/policystack/tests
+
   docs:
     name: docs
     runs-on: ubuntu-latest
@@ -124,7 +145,7 @@ jobs:
   upstream:
     name: upstream
     if: always()
-    needs: [library, validator, docs]
+    needs: [library, validator, launcher, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

@@ -20,8 +20,8 @@ _exclude:
   - __pycache__
   - "*.py[co]"
   # Elements come per element, docs and examples stay upstream, and adopter-owned paths are never
-  # written. Upstream test data is left out too: tools/validator's Makefile and Go tests run in
-  # upstream.yml only.
+  # written. Upstream test data is left out too: tools/validator's Makefile and Go tests, and the
+  # tools/policystack tests, run in upstream.yml only.
   - |
     {% if not element %}
     /stack
@@ -39,6 +39,7 @@ _exclude:
     /zensical.toml
     /lib/ct.yaml
     /lib/tests
+    /tools/policystack/tests
     /tools/requirements-docs.txt
     /tools/test_doc_generator.py
     /tools/validator/testdata/clusters

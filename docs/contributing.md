@@ -45,7 +45,7 @@ prek run --all-files                       # lint
 make -C tools/validator validate           # validate (Helm floor leg)
 make -C tools/validator lint test          # validator
 helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test && untt --strict lib/tests/fixtures/policy-stack-test   # library
-uv run --frozen --project tools/policystack pytest -q tools/policystack/tests   # launcher
+uv run --frozen --group dev --project tools/policystack pytest -q tools/policystack/tests   # launcher
 python -m unittest tools/test_doc_generator.py && zensical build --strict   # docs
 ```
 

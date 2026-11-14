@@ -24,7 +24,7 @@ one, it is yours: updates still arrive, and your edits are merged with them
 if the problem reproduces on the unmodified element. To compare:
 
 ```sh
-mise x -- uv run --frozen --no-dev --project tools/policystack copier copy -d element=odf \
+mise x -- uv run --project tools/policystack copier copy -d element=odf \
   --vcs-ref "$(sed -n 's/^_commit: //p' stack/odf/.copier-answers.yml)" \
   https://github.com/PolicyStack/PolicyStack.git /tmp/odf
 diff -r -x .copier-answers.yml -x charts -x Chart.lock /tmp/odf stack/odf # (1)!

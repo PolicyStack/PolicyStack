@@ -13,6 +13,10 @@ policystack = "policystack.cli:main"
 [dependency-groups]
 dev = ["pytest>=8"]
 
+[tool.uv]
+# A plain `uv run` installs only the launcher; tests take `--group dev`.
+default-groups = []
+
 [build-system]
 # Tracks the uv pin in mise.toml: a uv inside this range builds the project offline.
 requires = ["uv_build>=0.13,<0.14"]

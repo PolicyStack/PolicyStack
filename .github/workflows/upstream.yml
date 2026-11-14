@@ -113,7 +113,7 @@ jobs:
 
       - run: uv lock --check --project tools/policystack
 
-      - run: uv run --frozen --project tools/policystack pytest -q tools/policystack/tests
+      - run: uv run --frozen --group dev --project tools/policystack pytest -q tools/policystack/tests
 
   docs:
     name: docs

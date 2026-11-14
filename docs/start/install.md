@@ -30,8 +30,7 @@ Once [Create your repository](#create-your-repository) has made it, run every co
 ## Prerequisites
 
 - An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
-- `git` 2.43 or later and [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.8 or later on your workstation, to create the repository. uv runs the launcher with Python 3.14, which it downloads if none is installed, and the Python packages `tools/policystack/uv.lock` pins, which it downloads from PyPI ([Launcher requirements](../reference/launcher.md#requirements)).
-- [mise](https://mise.jdx.dev), once the repository exists. It installs every tool your repository uses, uv and Python included, at the versions its `mise.toml` pins.
+- `git` 2.43 or later and [mise](https://mise.jdx.dev/installing-mise.html) on your workstation. mise installs every other tool PolicyStack uses, at the versions a release's `mise.toml` pins: uv and Python for the launcher, Go and Helm for `validate`, and the linters your CI runs. The launcher's first run downloads its Python packages from PyPI ([Launcher requirements](../reference/launcher.md#requirements)).
 - `oc`, and `helm` 3.14 or later: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
 - Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 ([Support](../reference/compatibility.md#support)). Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
 - The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters.
@@ -40,7 +39,7 @@ Once [Create your repository](#create-your-repository) has made it, run every co
 
 ```sh
 git --version                            # git version 2.43.0 or later
-uv --version                             # uv 0.13.8 or later
+mise --version                           # any recent release
 helm version --short                     # v3.14.0 or later
 oc auth can-i '*' '*' --all-namespaces   # yes
 oc get managedclusters -l local-cluster=true
@@ -54,21 +53,20 @@ The last command applies to a hub that already runs ACM. A new hub creates `loca
 
 Argo CD reads only your repository. Upstream ships no fleet files and no live configuration.
 
-The launcher ships in every release, under `tools/policystack`. Your repository doesn't exist yet, so fetch just that directory from the newest upstream release and run it with uv:
+The launcher ships in every release, under `tools/policystack`. Your repository doesn't exist yet, so fetch just the launcher from a release and run it there:
 
 ```sh
-url=https://github.com/PolicyStack/PolicyStack.git
-tag=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' \
-  | sed -n 's|.*refs/tags/\(v[0-9]*\.[0-9]*\.[0-9]*\)$|\1|p' | head -1) # (1)!
-git clone -q --depth 1 --filter=blob:none --sparse --branch "$tag" "$url" ~/policystack-"$tag" # (2)!
-git -C ~/policystack-"$tag" sparse-checkout set tools/policystack
-uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack \
-  policystack install ~/<repo> # (3)!
+git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0 \
+  https://github.com/PolicyStack/PolicyStack.git ~/policystack # (1)!
+git -C ~/policystack sparse-checkout set tools/policystack # (2)!
+cd ~/policystack && mise trust && mise install # (3)!
+mise run ps -- install ~/<repo> # (4)!
 ```
 
-1.  The newest release. Prereleases such as `v1.3.0-rc.1` are skipped ([Release candidates](#release-candidates)). The launcher it fetches can install any release; it asks which.
-2.  One commit, and only the launcher's files: well under 1 MB. A Git server without partial clone support ignores `--filter` and sends the whole release, about 3 MB; the commands still work.
-3.  Not inside `~/policystack-<tag>`: the launcher refuses a directory inside a Git work tree. `--frozen` installs the exact packages `uv.lock` pins; `--no-dev` leaves out the launcher's test tools.
+1.  Any release from the [releases page](https://github.com/PolicyStack/PolicyStack/releases); `git ls-remote --tags <url>` lists them on any Git server. This only fetches the launcher: it installs whichever release you pick next, newest first. Git reports a "detached HEAD": expected, since a release is a tag, not a branch.
+2.  Leaves only the launcher and the release's root files, `mise.toml` among them: well under 1 MB. A Git server without partial clone support ignores `--filter` and sends the whole release, about 3 MB; the commands still work.
+3.  Installs the tools the release's `mise.toml` pins. Your repository gets the same `mise.toml`, so it reuses them.
+4.  An absolute path outside `~/policystack`: mise runs the task from `~/policystack`, and the launcher refuses a directory inside a Git work tree. The first run installs the Python packages `tools/policystack/uv.lock` pins.
 
 In a terminal, the launcher asks three things. Arrow keys move, space ticks, Enter confirms, and typing filters a list by name:
 
@@ -106,7 +104,7 @@ created /home/me/fleet: one commit on main, nothing pushed. Next (docs/start/ins
 
 The `+` lines are elements you didn't pick that the install adds, and why ([Dependencies](#dependencies)). Each element takes a few seconds to copy. If anything fails, or you press Ctrl-C, the directory is removed and you can run it again. Every flag and refusal: [install](../reference/launcher.md#install).
 
-Push it, and install your repository's own tools with mise. From here on, run the launcher from your repository with `mise run ps`; delete `~/policystack-<tag>`.
+Push it, and trust its `mise.toml`. `mise install` adds only tools that the release you picked pins differently from the one you fetched the launcher from. From here on, run the launcher from your repository with `mise run ps`; delete `~/policystack`.
 
 ```sh
 cd ~/<repo>
@@ -130,16 +128,55 @@ Left out: everything that stays upstream, such as the docs, the upstream README 
 
 ### Release candidates
 
-A prerelease, `vX.Y.Z-rc.N`, is for trying a release before it ships; the [contract](../reference/compatibility.md#versions) doesn't cover it. Set `tag` to the candidate instead of the `ls-remote` line, fetch the launcher the same way, and name the candidate:
+A prerelease, `vX.Y.Z-rc.N`, is for trying a release before it ships; the [contract](../reference/compatibility.md#versions) doesn't cover it. Fetch the launcher from the candidate, and name it:
 
 ```sh
-tag=v1.0.0-rc.2
-# git clone and sparse-checkout as above, then:
-uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack \
-  policystack install --to "$tag" ~/<repo> # (1)!
+git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0-rc.2 \
+  https://github.com/PolicyStack/PolicyStack.git ~/policystack
+git -C ~/policystack sparse-checkout set tools/policystack
+cd ~/policystack && mise trust && mise install
+mise run ps -- install --to v1.0.0-rc.2 ~/<repo> # (1)!
 ```
 
-1.  Or `--pre` in place of `--to "$tag"`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` predates the launcher. Later, `mise run update` moves the repository from the candidate to the release.
+1.  Or `--pre` in place of `--to v1.0.0-rc.2`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` predates the launcher. Later, `mise run update` moves the repository from the candidate to the release.
+
+### Disconnected
+
+A machine without internet access needs what the steps above download: upstream's Git repository, the tools mise installs, the launcher's Python packages, and the Go modules `validate` builds the validator from. Collect them into one folder on a connected machine with the same OS and CPU architecture, because most of them are binaries. Carry it across, and every command on this page works unchanged.
+
+On the connected machine, with mise installed:
+
+```sh
+mkdir ~/ps-offline && cd ~/ps-offline
+git clone --mirror https://github.com/PolicyStack/PolicyStack.git
+git -C PolicyStack.git archive v1.0.0 mise.toml tools/policystack tools/validator/go.mod tools/validator/go.sum \
+  | tar -x # (1)!
+cp "$(command -v mise)" .
+export MISE_DATA_DIR=$PWD/mise-data UV_CACHE_DIR=$PWD/uv-cache GOMODCACHE=$PWD/go-mod
+./mise trust mise.toml && ./mise install
+./mise x -- uv sync --project tools/policystack
+./mise x -- go -C tools/validator mod download
+rm -rf mise.toml tools # (2)!
+```
+
+1.  The files that name what to download, from the release you will install or a [release candidate](#release-candidates).
+2.  The folder ends up at about 1.3 GB: the tools mise installed, about 800 MB, and the Go modules, about 300 MB.
+
+Carry `~/ps-offline` to your home directory on the site machine, then:
+
+```sh
+git -C ~/ps-offline/PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git # (1)!
+git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
+  https://github.com/PolicyStack/PolicyStack.git # (2)!
+export PATH=~/ps-offline:$PATH MISE_DATA_DIR=~/ps-offline/mise-data MISE_OFFLINE=1 \
+  UV_CACHE_DIR=~/ps-offline/uv-cache UV_OFFLINE=1 GOMODCACHE=~/ps-offline/go-mod GOPROXY=off # (3)!
+```
+
+1.  An empty repository on your Git server, which now holds upstream's releases. Argo CD never reads it; only the launcher does.
+2.  Sends every fetch of upstream to your mirror. It must be `--global`: the launcher and copier fetch outside your repository, where a repository's own config doesn't apply. Keep passing the GitHub URL, never the mirror, as `--src`, so your answers files record the GitHub URL.
+3.  Put these in your shell profile. `mise install`, `mise run ps` and `mise run validate` then find everything in `~/ps-offline` and never reach the network.
+
+For each new release you take, repeat the connected steps into a fresh folder and both site steps: the mirror brings the new tags, and the folder brings any tool or package the new release pins. The rest of a disconnected site (operator images, catalogs, the hub): [Disconnected clusters](../guides/disconnected.md).
 
 ## Add elements
 
@@ -179,13 +216,13 @@ A picked example file is copied byte for byte into your `values/` and is yours f
 The launcher runs copier 9.19.1 from its own environment, so copier needs no install of its own. To run copier by hand, from your repository's root:
 
 ```sh
-copier() { mise x -- uv run --frozen --no-dev --project tools/policystack copier "$@"; }
+copier() { mise x -- uv run --project tools/policystack copier "$@"; }
 fw=$(sed -n 's/^_commit: //p' .copier-answers.yml)
 copier copy --vcs-ref "$fw" -d element=odf https://github.com/PolicyStack/PolicyStack.git stack/odf # (1)!
 git add stack/odf && git commit -m "feat: add odf ($fw)"
 ```
 
-1.  For a new repository, define the function with `--project ~/policystack-<tag>/tools/policystack` and run `copier copy --defaults --vcs-ref <tag> "$url" ~/<repo>` without `-d element`. That copies the framework only: `cd ~/<repo>`, copy `acm`, `gitops` and `upgrade` with the command above, then `git init -b main` and commit.
+1.  For a new repository, define the function with `--project ~/policystack/tools/policystack` and run `copier copy --defaults --vcs-ref <tag> https://github.com/PolicyStack/PolicyStack.git ~/<repo>` without `-d element`. That copies the framework only: `cd ~/<repo>`, copy `acm`, `gitops` and `upgrade` with the command above, then `git init -b main` and commit.
 
 !!! warning "Pass `--vcs-ref` with your framework's tag"
     Without it copier copies the newest release, which can be newer than your framework, and POLICY061 fails it. Delete the directory and copy it again with your framework's tag. copier also copies no dependencies and checks no tags.

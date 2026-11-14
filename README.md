@@ -6,16 +6,15 @@ Documentation: https://policystk.io/ (source in [`docs/`](docs/)). Each element'
 
 ## Quick start
 
-To use PolicyStack, create your own repository from one release `vX.Y.Z` with the launcher, `tools/policystack`, which needs git and [uv](https://docs.astral.sh/uv/). Your repository then needs [mise](https://mise.jdx.dev). Install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
+To use PolicyStack, create your own repository from one release `vX.Y.Z` with the launcher, `tools/policystack`. You need git and [mise](https://mise.jdx.dev/installing-mise.html); mise installs the rest. Install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
 
-1. Fetch only the launcher from the newest release, and create the repository with it:
+1. Fetch only the launcher from a release, and create the repository with it:
    ```sh
-   url=https://github.com/PolicyStack/PolicyStack.git
-   tag=$(git ls-remote --tags --refs --sort=-v:refname "$url" 'v*' \
-     | sed -n 's|.*refs/tags/\(v[0-9]*\.[0-9]*\.[0-9]*\)$|\1|p' | head -1)
-   git clone -q --depth 1 --filter=blob:none --sparse --branch "$tag" "$url" ~/policystack-"$tag"
-   git -C ~/policystack-"$tag" sparse-checkout set tools/policystack
-   uv run --frozen --no-dev --project ~/policystack-"$tag"/tools/policystack policystack install ~/my-fleet
+   git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0 \
+     https://github.com/PolicyStack/PolicyStack.git ~/policystack
+   git -C ~/policystack sparse-checkout set tools/policystack
+   cd ~/policystack && mise trust && mise install
+   mise run ps -- install ~/my-fleet
    cd ~/my-fleet && mise trust && mise install
    ```
    The launcher asks for the release and the elements; `acm`, `gitops` and `upgrade` are always included. Push the repository somewhere Argo CD can read. Take later releases with `mise run update`, from your repository ([Upgrading PolicyStack](https://policystk.io/guides/upgrading/)).

@@ -79,39 +79,9 @@ mirror:
 
 ### PolicyStack releases
 
-Your repository is created and updated from upstream's Git tags ([Installation](../start/install.md#create-your-repository)), so the site needs a copy of upstream's repository, tags included. policy-library is in it (`lib/`); there is no chart repository to mirror.
+Your repository is created and updated from upstream's Git tags, so the site needs a copy of upstream's repository, tags included. policy-library is in it (`lib/`); there is no chart repository to mirror. Your workstation also needs the tools mise installs, the launcher's Python packages and the validator's Go modules. [Installation: Disconnected](../start/install.md#disconnected) carries all of them across in one folder and points the launcher at your mirror.
 
-1.  Mirror upstream on a connected machine, then carry it across and push it to your Git server. Repeat to pick up new releases:
-
-    ```sh
-    git clone --mirror https://github.com/PolicyStack/PolicyStack.git
-    git -C PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git
-    ```
-
-2.  On every machine that runs the launcher, send the upstream URL to the mirror:
-
-    ```sh
-    git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
-      https://github.com/PolicyStack/PolicyStack.git
-    ```
-
-    The launcher and copier reach upstream only through `git`, so the answers files keep the upstream URL in `_src_path`, and every command in [Installation](../start/install.md) and [Upgrading PolicyStack](upgrading.md) works unchanged, the bootstrap `git ls-remote` and `git clone` included. Don't pass the mirror as `--src`: it would be recorded in `_src_path` instead.
-
-    !!! warning "Global or system config only"
-        The launcher fetches upstream into its cache, and copier clones it into a temporary directory; your repository's own `.git/config` applies to neither. Set the rewrite with `--global` or `--system`, or for one shell with `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.<mirror>.insteadOf GIT_CONFIG_VALUE_0=<upstream>`. A rewrite in your repository's own config is ignored, and the fetch goes to GitHub.
-
-3.  Carry the launcher's Python packages. `tools/policystack/uv.lock` pins every package by its download URL on `files.pythonhosted.org`, so a PyPI mirror set as uv's index is not used. Fill a uv cache on a connected machine with the same OS and CPU architecture, carry the directory across, and point uv at it:
-
-    ```sh
-    # connected machine, in a clone of the release you install or update to
-    UV_CACHE_DIR=~/uv-cache mise x -- uv sync --frozen --no-dev --project tools/policystack
-    # site machine, in your shell profile
-    export UV_CACHE_DIR=~/uv-cache UV_OFFLINE=1
-    ```
-
-    Refill it when a framework update changes `uv.lock`. Python and uv themselves are tools in `mise.toml`, like the rest below. To create a repository before mise is set up, install uv and Python 3.14 on the site machine yourself: offline, uv can't download Python.
-
-CI in your repository needs the tools in `mise.toml` and the validator's Go modules (`GOPROXY` pointing at your Go module proxy). The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
+CI runners in your site need the same tools and Go modules: the same folder and variables on a runner of the same OS and CPU architecture, or your own Go module proxy as `GOPROXY`. The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
 
 ### Git and the hub's Argo CD
 

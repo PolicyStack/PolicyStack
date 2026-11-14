@@ -92,7 +92,7 @@ Tests run in upstream only (`tests/` is not copied). `test_flows.py` runs instal
 end to end through copier against a synthetic upstream, which takes about a minute:
 
 ```bash
-mise x -- uv run --project tools/policystack pytest tools/policystack/tests
+mise x -- uv run --group dev --project tools/policystack pytest tools/policystack/tests
 ```
 
 ## CI/CD Integration

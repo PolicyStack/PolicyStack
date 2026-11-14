@@ -12,10 +12,9 @@ codes, the state it keeps, and the `upgrades/` formats upstream writes for it. W
 
 | Needs | Why |
 |---|---|
-| [uv](https://docs.astral.sh/uv/) 0.13.8 or later | Runs the launcher with Python 3.14, downloading it if none is installed. Creating a repository needs only uv and git ([Create your repository](../start/install.md#create-your-repository)) |
-| [mise](https://mise.jdx.dev), in your repository | Installs uv and Python at the versions `mise.toml` pins (`mise install`), and runs the tasks below |
+| [mise](https://mise.jdx.dev) | Installs uv and Python at the versions `mise.toml` pins (`mise install`), and runs the tasks below |
 | git 2.43 or later | `git merge-file --object-id`, used to carry your edits into files upstream renamed. Not checked at start |
-| Network access to upstream's Git and to PyPI | Upstream through `git`, so `url.insteadOf` mirrors apply. PyPI once: uv installs copier 9.19.1, questionary and ruamel.yaml, at the versions `tools/policystack/uv.lock` pins, into `tools/policystack/.venv`. Without either: [PolicyStack releases](../guides/disconnected.md#policystack-releases) |
+| Network access to upstream's Git and to PyPI | Upstream through `git`, so `url.insteadOf` mirrors apply. PyPI once: uv installs copier 9.19.1 and the other packages `tools/policystack/uv.lock` pins into `tools/policystack/.venv`. Without either: [Disconnected](../start/install.md#disconnected) |
 
 Tested on Linux only.
 
@@ -38,9 +37,8 @@ mise runs every task from the directory that holds `mise.toml`, wherever you cal
 policystack install [--src URL] [--to vX.Y.Z] [--pre] [--elements a,b] [--examples values/x.yaml,...] DIR
 ```
 
-Your repository doesn't exist yet, so `install` runs from the launcher fetched from an upstream
-release, with `uv run --frozen --no-dev --project <fetched>/tools/policystack policystack install`
-([Create your repository](../start/install.md#create-your-repository)).
+Your repository doesn't exist yet, so `install` runs as `mise run ps -- install` in the launcher
+fetched from an upstream release ([Create your repository](../start/install.md#create-your-repository)).
 
 | Flag | Default | Effect |
 |---|---|---|

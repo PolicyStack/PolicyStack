@@ -22,7 +22,7 @@ lychee = "0.24.2"
 
 [tasks.ps]
 description = "Install, add or update PolicyStack: mise run ps -- --help"
-run = "uv run --frozen --no-dev --project tools/policystack policystack"
+run = "uv run --frozen --project tools/policystack policystack"
 
 [tasks.validate]
 description = "Render and check every fleet cluster (docs/develop/validation.md)"

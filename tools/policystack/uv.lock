@@ -191,6 +191,7 @@ wheels = [
 name = "policystack"
 version = "0.0.0"
 source = { editable = "." }
+default-groups = []
 dependencies = [
     { name = "copier" },
     { name = "packaging" },

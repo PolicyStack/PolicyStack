@@ -2,7 +2,7 @@
 
 The [install chart](https://github.com/PolicyStack/PolicyStack/tree/main/install) is the only part of PolicyStack you install by hand, once per hub ([Install PolicyStack](../start/install.md#install-policystack)). It installs no elements. It creates the two ApplicationSets that turn fleet files into Applications, the `pstack` namespace the Policies live in, the objects that give the ApplicationSets their list of clusters, and the RBAC Argo CD needs to write ACM policy objects. Everything after it comes from Git.
 
-[ApplicationSets](../concepts/architecture.md) explains how the objects work together.
+[ApplicationSets](../concepts/architecture.md) explains how the objects work together. [Hub sizing](sizing.md) covers the Argo CD settings a hub with many clusters needs.
 
 !!! note "Two charts under `install/`"
     `install/operators` is a separate chart, rendered once to install ACM and OpenShift GitOps on a new hub ([Install the operators](../start/install.md#install-the-operators)). It is not part of the `policystack` release.

@@ -46,6 +46,8 @@ spec:
     # Argo CD templates a child generator's fields but not its post-selector, so the fleet files
     # come first and the clusters generator matches the hub they name. A hub that is not a DNS
     # label matches nothing: as a label value it would fail the whole ApplicationSet.
+    # The clusters generator lists every cluster secret from the API server once per fleet file
+    # that reaches it, so files naming this hub, which the first generator owns, are dropped first.
     - matrix:
         generators:
           - git: *fleet
@@ -53,6 +55,10 @@ spec:
               matchExpressions:
                 - key: hub
                   operator: Exists
+                - key: hub
+                  operator: NotIn
+                  values:
+                    - {{ .Values.hubName | quote }}
           - clusters:
               selector:
                 matchLabels:
@@ -72,7 +78,12 @@ spec:
       destination:
         server: 'https://kubernetes.default.svc'
         namespace: open-cluster-management
+      # Same history limit and sync options as appset.yaml.
+      revisionHistoryLimit: 1
       syncPolicy:
+        syncOptions:
+        - ServerSideApply=true
+        - ApplyOutOfSyncOnly=true
         automated:
           prune: true
           selfHeal: true

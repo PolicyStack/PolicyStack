@@ -54,9 +54,15 @@ spec:
       destination:
         server: 'https://kubernetes.default.svc'
         namespace: open-cluster-management
+      # One history entry: the last synced revision. Older entries are only read by rollback,
+      # which automated sync disables.
+      revisionHistoryLimit: 1
+      # Server-side apply stores no last-applied-configuration copy of each object, and
+      # ApplyOutOfSyncOnly skips objects that already match Git.
       syncPolicy:
         syncOptions:
-        - RespectIgnoreDifferences=true
+        - ServerSideApply=true
+        - ApplyOutOfSyncOnly=true
         automated:
           prune: true
           selfHeal: true

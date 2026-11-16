@@ -147,6 +147,10 @@ A hub whose MultiClusterHub disables self-management has no `local-cluster` secr
                 matchExpressions:
                   - key: hub
                     operator: Exists
+                  - key: hub # (5)!
+                    operator: NotIn
+                    values:
+                      - "acm-dc1"
             - clusters:
                 selector:
                   matchLabels:
@@ -158,6 +162,7 @@ A hub whose MultiClusterHub disables self-management has no `local-cluster` secr
     2.  Argo CD's `*` crosses `/`. This drops `hubs/` and other subdirectories, so a hub file is never a lifecycle fleet file.
     3.  Global Hub only: fleet files naming a managed hub imported in `default` mode. Fleet files come first because Argo CD templates a child generator's fields but not its `selector`.
     4.  A `hub` that is not a DNS label matches nothing instead of failing the whole ApplicationSet.
+    5.  Files naming this hub belong to the first generator. Dropping them here saves a list of every cluster secret per file: the `clusters` generator reads the secrets from the API server, uncached, once for each fleet file that reaches it.
 
 ## Applications
 
@@ -169,7 +174,8 @@ A hub whose MultiClusterHub disables self-management has no `local-cluster` secr
 | Injected values | `selector` for the cluster, `version`, `channel` | `selector` for the building hub, `hub`, `state`, `install`, `version`, `channel` ([Order](values.md#order)) |
 | Destination | The hub (`https://kubernetes.default.svc`) | Same |
 | Project | `default` | Same |
-| Sync | Automated, `prune`, `selfHeal`, `allowEmpty` | Automated, `prune`, `selfHeal` |
+| Sync | Automated, `prune`, `selfHeal`, `allowEmpty`, server-side apply, out-of-sync objects only | Automated, `prune`, `selfHeal`, server-side apply, out-of-sync objects only |
+| History | Last sync only (`revisionHistoryLimit: 1`) | Same |
 
 The Application name is also the Helm **release** name. The Policy, Placement and PlacementBinding names include it: Policy `install-gitops-prod-east-1`, Placement and PlacementBinding `gitops-prod-east-1`. ConfigurationPolicy and OperatorPolicy names do not ([Rendered names](elements.md#rendered-names)). Renaming an element, a cluster or `hubName` renames the release, so its Policies are deleted and recreated. Where a template prunes, the objects on the cluster are deleted and recreated too ([Removal and pruning](removal.md#what-happens-on-the-managed-cluster)).
 
@@ -178,6 +184,8 @@ What the sync options do, all on the hub:
 - **Automated**: every change at the revision syncs without anyone pressing Sync.
 - **`prune`**: an object that drops out of the render, such as a policy you set `enabled: false`, is deleted from `pstack`.
 - **`selfHeal`**: a hand edit to a Policy or Placement in `pstack` is reverted to what Git renders.
+- **`ServerSideApply=true`**: Argo CD applies with Kubernetes server-side apply, which tracks field ownership in `managedFields` instead of storing a full copy of each object in the `kubectl.kubernetes.io/last-applied-configuration` annotation. Policies are about half the size in etcd and in Argo CD's cache.
+- **`ApplyOutOfSyncOnly=true`**: a sync applies only the objects that differ from Git, not every object the element renders.
 - **`allowEmpty`**: Argo CD normally refuses an automated sync that would leave an Application with no objects. This lets a disabled element prune to zero ([Removal and pruning](removal.md)). Lifecycle Applications leave it off: `lifecycle/` always renders the `present` or `absent` Policy, so an empty render can only be an error, and Argo CD refuses to prune everything.
 
 The destination namespace, `open-cluster-management`, is unused. Every rendered object sets its own namespace, `policyNamespace` (`pstack`).
@@ -236,9 +244,11 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
       destination:
         server: 'https://kubernetes.default.svc'
         namespace: open-cluster-management
+      revisionHistoryLimit: 1 # (7)!
       syncPolicy:
         syncOptions:
-          - RespectIgnoreDifferences=true # (7)!
+          - ServerSideApply=true
+          - ApplyOutOfSyncOnly=true
         automated:
           prune: true
           selfHeal: true
@@ -251,7 +261,7 @@ The destination namespace, `open-cluster-management`, is unused. Every rendered 
     4.  A listed file that does not exist is skipped without an error ([Missing files](values.md#missing-files)).
     5.  The policy-library majors this hub supports. A revision built on another major fails its render ([Order](values.md#order)).
     6.  Becomes the element's single-cluster Placement ([Placement](policies.md#placement)).
-    7.  No effect: no Application sets `ignoreDifferences`.
+    7.  Keeps only the last sync in `status.history`. Older entries serve only rollback, which automated sync disables, and each one adds about 700 bytes to every Application.
 
 ## When an Application fails
 

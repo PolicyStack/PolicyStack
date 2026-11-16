@@ -125,7 +125,7 @@ What follows from that:
 - Changing the repository's default branch re-points every cluster. A cluster with no file on the new default branch loses its Applications.
 - Deleting a fleet file deletes the cluster's Applications and with them its Policies on the hub. ACM then removes the policies from the cluster; what they created stays unless the template sets `pruneObjectBehavior` ([Removal and pruning](removal.md)). A cluster a hub built is abandoned, not destroyed: it keeps running, unmanaged ([Cluster lifecycle](lifecycle.md)).
 
-A fleet file change lands within about 6 minutes: the ApplicationSet re-reads Git every 3 minutes, and Argo CD remembers which commit a branch points to for 3 minutes. An [ApplicationSet webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Git/#webhook-configuration) makes it immediate, except the fix for a failed generation, which waits for the 3-minute retry.
+A fleet file change lands within about 6 minutes: the ApplicationSet re-reads Git every 3 minutes, and Argo CD remembers which commit a branch points to for 3 minutes. An [ApplicationSet webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Git/#webhook-configuration) makes it immediate, except the fix for a failed generation, which waits for the 3-minute retry. On a large hub it has a cost ([Webhooks](../reference/sizing.md#webhooks)).
 
 ### One bad fleet file stops the hub
 

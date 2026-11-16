@@ -40,3 +40,19 @@ def test_stderr_hidden(capsys):
     with repo._copier():
         print("Make sure Git >= 2.24", file=sys.stderr)
     assert capsys.readouterr().err == ""
+
+
+def test_require_identity_refuses_before_any_work(tmp_path, monkeypatch):
+    """A fresh machine has no git identity; the launcher says so up front, with the fix."""
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "empty"))
+    for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "EMAIL"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    # No guessing an email from the hostname, which some CI runners would allow.
+    for k, v in {"COUNT": "1", "KEY_0": "user.useConfigOnly", "VALUE_0": "true"}.items():
+        monkeypatch.setenv(f"GIT_CONFIG_{k}", v)
+    with pytest.raises(repo.Refused, match="git config --global user.email"):
+        repo.require_identity(tmp_path)
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "A")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "a@example.com")
+    repo.require_identity(tmp_path)

@@ -323,8 +323,8 @@ PolicyStack.
 |---|---|---|---|---|
 | 1.x | 4.20 or later | 2.16 or later | 1.18 or later (Argo CD 3.1) | 3.18.4, as bundled in GitOps 1.18. Helm 4 is tested, advisory |
 
-On the workstation that runs the [launcher](launcher.md#requirements): git 2.43 or later, and mise,
-which installs the Python (3.14) and uv that `mise.toml` pins.
+On the workstation that runs the [launcher](launcher.md#requirements): git 2.43 or later, make, and
+mise, which installs the Python (3.14) and uv that `mise.toml` pins.
 
 CI runs no cluster. It renders with Helm 3.18.4, plus Helm 4.2.1 as an advisory leg, and validates
 the output against the ACM 2.16 CRDs. OpenShift and OpenShift GitOps are not tested. Later versions

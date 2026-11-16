@@ -323,9 +323,11 @@ def test_update_conflict_stop_and_resume(ad, capsys):
     edits(ad)
     before = (ad / "values/clusters/prod.yaml").read_text()
     rc, out = ps(capsys, "update", "--to", "v1.1.0")
-    assert (
-        rc == 1 and "stopped: conflicts in storage-nodes:\n  stack/storage-nodes/README.md" in out
+    assert rc == 1 and (
+        "Update paused: you and upstream both changed these files in storage-nodes:\n"
+        "  stack/storage-nodes/README.md" in out
     )
+    assert "mise run update --to v1.1.0" in out and "task failed" not in out  # not run by mise
     for line in (
         "  upgrade step 2026-11-11-hub.yaml: hub annotation\n    before the next release: wait",
         "  upgrade steps rewrite: values/clusters/prod.yaml, values/common.yaml",
@@ -396,12 +398,20 @@ def at_v110(v110, tmp_path, monkeypatch):
     return clone(v110, tmp_path / "ad", monkeypatch)
 
 
+def test_paused_under_mise_explains_its_error(capsys, monkeypatch):
+    """mise prints "[ps] ERROR task failed" after any non-zero exit; the stop says why first."""
+    monkeypatch.setenv("MISE_TASK_NAME", "ps")
+    cli._paused("framework", ["mise.toml"], ["."], "msg", "--to v1.1.0")
+    out = capsys.readouterr().out
+    assert "Fix mise.toml first" in out and out.rstrip().endswith("paused, not broken.")
+
+
 def test_update_f1_f2_hub(at_v110, capsys):
     """F1: an adopter edit to a file upstream renamed lands in the new name, merged with
     upstream's edit. F2: an edited file upstream deleted is kept, 'deleted by them'."""
     ad = at_v110
     rc, out = ps(capsys, "update", "--to", "v1.2.1", "odf")
-    assert rc == 1 and f"stopped: conflicts in odf:\n  {PDB}" in out
+    assert rc == 1 and f"both changed these files in odf:\n  {PDB}" in out
     assert "hub chart changed: before merging, run on every hub from this branch:" in out
     assert "[ ] newel" in out
     assert sh(ad, "git", "status", "--porcelain", PDB) == f"UD {PDB}\n"

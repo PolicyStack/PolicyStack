@@ -194,16 +194,30 @@ An element update merges upstream's changes to the element since its `_commit` w
 
 ## Resolving conflicts
 
-An update merges three versions of each file: the old release, the new release and yours. Where you and upstream changed the same lines, it leaves both in the file, between conflict markers, and stops:
+An update merges three versions of each file: the old release, the new release and yours. Where you and upstream changed the same lines, it leaves both in the file, between conflict markers, and pauses:
 
 ```text
 updating storage-nodes (3/4)
-stopped: conflicts in storage-nodes:
+
+Update paused: you and upstream both changed these files in storage-nodes:
   stack/storage-nodes/README.md
-resolve each file (git rm one you no longer need), then:
-  git add -A -- stack/storage-nodes && git commit -m 'chore(policystack): update storage-nodes to v1.1.0'
-  mise run update --to v1.1.0
+Nothing is lost. A file both sides edited now holds both versions: yours under
+"<<<<<<< before updating", upstream's above ">>>>>>> after updating".
+
+To finish:
+  1. Edit each file to what you want and delete the marker lines.
+     A file one side deleted: keep it, or git rm it.
+     Guide: https://policystk.io/guides/upgrading/#resolving-conflicts
+  2. Commit it:
+     git add -A -- stack/storage-nodes && git commit -m 'chore(policystack): update storage-nodes to v1.1.0'
+  3. Run the rest of the update:
+     mise run update --to v1.1.0
+
+mise reports "task failed" next. Expected: the update is paused, not broken.
+[update] ERROR task failed
 ```
+
+The last line is mise's: it reports any task that ends without success. A paused update ends that way on purpose, so scripts and CI see it didn't finish.
 
 !!! example "A conflict in `stack/odf/values.yaml`"
 
@@ -217,8 +231,8 @@ resolve each file (git rm one you no longer need), then:
 
 `before updating` is your repository, `after updating` is the new release. The scopes before the stop are already committed on the branch; nothing after it has started. To finish:
 
-1.  `git status` lists each conflicted file under `Unmerged paths`. Edit each to what you want, deleting the markers. In a framework file, take `after updating`: a framework you modified is not supported, and the conflict comes back on every update. Don't touch the answers file.
-2.  Run the two lines the launcher printed: the `git add ... && git commit` for that scope, then `mise run update --to <tag>`. On the update branch it continues with the scopes left.
+1.  `git status` lists each conflicted file under `Unmerged paths`. Edit each to what you want, deleting the markers. In a framework file you changed, keeping your side is fine; upstream supports only the framework as released, and the same lines can conflict again on the next update. Don't touch the answers file. If `mise.toml` is listed, fix it first: mise can't read it while it has markers.
+2.  Run the two commands the launcher printed: the `git add ... && git commit` for that scope, then `mise run update --to <tag>`. On the update branch it continues with the scopes left.
 
 The launcher refuses to commit a file with a conflict marker (a line starting `<<<<<<< `, from copier or any other merge), and refuses to start while any committed file has one. The `ci` check fails a marker too (the `check-merge-conflict` hook).
 

@@ -5,6 +5,7 @@ Needs git 2.43 or later (merge-file --object-id). From mise: mise run ps -- --he
 
 import argparse
 import difflib
+import os
 import shlex
 import shutil
 import sys
@@ -124,6 +125,7 @@ def _open(need: str | None) -> tuple[Path, str, str, Path]:
     if not (root / ANSWERS).is_file():
         raise Refused(f"not a PolicyStack repository (no {ANSWERS} at {root})")
     repo.require_clean(root)
+    repo.require_identity(root)
     if need:
         _need(need)
     url, tag = repo.answers(root, ".")["_src_path"], _commit(root, ".")
@@ -147,6 +149,7 @@ def install(a) -> None:
     parent = next(p for p in (dst, *dst.parents) if p.exists())
     if top := git("rev-parse", "--show-toplevel", cwd=parent, ok=(128,)).strip():
         raise Refused(f"{dst}: inside the git work tree {top}; install makes its own repository")
+    repo.require_identity(parent)
     if a.elements is None:
         _need("pass --elements (comma-separated; may be empty)")
     mirror = repo.mirror(a.src)
@@ -253,6 +256,30 @@ def _plan(root: Path, mirror: Path, tracked: list[str], tag: str):
         else:
             unchanged.append(el)
     return elements, changed, unchanged, removed
+
+
+def _paused(scope: str, files: list[str], spec: list[str], message: str, rest: str) -> None:
+    """The conflict stop, in plain words, ending with the steps to finish."""
+    fix_first = (
+        "\n     Fix mise.toml first: mise can't run until it is." if "mise.toml" in files else ""
+    )
+    listed = "\n  ".join(files)
+    print(f"""
+Update paused: you and upstream both changed these files in {scope}:
+  {listed}
+Nothing is lost. A file both sides edited now holds both versions: yours under
+"<<<<<<< before updating", upstream's above ">>>>>>> after updating".
+
+To finish:
+  1. Edit each file to what you want and delete the marker lines.{fix_first}
+     A file one side deleted: keep it, or git rm it.
+     Guide: https://policystk.io/guides/upgrading/#resolving-conflicts
+  2. Commit it:
+     git add -A -- {shlex.join(spec)} && git commit -m {shlex.quote(message)}
+  3. Run the rest of the update:
+     mise run update {rest}""")
+    if os.environ.get("MISE_TASK_NAME"):
+        print('\nmise reports "task failed" next. Expected: the update is paused, not broken.')
 
 
 def update(a) -> int:
@@ -378,11 +405,7 @@ def update(a) -> int:
                     if set(picked) != set(names)
                     else []
                 )
-                print(f"stopped: conflicts in {name}:", *stuck, sep="\n  ")
-                print("resolve each file (git rm one you no longer need), then:")
-                add = f"git add -A -- {shlex.join(spec)}"
-                print(f"  {add} && git commit -m {shlex.quote(message)}")
-                print(f"  mise run update --to {tag} {' '.join(rest)}".rstrip())
+                _paused(name, stuck, spec, message, f"--to {tag} {' '.join(rest)}".rstrip())
                 return 1
         print(f"done on branch {branch}, nothing pushed" + (f"\n{HUB}" if hub else ""))
         return 0

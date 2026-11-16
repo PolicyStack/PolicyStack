@@ -194,6 +194,16 @@ def _dirty(root: Path) -> bool:
     return bool(git("status", *args, cwd=root))
 
 
+def require_identity(cwd: Path) -> None:
+    """Every command commits; refuse before any work rather than at the first commit."""
+    if not git("var", "GIT_AUTHOR_IDENT", cwd=cwd, ok=(128,)).strip():
+        raise Refused(
+            "git doesn't know who you are, and the launcher commits for you. Set it once:\n"
+            '  git config --global user.name "Your Name"\n'
+            "  git config --global user.email you@example.com"
+        )
+
+
 def require_clean(root: Path) -> None:
     """Whole repository, not copier's subdirectory-only check: an uncommitted change in another
     scope would otherwise be resurrected or swept into this scope's commit. Untracked files count

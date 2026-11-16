@@ -29,25 +29,58 @@ Once [Create your repository](#create-your-repository) has made it, run every co
 
 ## Prerequisites
 
+### The hub and your Git server
+
 - An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
-- `git` 2.43 or later and [mise](https://mise.jdx.dev/installing-mise.html) on your workstation. mise installs every other tool PolicyStack uses, at the versions a release's `mise.toml` pins: uv and Python for the launcher, Go and Helm for `validate`, and the linters your CI runs. The launcher's first run downloads its Python packages from PyPI ([Launcher requirements](../reference/launcher.md#requirements)).
-- `oc`, and `helm` 3.14 or later: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
 - Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 ([Support](../reference/compatibility.md#support)). Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
 - The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters.
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`. The install chart creates its objects in that namespace and grants Policy rights to that instance's application controller; another instance has neither.
 - The hub is not a passive DR hub. On a passive DR hub, install PolicyStack only at takeover ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
-```sh
-git --version                            # git version 2.43.0 or later
-mise --version                           # any recent release
-helm version --short                     # v3.14.0 or later
-oc auth can-i '*' '*' --all-namespaces   # yes
-oc get managedclusters -l local-cluster=true
-# NAME            HUB ACCEPTED   ...   AVAILABLE
-# local-cluster   true           ...   True
-```
+### Your workstation
 
-The last command applies to a hub that already runs ACM. A new hub creates `local-cluster` in [Install the operators](#install-the-operators).
+Install these once, on the Linux or macOS machine you run every command from. A disconnected workstation takes step 1 from its own package repositories and the rest from [Disconnected](#disconnected).
+
+1.  git 2.43 or later, and make, from your OS's packages, and a git identity. make runs `mise run validate`; the launcher commits under your identity.
+
+    ```sh
+    sudo dnf install -y git make       # RHEL, Fedora
+    sudo apt-get install -y git make   # Ubuntu, Debian
+    xcode-select --install             # macOS: both come with the command line tools
+    git --version                      # git version 2.43.0 or later
+    git config --global user.name "Your Name"   # skip both if git already knows you
+    git config --global user.email you@example.com
+    ```
+
+    Ubuntu 22.04 and Debian 12 ship an older git: take a newer one from their backports.
+
+2.  [mise](https://mise.jdx.dev), which installs every other tool at the versions a release's `mise.toml` pins: uv and Python for the launcher, Go and Helm for `validate` and the install chart, and the linters your CI runs. Activating it in your shell puts those tools on your `PATH` whenever you are inside the repository, so `helm` below is the one `mise.toml` pins.
+
+    ```sh
+    curl https://mise.run | sh
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+    exec bash
+    mise --version
+    ```
+
+    For zsh or fish, and other ways to install it: [Getting started with mise](https://mise.jdx.dev/getting-started.html).
+
+3.  `oc`, logged in to the hub as a cluster administrator:
+
+    ```sh
+    curl -fsSL https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-4.20/openshift-client-linux.tar.gz \
+      | tar -xz -C ~/.local/bin oc
+    oc login https://api.<hub-domain>:6443
+    oc auth can-i '*' '*' --all-namespaces   # yes
+    oc get managedclusters -l local-cluster=true
+    # NAME            HUB ACCEPTED   ...   AVAILABLE
+    # local-cluster   true           ...   True
+    ```
+
+    Put your hub's OpenShift version in place of `4.20`: `oc` supports a cluster one minor version either side of its own. On arm64 or macOS, take the matching archive from the [OpenShift mirror](https://mirror.openshift.com/pub/openshift-v4/), or download `oc` from the hub's web console (**?** > **Command line tools**). The last command applies to a hub that already runs ACM. A new hub creates `local-cluster` in [Install the operators](#install-the-operators).
+
+The launcher's first run downloads its Python packages from PyPI ([Launcher requirements](../reference/launcher.md#requirements)).
 
 ## Create your repository
 
@@ -144,7 +177,7 @@ mise run ps -- install --to v1.0.0-rc.2 ~/<repo> # (1)!
 
 A machine without internet access needs what the steps above download: upstream's Git repository, the tools mise installs, the launcher's Python packages, and the Go modules `validate` builds the validator from. Collect them into one folder on a connected machine with the same OS and CPU architecture, because most of them are binaries. Carry it across, and every command on this page works unchanged.
 
-On the connected machine, with mise installed:
+On the connected machine, after [Your workstation](#your-workstation) steps 1 and 2:
 
 ```sh
 mkdir ~/ps-offline && cd ~/ps-offline
@@ -157,24 +190,32 @@ export MISE_DATA_DIR=$PWD/mise-data UV_CACHE_DIR=$PWD/uv-cache GOMODCACHE=$PWD/g
 ./mise x -- uv sync --project tools/policystack
 ./mise x -- go -C tools/validator mod download
 rm -rf mise.toml tools # (2)!
+curl -fsSL https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-4.20/openshift-client-linux.tar.gz \
+  | tar -xz oc # (3)!
 ```
 
 1.  The files that name what to download, from the release you will install or a [release candidate](#release-candidates).
 2.  The folder ends up at about 1.3 GB: the tools mise installed, about 800 MB, and the Go modules, about 300 MB.
+3.  `oc` for Linux on x86_64, for a 4.20 hub: use your hub's version, as in [Your workstation](#your-workstation) step 3.
 
-Carry `~/ps-offline` to your home directory on the site machine, then:
+Carry `~/ps-offline` to your home directory on the site machine. Install git and make there from your OS's package repositories ([Your workstation](#your-workstation) step 1); the folder replaces steps 2 and 3. Then:
 
 ```sh
 git -C ~/ps-offline/PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git # (1)!
 git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
   https://github.com/PolicyStack/PolicyStack.git # (2)!
+cat >> ~/.bashrc <<'EOF' # (3)!
 export PATH=~/ps-offline:$PATH MISE_DATA_DIR=~/ps-offline/mise-data MISE_OFFLINE=1 \
-  UV_CACHE_DIR=~/ps-offline/uv-cache UV_OFFLINE=1 GOMODCACHE=~/ps-offline/go-mod GOPROXY=off # (3)!
+  UV_CACHE_DIR=~/ps-offline/uv-cache UV_OFFLINE=1 GOMODCACHE=~/ps-offline/go-mod GOPROXY=off
+eval "$(mise activate bash)"
+EOF
+exec bash
+oc login https://api.<hub-domain>:6443
 ```
 
 1.  An empty repository on your Git server, which now holds upstream's releases. Argo CD never reads it; only the launcher does.
 2.  Sends every fetch of upstream to your mirror. It must be `--global`: the launcher and copier fetch outside your repository, where a repository's own config doesn't apply. Keep passing the GitHub URL, never the mirror, as `--src`, so your answers files record the GitHub URL.
-3.  Put these in your shell profile. `mise install`, `mise run ps` and `mise run validate` then find everything in `~/ps-offline` and never reach the network.
+3.  Every new shell finds `mise` and `oc` in `~/ps-offline`, and mise, uv and Go read everything from the folder and never reach the network. The last line activates mise, as [Your workstation](#your-workstation) step 2 does.
 
 For each new release you take, repeat the connected steps into a fresh folder and both site steps: the mirror brings the new tags, and the folder brings any tool or package the new release pins. The rest of a disconnected site (operator images, catalogs, the hub): [Disconnected clusters](../guides/disconnected.md).
 

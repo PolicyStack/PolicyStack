@@ -6,7 +6,7 @@ Documentation: https://policystk.io/ (source in [`docs/`](docs/)). Each element'
 
 ## Quick start
 
-To use PolicyStack, create your own repository from one release `vX.Y.Z` with the launcher, `tools/policystack`. You need git and [mise](https://mise.jdx.dev/installing-mise.html); mise installs the rest. Install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
+To use PolicyStack, create your own repository from one release `vX.Y.Z` with the launcher, `tools/policystack`. You need git, make, [mise](https://mise.jdx.dev) activated in your shell, and `oc`; mise installs the rest ([Your workstation](https://policystk.io/start/install/#your-workstation)). Install on the hub from your repository ([Installation](https://policystk.io/start/install/)):
 
 1. Fetch only the launcher from a release, and create the repository with it:
    ```sh

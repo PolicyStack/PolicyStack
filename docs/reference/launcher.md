@@ -13,6 +13,7 @@ codes, the state it keeps, and the `upgrades/` formats upstream writes for it. W
 | Needs | Why |
 |---|---|
 | [mise](https://mise.jdx.dev) | Installs uv and Python at the versions `mise.toml` pins (`mise install`), and runs the tasks below |
+| make | `mise run validate`, and so `mise run update`, run the validator through `tools/validator/Makefile` |
 | git 2.43 or later | `git merge-file --object-id`, used to carry your edits into files upstream renamed. Not checked at start |
 | Network access to upstream's Git and to PyPI | Upstream through `git`, so `url.insteadOf` mirrors apply. PyPI once: uv installs copier 9.19.1 and the other packages `tools/policystack/uv.lock` pins into `tools/policystack/.venv`. Without either: [Disconnected](../start/install.md#disconnected) |
 
@@ -128,7 +129,7 @@ Refuses, before any change:
 | Exit | Meaning |
 |---|---|
 | `0` | Done, or nothing to update |
-| `1` | Refused before any change; you answered no at `Proceed?`; copier refused; or `update` stopped on conflicts. Scopes committed before the stop stay on the branch |
+| `1` | Refused before any change; you answered no at `Proceed?`; copier refused; or `update` paused on conflicts. Scopes committed before the pause stay on the branch. Under mise, `[ps] ERROR task failed` follows |
 | `2` | Bad arguments |
 | `130` | Ctrl-C. The scope in progress is put back; `install` removes `DIR` |
 

@@ -47,6 +47,7 @@ nav = [
     { "Fleet files" = "reference/fleet.md" },
     { "Install chart" = "reference/install.md" },
     { "Lifecycle keys" = "reference/lifecycle.md" },
+    { "Launcher" = "reference/launcher.md" },
     { "Validator rules" = "reference/rules.md" },
     { "CI workflows" = "reference/ci.md" },
     { "Compatibility" = "reference/compatibility.md" },

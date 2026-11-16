@@ -2,7 +2,7 @@
 
 PolicyStack configures OpenShift clusters from Git through Red Hat Advanced Cluster Management (ACM) governance policies. It is for admins who run an ACM hub and want every cluster's operators and settings reviewed in Git, rolled out cluster by cluster, and reported as compliant or not. It adds no controller of its own: a Helm chart points the hub's OpenShift GitOps (Argo CD) at your repository, and ACM does the rest.
 
-You create your own repository from PolicyStack's releases with copier, describe each cluster in it, and turn on the elements you want. An element is a Helm chart under `stack/` that configures one product, such as cert-manager, MetalLB or the Compliance Operator.
+You create your own repository from PolicyStack's releases with the launcher (`mise run ps`), describe each cluster in it, and turn on the elements you want. An element is a Helm chart under `stack/` that configures one product, such as cert-manager, MetalLB or the Compliance Operator.
 
 ## How it works
 

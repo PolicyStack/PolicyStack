@@ -83,6 +83,19 @@ func policies(ctx Context, id string) ([]policyObject, []Finding) {
 	}
 }
 
+// PolicyKeys returns the policies.<key> of each Policy in ctx.Rendered. An undecodable render
+// returns none; the render-phase rules report it.
+func PolicyKeys(ctx Context) []string {
+	pols, _ := policies(ctx, "")
+	var out []string
+	for _, p := range pols {
+		if p.Kind == "Policy" {
+			out = append(out, strings.TrimSuffix(p.Metadata.Name, "-"+ctx.Cluster.ReleaseName))
+		}
+	}
+	return out
+}
+
 // action is the remediationAction ACM runs template with under p: the Policy's, unless the
 // template's is InformOnly.
 func (p policyObject) action(template string) string {

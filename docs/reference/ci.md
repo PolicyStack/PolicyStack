@@ -58,10 +58,10 @@ prek is a pre-commit-compatible hook runner, installed by `mise install`. It rea
 
 | Hook | Checks |
 | ---- | ------ |
-| `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins. `check-merge-conflict` runs with `--assume-in-merge`, so it also fails the conflict markers a `copier update` commits |
+| `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins. `check-merge-conflict` runs with `--assume-in-merge`, so it also fails conflict markers committed after an update |
 | `actionlint` (workflow syntax), `zizmor` (workflow security audit) | Workflows. zizmor runs offline |
 | `shellcheck` | Shell scripts |
-| `ruff-check`, `ruff-format` | `tools/*.py` |
+| `ruff-check`, `ruff-format` | Every Python file (`tools/*.py`, `tools/policystack/`) |
 | `element-readmes` | Regenerates `stack/*/README.md`, except for elements with a `.copier-answers.yml`: their README is upstream's ([Element reference](../develop/elements.md#element-reference)) |
 | `lychee` | Link checker: relative links in `docs/`, offline |
 
@@ -83,7 +83,7 @@ git add -u             # stage the rewritten files; add a new element's README b
 
 ## Upstream
 
-`upstream.yml` checks PolicyStack itself (the library, the validator code and the docs site), then
+`upstream.yml` checks PolicyStack itself (the library, the validator code, the launcher and the docs site), then
 publishes the site and cuts releases. It runs on every PR and `main` push in upstream PolicyStack. copier leaves it out of an adopter's copy, so
 none of this runs there.
 
@@ -91,8 +91,9 @@ none of this runs there.
 | --- | ---- |
 | `library` | policy-library in `lib/`: `ct lint --config lib/ct.yaml`, which fails a change to `lib/policy-library` without a `version` bump and runs `helm lint --strict`; then the helm-unittest suites in `lib/tests` (`untt --strict`), failing on a snapshot that is not committed ([Library changes](../contributing.md#library-changes)) |
 | `validator` | `make -C tools/validator lint` (golangci-lint, `go mod tidy -diff`, govulncheck) and `test`; then `make crds`, failing when `tools/validator/crds/` differs from the files the Makefile pins ([CRD schemas](../develop/validation.md#crd-schemas)) |
+| `launcher` | `uv lock --check` (`tools/policystack/uv.lock` matches `pyproject.toml`), then the launcher's tests (`pytest tools/policystack/tests`): unit tests, generic checks of this checkout's `stack/` and `values/`, and install, add and update run end to end through copier against a synthetic upstream that uses this checkout's `copier.yml` |
 | `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
-| `upstream` | The required check over `library`, `validator` and `docs` |
+| `upstream` | The required check over `library`, `validator`, `launcher` and `docs` |
 | `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: the site to `gh-pages` |
 | `release` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: release-please opens or updates the release PR and, once it merges, tags it `vX.Y.Z` ([Releases](../contributing.md#releases)) |
 
@@ -247,6 +248,7 @@ with framework updates ([Upgrading PolicyStack](../guides/upgrading.md)).
 | `mise.toml` | Every CLI tool, Go and Python |
 | `tools/validator/go.mod` | Go libraries and `govulncheck` (`go tool`) |
 | `tools/requirements*.txt` | PyYAML, Zensical |
+| `tools/policystack/uv.lock` | copier, questionary, ruamel.yaml and their dependencies, for the launcher |
 | `.github/workflows/` | Actions, by commit SHA |
 | `tools/validator/Makefile` | The CRD source SHAs. A bump needs `make crds` and the refetched `tools/validator/crds/` committed on the PR ([CRD schemas](../develop/validation.md#crd-schemas)) |
 

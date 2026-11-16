@@ -2,8 +2,9 @@ BINARY := bin/policystack-validator
 PKG := ./cmd/policystack-validator
 ROOT := ../..
 # validate runs from the repo root, where CI annotations and --extra-values paths resolve. ELEMENT
-# limits validate and preview to one chart.
-VALIDATOR := $(abspath $(BINARY)) --repo-root . $(if $(CI),--github) $(if $(ELEMENT),--element $(ELEMENT))
+# limits validate and preview to one chart. BASE_BRANCH is the branch HEAD merges into: POLICY052
+# resolves a revision naming it to HEAD, and a repository without an origin remote needs it.
+VALIDATOR := $(abspath $(BINARY)) --repo-root . $(if $(CI),--github) $(if $(ELEMENT),--element $(ELEMENT)) $(if $(BASE_BRANCH),--base-branch $(BASE_BRANCH))
 BASELINE := tools/validator/testdata/baseline.yaml
 # Upstream's example fleet. copier leaves it out of a copy, so an adopter's validate checks fleet/ only.
 FIXTURES := tools/validator/testdata/clusters

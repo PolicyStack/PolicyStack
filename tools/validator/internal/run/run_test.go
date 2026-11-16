@@ -637,3 +637,55 @@ func TestAllOn(t *testing.T) {
 		})
 	}
 }
+
+// TestPolicy011Wiring runs the check through Run: a missing element: target is reported only when a
+// fleet file's render, --all-on included, holds the Policy naming it. The stand-in helm renders
+// Policy p for release a-c when a values file turns something on.
+func TestPolicy011Wiring(t *testing.T) {
+	for _, tc := range []struct {
+		name, clusterFile string
+		allOn, want       bool
+	}{
+		{name: "disabled everywhere"},
+		{name: "cluster file enables it", clusterFile: "stack:\n  a:\n    enabled: true\n", want: true},
+		{name: "all-on", allOn: true, want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			write := func(rel, body string, mode os.FileMode) {
+				p := filepath.Join(root, rel)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte(body), mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			write("helm", "#!/bin/sh\n[ \"$1\" = template ] || exit 0\nfor f; do [ -f \"$f\" ] && cat \"$f\"; done | grep -q 'enabled: true' && printf 'kind: Policy\\nmetadata:\\n  name: p-a-c\\n'\nexit 0\n", 0o755)
+			write("stack/a/Chart.yaml", "apiVersion: v2\nname: a\nversion: 0.1.0\n", 0o644)
+			write("stack/a/values.yaml", "stack:\n  a:\n    enabled: false\n    policies:\n      p:\n        dependencies:\n          - name: ready\n            element: odf\n", 0o644)
+			write("values.yaml", "policyNamespace: policies\n", 0o644)
+			write("fleet/c.yaml", "revision: main\n", 0o644)
+			if tc.clusterFile != "" {
+				write("values/clusters/c.yaml", tc.clusterFile, 0o644)
+			}
+			res, err := Run(t.Context(), Options{
+				RepoRoot:     root,
+				StackDir:     filepath.Join(root, "stack"),
+				LifecycleDir: filepath.Join(root, "lifecycle"),
+				ValuesDir:    filepath.Join(root, "values"),
+				FixturesDir:  filepath.Join(root, "fleet"),
+				HelmBin:      filepath.Join(root, "helm"),
+				AllOn:        tc.allOn,
+				Only:         []string{"POLICY011"},
+				Logger:       slog.New(slog.DiscardHandler),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := len(res.Findings) == 1 && strings.Contains(res.Findings[0].Message, `names element "odf"`); got != tc.want || len(res.Findings) > 1 {
+				t.Errorf("findings %+v, want reported=%v", res.Findings, tc.want)
+			}
+		})
+	}
+}

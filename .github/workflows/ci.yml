@@ -30,7 +30,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # The hooks' tools only, not Go, Helm, golangci-lint or copier.
+      # The hooks' tools only, not Go, Helm, golangci-lint or uv.
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           install_args: python prek aqua:rhysd/actionlint zizmor shellcheck ruff lychee

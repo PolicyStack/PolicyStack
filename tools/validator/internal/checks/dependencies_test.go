@@ -27,8 +27,16 @@ func certManager(t *testing.T) *chart.Element {
 `)
 }
 
+// runDeps runs POLICY011 as if a fleet file rendered every policy of each element.
 func runDeps(els ...*chart.Element) []Finding {
-	return (&DependencyCheck{}).Run(Context{AllElements: els})
+	rendered := map[string]map[string]bool{}
+	for _, el := range els {
+		rendered[el.ChartName] = map[string]bool{}
+		for k := range el.Values.Component.Policies {
+			rendered[el.ChartName][k] = true
+		}
+	}
+	return (&DependencyCheck{}).Run(Context{AllElements: els, RenderedPolicies: rendered})
 }
 
 func TestPolicy011_ValidReferencesAreSilent(t *testing.T) {
@@ -139,6 +147,46 @@ func TestPolicy011_DanglingAndBadReferences(t *testing.T) {
 			}
 			if got[0].RuleID != "POLICY011" || got[0].Severity != SevError || got[0].Line == 0 {
 				t.Errorf("unexpected rule/severity/line: %+v", got[0])
+			}
+		})
+	}
+}
+
+// TestPolicy011_MissingElementOnlyWhereRendered: an element: naming no element under stack/ is
+// reported only when a fleet file's render holds the Policy declaring it. run.Run fills
+// RenderedPolicies from Helm's output, so Helm alone decides what enabled means.
+func TestPolicy011_MissingElementOnlyWhereRendered(t *testing.T) {
+	el := loadElement(t, `stack:
+  loki:
+    enabled: true
+    policies:
+      stack:
+        dependencies:
+          - name: ready
+            element: odf
+        templates:
+          cp: {}
+      other:
+        templates:
+          cp2: {}
+`, "apiVersion: v2\nname: loki\nversion: 0.1.0\n", nil)
+	for _, tc := range []struct {
+		name     string
+		rendered map[string]map[string]bool
+		want     bool
+	}{
+		{name: "no fleet files"},
+		{name: "rendered", rendered: map[string]map[string]bool{"loki": {"stack": true}}, want: true},
+		{name: "only another policy rendered", rendered: map[string]map[string]bool{"loki": {"other": true}}},
+		{name: "another chart's policy of that name", rendered: map[string]map[string]bool{"odf": {"stack": true}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := (&DependencyCheck{}).Run(Context{AllElements: []*chart.Element{el}, RenderedPolicies: tc.rendered})
+			if tc.want != (len(got) == 1) || len(got) > 1 {
+				t.Fatalf("want reported=%v, got %+v", tc.want, got)
+			}
+			if tc.want && (!strings.Contains(got[0].Message, `names element "odf", which is not an element under stack/`) || got[0].Severity != SevError) {
+				t.Errorf("unexpected finding: %+v", got[0])
 			}
 		})
 	}

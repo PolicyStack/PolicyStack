@@ -461,7 +461,7 @@ Copy one, change names and addresses, merge. [Values](#values) moves the shared 
 
 Lifecycle uses the same [values cascade](../concepts/values.md#order) as Day-2, starting from `lifecycle/values.yaml`, the lifecycle chart's defaults (every `install` key, commented). The fleet file's `install` ranks above every layer.
 
-Upstream's example layers. copier doesn't copy them into your repository: copy the one you need from [upstream's `values/platforms/`](https://github.com/PolicyStack/PolicyStack/tree/main/values/platforms) into your `values/platforms/`, and read it first ([Example files](../concepts/values.md#example-files)).
+Upstream's example layers. Unless you picked them at [install](../start/install.md#example-files), they aren't in your repository: copy the one you need from [upstream's `values/platforms/`](https://github.com/PolicyStack/PolicyStack/tree/main/values/platforms) into your `values/platforms/`, and read it first ([Example files](../concepts/values.md#example-files)).
 
 | Layer | Sets |
 |---|---|

@@ -6,7 +6,7 @@ A disconnected cluster cannot reach the internet. PolicyStack normally pulls fro
 
 | Normally reached | By | Disconnected replacement | Set up |
 |---|---|---|---|
-| GitHub | Argo CD on the hub, your repository's CI, and copier | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
+| GitHub | Argo CD on the hub, your repository's CI, and the launcher | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
 | Container images and operator catalogs | Every cluster | oc-mirror's mirror sets and CatalogSources, applied by the `disconnected` element; `global.catalogSources` points every operator at the mirrored catalog | [Site layer](#site-layer) |
 | Public certificate authorities | Every cluster | Your mirror registry's CA and your internal servers' CAs, applied by the `disconnected` element | [Site layer](#site-layer) |
 | Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
@@ -79,30 +79,9 @@ mirror:
 
 ### PolicyStack releases
 
-Your repository is created and updated from upstream's Git tags ([Installation](../start/install.md#create-your-repository)), so the site needs a copy of upstream's repository, tags included. policy-library is in it (`lib/`); there is no chart repository to mirror.
+Your repository is created and updated from upstream's Git tags, so the site needs a copy of upstream's repository, tags included. policy-library is in it (`lib/`); there is no chart repository to mirror. Your workstation also needs the tools mise installs, the launcher's Python packages and the validator's Go modules. [Installation: Disconnected](../start/install.md#disconnected) carries all of them across in one folder and points the launcher at your mirror.
 
-1.  Mirror upstream on a connected machine, then carry it across and push it to your Git server. Repeat to pick up new releases:
-
-    ```sh
-    git clone --mirror https://github.com/PolicyStack/PolicyStack.git
-    git -C PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git
-    ```
-
-2.  On every machine that runs copier, send the upstream URL to the mirror:
-
-    ```sh
-    git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
-      https://github.com/PolicyStack/PolicyStack.git
-    ```
-
-    copier reaches upstream only through `git`, so the answers files keep the upstream URL in `_src_path` and every command in [Installation](../start/install.md) and [Upgrading PolicyStack](upgrading.md) works unchanged.
-
-    !!! warning "Global or system config only"
-        copier clones upstream into a temporary directory, where your repository's own `.git/config` doesn't apply. Set the rewrite with `--global` or `--system`, or for one shell with `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.<mirror>.insteadOf GIT_CONFIG_VALUE_0=<upstream>`. A rewrite in your repository's own config is ignored, and copier tries GitHub.
-
-3.  Install copier from your Python package mirror: `pipx install copier` with `PIP_INDEX_URL` pointing at it. `mise install` installs the pinned copier the same way.
-
-CI in your repository needs the tools in `mise.toml` and the validator's Go modules (`GOPROXY` pointing at your Go module proxy). The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
+CI runners in your site need the same tools and Go modules: the same folder and variables on a runner of the same OS and CPU architecture, or your own Go module proxy as `GOPROXY`. The CRDs the validator checks against are committed in `tools/validator/crds/`, so it needs nothing else from the internet ([CRD schemas](../develop/validation.md#crd-schemas)).
 
 ### Git and the hub's Argo CD
 

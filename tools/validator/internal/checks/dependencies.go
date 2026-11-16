@@ -17,7 +17,9 @@ import (
 // A bad dependency renders and is accepted by ACM, then leaves the Policy Pending on every managed
 // cluster, along with everything that depends on it.
 //
-// Runs repo-wide so `element:` references resolve against the other elements under stack/.
+// Runs repo-wide so `element:` references resolve against the other elements under stack/. An
+// `element:` naming no element under stack/ is reported only when a fleet file's render holds the
+// Policy declaring it, so a copy may leave out the elements its disabled policies name.
 type DependencyCheck struct{}
 
 func (DependencyCheck) ID() string   { return "POLICY011" }
@@ -27,6 +29,8 @@ func (DependencyCheck) Phase() Phase { return PhaseRepo }
 // not, since a values layer may turn it on.
 type elementIndex struct {
 	el *chart.Element
+	// rendered[name] is set when a fleet file's render holds the Policy of policies.<name>.
+	rendered map[string]bool
 	// policyRenders[name] reports whether the chart emits the Policy, which needs a template or an
 	// operator. Every policy of the element is a key.
 	policyRenders map[string]bool
@@ -60,6 +64,7 @@ func (c *DependencyCheck) Run(ctx Context) []Finding {
 			continue
 		}
 		ix := indexElement(el)
+		ix.rendered = ctx.RenderedPolicies[el.ChartName]
 		byChart[el.ChartName] = ix
 		ixs = append(ixs, ix)
 	}
@@ -180,6 +185,9 @@ func (c *DependencyCheck) checkDep(ix *elementIndex, all map[string]*elementInde
 	if d.Element != "" {
 		t, ok := all[d.Element]
 		if !ok {
+			if !ix.rendered[owner] {
+				return out
+			}
 			var known []string
 			for n := range all {
 				known = append(known, n)

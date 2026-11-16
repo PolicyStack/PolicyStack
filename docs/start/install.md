@@ -6,7 +6,7 @@ PolicyStack runs on the ACM hub: a Helm release from `install/` points the hub's
 - A **layer** is a values file under `values/` that turns elements on and configures them.
 - A **fleet file**, `fleet/<cluster>.yaml`, enrolls one cluster and lists the layers it reads. The hub is itself a managed cluster, enrolled by `fleet/hubs/<hub>.yaml`.
 
-You create your own repository with [copier](https://copier.readthedocs.io), which copies the framework and each element you want from an upstream release tag `vX.Y.Z`, and records what it copied. Later, `copier update` merges a newer release with your changes, for you to open as a PR ([Upgrading PolicyStack](../guides/upgrading.md)). Full model: [How PolicyStack works](../concepts/overview.md).
+You create your own repository with the launcher (`mise run ps`), which copies the framework and each element you want from an upstream release tag `vX.Y.Z` with [copier](https://copier.readthedocs.io), and records what it copied. Later, `mise run update` merges a newer release with your changes on a branch, for you to open as a PR ([Upgrading PolicyStack](../guides/upgrading.md)). Full model: [How PolicyStack works](../concepts/overview.md).
 
 1. [Check the prerequisites](#prerequisites)
 2. [Create your repository](#create-your-repository)
@@ -17,7 +17,7 @@ You create your own repository with [copier](https://copier.readthedocs.io), whi
 7. [Add the hub's fleet file](#add-the-hubs-fleet-file)
 8. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
 
-Run every command from the root of your repository's clone, logged in to the hub as a cluster administrator.
+Once [Create your repository](#create-your-repository) has made it, run every command from the root of your repository's clone, logged in to the hub as a cluster administrator.
 
 | Placeholder | Meaning | Example |
 |---|---|---|
@@ -29,43 +29,124 @@ Run every command from the root of your repository's clone, logged in to the hub
 
 ## Prerequisites
 
+### The hub and your Git server
+
 - An empty Git repository, private or public. Argo CD can read any Git server, but the CI checks, CODEOWNERS and rulesets below are GitHub-specific.
-- copier 9.18 or later, `git` and Python on your workstation: `pipx install copier`. Once the repository exists, `mise install` installs the copier version it pins ([Setup](../contributing.md#setup)).
-- `oc`, and `helm` 3.14 or later: [upgrades](../guides/upgrading.md#install-chart) use `--reset-then-reuse-values`, added in 3.14. You need 3.17 or later only if the install hits an [ownership conflict](#install-policystack). Your local `helm` runs only the install chart. Argo CD renders elements with the Helm bundled in GitOps (3.18.4 in 1.18), and CI uses the same version.
 - Supported floors: ACM 2.16, OpenShift 4.20, OpenShift GitOps 1.18 ([Support](../reference/compatibility.md#support)). Cluster lifecycle has extra requirements ([Cluster lifecycle prerequisites](../guides/lifecycle.md#prerequisites)).
 - The hub manages itself: MultiClusterHub self-management on, the ACM default. It creates the hub's ManagedCluster (`local-cluster` by default), which carries the `local-cluster` label. Without it the hub never picks up `fleet/hubs/<hub>.yaml`, gets no Applications and builds no clusters.
 - A hub that already runs OpenShift GitOps must use its default Argo CD instance, `openshift-gitops`. The install chart creates its objects in that namespace and grants Policy rights to that instance's application controller; another instance has neither.
 - The hub is not a passive DR hub. On a passive DR hub, install PolicyStack only at takeover ([Hub disaster recovery](../guides/lifecycle.md#hub-disaster-recovery)).
 
-```sh
-copier --version                         # copier 9.18.0 or later
-helm version --short                     # v3.14.0 or later
-oc auth can-i '*' '*' --all-namespaces   # yes
-oc get managedclusters -l local-cluster=true
-# NAME            HUB ACCEPTED   ...   AVAILABLE
-# local-cluster   true           ...   True
-```
+### Your workstation
 
-The last command applies to a hub that already runs ACM. A new hub creates `local-cluster` in [Install the operators](#install-the-operators).
+Install these once, on the Linux or macOS machine you run every command from. A disconnected workstation takes step 1 from its own package repositories and the rest from [Disconnected](#disconnected).
+
+1.  git 2.43 or later, and make, from your OS's packages, and a git identity. make runs `mise run validate`; the launcher commits under your identity.
+
+    ```sh
+    sudo dnf install -y git make       # RHEL, Fedora
+    sudo apt-get install -y git make   # Ubuntu, Debian
+    xcode-select --install             # macOS: both come with the command line tools
+    git --version                      # git version 2.43.0 or later
+    git config --global user.name "Your Name"   # skip both if git already knows you
+    git config --global user.email you@example.com
+    ```
+
+    Ubuntu 22.04 and Debian 12 ship an older git: take a newer one from their backports.
+
+2.  [mise](https://mise.jdx.dev), which installs every other tool at the versions a release's `mise.toml` pins: uv and Python for the launcher, Go and Helm for `validate` and the install chart, and the linters your CI runs. Activating it in your shell puts those tools on your `PATH` whenever you are inside the repository, so `helm` below is the one `mise.toml` pins.
+
+    ```sh
+    curl https://mise.run | sh
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+    exec bash
+    mise --version
+    ```
+
+    For zsh or fish, and other ways to install it: [Getting started with mise](https://mise.jdx.dev/getting-started.html).
+
+3.  `oc`, logged in to the hub as a cluster administrator:
+
+    ```sh
+    curl -fsSL https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-4.20/openshift-client-linux.tar.gz \
+      | tar -xz -C ~/.local/bin oc
+    oc login https://api.<hub-domain>:6443
+    oc auth can-i '*' '*' --all-namespaces   # yes
+    oc get managedclusters -l local-cluster=true
+    # NAME            HUB ACCEPTED   ...   AVAILABLE
+    # local-cluster   true           ...   True
+    ```
+
+    Put your hub's OpenShift version in place of `4.20`: `oc` supports a cluster one minor version either side of its own. On arm64 or macOS, take the matching archive from the [OpenShift mirror](https://mirror.openshift.com/pub/openshift-v4/), or download `oc` from the hub's web console (**?** > **Command line tools**). The last command applies to a hub that already runs ACM. A new hub creates `local-cluster` in [Install the operators](#install-the-operators).
+
+The launcher's first run downloads its Python packages from PyPI ([Launcher requirements](../reference/launcher.md#requirements)).
 
 ## Create your repository
 
 Argo CD reads only your repository. Upstream ships no fleet files and no live configuration.
 
-Pick the newest framework release, a tag `vX.Y.Z` on the [releases page](https://github.com/PolicyStack/PolicyStack/releases), and copy it:
+The launcher ships in every release, under `tools/policystack`. Your repository doesn't exist yet, so fetch just the launcher from a release and run it there:
 
 ```sh
-url=https://github.com/PolicyStack/PolicyStack.git
-copier copy --vcs-ref v1.0.0 "$url" <repo> # (1)!
-cd <repo>
-git init -b main && git add -A && git commit -m "chore: PolicyStack v1.0.0"
-git remote add origin https://github.com/<org>/<repo>.git
-git push -u origin main
+git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0 \
+  https://github.com/PolicyStack/PolicyStack.git ~/policystack # (1)!
+git -C ~/policystack sparse-checkout set tools/policystack # (2)!
+cd ~/policystack && mise trust && mise install # (3)!
+mise run ps -- install ~/<repo> # (4)!
 ```
 
-1.  Without `--vcs-ref`, copier takes the newest release. Name the release so the copy is the one you picked.
+1.  Any release from the [releases page](https://github.com/PolicyStack/PolicyStack/releases); `git ls-remote --tags <url>` lists them on any Git server. This only fetches the launcher: it installs whichever release you pick next, newest first. Git reports a "detached HEAD": expected, since a release is a tag, not a branch.
+2.  Leaves only the launcher and the release's root files, `mise.toml` among them: well under 1 MB. A Git server without partial clone support ignores `--filter` and sends the whole release, about 3 MB; the commands still work.
+3.  Installs the tools the release's `mise.toml` pins. Your repository gets the same `mise.toml`, so it reuses them.
+4.  An absolute path outside `~/policystack`: mise runs the task from `~/policystack`, and the launcher refuses a directory inside a Git work tree. The first run installs the Python packages `tools/policystack/uv.lock` pins.
 
-You now have the framework (`install/`, `lifecycle/`, `lib/`, `tools/`, the CI workflows and hooks, `mise.toml`, the root `values.yaml`) and `.copier-answers.yml`, which records the release you copied:
+In a terminal, the launcher asks three things. Arrow keys move, space ticks, Enter confirms, and typing filters a list by name:
+
+| Prompt | Lists | Pick |
+|---|---|---|
+| `Release` | Every release, newest first. A release upstream later found broken is shown with its reason and can't be picked ([Blocked releases](../reference/launcher.md#blocked-releases)) | The newest |
+| `Elements` | Every element with its stability. The line under the list shows the highlighted element's description and what it needs. `acm`, `gitops` and `upgrade` are ticked and locked | What you want now. [Add elements](#add-elements) works later too |
+| `Example values files` | Upstream's `values/`, each with the elements it turns on | None, unless one fits ([Example files](#example-files)) |
+
+It then prints what it will create and asks `Proceed?`. The same install without prompts, as a script would run it:
+
+```sh
+mise run ps -- install --to v1.0.0 --elements odf,loki \
+  --examples values/clusters/prod-east-1.yaml ~/fleet
+```
+
+```text
+PolicyStack v1.0.0 into /home/me/fleet
+  framework: install/, lifecycle/, lib/, tools/, CI, mise.toml
+  elements: acm, gitops, infra-nodes, loki, machine-health, odf, storage-nodes, upgrade, user-monitoring
+    + infra-nodes enabled by values/clusters/prod-east-1.yaml
+    + machine-health enabled by values/clusters/prod-east-1.yaml
+    + storage-nodes needed by odf
+    + user-monitoring enabled by values/clusters/prod-east-1.yaml
+  not added, named only by policies that ship disabled; POLICY011 fails once a cluster enables one: loki -> coo, loki -> logging
+  example files, yours from now on: values/clusters/prod-east-1.yaml
+copying framework (1/10)
+copying acm (2/10)
+...
+copying user-monitoring (10/10)
+created /home/me/fleet: one commit on main, nothing pushed. Next (docs/start/install.md):
+  git -C /home/me/fleet remote add origin <your repository URL> && git -C /home/me/fleet push -u origin main
+  write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml, then: mise run validate
+```
+
+The `+` lines are elements you didn't pick that the install adds, and why ([Dependencies](#dependencies)). Each element takes a few seconds to copy. If anything fails, or you press Ctrl-C, the directory is removed and you can run it again. Every flag and refusal: [install](../reference/launcher.md#install).
+
+Push it, and trust its `mise.toml`. `mise install` adds only tools that the release you picked pins differently from the one you fetched the launcher from. From here on, run the launcher from your repository with `mise run ps`; delete `~/policystack`.
+
+```sh
+cd ~/<repo>
+git remote add origin https://github.com/<org>/<repo>.git
+git push -u origin main
+mise trust && mise install
+```
+
+You now have the framework (`install/`, `lifecycle/`, `lib/`, `tools/`, the CI workflows and hooks, `mise.toml`, the root `values.yaml`), one directory per element under `stack/`, and a `.copier-answers.yml` at the root and in each element, which records the release copied there:
 
 ```yaml title=".copier-answers.yml"
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
@@ -74,32 +155,118 @@ _src_path: https://github.com/PolicyStack/PolicyStack.git
 element: ''
 ```
 
-`copier update` reads `_commit` to know what to merge, and the validator reads it to check every fleet pin (POLICY052) and every element's release (POLICY061). Never edit it by hand ([Answers files](../guides/upgrading.md#answers-files)).
+`mise run update` reads `_commit` to know what to merge, and the validator reads it to check every fleet pin (POLICY052) and every element's release (POLICY061). Never edit it by hand ([Answers files](../guides/upgrading.md#answers-files)).
 
-copier leaves out `stack/`, which you fill in the next step, and everything that stays upstream: the docs, the upstream README and CODEOWNERS, and the example `values/` files ([Example files](../concepts/values.md#example-files)). Who owns each path from here on: [The repository](../concepts/overview.md#the-repository).
+Left out: everything that stays upstream, such as the docs, the upstream README and CODEOWNERS, and the example `values/` files you didn't pick. Who owns each path from here on: [The repository](../concepts/overview.md#the-repository).
+
+### Release candidates
+
+A prerelease, `vX.Y.Z-rc.N`, is for trying a release before it ships; the [contract](../reference/compatibility.md#versions) doesn't cover it. Fetch the launcher from the candidate, and name it:
+
+```sh
+git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0-rc.2 \
+  https://github.com/PolicyStack/PolicyStack.git ~/policystack
+git -C ~/policystack sparse-checkout set tools/policystack
+cd ~/policystack && mise trust && mise install
+mise run ps -- install --to v1.0.0-rc.2 ~/<repo> # (1)!
+```
+
+1.  Or `--pre` in place of `--to v1.0.0-rc.2`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` predates the launcher. Later, `mise run update` moves the repository from the candidate to the release.
+
+### Disconnected
+
+A machine without internet access needs what the steps above download: upstream's Git repository, the tools mise installs, the launcher's Python packages, and the Go modules `validate` builds the validator from. Collect them into one folder on a connected machine with the same OS and CPU architecture, because most of them are binaries. Carry it across, and every command on this page works unchanged.
+
+On the connected machine, after [Your workstation](#your-workstation) steps 1 and 2:
+
+```sh
+mkdir ~/ps-offline && cd ~/ps-offline
+git clone --mirror https://github.com/PolicyStack/PolicyStack.git
+git -C PolicyStack.git archive v1.0.0 mise.toml tools/policystack tools/validator/go.mod tools/validator/go.sum \
+  | tar -x # (1)!
+cp "$(command -v mise)" .
+export MISE_DATA_DIR=$PWD/mise-data UV_CACHE_DIR=$PWD/uv-cache GOMODCACHE=$PWD/go-mod
+./mise trust mise.toml && ./mise install
+./mise x -- uv sync --project tools/policystack
+./mise x -- go -C tools/validator mod download
+rm -rf mise.toml tools # (2)!
+curl -fsSL https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-4.20/openshift-client-linux.tar.gz \
+  | tar -xz oc # (3)!
+```
+
+1.  The files that name what to download, from the release you will install or a [release candidate](#release-candidates).
+2.  The folder ends up at about 1.3 GB: the tools mise installed, about 800 MB, and the Go modules, about 300 MB.
+3.  `oc` for Linux on x86_64, for a 4.20 hub: use your hub's version, as in [Your workstation](#your-workstation) step 3.
+
+Carry `~/ps-offline` to your home directory on the site machine. Install git and make there from your OS's package repositories ([Your workstation](#your-workstation) step 1); the folder replaces steps 2 and 3. Then:
+
+```sh
+git -C ~/ps-offline/PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git # (1)!
+git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
+  https://github.com/PolicyStack/PolicyStack.git # (2)!
+cat >> ~/.bashrc <<'EOF' # (3)!
+export PATH=~/ps-offline:$PATH MISE_DATA_DIR=~/ps-offline/mise-data MISE_OFFLINE=1 \
+  UV_CACHE_DIR=~/ps-offline/uv-cache UV_OFFLINE=1 GOMODCACHE=~/ps-offline/go-mod GOPROXY=off
+eval "$(mise activate bash)"
+EOF
+exec bash
+oc login https://api.<hub-domain>:6443
+```
+
+1.  An empty repository on your Git server, which now holds upstream's releases. Argo CD never reads it; only the launcher does.
+2.  Sends every fetch of upstream to your mirror. It must be `--global`: the launcher and copier fetch outside your repository, where a repository's own config doesn't apply. Keep passing the GitHub URL, never the mirror, as `--src`, so your answers files record the GitHub URL.
+3.  Every new shell finds `mise` and `oc` in `~/ps-offline`, and mise, uv and Go read everything from the folder and never reach the network. The last line activates mise, as [Your workstation](#your-workstation) step 2 does.
+
+For each new release you take, repeat the connected steps into a fresh folder and both site steps: the mirror brings the new tags, and the folder brings any tool or package the new release pins. The rest of a disconnected site (operator images, catalogs, the hub): [Disconnected clusters](../guides/disconnected.md).
 
 ## Add elements
 
-Each element is copied on its own into `stack/<element>/`, from the same release tag as the framework, and gets its own `.copier-answers.yml`. Every repository needs `acm`, `gitops` and `upgrade`: [Install the operators](#install-the-operators) reads the first two, and `upgrade` applies a fleet file's `version` and `channel`. Add any others the same way, now or later:
+Each element is copied on its own into `stack/<element>/`, from the framework's release, and gets its own `.copier-answers.yml`. Every repository has `acm`, `gitops` and `upgrade`: [Install the operators](#install-the-operators) reads the first two, and `upgrade` applies a fleet file's `version` and `channel`. To add another later, from your repository's root:
 
 ```sh
-url=https://github.com/PolicyStack/PolicyStack.git
-for el in acm gitops upgrade cert-manager; do
-  copier copy --vcs-ref v1.0.0 -d element="$el" "$url" "stack/$el" # (1)!
-done
-git add stack && git commit -m "feat: add acm, gitops, upgrade and cert-manager"
+mise run ps -- add local-storage # (1)!
 ```
 
-1.  The `_commit` in your root `.copier-answers.yml`. An element added later takes that tag too: an element may be older than your framework, never newer. An element that first ships in a newer release needs the framework updated to that release first ([Framework updates](../guides/upgrading.md#framework-updates)); until then `copier copy` fails with `FileNotFoundError: ... stack/<element>`.
+```text
+add at v1.0.0 (your framework release)
+  elements: local-storage
+copying local-storage (1/1)
+committed; nothing pushed
+```
 
-!!! warning "Pass `--vcs-ref` for every element"
-    Without it copier copies the newest release, which can be newer than your framework. That element may then need framework code you don't have yet, and POLICY061 fails it. Delete the directory and copy it again with your framework's tag.
+1.  Without a name it lists the elements you don't have. It commits on the branch you are on, as `feat: add local-storage (v1.0.0)`, so open a PR for it like any other change.
 
-Each element is either stable or preview, shown at the top of its `README.md`. A preview element may change incompatibly in a framework minor ([Element stability](../reference/compatibility.md#element-stability)). Each element's settings are in its `README.md`.
+An element may be older than your framework, never newer: a newer one may need framework code you don't have, and POLICY061 fails it. So `add` always copies at your framework's `_commit`, and refuses an element that first ships in a later release, naming the release to update the framework to first ([Framework updates](../guides/upgrading.md#framework-updates)).
 
-Some elements depend on another: `odf`, for one, waits on Policies of `storage-nodes`. Copy both. Once the first fleet file exists, CI fails a missing dependency with [POLICY011](../reference/rules.md), naming it. In your repository the validator checks elements and values only through the clusters in `fleet/` ([What `validate` runs](../develop/validation.md#what-validate-runs)).
+Each element is either stable or preview, shown in the picker and at the top of its `README.md`. A preview element may change incompatibly in a framework minor ([Element stability](../reference/compatibility.md#element-stability)). Each element's settings are in its `README.md`.
 
 Elements you write yourself also go under `stack/`, without an answers file ([Writing an element](../develop/elements.md)).
+
+### Dependencies
+
+Some elements depend on another: `odf`, for one, waits on Policies of `storage-nodes`. `install` and `add` copy every such dependency with the element that needs it (`+ storage-nodes needed by odf`).
+
+A dependency named only by a policy that ships disabled is not copied: `loki`'s optional policies wait on `coo` and `logging`, and the summary lists them under `not added`. Once a fleet file enables such a policy without its element, CI fails it with [POLICY011](../reference/rules.md), naming it; add the element then. In your repository the validator checks elements and values only through the clusters in `fleet/` ([What `validate` runs](../develop/validation.md#what-validate-runs)).
+
+### Example files
+
+A picked example file is copied byte for byte into your `values/` and is yours from then on: updates never merge upstream's changes into it. It turns its elements on as soon as a fleet file lists it, which is why `install` copies the elements it enables. Read it before listing it ([Example files](../concepts/values.md#example-files)).
+
+### Without the launcher
+
+The launcher runs copier 9.19.1 from its own environment, so copier needs no install of its own. To run copier by hand, from your repository's root:
+
+```sh
+copier() { mise x -- uv run --project tools/policystack copier "$@"; }
+fw=$(sed -n 's/^_commit: //p' .copier-answers.yml)
+copier copy --vcs-ref "$fw" -d element=odf https://github.com/PolicyStack/PolicyStack.git stack/odf # (1)!
+git add stack/odf && git commit -m "feat: add odf ($fw)"
+```
+
+1.  For a new repository, define the function with `--project ~/policystack/tools/policystack` and run `copier copy --defaults --vcs-ref <tag> https://github.com/PolicyStack/PolicyStack.git ~/<repo>` without `-d element`. That copies the framework only: `cd ~/<repo>`, copy `acm`, `gitops` and `upgrade` with the command above, then `git init -b main` and commit.
+
+!!! warning "Pass `--vcs-ref` with your framework's tag"
+    Without it copier copies the newest release, which can be newer than your framework, and POLICY061 fails it. Delete the directory and copy it again with your framework's tag. copier also copies no dependencies and checks no tags.
 
 ## Protect the repository
 

@@ -53,7 +53,7 @@ jobs:
           if [ -n "$files" ]; then echo "found=true" >> "$GITHUB_OUTPUT"; else echo "No fleet files, nothing to render." >> "$GITHUB_STEP_SUMMARY"; fi
 
       # Go and Helm from mise.toml, the same versions as validate.yml.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         if: steps.fleet.outputs.found == 'true'
         with:
           install_args: go helm

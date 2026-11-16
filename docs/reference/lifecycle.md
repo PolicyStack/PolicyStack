@@ -23,6 +23,7 @@ Defaults are in [`lifecycle/values.yaml`](https://github.com/PolicyStack/PolicyS
 | `baseDomain` | `""` | Required except on `KubeVirt`, which uses the hub's ingress domain. Fixed at create. |
 | `releaseRepository` | `quay.io/openshift-release-dev/ocp-release` | Image is `<releaseRepository>:<version>-multi`, `-x86_64` on `siteconfig`. Point at a mirror when disconnected. |
 | `manifests` | `[]` | Extra hub objects with `apiVersion`, `kind`, `metadata`, applied by the `manifests` step before the cluster. Applied as `musthave` with no ownership check, so an existing object of the same name is patched. `cleanup` deletes every object listed at destroy time, one that existed before included. Removing an entry stops managing the object but never deletes it. ACM templates inside entries resolve on the hub. |
+| `precheck` | `[]` | Hub objects that run checks before the first build, each with `apiVersion`, `kind`, `metadata.name` and the `status` it must reach. The `precheck` step creates them and stays NonCompliant until every one reports that status; `cluster` waits for it. Renders nothing once the engine's root object exists. Use a kind with a status subresource. `cleanup` deletes the entries still listed at destroy; a renamed or removed entry is never deleted. ACM templates inside entries resolve on the hub, so write a literal `{{` as `{{ "{{" }}`. Examples: [Pre-install checks](../guides/lifecycle.md#pre-install-checks). |
 
 !!! warning "Keep the credential for the cluster's life"
     The `credentials` step re-reads it on every evaluation and copies it into per-cluster Secrets. If it is deleted, `credentials` fails and every later step stops, so version bumps and NodePool changes no longer apply. Lifecycle never deletes it.
@@ -293,6 +294,7 @@ Mode column: **enforce** creates or patches (`musthave`), or deletes with `mustn
 | `guard` | InformOnly | NonCompliant, naming the object, while the [ownership check](../concepts/lifecycle.md#ownership) finds a foreign one. Stops the chain. | same | same |
 | `credentials` | enforce | Namespace `install.namespace`, `<cluster>-pull-secret`, `<cluster>-ssh-key`, etcd key on `Agent`/`None` | Namespace `<cluster>`, `-pull-secret`, `-creds`, `-install-config`, `-certs` on vSphere | Namespace `<cluster>`, `-pull-secret`, `-bmc`. Fails on an empty BMC `username` or `password`. |
 | `manifests` | enforce | `install.manifests` | same | same |
+| `precheck` | enforce | Only with `install.precheck`: creates its objects and waits for each to reach its `status`. Renders nothing once the root object exists. | same | same |
 | `cluster` | enforce | HostedCluster, NodePools | ClusterDeployment, ManagedCluster, KlusterletAddonConfig | ClusterImageSet, ClusterInstance, KlusterletAddonConfig |
 | `ready` | InformOnly | The HostedCluster's desired version and newest Completed version both equal `version`, and every NodePool reports `version` | `spec.installed: true` | `Provisioned` True and every host joined (Agent stage `Done`) or removed. Names the pending host's BareMetalHost while it exists, otherwise the ClusterInstance. |
 
@@ -305,7 +307,7 @@ Mode column: **enforce** creates or patches (`musthave`), or deletes with `mustn
 | `detached` | InformOnly `mustnothave` | Waits for the ManagedCluster to go | same | none |
 | `destroy` | enforce `mustnothave` | Deletes the HostedCluster; HyperShift deletes the NodePools and control plane | Deletes the ClusterDeployment; Hive deprovisions with `<cluster>-creds` (and `-certs` on vSphere) | Deletes the ClusterInstance; SiteConfig deletes what it rendered: BareMetalHosts, then ManagedCluster |
 | `destroyed` | InformOnly `mustnothave` | Waits for the HostedCluster to go | Waits for deprovision | Waits for the ClusterInstance to go |
-| `cleanup` | enforce `mustnothave` | Copied secrets, etcd key, `install.manifests` | Namespace `<cluster>`, `install.manifests` | Namespace `<cluster>`, ClusterImageSet, `install.manifests` |
+| `cleanup` | enforce `mustnothave` | Copied secrets, etcd key, `install.manifests`, `install.precheck` | Namespace `<cluster>`, `install.manifests`, `install.precheck` | Namespace `<cluster>`, ClusterImageSet, `install.manifests`, `install.precheck` |
 
 Create templates are `musthave`: only the fields the template lists are compared, so fields HyperShift or Hive fill in never cause a fight, and nothing is ever removed. The ClusterInstance alone is `mustonlyhave` with `metadataComplianceType: musthave`: `musthave` matches list items by name, which ClusterInstance nodes lack, so a changed node would be appended as a duplicate and a node could never be dropped. `metadataComplianceType` keeps the labels and annotations SiteConfig adds.
 
@@ -350,6 +352,7 @@ The steps run in the hub's own cluster namespace, `local-cluster`; under a defau
 | `present-credentials` NonCompliant, template error | Credential Secret missing | Create it. Without `pullSecret` the API rejects the pull secret. |
 | Cluster has no SSH key, no error | `ssh-publickey` missing from the credential | Add it. |
 | `hive`/`siteconfig`: `present-credentials-<cluster>` NonCompliant: `because it is being terminated` | Namespace `<cluster>` from the last destroy is still terminating | Wait until `oc get ns <cluster>` returns NotFound. |
+| `present-precheck-<cluster>`: `Waiting for install.precheck to pass: …` | A check is running, failed, or its controller is missing (no OpenShift Pipelines or Resource Operator watching that namespace) | Read the object's status. A failed run stays failed: rename it or delete it ([When a check fails](../guides/lifecycle.md#when-a-check-fails)). |
 | `present-cluster-<cluster>` NonCompliant with an API or webhook denial | A [fixed-at-create](#immutable-fields) key changed | Revert it. |
 | Two clusters with the same name after changing `engine` | Ownership check missed the switch | Destroy the new one; never change `engine` without destroying first ([Changing `engine`](../concepts/lifecycle.md#ownership)). |
 | `hypershift` cluster built but no Day-2 Applications | `autoImportDisabled` in AddOnDeploymentConfig `hypershift-addon-deploy-config` | Remove it, or import by hand. |

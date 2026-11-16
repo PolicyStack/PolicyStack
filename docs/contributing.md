@@ -205,14 +205,14 @@ HyperShift as the worked example:
 ```text
 lifecycle/
 ├── converters/
-│   ├── guard.yaml, manifests.yaml, detach.yaml,   # shared by every engine
-│   │   managedcluster.yaml, destroy.yaml
+│   ├── guard.yaml, manifests.yaml, precheck.yaml, # shared by every engine
+│   │   detach.yaml, managedcluster.yaml, destroy.yaml
 │   └── _hypershift/
 │       ├── root.yaml           # the HostedCluster by identity alone
 │       ├── credentials.yaml    # pull secret, SSH key, etcd encryption key
 │       ├── hostedcluster.yaml  # the cluster: HostedCluster and NodePools
 │       ├── ready.yaml          # gate: waits for the rollout
-│       └── cleanup.yaml        # deletes what credentials copied, then install.manifests
+│       └── cleanup.yaml        # deletes what credentials copied, then install.manifests and install.precheck
 ├── values.yaml                 # stack.hypershift: the present and absent Policies
 └── values.schema.json          # install.engine enum and per-engine keys
 ```
@@ -228,11 +228,11 @@ Rendered for fixture `hcp-kubevirt`, Policy `present-lifecycle-hcp-kubevirt` hol
     is required`) or ships an extra enforced Policy `<e>-lifecycle-<cluster>`. Shared converters sit directly in `converters/` for the same reason
     ([Partials](develop/elements.md#partials-and-file-reuse)). An engine needs:
     - `root.yaml`: the object the engine creates first and deletes to destroy the cluster, with only
-      `apiVersion`, `kind`, name and namespace. The shared `destroy` step, the `destroyed` gate and
-      the ownership check read it.
+      `apiVersion`, `kind`, name and namespace. The shared `destroy` and `precheck` steps, the `destroyed`
+      gate and the ownership check read it.
     - `credentials.yaml`, the cluster converter, a ready gate (`ready.yaml`; Hive's is
       `installed.yaml`) and `cleanup.yaml`, which ends with `include "lifecycle.cleanupManifests"` so
-      the hub objects from `install.manifests` are deleted once the cluster is gone.
+      the hub objects from `install.manifests` and `install.precheck` are deleted once the cluster is gone.
 
     Some fields can't change after create: Hive rejects `provisioning.releaseImage` changes. Read
     those back from the live object, so a later `version` bump never produces a rejected update:

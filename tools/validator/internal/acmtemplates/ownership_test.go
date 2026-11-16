@@ -67,7 +67,7 @@ func TestOwnership(t *testing.T) {
 				}
 				creds := []string{credential("ssh-ed25519 KEY"), hostInventory("ssh-ed25519 KEY")}
 				guards, steps := 0, 0
-				for name, raw := range rawTemplates(t, c, "version=4.20.8") {
+				for name, raw := range rawTemplates(t, c, append([]string{"version=4.20.8"}, precheckSet...)...) {
 					switch strings.TrimSuffix(name[strings.Index(name, "-")+1:], "-"+c) {
 					case "guard":
 						guards++

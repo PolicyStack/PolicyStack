@@ -19,7 +19,7 @@ On every hub that builds clusters:
 1. Create the credential Secret on the hub with `oc`, in any namespace, and never commit it. It holds `pullSecret`, `ssh-publickey` and, for `hive`, the cloud login; each example below shows the exact keys and command. The hub copies its keys into per-cluster Secrets on every Policy evaluation, so a rotated key reaches existing clusters without a merge. Destroy never deletes it.
 2. Add `fleet/<cluster>.yaml` with `hub`, `version` and `install` ([Examples](#examples)). The file name is the cluster name. `install` can also come from any values layer ([Values](#values)).
 3. Merge to the default branch. Fleet files are read only there ([Fleet files](../concepts/overview.md#fleet-files)). Within about 6 minutes `oc get applications.argoproj.io -n openshift-gitops lifecycle-<cluster>` shows the Application. It renders the `lifecycle/` chart at the fleet file's `revision` (branch, tag or SHA, [Revision](../reference/fleet.md#revision)), so `revision: main` follows the default branch.
-4. Follow the build ([Watching a build](#watching-a-build)). The hub creates Policy `present-lifecycle-<cluster>`, whose steps run in order: guard, credentials, manifests, cluster, ready ([The step chain](../concepts/lifecycle.md#the-step-chain), with the full AWS render in [Worked example](../concepts/lifecycle.md#worked-example)).
+4. Follow the build ([Watching a build](#watching-a-build)). The hub creates Policy `present-lifecycle-<cluster>`, whose steps run in order: guard, credentials, manifests, precheck (only with [`install.precheck`](#pre-install-checks)), cluster, ready ([The step chain](../concepts/lifecycle.md#the-step-chain), with the full AWS render in [Worked example](../concepts/lifecycle.md#worked-example)).
 
 !!! note "Cluster name"
     A DNS label of at most 30 characters. Day-2 element names are built from it and must stay under ACM's 63-character limit; CI fails a name that pushes any Policy past it (POLICY001, [Naming limits](../concepts/policies.md#naming-limits)).
@@ -499,6 +499,147 @@ install:
     - The lifecycle chart schema-checks every `stack.*` key in the layers it reads, so an element typo in a shared layer, such as `certManager: Additional property enabeld is not allowed`, also fails every `lifecycle-<cluster>` render that reads it.
     - `global.remediationAction: inform` ([Dry run](rollout.md#dry-run)) also sets the lifecycle Policy to inform: nothing is built, and `state: absent` destroys nothing.
 
+## Pre-install checks
+
+`install.precheck` holds a cluster's first build until checks you already run pass. The usual case is a Tekton pipeline or an Ansible job that checks infrastructure outside the cluster: switches, DNS records, load balancers, firewall rules. PolicyStack starts the run on the hub and waits for its result. Your pipeline or playbook does not change.
+
+How it works:
+
+- Each entry is a hub object that starts one run, such as a Tekton `PipelineRun` or an AAP `AnsibleJob`, and it lists the `status` the object must reach.
+- The `precheck` step creates the objects and compares their status on every evaluation. The API server drops `status` on create, and only the object's controller writes it, so the step stays NonCompliant until the run reports success.
+- Until `precheck` is Compliant, `cluster` and `ready` stay Pending. No HostedCluster, ClusterDeployment or ClusterInstance is created, so no cloud resources are touched and no BMC is powered on.
+- Once the engine's root object exists ([Ownership](../concepts/lifecycle.md#ownership)), the step renders nothing and is Compliant. Later upgrades, scaling and destroy never wait on the checks, and deleting the run object afterwards re-runs nothing.
+- `cleanup` deletes the objects still listed in `install.precheck` after a destroy, so a rebuild under the same name runs the checks again.
+
+!!! warning "Use a kind with a status subresource"
+    `PipelineRun`, `AnsibleJob` and `batch/v1` `Job` qualify. On a custom resource whose CRD allows `status` but has no status subresource, the create stores your `status` as given: the step passes at once and checks nothing. A kind with no `status` field, such as a ConfigMap, fails the create instead.
+
+Both examples below run on the hub. Its pods, or AAP's execution pods, need network access to whatever the checks test.
+
+=== "Tekton"
+
+    Needs OpenShift Pipelines on the hub: turn on the [`pipelines`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/pipelines) element in a layer the hub's fleet file reads. The Pipeline stays in your repository and is fetched by Tekton's git resolver at run time.
+
+    ```sh
+    oc create namespace precheck
+    oc create secret generic git-token -n precheck --from-literal=token=<token>                  # (1)!
+    oc create secret generic infra-checks -n precheck --from-file=ssh-privatekey=id_ed25519     # (2)!
+    ```
+
+    1.  Only for a private repository; the git resolver reads key `token`.
+    2.  Whatever your Pipeline's workspaces mount, such as device credentials or a vault password.
+
+    ```yaml
+    # fleet/ocp-aws.yaml
+    revision: main
+    hub: acm-dc1
+    version: 4.20.8
+    install:
+      precheck:
+        - apiVersion: tekton.dev/v1
+          kind: PipelineRun
+          metadata:
+            name: infra-checks-ocp-aws-1 # (1)!
+            namespace: precheck
+          spec:
+            pipelineRef:
+              resolver: git
+              params:
+                - {name: url, value: https://git.example.com/netops/infra-checks.git}
+                - {name: revision, value: v2.3.0} # (2)!
+                - {name: pathInRepo, value: pipelines/infra-checks.yaml}
+                - {name: gitToken, value: git-token}
+            params: # (3)!
+              - {name: cluster, value: ocp-aws}
+              - {name: base-domain, value: aws.example.com}
+            workspaces:
+              - name: credentials
+                secret:
+                  secretName: infra-checks
+          status:
+            conditions: # (4)!
+              - type: Succeeded
+                status: "True"
+      # engine, credential, baseDomain, hive: as in the AWS example
+    ```
+
+    1.  Unique on the hub: include the cluster name. Bump the suffix to run the checks again ([below](#when-a-check-fails)).
+    2.  A tag or SHA, so a change to the Pipeline does not alter checks already run.
+    3.  `params` and `workspaces` are whatever your Pipeline declares.
+    4.  Tekton sets condition `Succeeded` to `True` when every task passes and `False` when one fails. The step compares only `type` and `status`.
+
+    ```sh
+    oc get pipelinerun -n precheck infra-checks-ocp-aws-1   # SUCCEEDED, REASON
+    tkn pipelinerun logs -n precheck infra-checks-ocp-aws-1
+    ```
+
+=== "AAP"
+
+    Needs AAP running on the hub, from the [`aap`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/aap) element in a layer the hub's fleet file reads. The AAP operator includes the Resource Operator, which turns an `AnsibleJob` into a launch of an AAP job template. The `aap` element installs the operator for its own namespace, `ansible-automation-platform`, so the Secret and the AnsibleJob go there.
+
+    In AAP, create a job template that runs your playbook and turn on **Prompt on launch** for **Variables**, or define the variables in a survey; otherwise AAP refuses the launch and the AnsibleJob ends as `error`. Then, in the platform gateway (**Access Management > Users > _user_ > Tokens**), create a token with **Write** scope for a user that can run the template. The Resource Operator connects through the gateway's Route `aap`:
+
+    ```sh
+    oc create secret generic aap-token -n ansible-automation-platform \
+      --from-literal=host=https://$(oc get route aap -n ansible-automation-platform -o jsonpath='{.spec.host}') \
+      --from-literal=token=<token>
+    ```
+
+    ```yaml
+    # fleet/ocp-aws.yaml
+    revision: main
+    hub: acm-dc1
+    version: 4.20.8
+    install:
+      precheck:
+        - apiVersion: tower.ansible.com/v1alpha1
+          kind: AnsibleJob
+          metadata:
+            name: infra-checks-ocp-aws-1 # (1)!
+            namespace: ansible-automation-platform
+          spec:
+            connection_secret: aap-token
+            job_template_name: Infra pre-install checks
+            extra_vars: # (2)!
+              cluster: ocp-aws
+              base_domain: aws.example.com
+          status:
+            ansibleJobResult:
+              status: successful # (3)!
+      # engine, credential, baseDomain, hive: as in the AWS example
+    ```
+
+    1.  Unique on the hub: include the cluster name. Bump the suffix to run the checks again ([below](#when-a-check-fails)).
+    2.  Lifecycle passes entries to ACM as templates, so a Jinja `{{ }}` here would be evaluated on the hub and fail the step. Keep Jinja in the job template, or write `{{ "{{" }}`.
+    3.  The Resource Operator writes `pending` after the launch, then `successful` when the AAP job ends. A failed or canceled job, or a launch AAP rejects (bad token or host, unknown template name), ends as `error` with the reason in `status.error_message`. If neither appears, check `status.message`, then `oc describe job -n ansible-automation-platform <name>`: a missing connection Secret, or one without `host` and `token`, leaves the runner pod in `CreateContainerConfigError`.
+
+    ```sh
+    oc get ansiblejob -n ansible-automation-platform infra-checks-ocp-aws-1 -o jsonpath='{.status.ansibleJobResult}'
+    ```
+
+    !!! note "AAP elsewhere"
+        For a controller outside the hub, install the Resource Operator on the hub as ACM documents it: channel `stable-2.x-cluster-scoped` matching your AAP version, all namespaces ([ACM: Ansible integration](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16/html/governance/policy-deployment#ansible-integration-grc)). The AnsibleJob and Secret can then live in any namespace, and `host` is that AAP's platform gateway URL. The playbook runs on AAP's execution nodes, not the hub.
+
+While the checks run, `present-precheck-<cluster>` reports `Waiting for install.precheck to pass:` followed by the object it waits on ([Watching a build](#watching-a-build)).
+
+### When a check fails
+
+A finished run never changes again, so a failed check holds the build until you start a new run. Fix the infrastructure first, then either:
+
+- Bump the name suffix (`infra-checks-ocp-aws-2`) and merge. The step creates the new object. The failed one is no longer managed, and nothing deletes it, `cleanup` included: delete it by hand once you no longer need its logs.
+- Delete the object: `oc delete pipelinerun -n precheck infra-checks-ocp-aws-1`. The step re-creates it within seconds, so a second failure follows at once if nothing was fixed.
+
+Changing an entry's `spec` under the same name starts no new run. The Resource Operator never relaunches an AnsibleJob it has run, and Tekton refuses spec changes to a started PipelineRun, so the step reports an update error. Change values together with a new suffix.
+
+To build without the checks, remove `install.precheck` and merge. Objects it already created are no longer managed; delete them by hand.
+
+!!! warning "Set it per cluster, before the first build"
+    - `install.precheck` is a list, and a list in the fleet file replaces a layer's list whole ([Merge rules](../concepts/values.md#merge-rules)). Object names include the cluster name, so set it in the fleet file or `values/clusters/<cluster>.yaml`.
+    - Adding or removing it on a cluster that is already built runs nothing, but the hub re-creates the `cluster` and `ready` steps with a changed dependency, so both show Pending for a moment.
+    - Under a [dry run](rollout.md#dry-run) the step creates nothing and stays NonCompliant.
+    - The cluster's `revision` must include the release that added `install.precheck`; an older `lifecycle/` rejects the key and the render fails.
+    - Whoever can merge to `fleet/` or `values/` can create any object on the hub this way, as with `install.manifests`. Protect those paths with CODEOWNERS.
+
 ## Watching a build
 
 ```sh
@@ -657,7 +798,7 @@ BMAC (the BareMetal Agent Controller in assisted-service) drains the Node, depro
 
 ## Destroy
 
-The hub detaches the cluster from ACM, deletes it through its engine, then cleans up the copied Secrets and `install.manifests` ([Destroy and abandon](../concepts/lifecycle.md#destroy-and-abandon)). The credential is never deleted.
+The hub detaches the cluster from ACM, deletes it through its engine, then cleans up the copied Secrets, `install.manifests` and `install.precheck` ([Destroy and abandon](../concepts/lifecycle.md#destroy-and-abandon)). The credential is never deleted.
 
 1. Set `state: absent` and merge. Change nothing else:
 
@@ -684,9 +825,9 @@ Until step 3, the absent Policy keeps running and deletes these again if anythin
 
 | Engine | Deleted |
 |---|---|
-| `hive` | Namespace `<cluster>`, `install.manifests` |
-| `siteconfig` | Namespace `<cluster>`, ClusterImageSet `lifecycle-<cluster>`, `install.manifests` |
-| `hypershift` | Secrets `<cluster>-pull-secret`, `-ssh-key` and `-etcd-encryption-key` in `install.namespace`, `install.manifests` |
+| `hive` | Namespace `<cluster>`, `install.manifests`, `install.precheck` |
+| `siteconfig` | Namespace `<cluster>`, ClusterImageSet `lifecycle-<cluster>`, `install.manifests`, `install.precheck` |
+| `hypershift` | Secrets `<cluster>-pull-secret`, `-ssh-key` and `-etcd-encryption-key` in `install.namespace`, `install.manifests`, `install.precheck` |
 
 | Engine | Left behind |
 |---|---|

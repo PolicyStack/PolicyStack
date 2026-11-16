@@ -49,6 +49,10 @@ install:
   nodePools: {}
   # Extra hub objects, created before the cluster and deleted after it is gone
   manifests: []
+  # Hub objects that run checks before the first build, such as a Tekton PipelineRun or an
+  # AnsibleJob. Each lists the status it must reach; the cluster is not created until all do.
+  # Deleted after the cluster is gone.
+  precheck: []
   # Only with engine hive, which reads:
   #   platform:          exactly one of aws, gcp, azure or vsphere. The install-config platform; region,
   #                      baseDomainResourceGroupName and cloudName also go to the ClusterDeployment.
@@ -112,7 +116,7 @@ stack:
       present:
         description: "Create and reconcile the hosted cluster"
         # Each template waits for the one before it
-        orderManifests: [guard, credentials, manifests, cluster, ready]
+        orderManifests: [guard, credentials, manifests, precheck, cluster, ready]
         templates:
           guard:
             description: "Refuse a same-named object lifecycle did not build"
@@ -129,6 +133,13 @@ stack:
             description: "Extra hub objects from install.manifests"
             file: manifests
             severity: medium
+
+          # Enforced, yet waits: each object's status must match, and only its controller writes it
+          precheck:
+            description: "Run install.precheck and wait for it to pass before the first build"
+            file: precheck
+            customMessage:
+              noncompliant: "Waiting for install.precheck to pass: {{ .DefaultMessage }}"
 
           cluster:
             description: "HostedCluster and NodePools"
@@ -181,7 +192,7 @@ stack:
               noncompliant: "Waiting for HyperShift to delete the NodePools and the control plane"
 
           cleanup:
-            description: "Delete the copied secrets and install.manifests"
+            description: "Delete the copied secrets, install.manifests and install.precheck"
             file: _hypershift/cleanup
             severity: medium
 
@@ -206,7 +217,7 @@ stack:
       present:
         description: "Install the cluster with Hive"
         # Each template waits for the one before it
-        orderManifests: [guard, credentials, manifests, cluster, ready]
+        orderManifests: [guard, credentials, manifests, precheck, cluster, ready]
         templates:
           guard:
             description: "Refuse a same-named object lifecycle did not build"
@@ -223,6 +234,13 @@ stack:
             description: "Extra hub objects from install.manifests"
             file: manifests
             severity: medium
+
+          # Enforced, yet waits: each object's status must match, and only its controller writes it
+          precheck:
+            description: "Run install.precheck and wait for it to pass before the first build"
+            file: precheck
+            customMessage:
+              noncompliant: "Waiting for install.precheck to pass: {{ .DefaultMessage }}"
 
           cluster:
             description: "ClusterDeployment, ManagedCluster and KlusterletAddonConfig"
@@ -275,7 +293,7 @@ stack:
               noncompliant: "Waiting for Hive to deprovision the cluster"
 
           cleanup:
-            description: "Delete Namespace <cluster> and install.manifests"
+            description: "Delete Namespace <cluster>, install.manifests and install.precheck"
             file: _hive/cleanup
             severity: medium
 
@@ -300,7 +318,7 @@ stack:
       present:
         description: "Install the cluster with SiteConfig"
         # Each template waits for the one before it
-        orderManifests: [guard, credentials, manifests, cluster, ready]
+        orderManifests: [guard, credentials, manifests, precheck, cluster, ready]
         templates:
           guard:
             description: "Refuse a same-named object lifecycle did not build"
@@ -317,6 +335,13 @@ stack:
             description: "Extra hub objects from install.manifests"
             file: manifests
             severity: medium
+
+          # Enforced, yet waits: each object's status must match, and only its controller writes it
+          precheck:
+            description: "Run install.precheck and wait for it to pass before the first build"
+            file: precheck
+            customMessage:
+              noncompliant: "Waiting for install.precheck to pass: {{ .DefaultMessage }}"
 
           cluster:
             description: "ClusterImageSet and ClusterInstance"
@@ -357,6 +382,6 @@ stack:
               noncompliant: "Waiting for SiteConfig to delete the BareMetalHosts, ManagedCluster and install objects"
 
           cleanup:
-            description: "Delete Namespace <cluster>, ClusterImageSet lifecycle-<cluster> and install.manifests"
+            description: "Delete Namespace <cluster>, ClusterImageSet lifecycle-<cluster>, install.manifests and install.precheck"
             file: _siteconfig/cleanup
             severity: medium

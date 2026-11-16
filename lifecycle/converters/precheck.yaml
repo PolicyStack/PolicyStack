@@ -1,0 +1,13 @@
+{{- /*
+install.precheck until the root object exists: each object is created and must reach the status it
+lists, which the API server drops on create and only its controller writes. Once the cluster's root
+object exists, renders nothing, which ACM reports as Compliant, so only the first build waits.
+*/ -}}
+{{- $r := include "lifecycle.root" . | fromYaml }}
+{{ include "lifecycle.refuse" . }}
+{{ "{{-" }} if not (lookup {{ $r.apiVersion | quote }} {{ $r.kind | quote }} {{ $r.metadata.namespace | quote }} {{ $r.metadata.name | quote }}) {{ "}}" }}
+{{- range .Values.install.precheck }}
+- complianceType: musthave
+  objectDefinition: {{- toYaml . | nindent 4 }}
+{{- end }}
+{{ "{{-" }} end {{ "}}" }}

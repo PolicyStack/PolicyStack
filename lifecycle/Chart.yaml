@@ -2,7 +2,7 @@ apiVersion: v2
 name: lifecycle
 description: "Builds, upgrades and destroys a cluster from its fleet file"
 type: application
-version: 1.0.0-rc.1 # x-release-please-version: the framework release (.release-please/config.json)
+version: 1.0.0-rc.2 # x-release-please-version: the framework release (.release-please/config.json)
 dependencies:
   - name: policy-library
     alias: stack

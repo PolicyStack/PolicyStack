@@ -83,6 +83,17 @@
           "type": "array",
           "items": {"type": "object", "required": ["apiVersion", "kind", "metadata"]}
         },
+        "precheck": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["apiVersion", "kind", "metadata", "status"],
+            "properties": {
+              "metadata": {"type": "object", "required": ["name"]},
+              "status": {"type": "object", "minProperties": 1}
+            }
+          }
+        },
         "hive": {
           "type": "object",
           "additionalProperties": false,

@@ -8,5 +8,6 @@ its two Policies renders.
 {{- $policies := (index .Values.stack $engine).policies }}
 {{- $_ := set $policies.present "enabled" (eq .Values.state "present") }}
 {{- $_ = set $policies.absent "enabled" (eq .Values.state "absent") }}
+{{- $_ = set $policies.present.templates.precheck "enabled" (not (empty .Values.install.precheck)) }}
 {{- include "policy-library.render" (merge (dict "component" $engine) .) }}
 {{- end }}

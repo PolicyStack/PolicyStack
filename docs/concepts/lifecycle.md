@@ -120,7 +120,7 @@ The lifecycle chart lists the steps in `orderManifests`, a policy-library key th
 ```mermaid
 flowchart LR
   subgraph present
-    pg[guard] --> pc[credentials] --> pm[manifests] --> pcl[cluster] --> pr[ready]
+    pg[guard] --> pc[credentials] --> pm[manifests] --> pp[precheck] --> pcl[cluster] --> pr[ready]
   end
   subgraph absent
     ag[guard] --> ad[detach] --> adt[detached] --> ax[destroy] --> axd[destroyed] --> acl[cleanup]
@@ -132,13 +132,14 @@ flowchart LR
 | `guard` | InformOnly | NonCompliant while a same-named cluster exists that lifecycle did not build ([Ownership](#ownership)). Stops the chain. |
 | `credentials` | enforce | Namespace and the Secrets copied from the credential. |
 | `manifests` | enforce | `install.manifests`: extra hub objects, such as a MetalLB address pool the cluster's API needs. |
+| `precheck` | enforce | Only with `install.precheck`, and only until the engine's root object exists. Creates the runs of your pre-install checks, such as a Tekton PipelineRun, and stays NonCompliant until each reports the status listed ([Pre-install checks](../guides/lifecycle.md#pre-install-checks)). |
 | `cluster` | enforce | The engine's objects: HostedCluster and NodePools, ClusterDeployment, or ClusterInstance. |
 | `ready` | InformOnly | Waits for the install, or a HyperShift upgrade, to finish. |
 | `detach` | enforce | Deletes the ManagedCluster while the cluster still runs, so ACM's agents clean up. |
 | `detached` | InformOnly | Waits for the ManagedCluster to be gone. |
 | `destroy` | enforce | Deletes the engine's root object; the engine then deletes the cluster. |
 | `destroyed` | InformOnly | Waits for the root object to be gone. |
-| `cleanup` | enforce | Deletes the copied Secrets or Namespace `<cluster>`, and `install.manifests`. |
+| `cleanup` | enforce | Deletes the copied Secrets or Namespace `<cluster>`, `install.manifests` and `install.precheck`. |
 
 The InformOnly steps are gates. An enforced create or delete is Compliant as soon as the API accepts it, long before the engine finishes, so each enforced step that hands work to an engine is followed by a gate that checks the engine's status. InformOnly is a template-level action ACM never enforces, even inside an enforced Policy ([ACM policies in brief](acm.md#inform-enforce-and-informonly)), so a gate never changes anything.
 
@@ -201,7 +202,7 @@ The absent chain:
 
 1. `detach` deletes the ManagedCluster while the cluster still runs, so ACM's agents remove themselves. The cluster leaves Argo CD, and its Day-2 Applications and hub Policies are deleted.
 2. `destroy` deletes the root object. HyperShift deletes the control plane and NodePools; Hive deprovisions the cloud resources with `<cluster>-creds`; SiteConfig deletes the BareMetalHosts, then the ManagedCluster.
-3. `cleanup` deletes the copied Secrets or Namespace `<cluster>`, the `siteconfig` ClusterImageSet, and `install.manifests`. The credential stays.
+3. `cleanup` deletes the copied Secrets or Namespace `<cluster>`, the `siteconfig` ClusterImageSet, `install.manifests` and `install.precheck`. The credential stays.
 
 The cluster is gone when `absent-lifecycle-<cluster>` is Compliant. Then delete the fleet file: a lingering `absent` Policy deletes any Namespace `<cluster>` created later ([Not marked](#ownership)). Or set `state: present` to build a new cluster under the same name. Procedure and what each engine leaves behind: [Destroy](../guides/lifecycle.md#destroy).
 

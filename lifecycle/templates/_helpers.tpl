@@ -84,10 +84,11 @@ Args: dict "root" <root context> "namespace" <namespace>
 {{- end -}}
 
 {{/*
-Deletes install.manifests. Each engine's cleanup converter ends with it, once the cluster is gone.
+Deletes install.manifests and install.precheck. Each engine's cleanup converter ends with it, once
+the cluster is gone, so a rebuild runs its checks again.
 */}}
 {{- define "lifecycle.cleanupManifests" -}}
-{{- range .Values.install.manifests }}
+{{- range concat (.Values.install.manifests | default list) (.Values.install.precheck | default list) }}
 - complianceType: mustnothave
   objectDefinition:
     apiVersion: {{ .apiVersion }}

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-rc.3](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-11-16)
+
+
+### Features
+
+* Added PS launcher ([#79](https://github.com/PolicyStack/PolicyStack/issues/79)) ([9adf469](https://github.com/PolicyStack/PolicyStack/commit/9adf469816aa9cede03788899cac9e547361fe23))
+* **install:** Added argo sizing + improvements to the appsets ([#82](https://github.com/PolicyStack/PolicyStack/issues/82)) ([75564d1](https://github.com/PolicyStack/PolicyStack/commit/75564d1184d4081d5086ff03f900ad628866d084))
+* **lifecycle:** add install.precheck to gate the first build on pre-install checks ([#81](https://github.com/PolicyStack/PolicyStack/issues/81)) ([f218b83](https://github.com/PolicyStack/PolicyStack/commit/f218b83e458d23a732f07e2991f2ec6f2aaf3c4a))
+
 ## [1.0.0-rc.2](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-11-13)
 
 

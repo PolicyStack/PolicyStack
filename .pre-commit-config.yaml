@@ -1,7 +1,7 @@
 # Run by prek: in CI (ci.yml lint) as `prek run --all-files`, locally after `prek install`. Tools come
 # from mise.toml (language: system). Only the README generator gets its own env, for PyYAML.
 # tools/validator/crds holds upstream's files verbatim. The validator's lint runs in upstream.yml.
-exclude: ^(site|autoshiftv2|oac-apps|tools/validator/crds)/
+exclude: ^(site|tools/validator/crds)/
 
 repos:
   - repo: builtin

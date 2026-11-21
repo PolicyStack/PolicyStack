@@ -12,7 +12,7 @@ You create your own repository with the launcher (`mise run ps`), which copies t
 2. [Create your repository](#create-your-repository)
 3. [Add elements](#add-elements)
 4. [Protect the repository](#protect-the-repository)
-5. [Install the operators](#install-the-operators) (new hubs only)
+5. [Install the operators](#install-the-operators) (skip on a hub that already runs ACM)
 6. [Install PolicyStack](#install-policystack)
 7. [Add the hub's fleet file](#add-the-hubs-fleet-file)
 8. [Hand the operators to PolicyStack](#hand-the-operators-to-policystack) (later, once the stack is proven)
@@ -164,14 +164,14 @@ Left out: everything that stays upstream, such as the docs, the upstream README 
 A prerelease, `vX.Y.Z-rc.N`, is for trying a release before it ships; the [contract](../reference/compatibility.md#versions) doesn't cover it. Fetch the launcher from the candidate, and name it:
 
 ```sh
-git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0-rc.2 \
+git clone --depth 1 --filter=blob:none --sparse --branch v1.0.0-rc.3 \
   https://github.com/PolicyStack/PolicyStack.git ~/policystack
 git -C ~/policystack sparse-checkout set tools/policystack
 cd ~/policystack && mise trust && mise install
-mise run ps -- install --to v1.0.0-rc.2 ~/<repo> # (1)!
+mise run ps -- install --to v1.0.0-rc.3 ~/<repo> # (1)!
 ```
 
-1.  Or `--pre` in place of `--to v1.0.0-rc.2`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` predates the launcher. Later, `mise run update` moves the repository from the candidate to the release.
+1.  Or `--pre` in place of `--to v1.0.0-rc.3`, to pick among candidates and releases. A candidate must ship `tools/policystack`; `v1.0.0-rc.1` and `v1.0.0-rc.2` predate the launcher. Later, `mise run update` moves the repository from the candidate to the release.
 
 ### Disconnected
 
@@ -204,18 +204,18 @@ Carry `~/ps-offline` to your home directory on the site machine. Install git and
 git -C ~/ps-offline/PolicyStack.git push --mirror https://git.example.internal/mirrors/PolicyStack.git # (1)!
 git config --global url."https://git.example.internal/mirrors/PolicyStack.git".insteadOf \
   https://github.com/PolicyStack/PolicyStack.git # (2)!
-cat >> ~/.bashrc <<'EOF' # (3)!
+cat >> ~/.bashrc <<'EOF'
 export PATH=~/ps-offline:$PATH MISE_DATA_DIR=~/ps-offline/mise-data MISE_OFFLINE=1 \
   UV_CACHE_DIR=~/ps-offline/uv-cache UV_OFFLINE=1 GOMODCACHE=~/ps-offline/go-mod GOPROXY=off
 eval "$(mise activate bash)"
 EOF
-exec bash
+exec bash # (3)!
 oc login https://api.<hub-domain>:6443
 ```
 
 1.  An empty repository on your Git server, which now holds upstream's releases. Argo CD never reads it; only the launcher does.
 2.  Sends every fetch of upstream to your mirror. It must be `--global`: the launcher and copier fetch outside your repository, where a repository's own config doesn't apply. Keep passing the GitHub URL, never the mirror, as `--src`, so your answers files record the GitHub URL.
-3.  Every new shell finds `mise` and `oc` in `~/ps-offline`, and mise, uv and Go read everything from the folder and never reach the network. The last line activates mise, as [Your workstation](#your-workstation) step 2 does.
+3.  Every new shell finds `mise` and `oc` in `~/ps-offline`, and mise, uv and Go read everything from the folder and never reach the network. The `eval` line activates mise, as [Your workstation](#your-workstation) step 2 does, and `exec bash` loads all of it into this shell.
 
 For each new release you take, repeat the connected steps into a fresh folder and both site steps: the mirror brings the new tags, and the folder brings any tool or package the new release pins. The rest of a disconnected site (operator images, catalogs, the hub): [Disconnected clusters](../guides/disconnected.md).
 
@@ -227,14 +227,14 @@ Each element is copied on its own into `stack/<element>/`, from the framework's 
 mise run ps -- add local-storage # (1)!
 ```
 
+1.  Without a name it lists the elements you don't have. It commits on the branch you are on, as `feat: add local-storage (v1.0.0)`, so open a PR for it like any other change.
+
 ```text
 add at v1.0.0 (your framework release)
   elements: local-storage
 copying local-storage (1/1)
 committed; nothing pushed
 ```
-
-1.  Without a name it lists the elements you don't have. It commits on the branch you are on, as `feat: add local-storage (v1.0.0)`, so open a PR for it like any other change.
 
 An element may be older than your framework, never newer: a newer one may need framework code you don't have, and POLICY061 fails it. So `add` always copies at your framework's `_commit`, and refuses an element that first ships in a later release, naming the release to update the framework to first ([Framework updates](../guides/upgrading.md#framework-updates)).
 
@@ -350,11 +350,40 @@ git add stack/odf && git commit -m "feat: add odf ($fw)"
 
         On a disconnected hub, also pass the layer that sets `global.catalogSources`, which points each Subscription at your mirrored catalog, such as `-f values/datacenters/<dc>.yaml` ([Disconnected clusters](../guides/disconnected.md#the-hub)).
 
+=== "Hub that already runs GitOps"
+
+    Common on clusters that came with OpenShift GitOps, such as demo environments. The chart always renders both operators, so first match it to the GitOps you have. Otherwise it adds a second OperatorGroup next to yours, and OLM marks the running GitOps operator `Failed` with `TooManyOperatorGroups` and stops upgrading it.
+
+    1.  Run step 1 of [Existing hub: check compatibility](#existing-hub-check-compatibility) and compare the result with its table.
+    2.  Write the fix into `values/acm/<hub>.yaml`, the layer [handover](#enable-the-elements) uses later. Most installs differ only in the OperatorGroup name, such as `openshift-gitops-operator-og`:
+
+        ```yaml
+        # values/acm/<hub>.yaml
+        stack:
+          gitops:
+            operatorPolicies:
+              gitops:
+                operatorGroup:
+                  name: openshift-gitops-operator-og
+        ```
+
+        Add `stack.acm.config.availabilityConfig: Basic` here for a single node hub (below).
+    3.  Run the New hub command with `-f values/acm/<hub>.yaml` added. `oc apply` updates your GitOps objects in place and adds ACM.
+
+    If GitOps runs in another namespace, its Subscription name differs from the package name, or its Subscription uses a catalog other than `redhat-operators`, leave it alone and render ACM only. Add `-f values/acm/<hub>.yaml` if you wrote the layer:
+
+    ```sh
+    until helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \
+          --set stack.gitops.operatorPolicies.gitops=null | oc apply -f -; do sleep 30; done
+    ```
+
+    Leave the `gitops` element off at [handover](#hand-the-operators-to-policystack) in that case.
+
 === "Hub that already runs ACM and GitOps"
 
     Skip this step. Your operators keep running as they are. Run the [compatibility checks](#existing-hub-check-compatibility) before enabling the `acm` or `gitops` element.
 
-    If only one of them runs, install the other from OperatorHub following the Red Hat docs (GitOps: namespace `openshift-gitops-operator`, channel `latest`). Don't run this chart: it renders both, and would create a second Subscription for the one already installed.
+    If only ACM runs, install GitOps from OperatorHub following the Red Hat docs (namespace `openshift-gitops-operator`, channel `latest`). Don't run this chart: it renders both, and would create a second Subscription for ACM.
 
 ## Install PolicyStack
 

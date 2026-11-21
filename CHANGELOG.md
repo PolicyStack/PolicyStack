@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.3...v1.0.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* drop stale paths from pre-commit exclude ([70f50d7](https://github.com/PolicyStack/PolicyStack/commit/70f50d73ccd4ef5ed5284796dd9b04c9de4c6213))
+
 ## [1.0.0-rc.3](https://github.com/PolicyStack/PolicyStack/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-11-16)
 
 

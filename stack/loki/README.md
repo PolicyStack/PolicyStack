@@ -65,7 +65,7 @@ Standards: NIST SP 800-53. Controls: AU-6 Audit Review, Analysis, and Reporting,
 
 | Template | Action | Severity | Waits for | Renders | Description |
 |---|---|---|---|---|---|
-| `forwarder-clusterlogforwarder` | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder](converters/forwarder/clusterlogforwarder.yaml) | ClusterLogForwarder |
+| `forwarder-clusterlogforwarder` | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder](converters/forwarder/clusterlogforwarder.yaml) (mustonlyhave) | ClusterLogForwarder |
 | `forwarder-collector` | enforce | medium |  | [collector](converters/forwarder/collector.yaml) | Collector ServiceAccount |
 | `forwarder-collector-rbac` | enforce | medium |  | [collector-rbac](converters/forwarder/collector-rbac.yaml) | Collector ClusterRoleBindings |
 

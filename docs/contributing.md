@@ -289,7 +289,8 @@ Rendered for fixture `hcp-kubevirt`, Policy `present-lifecycle-hcp-kubevirt` hol
 6.  **Engine-specific code.** Check each and extend it if the engine needs it:
     `lifecycle.releaseImage` picks `-x86_64` for `siteconfig` and `-multi` for every other engine;
     POLICY052 checks only that a pinned revision has `lifecycle/converters/_hypershift/`, so a fleet
-    file pinned to a revision without the new engine passes CI and then fails to render; POLICY051
+    file pinned to a revision without the new engine fails to render, which CI catches only when that
+    fleet file changes (POLICY053); POLICY051
     reads only `install.siteconfig.nodes`.
 
 7.  **Docs.** An example in [Building clusters](guides/lifecycle.md), a row in

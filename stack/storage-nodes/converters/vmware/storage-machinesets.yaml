@@ -42,11 +42,11 @@ Portable across node elements. The role and config block are read from .Config.
               {{- range $k, $v := .Config.nodeLabels }}
               {{ $k }}: {{ $v | quote }}
               {{- end }}
+          {{- /* The taint ODF and the LocalVolumeSet tolerate, whatever the role */}}
           taints:
-            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+            - key: node.ocs.openshift.io/storage
+              value: "true"
               effect: NoSchedule
-            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
-              effect: NoExecute
           providerSpec:
             value:
               numCPUs: {{ if $cfg.numCPUs }}{{ $cfg.numCPUs }}{{ else }}{{ "{{" }} $pv.numCPUs {{ "}}" }}{{ end }}

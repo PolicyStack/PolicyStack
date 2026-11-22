@@ -19,6 +19,20 @@ func TestPolicy037_ProtectedObjects(t *testing.T) {
 	}
 	x := func(spec string) string { return policyDoc("a", "", template("ConfigurationPolicy", "a-x", "", spec)) }
 	const msg = `policies.a.templates.x: `
+	const (
+		first = `{{ $spec := deepCopy (dig "spec" dict (lookup "config.openshift.io/v1" "Image" "" "cluster")) }}`
+		last  = ` {{ $spec | toRawJson | toLiteral }}`
+		keeps = first + ` {{ $_ := set $spec "a" 1 }}` + last
+	)
+	// live is an object-template on Image cluster whose spec is one string.
+	live := func(ct, mdct, spec string) string {
+		md := ""
+		if mdct != "" {
+			md = "metadataComplianceType: " + mdct + ", "
+		}
+		return "{complianceType: " + ct + ", " + md + "objectDefinition: {apiVersion: config.openshift.io/v1, kind: Image, metadata: {name: cluster}, spec: '" + spec + "'}}"
+	}
+	flagged := []want{{SevError, msg + "mustonlyhave Image cluster", inValues, 7}}
 	cases := []struct {
 		name, rendered string
 		want           []want
@@ -60,6 +74,19 @@ func TestPolicy037_ProtectedObjects(t *testing.T) {
 			"            - complianceType: musthave\n              objectDefinition: {apiVersion: v1, kind: Namespace, metadata: {name: a}}\n" +
 			"            {{- end }}\n"),
 			[]want{{SevError, msg + "mustnothave Namespace openshift-, which OpenShift owns", inValues, 7}}},
+		{"mustonlyhave of the live spec", x(objects("enforce", live("mustonlyhave", "musthave", keeps))), nil},
+		{"live spec without metadata musthave", x(objects("enforce", live("mustonlyhave", "", keeps))), flagged},
+		{"spec of another object", x(objects("enforce", live("mustonlyhave", "musthave", strings.Replace(keeps, `"Image"`, `"Proxy"`, 1)))), flagged},
+		{"live spec reassigned", x(objects("enforce", live("mustonlyhave", "musthave", first+` {{ $spec = dict }}`+last))), flagged},
+		{"looked up but not output", x(objects("enforce", live("mustonlyhave", "musthave", first+` {{ dict "a" 1 | toRawJson | toLiteral }}`))), flagged},
+		{"lookup merely mentioned", x(objects("enforce", live("mustonlyhave", "musthave",
+			`{{ $x := lookup "config.openshift.io/v1" "Image" "" "cluster" }} {{ dict | toRawJson | toLiteral }}`))), flagged},
+		{"built on the hub", x(objects("enforce", live("mustonlyhave", "musthave", first+` {{hub .ManagedClusterName hub}}`+last))), flagged},
+		{"mustnothave of the live spec", x(objects("enforce", live("mustnothave", "musthave", keeps))),
+			[]want{{SevError, msg + "mustnothave Image cluster", inValues, 7}}},
+		{"literal spec with metadata musthave", x(objects("enforce", "{complianceType: mustonlyhave, metadataComplianceType: musthave, "+
+			"objectDefinition: {apiVersion: config.openshift.io/v1, kind: Image, metadata: {name: cluster}, spec: {registrySources: {}}}}")),
+			[]want{{SevError, msg + "mustonlyhave Image cluster", inValues, 7}}},
 		{"templated name", x(objects("enforce", ot("mustnothave", "v1", "Namespace", "", "{{ .x }}"))), nil},
 		{"raw that is not YAML", x("          object-templates-raw: |\n            - complianceType: [\n"),
 			[]want{{SevWarning, msg + "object-templates-raw is not YAML once its template actions are removed, so it is not checked", inValues, 7}}},

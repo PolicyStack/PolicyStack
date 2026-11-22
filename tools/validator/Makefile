@@ -3,7 +3,8 @@ PKG := ./cmd/policystack-validator
 ROOT := ../..
 # validate runs from the repo root, where CI annotations and --extra-values paths resolve. ELEMENT
 # limits validate and preview to one chart. BASE_BRANCH is the branch HEAD merges into: POLICY052
-# resolves a revision naming it to HEAD, and a repository without an origin remote needs it.
+# resolves a revision naming it to HEAD, and a repository without an origin remote needs it. POLICY053
+# compares fleet files with it, or with DEFAULT_BRANCH when that is set.
 VALIDATOR := $(abspath $(BINARY)) --repo-root . $(if $(CI),--github) $(if $(ELEMENT),--element $(ELEMENT)) $(if $(BASE_BRANCH),--base-branch $(BASE_BRANCH))
 BASELINE := tools/validator/testdata/baseline.yaml
 # Upstream's example fleet. copier leaves it out of a copy, so an adopter's validate checks fleet/ only.
@@ -76,17 +77,17 @@ crds:
 # 2. --all-on turns every element and policy on, tools/sample-element too, under INPUTS; then each
 #    testdata/profiles file alone (docs/develop/validation.md#profiles). In CI, sort -u drops the
 #    annotations two runs both report.
-# 3. A copy's real fleet, when it has one. Upstream ships none. POLICY052 (fleet pins) runs here
-#    only: the fixtures' revisions are not real pins.
+# 3. A copy's real fleet, when it has one. Upstream ships none. POLICY052 (fleet pins) and
+#    POLICY053 (promoted commits) run here only: the fixtures' revisions are not real pins.
 validate: build
 	@cd $(ROOT) && failed=0; skip=; \
 	if [ -d $(FIXTURES) ]; then \
 	  skip="--skip POLICY071"; \
-	  $(VALIDATOR) --extra-values $(BASELINE) --include-sample-element --skip POLICY052,POLICY081 || failed=1; \
+	  $(VALIDATOR) --extra-values $(BASELINE) --include-sample-element --skip POLICY052,POLICY053,POLICY081 || failed=1; \
 	  acm=$$(mktemp); \
-	  $(VALIDATOR) --all-on --extra-values $(BASELINE),$(INPUTS) --include-sample-element --skip POLICY052,POLICY071 >> "$$acm" || failed=1; \
+	  $(VALIDATOR) --all-on --extra-values $(BASELINE),$(INPUTS) --include-sample-element --skip POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
 	  for p in tools/validator/testdata/profiles/*.yaml; do \
-	    $(VALIDATOR) --extra-values "$(BASELINE),$$p" --include-sample-element --skip POLICY052,POLICY071 >> "$$acm" || failed=1; \
+	    $(VALIDATOR) --extra-values "$(BASELINE),$$p" --include-sample-element --skip POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
 	  done; \
 	  $(if $(CI),sort -u,cat) "$$acm"; rm -f "$$acm"; \
 	fi; \

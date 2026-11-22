@@ -320,6 +320,10 @@ wins, left to right". Template means `policies.<p>.templates.<t>`, operator mean
 | operator `operatorGroup.name` | `subscription.name`, watching all namespaces |
 | operator `displayName` | `subscription.name` |
 
+!!! danger "Clearing `InformOnly` enforces the template"
+    A template without it takes its Policy's action, so a `mustnothave` check starts deleting. The
+    validator fails a layer that clears one an element ships (POLICY042).
+
 !!! warning "Template `remediationAction` accepts only `InformOnly`"
     It keeps one template reporting inside an `enforce` Policy
     ([inform, enforce and InformOnly](../concepts/acm.md#inform-enforce-and-informonly)). Set it on

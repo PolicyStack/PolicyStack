@@ -48,7 +48,7 @@ No comment means no fleet cluster changes, but only if the **Render diff** check
 
 ## Promoting and rolling back
 
-Promote a tag- or SHA-pinned cluster with a fleet PR. Its Render Diff shows the Policy changes for that cluster:
+Promote a tag- or SHA-pinned cluster with a fleet PR. CI validates the commit it pins ([Promotions](../reference/ci.md#promotions-policy053)) and Render Diff shows the Policy changes for that cluster:
 
 ```diff
  # fleet/prod-east-1.yaml

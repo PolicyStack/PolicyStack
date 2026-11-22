@@ -166,6 +166,21 @@ a major newer than the PR's, or more than one major older, fails, since the hub'
 renders only its own major and the one before. To see what a pinned cluster actually gets, read
 [Render Diff](#render-diff).
 
+### Promotions (POLICY053)
+
+A PR whose fleet file differs from the default branch's and pins another commit, such as a promotion
+from `v1.4.0` to `v1.5.0`, also validates that commit: its `stack/`, `lifecycle/`, `lib/` and `values/`, with the
+fleet file from the PR.
+
+| Finding at the pinned commit | On the PR |
+|---|---|
+| The render fails (RENDER000), a safety rule fails (POLICY037, POLICY041, POLICY042), or the commit can't be read or loaded | Error: blocks the promotion |
+| Any other error | Warning: a rule newer than the tag must not block a rollback to it |
+
+!!! note "Only changed fleet files"
+    A pin the PR doesn't touch is not validated again. Neither is a pinned branch that moves later:
+    protect any branch a fleet file names and run CI on PRs to it.
+
 ### Install chart (POLICY071)
 
 `install/` is run by hand on each hub, so nothing else renders it. Upstream checks it in the

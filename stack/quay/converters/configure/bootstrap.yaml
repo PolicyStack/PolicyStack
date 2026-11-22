@@ -66,6 +66,9 @@ volume items are required keys, so the kubelet holds the pod until the network o
 injected the trust bundle.
 */}}
 {{- $cfg := .Config }}
+{{- if not $cfg.featureUserInitialize }}
+{{- fail "quay: policies.configure needs config.featureUserInitialize: true, the API its bootstrap Job creates the first user with" }}
+{{- end }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -159,7 +162,12 @@ spec:
 
               ADMINPASS=`head -c 8 /dev/urandom | base64 | sed 's/=//'`
               BASE64AUTH=`echo -n $QUAY_ADMIN:$ADMINPASS | base64 -w0`
-              RESULT=$(curl -X POST -sS --cacert /tmp/ca.crt https://$QUAY_HOST/api/v1/user/initialize --header 'Content-Type: application/json' --data "{ \"username\": \"${QUAY_ADMIN}\", \"password\":\"${ADMINPASS}\", \"email\": \"${QUAY_ADMIN}@example.com\", \"access_token\": true}") || exit 1
+              # Quay can be Available on pods that have not loaded FEATURE_USER_INITIALIZE. They answer with
+              # an HTML 404 that names access_token_uuid, so match the JSON key.
+              until RESULT=$(curl -X POST -sS --cacert /tmp/ca.crt https://$QUAY_HOST/api/v1/user/initialize --header 'Content-Type: application/json' --data "{ \"username\": \"${QUAY_ADMIN}\", \"password\":\"${ADMINPASS}\", \"email\": \"${QUAY_ADMIN}@example.com\", \"access_token\": true}") && echo "$RESULT" | grep -q -e '"access_token" *:' -e "non-empty database"; do
+                echo "Quay has not created the first user yet, retrying."
+                sleep 10
+              done
               echo "$RESULT" | grep -q "non-empty database"
               if [ $? -eq 0 ]; then
                 echo "Quay user configuration failed, the database has been initialized."

@@ -37,8 +37,8 @@ Every rule runs in one of three phases:
 | Phase | Runs | Reads | Rules |
 |---|---|---|---|
 | Chart | Once per element | The element's own `Chart.yaml`, `values.yaml` and `converters/` | POLICY021, 022, 030, 031, 040, 070, 090 |
-| Cluster | Once per element and fixture | The `helm template` output for that cascade | POLICY001, 002, 032, 033, 034, 037, 050, 080, 081, 082, RENDER000 |
-| Repo | Once | Every element, every file under `values/`, every fleet file, `install/`, the copier answers files | POLICY003, 011, 035, 038, 039, 051, 052, 060, 061, 071, 091, 092 |
+| Cluster | Once per element and fixture | The `helm template` output for that cascade | POLICY001, 002, 032, 033, 034, 037, 041, 042, 050, 080, 081, 082, RENDER000 |
+| Repo | Once | Every element, every file under `values/`, every fleet file, `install/`, the copier answers files, the commits changed fleet files pin | POLICY003, 011, 035, 038, 039, 051, 052, 053, 060, 061, 071, 091, 092 |
 
 Cluster-phase rules see the whole cascade, so a values layer that turns a template on or changes its
 action is checked the same as the element's own `values.yaml`.
@@ -133,15 +133,16 @@ failure fails the target. Passes 1 and 2 render the fixtures, so they run only w
 `tools/validator/testdata/clusters` exists: upstream has it, an adopter's copy doesn't.
 
 1.  **Fixtures.** Every element plus `tools/sample-element/`, which `tools/create-element.sh` copies
-    for every new element and so must stay valid. Skips POLICY052, because fixture revisions are
-    not real pins, and POLICY081, which pass 2 covers. It runs POLICY071, the
+    for every new element and so must stay valid. Skips POLICY052 and POLICY053, because fixture
+    revisions are not real pins, and POLICY081, which pass 2 covers. It runs POLICY071, the
     [install chart](../reference/install.md) check.
 2.  **Profiles.** The all-on run, then one run per file in `tools/validator/testdata/profiles/`.
     Together they turn every element and optional piece on, so POLICY081 and POLICY001 see every
     converter ([Profiles](#profiles)).
 3.  **Your fleet.** Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exists, which upstream never
-    has. It renders the real fleet files and is the only pass that runs POLICY052 against real
-    `revision` pins. Without fixtures, it also runs POLICY071, so an adopter's copy checks
+    has. It renders the real fleet files and is the only pass that runs POLICY052 and POLICY053
+    against real `revision` pins. POLICY053 renders each commit a changed fleet file pins, about
+    30 seconds per distinct commit. Without fixtures, it also runs POLICY071, so an adopter's copy checks
     `install/` once it has a fleet file.
 
 Upstream, a clean run prints `ok: no findings` three times (fixtures, all-on, `variants`). An
@@ -216,9 +217,10 @@ Each points at the file to change: POLICY022 at the converter that reads the mis
 at the layer that set `pruneObjectBehavior`, POLICY021 at the stray file. Fixes for these and other
 common findings: [Fixing common findings](../reference/rules.md#fixing-common-findings).
 
-Only findings about one fixture name it: POLICY001, POLICY002, POLICY050, POLICY051, POLICY082 and
-RENDER000. POLICY033, POLICY037, POLICY080 and POLICY081 leave it out on purpose, so one mistake is
-reported once rather than once per fixture.
+Only findings about one fixture name it: POLICY001, POLICY002, POLICY050, POLICY051, POLICY053,
+POLICY082 and RENDER000. POLICY033, POLICY037, POLICY042, POLICY080 and POLICY081 leave it out on
+purpose, so one mistake is reported once rather than once per fixture. POLICY041 also leaves out
+the element when a layer sets the predicates.
 
 A finding on rendered output points at the last cascade file that sets the field on the entry (a
 `policies.<p>`, `policies.<p>.templates.<t>` or `operatorPolicies.<k>` key), else the file that
@@ -248,7 +250,8 @@ file; POLICY080 points at the element's `values.yaml` instead.
     | `--extra-values` | Comma-separated values files appended to every cascade but `lifecycle/`'s ([Baseline](#baseline)) |
     | `--all-on` | Turns on every element and every policy, template and operator in it, ranked below `--extra-values` ([Profiles](#profiles)) |
     | `--lifecycle-dir` | Lifecycle chart, default `<repo>/lifecycle` |
-    | `--base-branch` | The branch a PR merges into, default `$GITHUB_BASE_REF`. POLICY052 resolves a `revision` naming it to `HEAD`, the PR's merge commit |
+    | `--default-branch` | The branch Argo CD reads fleet files from, default `$DEFAULT_BRANCH`, else `--base-branch`. POLICY053 validates the pins that differ from it |
+    | `--base-branch` | The branch a PR merges into, default `$GITHUB_BASE_REF`. POLICY052 resolves a `revision` naming it to `HEAD`, the PR's merge commit, and POLICY053 compares fleet files with it |
     | `--render-dir` | Writes `<dir>/<fleet file path without .yaml>/<element>.yaml`, a failed render as `# RENDER000:` lines. [Render Diff](../reference/ci.md#render-diff) diffs two of these |
 
     Locally `$GITHUB_BASE_REF` is empty, so a fleet file with `revision: main` resolves to
@@ -368,7 +371,7 @@ and POLICY001 reach every converter:
   Example: infra-nodes `workloads` and `restore` exclude each other, so `variants.yaml` turns
   `workloads` off and `restore` on.
 
-Every rule but POLICY052 and POLICY071 runs on these, so an optional piece also needs its input. A
+Every rule but POLICY052, POLICY053 and POLICY071 runs on these, so an optional piece also needs its input. A
 converter that loops over a `config` map renders nothing when the map is empty
 ([Converter shapes](elements.md#converter-shapes)): metallb's `addressing/pools.yaml` ranges over
 `config.ipAddressPools`. With the map empty it renders `object-templates-raw: []`, and a Policy
@@ -432,7 +435,27 @@ POLICY037 fails a template that is `mustonlyhave` or `mustnothave`
 the [POLICY037](../reference/rules.md#rules) row): enforced, it wipes what the installer and
 operators wrote. Use `musthave`.
 
-A template that must stay `mustonlyhave` or `mustnothave` can only be `InformOnly` (reported, never
-enforced); an element has no way to enforce it. The validator also honours
+One enforced form passes: taking an entry out of a list on a `config.openshift.io` object, which
+`musthave` can't do, since it only adds to lists. Build the whole `spec` from the live object, so
+every other field is kept:
+
+```yaml title="converter, as in stack/remediations/converters/registries/allowlist.yaml"
+spec: >-
+  {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "config.openshift.io/v1" "Image" "" "cluster")) {{ "}}" }}
+  {{ "{{" }} $_ := set $spec "allowedRegistriesForImport" (fromJson `{{ toJson $import | replace "`" "\\u0060" }}`) {{ "}}" }}
+  {{ "{{" }} $spec | toRawJson | toLiteral {{ "}}" }}
+```
+
+```yaml title="values.yaml, on the template"
+complianceType: mustonlyhave
+metadataComplianceType: musthave
+```
+
+The first and last lines must be exactly these, naming the same object, with no other assignment to
+`$spec`. It works only in `object-templates`, not in `object-templates-raw`. The validator checks that
+shape only: keeping the other fields is up to the lines between.
+
+Any other template that must stay `mustonlyhave` or `mustnothave` can only be `InformOnly` (reported,
+never enforced). The validator also honours
 `validator.policystk.io/allow-destructive: "<reason>"` on a ConfigurationPolicy, but policy-library
 can't set it today.

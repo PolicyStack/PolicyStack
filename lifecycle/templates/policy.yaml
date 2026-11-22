@@ -9,5 +9,13 @@ its two Policies renders.
 {{- $_ := set $policies.present "enabled" (eq .Values.state "present") }}
 {{- $_ = set $policies.absent "enabled" (eq .Values.state "absent") }}
 {{- $_ = set $policies.present.templates.precheck "enabled" (not (empty .Values.install.precheck)) }}
+{{- /* An enforced gate would act on what it only checks, so no values layer can clear its InformOnly */}}
+{{- range $policy := list $policies.present $policies.absent }}
+{{- range $gate := list "guard" "ready" "detached" "destroyed" }}
+{{- with get ($policy.templates | default dict) $gate }}
+{{- $_ := set . "remediationAction" "InformOnly" }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- include "policy-library.render" (merge (dict "component" $engine) .) }}
 {{- end }}

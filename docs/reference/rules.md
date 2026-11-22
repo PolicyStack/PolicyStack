@@ -18,7 +18,7 @@ element ([Reading the output](../develop/validation.md#reading-the-output)).
 
 CI runs `make -C tools/validator validate`, whose flags are fixed in the
 Makefile, so a PR can't skip a rule. `--skip`/`--only` work only when you run the binary by hand. The
-one opt-out in the repo is POLICY037's: make the template `InformOnly`
+one rule with opt-outs in the repo is POLICY037: make the template `InformOnly`, or build the spec from the live one
 ([Destructive templates](../develop/validation.md#destructive-templates)).
 
 ??? info "Terms the table uses"
@@ -62,11 +62,14 @@ one opt-out in the repo is POLICY037's: make the template `InformOnly`
 | POLICY033 | `pruneObjectBehavior` on a template that isn't enforced or has a dependency | Remove `pruneObjectBehavior` or the dependency ([Removal and pruning](../concepts/removal.md)) |
 | POLICY034 | `version` or `channel` in a values layer | Move it to the cluster's fleet file |
 | POLICY035 | A typo in `values/`: a key nothing reads | Fix the key the message names |
-| POLICY037 | `mustonlyhave` or `mustnothave` on an object OpenShift owns | `musthave`, or `InformOnly` ([Destructive templates](../develop/validation.md#destructive-templates)) |
+| POLICY037 | `mustonlyhave` or `mustnothave` on an object OpenShift owns | `musthave`, `InformOnly`, or a spec built from the live one ([Destructive templates](../develop/validation.md#destructive-templates)) |
 | POLICY038 | A `subscription.source` that is not a default catalog | Fix the name, or declare it under `global.catalogSources` ([Disconnected clusters](../guides/disconnected.md)) |
 | POLICY039 | A layer or fleet file still sets a key an element deprecated | Set the replacement the message names instead, before the version it names. A finding at an element's `values.yaml` is a malformed note: write it as `Deprecated: use <key>; removed in <version>` ([Deprecating a key](../develop/elements.md#deprecating-a-key-or-an-element)) |
+| POLICY041 | `placement.predicates` in a values file | Remove it. To narrow, use `placement.claimSelector` or `celSelector`; to reach another cluster, list the layer in that cluster's fleet file ([Overriding the Placement](../concepts/policies.md#overriding-the-placement)) |
+| POLICY042 | A values layer set a gate's `remediationAction`, or the whole entry, to null or `""` | Remove the override. To drop the gate, set `enabled: false` on it |
 | POLICY050 | A broken fleet file | Fix the key the message names. `install.version` is an error whatever its value: use the top-level `version` |
 | POLICY052 | A `revision` that doesn't resolve, a commit missing what the fleet file uses, or one on a framework major the hubs don't render | Push the branch or tag first. The "upgrade element" is `stack/upgrade`: a fleet file setting `version` or `channel` needs a `revision` that has it. Locally, `main` means `origin/main` ([flags](../develop/validation.md#reading-the-output)). A newer major: merge the framework update and upgrade the hubs first. Two or more majors older: move the `revision` forward ([Majors](../guides/upgrading.md#majors)) |
+| POLICY053 | A fleet PR pins a commit that can't be loaded, doesn't render or fails a safety rule | Fix it on a branch, tag the fixed commit and pin that. The message names the rule and the file at the pinned commit |
 | POLICY060 | A `Chart.yaml` copied from outside `stack/`, written by hand, or with a floor above `lib/policy-library` | Set what the message names. A floor above the library means the library change this chart needs is missing, or `lib/policy-library/Chart.yaml` `version` was not bumped with it ([Library changes](../contributing.md#library-changes)) |
 | POLICY061 | A hand-run `copier copy` or `copier update` from a branch or commit instead of a release tag, into the wrong directory, or past the framework; or an element left on an older major than the framework | Delete the element and `mise run ps -- add` it again, or `mise run update`, which takes elements at the framework's tag and moves every element on a major. Never edit an answers file by hand ([Answers files](../guides/upgrading.md#answers-files)) |
 | POLICY070 | `helm lint` failed on the element with only its own `values.yaml`, where it is off | A chart structure error; render problems are RENDER000 |

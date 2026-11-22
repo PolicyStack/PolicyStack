@@ -34,6 +34,10 @@ stack:
         templates:
           allowlist:
             description: "Image registry allowlist"
+            # musthave appends to lists, so removing a registry would never revoke it
+            complianceType: mustonlyhave
+            # Image cluster carries labels and annotations the platform writes
+            metadataComplianceType: musthave
 
       # Remove the Samples Operator and its imagestreams
       samples:

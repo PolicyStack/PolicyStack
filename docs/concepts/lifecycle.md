@@ -141,7 +141,7 @@ flowchart LR
 | `destroyed` | InformOnly | Waits for the root object to be gone. |
 | `cleanup` | enforce | Deletes the copied Secrets or Namespace `<cluster>`, `install.manifests` and `install.precheck`. |
 
-The InformOnly steps are gates. An enforced create or delete is Compliant as soon as the API accepts it, long before the engine finishes, so each enforced step that hands work to an engine is followed by a gate that checks the engine's status. InformOnly is a template-level action ACM never enforces, even inside an enforced Policy ([ACM policies in brief](acm.md#inform-enforce-and-informonly)), so a gate never changes anything.
+The InformOnly steps are gates. An enforced create or delete is Compliant as soon as the API accepts it, long before the engine finishes, so each enforced step that hands work to an engine is followed by a gate that checks the engine's status. InformOnly is a template-level action ACM never enforces, even inside an enforced Policy ([ACM policies in brief](acm.md#inform-enforce-and-informonly)), so a gate never changes anything. `lifecycle/` sets it on every gate after merging values, so a values layer can't clear it.
 
 `siteconfig` has no `detach` or `detached`: SiteConfig owns the ManagedCluster and would re-create it. Per-engine detail for every step: [Policy chains](../reference/lifecycle.md#policy-chains).
 

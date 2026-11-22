@@ -49,6 +49,7 @@ func realMain() error {
 		allOn         = flag.Bool("all-on", false, "turn on every element and every policy, template and operator it ships off, ranked below --extra-values")
 		renderDir     = flag.String("render-dir", "", "write each render to <dir>/<fleet file path without .yaml>/<chart>.yaml, a failed one as # comments, for diffing two trees")
 		baseBranch    = flag.String("base-branch", os.Getenv("GITHUB_BASE_REF"), "branch HEAD lands on; POLICY052 resolves a revision naming it to HEAD")
+		defaultBranch = flag.String("default-branch", os.Getenv("DEFAULT_BRANCH"), "branch Argo CD reads fleet files from (default --base-branch); POLICY053 validates the pins that differ from it")
 		element       = flag.String("element", "", "check and render only this chart; repo-wide rules still read every element but report only this one")
 		cluster       = flag.String("cluster", "", "render only the fleet file of this name")
 		evaluate      = flag.Bool("evaluate", false, "with --render-dir, also write <chart>.evaluated.yaml beside each render: the objects ACM applies, templates resolved on an empty cluster")
@@ -114,6 +115,7 @@ func realMain() error {
 		AllOn:         *allOn,
 		RenderDir:     *renderDir,
 		BaseBranch:    *baseBranch,
+		DefaultBranch: *defaultBranch,
 		Element:       *element,
 		Cluster:       *cluster,
 		Evaluate:      *evaluate,

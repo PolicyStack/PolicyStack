@@ -53,7 +53,7 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SI-7 Software,
 
 | Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `registries-allowlist` | enforce | high | [allowlist](converters/registries/allowlist.yaml) (mustonlyhave) | Image registry allowlist |
+| `registries-allowlist` | enforce | high | [allowlist](converters/registries/allowlist.yaml) | Image registry allowlist |
 
 ### Policy `samples`
 

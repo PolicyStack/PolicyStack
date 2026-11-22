@@ -2,32 +2,19 @@
 QuayRegistry. The managed component set differs most between clusters (external Postgres or
 object storage, no Clair), so it comes from values.
 
-mustonlyhave on the live spec with components merged by kind: musthave appends to lists, so a
-changed component would be listed twice. The Quay operator adds kinds values don't name, and an
-admin may set overrides, so both are kept. The bundle has its own template, which stays musthave.
-*/ -}}
+mustonlyhave: musthave appends to lists, so a changed component would be listed twice. The operator
+adds every kind the spec leaves out, so values list all of them.
+*/}}
 {{- $cfg := .Config }}
-{{- /* A component a layer sets to null is not managed here: its live value stays */}}
-{{- $components := dict }}
-{{- range $kind, $managed := $cfg.components }}
-{{- if not (kindIs "invalid" $managed) }}
-{{- $_ := set $components $kind $managed }}
-{{- end }}
-{{- end }}
 apiVersion: quay.redhat.com/v1
 kind: QuayRegistry
 metadata:
   name: registry
   namespace: quay-enterprise
-spec: >-
-  {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "quay.redhat.com/v1" "QuayRegistry" "quay-enterprise" "registry")) {{ "}}" }}
-  {{ "{{" }} $byKind := dict {{ "}}" }}
-  {{ "{{" }} range dig "components" list $spec {{ "}}" }}{{ "{{" }} $_ := set $byKind .kind (merge (dig .kind dict $byKind) .) {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} range $kind, $managed := fromJson `{{ toJson $components | replace "`" "\\u0060" }}` {{ "}}" }}
-  {{ "{{" }} $_ := set $byKind $kind (set (set (dig $kind dict $byKind) "kind" $kind) "managed" $managed) {{ "}}" }}
-  {{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} $components := list {{ "}}" }}
-  {{ "{{" }} range $byKind {{ "}}" }}{{ "{{" }} $components = append $components . {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} $_ := set $spec "components" $components {{ "}}" }}
-  {{ "{{" }} $_ := set $spec "configBundleSecret" "quay-registry-config-bundle" {{ "}}" }}
-  {{ "{{" }} $spec | toRawJson | toLiteral {{ "}}" }}
+spec:
+  configBundleSecret: quay-registry-config-bundle
+  components:
+    {{- range $kind, $managed := $cfg.components }}
+    - kind: {{ $kind }}
+      managed: {{ $managed }}
+    {{- end }}

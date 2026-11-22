@@ -25,7 +25,7 @@ Under `stack.quay.config`. Maps merge across layers; lists are replaced whole.
 
 | Key | Description | Default |
 |---|---|---|
-| `components` | Quay components the operator manages. Set a component to false to supply it externally, e.g. Postgres or object storage. |  |
+| `components` | Quay components the operator manages. Set a component to false to supply it externally, e.g. Postgres or object storage. Keep every kind listed: the operator adds a missing one, and the exact match removes it again. |  |
 | `components.quay` |  | `true` |
 | `components.clair` |  | `true` |
 | `components.postgres` |  | `true` |

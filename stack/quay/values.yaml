@@ -18,10 +18,10 @@ stack:
         monitoring: true
         tls: true
       # Allow the first user to be created through the unauthenticated initialize API. Until a
-      # user exists, anyone who reaches the Route can claim a superuser name. While false, a new
-      # registry has no user to log in as: to create the first, set it true and turn on the
-      # configure policy in the same change.
-      featureUserInitialize: false
+      # user exists, anyone who reaches the Route can claim a superuser name, so unset means only
+      # while the configure policy is on, whose Job creates that user. Set it true to create the
+      # first user yourself.
+      featureUserInitialize: null
       # Restrict browser API calls to XHR
       browserApiCallsXhrOnly: false
       # Allow self-service user creation
@@ -64,23 +64,25 @@ stack:
         dependencies:
           - name: install
         templates:
-          bundle:
-            description: "Quay namespace and config bundle"
-
           registry:
-            description: "QuayRegistry"
-            # musthave appends to lists, so changing a component would list it twice
+            description: "Quay namespace, config bundle and QuayRegistry"
+            waitForOperator: quay
+
+          registry-exact:
+            # registry only adds, so a changed component is listed twice. This keeps one entry per
+            # kind with the managed flag from values. Default changes to true in 2.0.0.
+            enabled: false
+            description: "One QuayRegistry entry per component. Default changes to on in 2.0.0"
             complianceType: mustonlyhave
             metadataComplianceType: musthave
             waitForOperator: quay
 
-      # Run the one-shot bootstrap Job and publish the console link. Needs
-      # config.featureUserInitialize: true. Opt-in: the Job is
+      # Run the one-shot bootstrap Job and publish the console link. Opt-in: the Job is
       # opinionated (it creates an initial user, org and repo). It verifies Quay's route
       # against the default ingress certificate and the cluster trust bundle.
       configure:
         enabled: false
-        description: "Bootstrap the registry and publish its console link (needs config.featureUserInitialize: true)"
+        description: "Bootstrap the registry and publish its console link"
         severity: low
         dependencies:
           - name: deploy

@@ -599,6 +599,51 @@ annotations:
 `create-element.sh` writes `preview`. Any other value fails the README generator. In your
 repository, an element you wrote may keep the annotation, change it or drop it.
 
+### Changing a default
+
+Within a major, unchanged values render unchanged behaviour
+([Unchanged values](../reference/compatibility.md#unchanged-values)). To change what an element
+does, add the new behaviour beside the old and announce the flip on the key:
+
+=== "A key"
+
+    ```yaml title="stack/nfd/values.yaml"
+    config:
+      # PCI fields in the node labels.
+      # Default changes to [vendor] in 2.0.0.
+      pciLabelFields:
+        - class
+    ```
+
+=== "A template"
+
+    For behaviour a key can't switch, such as another `complianceType`:
+
+    ```yaml title="stack/remediations/values.yaml"
+    templates:
+      allowlist:
+        description: "Image registry allowlist"
+
+      allowlist-exact:
+        # Also revokes registries not in values.
+        # Default changes to true in 2.0.0.
+        enabled: false
+        complianceType: mustonlyhave
+    ```
+
+The note is written `Default changes to <value> in <version>`, in the comment directly above the key.
+The README shows a `config` key's comment; for a template, repeat the note in its `description`.
+POLICY043 warns on every cluster that renders with the default until a layer sets the key, to the
+old value or the new one. The major then flips every noted default in one release and deletes the
+notes.
+
+!!! warning "A converter rewrite is a behaviour change"
+    Values can be ACM templates, so `allowedRegistries: ['{{ fromConfigMap ... }}']` resolves on
+    the cluster. Moving a value inside a raw string, a lookup or another templated field stops that,
+    and ACM writes the template as text while reporting Compliant. `make compat` and
+    `make upgrade-test` catch it for the values in `testdata/compat/values.yaml`
+    ([Compatibility](../reference/ci.md#compatibility)).
+
 ### Deprecating a key or an element
 
 To retire a values key, keep it in the element's `values.yaml`, still working, and end the comment
@@ -614,15 +659,14 @@ above it with one line in exactly this form:
 The comment is the key's description, so the element README shows it. The validator warns
 (POLICY039) on every values layer and fleet file that sets the key, naming the replacement and the
 version, and keeps accepting the key (POLICY035) until it is gone. A `Deprecated:` line in any other
-form is reported at the `values.yaml`. In a stable element, remove the key no earlier than that
-major, and at least one minor and 90 days after the release that deprecated it. A preview element
-may name the next minor instead, or rename the key without deprecating it
+form is reported at the `values.yaml`. Stable or preview, `removed in` names a major: remove the key
+no earlier than that, and at least one minor and 90 days after the release that deprecated it
 ([Deprecation](../reference/compatibility.md#deprecation)). `lifecycle/values.yaml` keys are
-deprecated the same way, with a framework version, but at every maturity: `removed in` names a
-major, and the key keeps working until then ([Lifecycle](../reference/compatibility.md#lifecycle)).
+deprecated the same way, and keep working until then
+([Lifecycle](../reference/compatibility.md#lifecycle)).
 
 To retire an element, set `deprecated: true` in its `Chart.yaml` and keep it working until a later
-release removes it: any later minor for a preview element, a major for a stable one. The validator
+major removes it, whether the element is stable or preview. The validator
 warns (POLICY092) on every values file that turns it on. Never rename an element directory: a
 rename deletes and recreates every Policy it renders. Add the new element and deprecate the old one.
 

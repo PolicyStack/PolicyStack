@@ -34,7 +34,12 @@ stack:
         templates:
           allowlist:
             description: "Image registry allowlist"
-            # musthave appends to lists, so removing a registry would never revoke it
+
+          allowlist-exact:
+            # allowlist only adds. This also revokes every registry not in values, the ones added
+            # by hand included, and takes literal values only. Default changes to true in 2.0.0.
+            enabled: false
+            description: "Revoke registries not in values. Default changes to on in 2.0.0"
             complianceType: mustonlyhave
             # Image cluster carries labels and annotations the platform writes
             metadataComplianceType: musthave

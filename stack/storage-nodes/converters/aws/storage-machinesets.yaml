@@ -50,11 +50,15 @@ Portable across node elements. The role and config block are read from .Config.
               {{- range $k, $v := .Config.nodeLabels }}
               {{ $k }}: {{ $v | quote }}
               {{- end }}
-          {{- /* The taint ODF and the LocalVolumeSet tolerate, whatever the role */}}
           taints:
-            - key: node.ocs.openshift.io/storage
-              value: "true"
+            {{- with $cfg.taints }}
+            {{- toYaml . | nindent 12 }}
+            {{- else }}
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
               effect: NoSchedule
+            - key: node-role.kubernetes.io/{{ "{{" }} $role {{ "}}" }}
+              effect: NoExecute
+            {{- end }}
           providerSpec:
             value:
               kind: AWSMachineProviderConfig

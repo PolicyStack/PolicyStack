@@ -13,7 +13,7 @@ guard the framework.
 | [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit | Runs |
 | [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart | Runs, including the `fleet/` pass |
 | [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
-| [Upstream](#upstream) (`upstream.yml`) | Every PR and `main` push | The policy-library lint or tests, a validator lint or test, a stale CRD, the doc generator tests or the site build fails | Absent: copier leaves it out |
+| [Upstream](#upstream) (`upstream.yml`) | Every PR and `main` push | The policy-library lint or tests, a validator lint or test, a stale CRD, an unapproved output change, the doc generator tests or the site build fails | Absent: copier leaves it out |
 
 A new push to a PR cancels its running CI, Upstream and Render Diff checks. CI, Upstream and Policy
 Validate can also be started from the Actions tab.
@@ -92,10 +92,55 @@ none of this runs there.
 | `library` | policy-library in `lib/`: `ct lint --config lib/ct.yaml`, which fails a change to `lib/policy-library` without a `version` bump and runs `helm lint --strict`; then the helm-unittest suites in `lib/tests` (`untt --strict`), failing on a snapshot that is not committed ([Library changes](../contributing.md#library-changes)) |
 | `validator` | `make -C tools/validator lint` (golangci-lint, `go mod tidy -diff`, govulncheck) and `test`; then `make crds`, failing when `tools/validator/crds/` differs from the files the Makefile pins ([CRD schemas](../develop/validation.md#crd-schemas)) |
 | `launcher` | `uv lock --check` (`tools/policystack/uv.lock` matches `pyproject.toml`), then the launcher's tests (`pytest tools/policystack/tests`): unit tests, generic checks of this checkout's `stack/` and `values/`, and install, add and update run end to end through copier against a synthetic upstream that uses this checkout's `copier.yml` |
+| `compat` | On PRs, [Compatibility](#compatibility): output for unchanged values, then the upgrade test |
 | `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
-| `upstream` | The required check over `library`, `validator`, `launcher` and `docs` |
+| `upstream` | The required check over `library`, `validator`, `launcher`, `compat` and `docs` |
 | `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: the site to `gh-pages` |
 | `release` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: release-please opens or updates the release PR and, once it merges, tags it `vX.Y.Z` ([Releases](../contributing.md#releases)) |
+
+### Compatibility
+
+`compat` holds [Unchanged values](compatibility.md#unchanged-values). It renders the last release
+tag and the PR with the release's values and fleet fixtures, in these scenarios:
+
+| Scenario | Values |
+|---|---|
+| `defaults` | Every element on, with its defaults |
+| `templated` | The same, with the ACM templates in `tools/validator/testdata/compat/values.yaml` as values: the release's copy, then the PR's |
+| `all-on` | The release's all-on profile and inputs |
+| One per profile | The release's `testdata/profiles` |
+
+`install/` and `install/operators` are rendered too. A file fails when its objects differ from the
+release's and from the base branch's. Going back to the release's output, or carrying what the base
+already approved, passes. Formatting, comments and `description` annotations don't count.
+
+The upgrade test then takes each difference to a real config-policy-controller (the commit the
+validator's Makefile pins): it applies the release's ConfigurationPolicies over
+`testdata/compat/seed.yaml`, then the PR's on top, and reports every object and compliance state
+that moved.
+
+To approve a difference, agree it first, then:
+
+1.  Read the job summary and the `compat-diff` artifact.
+2.  Create the label the summary prints, `output-change-<hash>`, and add it to the PR.
+3.  Re-run the job.
+
+The hash covers exactly that difference, so a later push that changes it needs a new label.
+
+```sh
+make -C tools/validator compat RELEASE=v1.0.0 BASE=main  # (1)!
+make -C tools/validator upgrade-test                     # (2)!
+```
+
+1.  About a minute on a workstation, longer in CI. The full diff is in `tools/validator/bin/compat/changes.diff`.
+2.  About 45 seconds per distinct difference, four at a time, and none when there is no difference.
+    The first run downloads envtest and builds the controller.
+
+!!! warning "What it can't see"
+    - A value no scenario sets. Add converter inputs to `testdata/compat/values.yaml`.
+    - OperatorPolicies, hub templates, and what operators do with an object: the upgrade test has no
+      OLM, propagator or operators, and kinds without a CRD get one without a schema.
+    - A validator rule that fails a repository that passes today. That is review only.
 
 ### Documentation site
 
@@ -122,7 +167,7 @@ digits, `-`) and `!` (breaking) are optional.
 ```text
 feat(validator): real POLICY080       # ok
 fix!: rename hubName                  # ok
-feat(odf): breaking: rename config.pools  # ok: preview break, a minor
+fix(quay): breaking: close first-user API # ok: security exception
 Revert "feat: add metallb"            # fails: retitle to revert: feat: add metallb
 ```
 
@@ -172,10 +217,10 @@ A PR whose fleet file differs from the default branch's and pins another commit,
 from `v1.4.0` to `v1.5.0`, also validates that commit: its `stack/`, `lifecycle/`, `lib/` and `values/`, with the
 fleet file from the PR.
 
-| Finding at the pinned commit | On the PR |
-|---|---|
-| The render fails (RENDER000), a safety rule fails (POLICY037, POLICY041, POLICY042), or the commit can't be read or loaded | Error: blocks the promotion |
-| Any other error | Warning: a rule newer than the tag must not block a rollback to it |
+| Finding at the pinned commit | In 1.1 | From 1.2.0 |
+|---|---|---|
+| The render fails (RENDER000), a safety rule fails (POLICY037, POLICY041, POLICY042), or the commit can't be read or loaded | Warning | Error: blocks the promotion |
+| Any other error | Warning | Warning: a rule newer than the tag must not block a rollback to it |
 
 !!! note "Only changed fleet files"
     A pin the PR doesn't touch is not validated again. Neither is a pinned branch that moves later:

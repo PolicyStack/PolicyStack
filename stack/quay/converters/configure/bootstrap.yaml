@@ -66,13 +66,17 @@ volume items are required keys, so the kubelet holds the pod until the network o
 injected the trust bundle.
 */}}
 {{- $cfg := .Config }}
-{{- if not $cfg.featureUserInitialize }}
-{{- fail "quay: policies.configure needs config.featureUserInitialize: true, the API its bootstrap Job creates the first user with" }}
-{{- end }}
+{{- /* A Job is immutable and this one runs once, so an existing one is left alone, unless mustnothave removes it */}}
+{{- $bootstrap := (((.Values.stack.quay.policies).configure).templates).bootstrap | default dict }}
+{{- $once := ne (lower ($bootstrap.complianceType | default "")) "mustnothave" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
+  {{- if $once }}
+  name: '{{ "{{" }} skipObject (not (empty (lookup "batch/v1" "Job" "quay-enterprise" "create-admin-user"))) {{ "}}" }}create-admin-user'
+  {{- else }}
   name: create-admin-user
+  {{- end }}
   namespace: quay-enterprise
 spec:
   template:
@@ -164,7 +168,13 @@ spec:
               BASE64AUTH=`echo -n $QUAY_ADMIN:$ADMINPASS | base64 -w0`
               # Quay can be Available on pods that have not loaded FEATURE_USER_INITIALIZE. They answer with
               # an HTML 404 that names access_token_uuid, so match the JSON key.
+              TRIES=0
               until RESULT=$(curl -X POST -sS --cacert /tmp/ca.crt https://$QUAY_HOST/api/v1/user/initialize --header 'Content-Type: application/json' --data "{ \"username\": \"${QUAY_ADMIN}\", \"password\":\"${ADMINPASS}\", \"email\": \"${QUAY_ADMIN}@example.com\", \"access_token\": true}") && echo "$RESULT" | grep -q -e '"access_token" *:' -e "non-empty database"; do
+                TRIES=$((TRIES + 1))
+                if [ $TRIES -ge 90 ]; then
+                  echo "Quay did not create the first user. Check featureUserInitialize and the authentication type."
+                  exit 1
+                fi
                 echo "Quay has not created the first user yet, retrying."
                 sleep 10
               done

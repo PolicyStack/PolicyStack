@@ -1,49 +1,31 @@
-{{- /*
-Forwards the selected log types into the LokiStack.
-
-mustonlyhave on the live spec merged with ours: musthave appends to inputRefs, so a log type taken
-out of values would still be forwarded. Outputs and pipelines merge by name, keeping the others and
-any outputRefs added to ours.
-*/ -}}
+{{- /* Forwards the selected log types into the LokiStack. */ -}}
 {{- $cfg := .Config }}
-{{- $want := fromYaml `
-managementState: Managed
-serviceAccount:
-  name: collector
-outputs:
-  - name: logging-lokistack
-    type: lokiStack
-    lokiStack:
-      target:
-        name: logging-lokistack
-        namespace: openshift-logging
-      authentication:
-        token:
-          from: serviceAccount
-    tls:
-      ca:
-        configMapName: openshift-service-ca.crt
-        key: service-ca.crt
-pipelines:
-  - name: logs-to-loki
-    outputRefs:
-      - logging-lokistack
-` }}
-{{- $_ := set (index $want.pipelines 0) "inputRefs" $cfg.forwardedLogTypes }}
 apiVersion: observability.openshift.io/v1
 kind: ClusterLogForwarder
 metadata:
   name: logging
   namespace: openshift-logging
-spec: >-
-  {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "observability.openshift.io/v1" "ClusterLogForwarder" "openshift-logging" "logging")) {{ "}}" }}
-  {{ "{{" }} $want := fromJson `{{ toJson $want | replace "`" "\\u0060" }}` {{ "}}" }}
-  {{ "{{" }} range $list := list "outputs" "pipelines" {{ "}}" }}
-  {{ "{{" }} $byName := dict {{ "}}" }}
-  {{ "{{" }} range dig $list list $spec {{ "}}" }}{{ "{{" }} $_ := set $byName .name . {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} range index $want $list {{ "}}" }}{{ "{{" }} if eq $list "pipelines" {{ "}}" }}{{ "{{" }} $_ := set . "outputRefs" (uniq (concat (dig "outputRefs" list (dig .name dict $byName)) .outputRefs)) {{ "}}" }}{{ "{{" }} end {{ "}}" }}{{ "{{" }} $_ := set $byName .name (mergeOverwrite (dig .name dict $byName) .) {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} $items := list {{ "}}" }}
-  {{ "{{" }} range $byName {{ "}}" }}{{ "{{" }} $items = append $items . {{ "}}" }}{{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} $_ := set $want $list $items {{ "}}" }}
-  {{ "{{" }} end {{ "}}" }}
-  {{ "{{" }} mergeOverwrite $spec $want | toRawJson | toLiteral {{ "}}" }}
+spec:
+  managementState: Managed
+  serviceAccount:
+    name: collector
+  outputs:
+    - name: logging-lokistack
+      type: lokiStack
+      lokiStack:
+        target:
+          name: logging-lokistack
+          namespace: openshift-logging
+        authentication:
+          token:
+            from: serviceAccount
+      tls:
+        ca:
+          configMapName: openshift-service-ca.crt
+          key: service-ca.crt
+  pipelines:
+    - name: logs-to-loki
+      inputRefs:
+        {{- toYaml $cfg.forwardedLogTypes | nindent 8 }}
+      outputRefs:
+        - logging-lokistack

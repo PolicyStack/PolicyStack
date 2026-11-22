@@ -18,6 +18,7 @@ Shipped with `enabled: false`. Turn one on in a values layer.
 | Entry | Description | Turn on with |
 |---|---|---|
 | Policy [`forwarder`](#policy-forwarder) | Forward cluster logs into Loki | `policies.forwarder.enabled: true` |
+| template `forwarder-clusterlogforwarder-exact` (needs Policy `forwarder`) | Stop forwarding log types not in values. Default changes to on in 2.0.0 | `policies.forwarder.templates.clusterlogforwarder-exact.enabled: true` |
 | Policy [`observability-ui`](#policy-observability-ui) | Logging view in the OpenShift console | `policies.observability-ui.enabled: true` |
 
 ## Settings
@@ -65,7 +66,8 @@ Standards: NIST SP 800-53. Controls: AU-6 Audit Review, Analysis, and Reporting,
 
 | Template | Action | Severity | Waits for | Renders | Description |
 |---|---|---|---|---|---|
-| `forwarder-clusterlogforwarder` | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder](converters/forwarder/clusterlogforwarder.yaml) (mustonlyhave) | ClusterLogForwarder |
+| `forwarder-clusterlogforwarder` | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder](converters/forwarder/clusterlogforwarder.yaml) | ClusterLogForwarder |
+| `forwarder-clusterlogforwarder-exact` (off) | enforce | medium | `forwarder-collector-rbac`<br>compliant while pending | [clusterlogforwarder-exact](converters/forwarder/clusterlogforwarder-exact.yaml) (mustonlyhave) | Stop forwarding log types not in values. Default changes to on in 2.0.0 |
 | `forwarder-collector` | enforce | medium |  | [collector](converters/forwarder/collector.yaml) | Collector ServiceAccount |
 | `forwarder-collector-rbac` | enforce | medium |  | [collector-rbac](converters/forwarder/collector-rbac.yaml) | Collector ClusterRoleBindings |
 

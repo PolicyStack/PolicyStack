@@ -13,9 +13,9 @@ number it carries and what upstream promises about it.
 
 | Tier | Paths | Version | Promise |
 |---|---|---|---|
-| Framework | `install/`, `lifecycle/`, `lib/`, `tools/`, `upgrades/`, the copied workflows and hooks, the root `values.yaml`, plus the surfaces in [Public API](#public-api) | `vX.Y.Z`, recorded in `/.copier-answers.yml` | A breaking change is a framework major, except where [Maturity](#maturity) lets a preview lifecycle engine change in a minor. You MUST NOT modify these paths: every framework update has to merge your edits, and a modified framework is not supported. |
+| Framework | `install/`, `lifecycle/`, `lib/`, `tools/`, `upgrades/`, the copied workflows and hooks, the root `values.yaml`, plus the surfaces in [Public API](#public-api) | `vX.Y.Z`, recorded in `/.copier-answers.yml` | A breaking change is a framework major, preview lifecycle engines included. You MUST NOT modify these paths: every framework update has to merge your edits, and a modified framework is not supported. |
 | Stable element | Each `stack/<element>` whose `Chart.yaml` sets `policystk.io/stability: stable` (`acm`, `gitops`, `upgrade`), unmodified | `vX.Y.Z`, the release it was copied from, recorded in `stack/<element>/.copier-answers.yml` | A breaking change is a framework major ([Element stability](#element-stability)). |
-| Preview element | Every other upstream element, `policystk.io/stability: preview` | Same | A framework minor MAY change values keys, Policy names or output, except the Policy names in [Public API](#public-api) item 10. The release notes say how. |
+| Preview element | Every other upstream element, `policystk.io/stability: preview` | Same | The same promise as a stable element. Preview says only that it isn't proven on live clusters ([Element stability](#element-stability)). |
 | Yours | `fleet/`, `values/`, `.github/CODEOWNERS`, `README.md`, and every element you modified, ejected or wrote | Yours | None. Upstream never writes these after the first copy, with one exception: `mise run update` applies upstream's [upgrade steps](launcher.md#upgrade-steps) to `values/` and `fleet/`, as a separate commit on the update branch that you review before merging. |
 
 An element counts as unmodified while its files equal the tag in its answers file. Once you edit
@@ -33,6 +33,30 @@ diff -r -x .copier-answers.yml -x charts -x Chart.lock /tmp/odf stack/odf # (1)!
 1.  `charts/` and `Chart.lock` are what `helm dependency update` writes, gitignored.
 
 The tiers and paths in your repository: [The repository](../concepts/overview.md#the-repository).
+
+## Unchanged values
+
+At every maturity, stable or preview, unchanged values render unchanged behaviour within a major.
+New behaviour ships off, or behind a key that defaults to the old behaviour. This covers every
+element, `lifecycle/`, `install/` and policy-library.
+
+| Change | Within a major |
+|---|---|
+| A bug fix that changes what a cluster gets | Ships opt-in. Output that failed to render, or that the API server or ACM rejected, had no behaviour to keep and is fixed directly |
+| A better default | Ships opt-in, its comment says `Default changes to <value> in <version>`, and POLICY043 warns whoever hasn't chosen. The major flips every such default together |
+| A new policy, template or element | Ships off |
+| A key, entry or Policy renamed or removed, or a template that stops accepting a value it took, ACM templates included | Not allowed: a major, after [Deprecation](#deprecation) |
+| An operator channel or version default | MAY move in a minor, named in the release notes |
+| A security fix with no compatible path | The one exception. A `fix` without `!`, with a subject that starts with `breaking:`, and release notes that say what changed and why |
+
+Formatting, comments and `description` annotations are not behaviour. Upstream CI renders the last
+release and each PR with the same values and fails on any other difference a maintainer hasn't
+approved ([Compatibility](ci.md#compatibility)).
+
+!!! example "Fixing a bug without breaking it"
+    `musthave` only adds to lists, so removing a registry from `allowedRegistries` never revoked it.
+    Replacing the template would also have removed every registry added by hand. Instead `allowlist`
+    stays as it was, `allowlist-exact` ships off, and 2.0.0 turns it on.
 
 ## Public API
 
@@ -76,19 +100,17 @@ the next major.
     `upgrades/blocked.yaml`. A rule may be narrowed or retired in a minor; a change that makes it
     fail a repository that passes today follows [Deprecation](#deprecation). A retired ID is never
     reused.
-10. **Stable elements.** Their `config` keys and types, the names of their `policies`,
-    `templates` and `operatorPolicies` entries, Policy names other elements depend on, which
-    entries are on by default, and the enforcement defaults `enabled`, `remediationAction`,
-    `complianceType` and `pruneObjectBehavior`. Also the names of other elements' Policies that a
-    stable element depends on, whatever their stability: today `odf` `ready`, which `acm`
-    observability waits for.
+10. **Elements, at every maturity.** Their `config` keys and types, the names of their `policies`,
+    `templates` and `operatorPolicies` entries, their Policy names, which entries are on by default,
+    and the enforcement defaults `enabled`, `remediationAction`, `complianceType` and
+    `pruneObjectBehavior`.
 
 ### Not covered
 
 These MAY change in any release:
 
-- Output of preview elements, even for unchanged values.
 - Internal library defines, and the internals of `tools/*.py` and `tools/*.sh`.
+- Formatting, comments and `description` annotations in rendered output.
 - Validator and launcher message text, the update plan included. Rule IDs and exit codes are
   covered; wording is not.
 - New validator warnings. A warning never fails a PR.
@@ -106,9 +128,9 @@ Upstream has one tag line, `vX.Y.Z`. Every release tag holds the framework and e
 release-please cuts it from the Conventional Commit types merged since the last one
 ([Releases](../contributing.md#releases)). The release notes list every `feat`, `fix`, `perf` and
 `revert`, each element change under the element's name (`odf:`), and every `!` change under its
-own heading. A breaking change to a preview element, or one [Maturity](#maturity) allows in a minor
-for a preview engine, has no `!`: its subject starts with `breaking:` and says what to change, under
-the element's name or `lifecycle`, so searching for `breaking:` finds every one.
+own heading. The only breaking change without `!` is the security exception in
+[Unchanged values](#unchanged-values): its subject starts with `breaking:` and says what to change,
+under the element's name or `lifecycle`, so searching for `breaking:` finds every one.
 
 | Part | Version in | Recorded in your repository |
 |---|---|---|
@@ -125,15 +147,15 @@ or on another major.
 
 ### Framework versions
 
-- **Major:** anything in [Public API](#public-api) removed, renamed or given a new meaning; a
-  breaking change to a stable element or a stable engine or platform; anything
-  [Lifecycle](#lifecycle) holds for a major at every maturity; a policy-library major; a naming or
-  `policyNamespace` change.
-- **Minor:** a new optional key, injected value, fleet key, lifecycle engine or platform, validator
-  rule, or a library minor; a new element; a compatible change to a stable element; any change to a
-  preview element, breaking ones included; an incompatible change [Maturity](#maturity) allows for a
-  preview engine.
-- **Patch:** a fix.
+- **Major:** anything in [Public API](#public-api) removed, renamed or given a new meaning; a change
+  to behaviour for unchanged values in any element, engine or platform
+  ([Unchanged values](#unchanged-values)); anything [Lifecycle](#lifecycle) holds; a policy-library
+  major; a naming or `policyNamespace` change.
+- **Minor:** a new optional key that defaults to the old behaviour, injected value, fleet key,
+  lifecycle engine or platform, validator rule, or a library minor; a new element, or a policy or
+  template that ships off; a moved operator channel or version default.
+- **Patch:** a fix that leaves behaviour for unchanged values as it was, or fixes output that failed
+  to render or was rejected, and the security exception.
 
 A floor rise in [Support](#support) is a minor.
 
@@ -147,30 +169,31 @@ annotations:
   policystk.io/stability: stable
 ```
 
-| Stability | Elements | A breaking change ships in |
-|---|---|---|
-| `stable` | `acm`, `gitops`, `upgrade` | A framework major only |
-| `preview` | Every other upstream element, and every element `tools/create-element.sh` creates | Any framework minor, except the Policy names in [Public API](#public-api) item 10. The release notes say what to change |
+| Stability | Elements | Means | A breaking change ships in |
+|---|---|---|---|
+| `stable` | `acm`, `gitops`, `upgrade` | Proven | A framework major only |
+| `preview` | Every other upstream element, and every element `tools/create-element.sh` creates | Not proven on live clusters: test it on one before production | A framework major only |
 
-For a stable element, breaking means any of:
+Breaking means any of:
 
+- Behaviour for unchanged values changed ([Unchanged values](#unchanged-values)).
 - A `config` key removed, renamed, or narrowed to fewer types or values.
 - A policy, template or operator entry renamed.
 - An enforcement default flipped.
 - The library floor raised to a new library major.
 
-A new key, a new policy or template that ships off or inform-only, a moved operator channel or
-version default, or a library floor raised within the major is a framework minor. A fix that
-leaves output for unchanged values identical, except for the bug, is a patch.
+A new key with the old behaviour as its default, a new policy or template that ships off, a moved
+operator channel or version default, or a library floor raised within the major is a framework
+minor.
 
 A preview element becomes stable in a framework minor, by changing its annotation. A stable element
 never goes back to preview within a major.
 
 ### policy-library versions
 
-- **Patch:** a fix. Output for unchanged values changes only where it was a bug: it contradicts
-  the [library reference](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#reference),
-  or ACM rejects or misapplies it. The PR names the bug.
+- **Patch:** a fix. Output for unchanged values changes only where it failed to render, or the API
+  server or ACM rejected it. The PR names the bug. A fix to any other output is a new key that
+  defaults to the old output, until the major.
 - **Minor:** a new optional key or define. Output for values that don't set it is unchanged.
 - **Major:** anything removed or renamed, or any other change to output for unchanged values. A
   library major ships only in a framework major, and never changes the naming scheme.
@@ -195,20 +218,21 @@ The order and commands: [Framework updates](../guides/upgrading.md#framework-upd
 
 ## Deprecation
 
-The **Values keys** and **Elements** rules below bind the Public API, stable elements and stable
-engines. A preview element SHOULD deprecate a key for one minor when the old key can keep working,
-and MAY rename or remove keys in any minor. `install` keys follow [Lifecycle](#lifecycle) at every
-maturity.
+These rules bind the Public API and every element and engine, whatever its maturity. `install` keys
+follow [Lifecycle](#lifecycle).
 
 - **Values keys:** a deprecated key keeps working, and the schema and POLICY035 keep accepting it,
   for at least one minor and at least 90 days. It is removed only in a major. The key's comment
   ends with `Deprecated: use <key>; removed in <version>`, and POLICY039 warns on every layer and
   fleet file that still sets it ([Deprecating a key](../develop/elements.md#deprecating-a-key-or-an-element)).
 - **Elements:** a deprecated element sets `deprecated: true` in its `Chart.yaml` and keeps working
-  until a release removes it: any later minor for a preview element, a major for a stable one.
+  until a framework major removes it.
   POLICY092 warns on every values file that turns it on. Once it is removed, updates skip it and
   list it as `removed upstream`, and an update to a new major is refused until you
   [eject](../guides/upgrading.md#skip-freeze-eject-roll-back) it to keep it as yours, or remove it.
+- **Defaults:** a default that will change keeps its value until the major. Its comment says
+  `Default changes to <value> in <version>`, and POLICY043 warns wherever it is in use and no layer
+  sets the key ([Changing a default](../develop/elements.md#changing-a-default)).
 - **Validator rules:** a new rule, or a new error case of an existing rule, that can fail a
   repository that passes today ships as a warning for at least one minor before it becomes an
   error. A rule that prevents an outage or a security problem MAY be an error at once. Rule IDs are
@@ -218,8 +242,7 @@ maturity.
   behaviour.
 
 Fixes, security fixes included, land only in the latest minor. Older minors and majors get no
-backports: to get a fix, update. For a preview element, that update brings every change to it since
-your release, breaking ones included.
+backports: to get a fix, update.
 
 ## Policy names
 
@@ -228,7 +251,7 @@ restarts its compliance history. What the cluster already has stays, unless the 
 ([Removal and pruning](../concepts/removal.md)).
 
 - Changing the naming scheme or `policyNamespace` is a framework major.
-- Renaming a policy, template or operator entry of a stable element is a framework major. The release
+- Renaming a policy, template or operator entry of any element is a framework major. The release
   notes list every Policy it recreates.
 - Element directories are never renamed. A replacement is a new element; the old one is deprecated
   and removed as in [Deprecation](#deprecation).
@@ -253,9 +276,9 @@ At every maturity, these change only in a framework major:
 Fleet files are read at `HEAD`, and each revision's `lifecycle/` rejects `install` keys it doesn't
 know. Set a new `install` key only on a fleet file whose `revision` has the release that added it.
 
-For a stable engine or platform:
+For every engine and platform, whatever its maturity:
 
-- **Patch:** a fix.
+- **Patch:** a fix, as [Unchanged values](#unchanged-values) allows one.
 - **Minor:** a new optional key, engine or platform, or a validation every existing fleet file
   already passes.
 - **Major:** any other incompatible change, such as a converter that builds a different object
@@ -274,10 +297,9 @@ HyperShift and Hive APIs.
 
 ### Maturity
 
-Stable engines and platforms follow the rules above. Apart from the rules that hold at every
-maturity, a preview one MAY change incompatibly in a framework minor: its converters, behaviour and
-defaults not fixed at create. The release notes say what to change. Promotion to stable happens in
-a minor once its build, upgrade, scale and destroy paths have been checked on live clusters.
+Every engine and platform follows the rules above. Preview says only that its build, upgrade, scale
+and destroy paths haven't been checked on live clusters. Promotion to stable happens in a minor,
+once they have.
 
 | Engine | Platform | Maturity |
 |---|---|---|
@@ -292,8 +314,8 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 | `siteconfig` | `ibi` | Preview |
 
 !!! warning "Every engine and platform is preview at 1.0"
-    Pin hub-built clusters to tags, and read the lifecycle section of every framework release's
-    notes before moving their pins ([Rolling out changes](../guides/rollout.md#choosing-a-pin)).
+    None is proven on live clusters. Pin hub-built clusters to tags, test a build and a destroy, and
+    read the lifecycle section of a release's notes before moving their pins ([Rolling out changes](../guides/rollout.md#choosing-a-pin)).
 
 ## How it is enforced
 
@@ -305,10 +327,12 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 | A hub never renders a library major it wasn't built for | The install chart injects `policystack.libraryMajors`; policy-library fails the render when its own major isn't listed |
 | Answers files say what was copied | POLICY061: every `_commit` is a `vX.Y.Z` tag, each element's names its own directory, and no element's is newer than the root's or on another major |
 | Stability is `stable` or `preview` | `tools/doc-generator.py`, run by the `element-readmes` hook, fails on any other value. It skips elements with a `.copier-answers.yml`, so in your repository it checks only elements you wrote or ejected |
-| A breaking change gets a major | Review only. The PR author marks it with `!`, a reviewer checks it, and release-please bumps the major. Upstream has no fleet files, so Render Diff shows the change only in your repository: on the update PR for clusters pinned to the default branch, and on the PR that moves a tag pin |
+| Unchanged values, unchanged output | Upstream's `compat` job renders the last release and the PR with the release's values and fails on a new difference, unless a maintainer's label approves exactly it ([Compatibility](ci.md#compatibility)). It sees what the fixtures and scenarios set, and no runtime behaviour beyond its upgrade test |
+| A breaking change gets a major | The PR author marks it with `!`, a reviewer checks it before adding the `output-change-<hash>` label the job prints, and release-please bumps the major |
+| A default that will change warns first | POLICY043 reads the comment. Review checks that there is one |
 | Deprecation windows | Review only. POLICY039 warns on a deprecated key, but doesn't check the version its comment names |
 | A new error ships as a warning first | Review only |
-| A preview break says `breaking:` | Review only. `pr-title` accepts any subject |
+| A security exception says `breaking:` | Review only. `pr-title` accepts any subject |
 | Tags never move | GitHub tag rulesets on `v*` in upstream. The launcher refuses a release tag that moved since this machine last fetched it |
 | A release commit carries only its tag | The launcher refuses a release whose commit carries a second tag, because copier would record that one. release-please tags one package |
 | Conflict markers never merge | The launcher refuses to commit one or to start while one is committed; the `check-merge-conflict` hook in `ci`, over every file except `tools/validator/crds/`; and the render in `validate` |

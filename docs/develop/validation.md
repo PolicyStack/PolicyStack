@@ -37,7 +37,7 @@ Every rule runs in one of three phases:
 | Phase | Runs | Reads | Rules |
 |---|---|---|---|
 | Chart | Once per element | The element's own `Chart.yaml`, `values.yaml` and `converters/` | POLICY021, 022, 030, 031, 040, 070, 090 |
-| Cluster | Once per element and fixture | The `helm template` output for that cascade | POLICY001, 002, 032, 033, 034, 037, 041, 042, 050, 080, 081, 082, RENDER000 |
+| Cluster | Once per element and fixture | The `helm template` output for that cascade | POLICY001, 002, 032, 033, 034, 037, 041, 042, 043, 050, 080, 081, 082, RENDER000 |
 | Repo | Once | Every element, every file under `values/`, every fleet file, `install/`, the copier answers files, the commits changed fleet files pin | POLICY003, 011, 035, 038, 039, 051, 052, 053, 060, 061, 071, 091, 092 |
 
 Cluster-phase rules see the whole cascade, so a values layer that turns a template on or changes its
@@ -134,14 +134,14 @@ failure fails the target. Passes 1 and 2 render the fixtures, so they run only w
 
 1.  **Fixtures.** Every element plus `tools/sample-element/`, which `tools/create-element.sh` copies
     for every new element and so must stay valid. Skips POLICY052 and POLICY053, because fixture
-    revisions are not real pins, and POLICY081, which pass 2 covers. It runs POLICY071, the
+    revisions are not real pins, POLICY043, because an example fleet chooses nothing, and POLICY081, which pass 2 covers. It runs POLICY071, the
     [install chart](../reference/install.md) check.
 2.  **Profiles.** The all-on run, then one run per file in `tools/validator/testdata/profiles/`.
     Together they turn every element and optional piece on, so POLICY081 and POLICY001 see every
     converter ([Profiles](#profiles)).
 3.  **Your fleet.** Only when `fleet/*.yaml` or `fleet/hubs/*.yaml` exists, which upstream never
-    has. It renders the real fleet files and is the only pass that runs POLICY052 and POLICY053
-    against real `revision` pins. POLICY053 renders each commit a changed fleet file pins, about
+    has. It renders the real fleet files and is the only pass that runs POLICY043, and POLICY052 and
+    POLICY053 against real `revision` pins. POLICY053 renders each commit a changed fleet file pins, about
     30 seconds per distinct commit. Without fixtures, it also runs POLICY071, so an adopter's copy checks
     `install/` once it has a fleet file.
 
@@ -155,6 +155,8 @@ adopter's copy prints it once, for `fleet/`.
 | `crds` | Refetches the committed [CRD schemas](#crd-schemas) in `tools/validator/crds/` from the pinned SHAs. Run it by hand after a pin changes, then commit the result |
 | `test` | Upstream only. `go test -race ./...`. Tests that need Helm skip without it. A rule ID missing from the rules table in `tools/validator/README.md` (which [Validator rules](../reference/rules.md) includes) fails |
 | `lint` | golangci-lint (`.golangci.yml`, gofmt and goimports included; `make fmt` fixes formatting), `go mod tidy -diff`, `go tool govulncheck` |
+| `compat RELEASE=<tag> [BASE=<commit>]` | Upstream only. Output for unchanged values against the release ([Compatibility](../reference/ci.md#compatibility)) |
+| `upgrade-test` | Upstream only. What `compat`'s differences move on a real config-policy-controller. Run `compat` first |
 | `ci` | Upstream only. `lint`, `validate`, `test` |
 | `deps` | `helm dependency update` for every chart that uses policy-library. Optional: `validate` runs it for any chart whose `charts/` archive is older than `lib/` |
 
@@ -371,7 +373,7 @@ and POLICY001 reach every converter:
   Example: infra-nodes `workloads` and `restore` exclude each other, so `variants.yaml` turns
   `workloads` off and `restore` on.
 
-Every rule but POLICY052, POLICY053 and POLICY071 runs on these, so an optional piece also needs its input. A
+Every rule but POLICY043, POLICY052, POLICY053 and POLICY071 runs on these, so an optional piece also needs its input. A
 converter that loops over a `config` map renders nothing when the map is empty
 ([Converter shapes](elements.md#converter-shapes)): metallb's `addressing/pools.yaml` ranges over
 `config.ipAddressPools`. With the map empty it renders `object-templates-raw: []`, and a Policy
@@ -439,10 +441,10 @@ One enforced form passes: taking an entry out of a list on a `config.openshift.i
 `musthave` can't do, since it only adds to lists. Build the whole `spec` from the live object, so
 every other field is kept:
 
-```yaml title="converter, as in stack/remediations/converters/registries/allowlist.yaml"
+```yaml title="converter, as in stack/remediations/converters/registries/allowlist-exact.yaml"
 spec: >-
   {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "config.openshift.io/v1" "Image" "" "cluster")) {{ "}}" }}
-  {{ "{{" }} $_ := set $spec "allowedRegistriesForImport" (fromJson `{{ toJson $import | replace "`" "\\u0060" }}`) {{ "}}" }}
+  {{ "{{" }} $_ := set $spec "allowedRegistriesForImport" (fromJson `{{ toJson $import }}`) {{ "}}" }}
   {{ "{{" }} $spec | toRawJson | toLiteral {{ "}}" }}
 ```
 
@@ -450,6 +452,10 @@ spec: >-
 complianceType: mustonlyhave
 metadataComplianceType: musthave
 ```
+
+Ship such a template off, beside the one it replaces
+([Changing a default](elements.md#changing-a-default)). It takes literal values only: the shipped
+converter fails on a template or a quote in them, which wouldn't survive the raw string.
 
 The first and last lines must be exactly these, naming the same object, with no other assignment to
 `$spec`. It works only in `object-templates`, not in `object-templates-raw`. The validator checks that

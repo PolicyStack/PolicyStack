@@ -23,6 +23,12 @@ stack:
       numCoresPerSocket: ""
       # vSphere memory in MiB. Empty inherits from the worker MachineSet.
       memoryMiB: ""
+      # Taints on new storage nodes. Empty uses node-role.kubernetes.io/<role>, which ODF does
+      # not tolerate. To run ODF on them set
+      # [{key: node.ocs.openshift.io/storage, value: "true", effect: NoSchedule}]. Taints are only
+      # added: remove the node-role taints from an existing MachineSet by hand.
+      # Default changes to that ODF taint in 2.0.0.
+      taints: []
       # Bare metal only: node names to designate as storage. Empty takes the first
       # `replicas` nodes instead.
       nodes: []

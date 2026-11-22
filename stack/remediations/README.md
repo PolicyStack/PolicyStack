@@ -11,6 +11,14 @@ stack:
     enabled: true
 ```
 
+## Optional pieces
+
+Shipped with `enabled: false`. Turn one on in a values layer.
+
+| Entry | Description | Turn on with |
+|---|---|---|
+| template `registries-allowlist-exact` | Revoke registries not in values. Default changes to on in 2.0.0 | `policies.registries.templates.allowlist-exact.enabled: true` |
+
 ## Settings
 
 Under `stack.remediations.config`. Maps merge across layers; lists are replaced whole.
@@ -53,7 +61,8 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SI-7 Software,
 
 | Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
-| `registries-allowlist` | enforce | high | [allowlist](converters/registries/allowlist.yaml) (mustonlyhave) | Image registry allowlist |
+| `registries-allowlist` | enforce | high | [allowlist](converters/registries/allowlist.yaml) | Image registry allowlist |
+| `registries-allowlist-exact` (off) | enforce | high | [allowlist-exact](converters/registries/allowlist-exact.yaml) (mustonlyhave) | Revoke registries not in values. Default changes to on in 2.0.0 |
 
 ### Policy `samples`
 

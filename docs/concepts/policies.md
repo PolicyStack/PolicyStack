@@ -138,7 +138,7 @@ If the guard excludes the cluster, its Policies stop reaching it, which is a rem
 
     Every Application that reads this layer renders a Placement with two predicates, `name In (<its cluster>)` OR `environment=prod`. Each prod cluster then also receives every other prod cluster's Policies, built from their values. Where both clusters render a template of the same name, ACM rejects the copy (`Template name must be unique`). The rest apply as written, so an unreviewed change on one cluster's branch can reach a cluster pinned to a tag.
 
-    The validator fails it (POLICY041), on the branch and at the commit a promotion pins (POLICY053). policy-library still renders the key, so the check protects only branches whose PRs require `ci`.
+    The validator fails it on the branch (POLICY041) and reports it at the commit a promotion pins (POLICY053, a warning until 1.2.0). policy-library still renders the key, so the check protects only branches whose PRs require `ci`.
 
 ### Lifecycle
 

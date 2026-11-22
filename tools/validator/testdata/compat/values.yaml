@@ -1,0 +1,26 @@
+# The compatibility check's templated scenario: values that are ACM templates, which a converter
+# change can stop resolving. Both sides read the release's copy, then the change's.
+stack:
+  remediations:
+    config:
+      allowedRegistries:
+        - quay.io
+        - '{{ fromConfigMap "default" "compat-site" "mirror" }}'
+      allowedRegistriesForImport:
+        - domainName: quay.io
+    policies:
+      registries:
+        enabled: true
+  loki:
+    config:
+      forwardedLogTypes:
+        - '{{ printf "%s" "application" }}'
+    policies:
+      forwarder:
+        enabled: true
+  storageNodes:
+    policies:
+      aws:
+        enabled: true
+      vmware:
+        enabled: true

@@ -50,6 +50,7 @@ var kinds = []struct {
 	{"v1", "Secret", "secrets", true},
 	{"agent-install.openshift.io/v1beta1", "Agent", "agents", true},
 	{"apps/v1", "StatefulSet", "statefulsets", true},
+	{"batch/v1", "Job", "jobs", true},
 	{"cert-manager.io/v1", "Certificate", "certificates", true},
 	{"cluster.open-cluster-management.io/v1", "ManagedCluster", "managedclusters", false},
 	{"compliance.openshift.io/v1alpha1", "ComplianceCheckResult", "compliancecheckresults", true},
@@ -87,6 +88,13 @@ var hubObjects = []runtime.Object{
 		"metadata": map[string]any{"name": "central", "namespace": "stackrox"},
 		"spec":     map[string]any{"host": "central-stackrox.apps.hub.example"},
 	}},
+}
+
+// Kinds calls fn with each kind the fake cluster serves.
+func Kinds(fn func(apiVersion, kind, plural string, namespaced bool)) {
+	for _, k := range kinds {
+		fn(k.gv, k.kind, k.plural, k.namespaced)
+	}
 }
 
 // NewResolver returns a resolver over a fake cluster holding objs.

@@ -115,6 +115,63 @@ jobs:
 
       - run: uv run --frozen --group dev --project tools/policystack pytest -q tools/policystack/tests
 
+  # A change to output for unchanged values fails unless a maintainer labels exactly that difference
+  # (docs/reference/ci.md#compatibility), and the upgrade test shows what it moves on a real
+  # config-policy-controller. Labels are read when the job runs: re-run it after adding one. The job
+  # always runs, since alls-green fails a skipped one, and has nothing to compare outside a PR.
+  compat:
+    name: compat
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0 # the release tags
+          persist-credentials: false
+
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        if: github.event_name == 'pull_request'
+        with:
+          install_args: go helm
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: compat-${{ runner.os }}-${{ hashFiles('tools/validator/go.sum', 'tools/validator/Makefile') }}
+          restore-keys: compat-${{ runner.os }}-
+
+      - name: Unchanged values, unchanged output
+        id: compat
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -o pipefail
+          LABELS=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" --paginate --jq '.[].name' | paste -sd, -)
+          export LABELS
+          git tag --merged HEAD^1 --list 'v*' --sort=-v:refname > "$RUNNER_TEMP/tags"
+          release=$(grep -Exm1 'v[0-9]+\.[0-9]+\.[0-9]+' "$RUNNER_TEMP/tags")
+          make -C tools/validator compat RELEASE="$release" BASE="$(git rev-parse HEAD^1)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upgrade from the last release
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('tools/validator/bin/compat/changes.diff') != '' }}
+        run: make -C tools/validator upgrade-test
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: compat-diff
+          path: tools/validator/bin/compat/changes.diff
+          if-no-files-found: ignore
+
   docs:
     name: docs
     runs-on: ubuntu-latest
@@ -145,7 +202,7 @@ jobs:
   upstream:
     name: upstream
     if: always()
-    needs: [library, validator, launcher, docs]
+    needs: [library, validator, launcher, compat, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

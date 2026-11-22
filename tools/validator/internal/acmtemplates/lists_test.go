@@ -42,7 +42,7 @@ func wantYAML(t *testing.T, got any, want string) {
 	}
 }
 
-// TestImageAllowlist: the rendered lists replace the live ones, so a registry taken out of values
+// TestImageAllowlist: allowlist-exact's lists replace the live ones, so a registry taken out of values
 // is revoked, and every other field of the spec is kept.
 func TestImageAllowlist(t *testing.T) {
 	const image = "apiVersion: config.openshift.io/v1\nkind: Image\nmetadata: {name: cluster}\n"
@@ -81,11 +81,6 @@ allowedRegistriesForImport: [{domainName: quay.io, insecure: false}]
 registrySources: {allowedRegistries: [quay.io], insecureRegistries: [lab.example], containerRuntimeSearchRegistries: [quay.io]}`,
 		},
 		{
-			name: "a backtick stays data", allowed: "['x`) }}{{ $spec = dict }}{{ (fromJson `']", imports: "[]",
-			live: []string{image + "spec: {additionalTrustedCA: {name: registry-cas}}\n"},
-			want: "{additionalTrustedCA: {name: registry-cas}, allowedRegistriesForImport: [], registrySources: {allowedRegistries: ['x`) }}{{ $spec = dict }}{{ (fromJson `']}}",
-		},
-		{
 			name: "every entry removed", allowed: "[]", imports: "[]",
 			live: []string{image + "spec: {registrySources: {allowedRegistries: [revoked.example]}}\n"},
 			want: "{registrySources: {allowedRegistries: []}, allowedRegistriesForImport: []}",
@@ -97,7 +92,7 @@ registrySources: {allowedRegistries: [quay.io], insecureRegistries: [lab.example
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			files := valuesFile(t, fmt.Sprintf(layer, tt.allowed, tt.imports))
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/remediations"), "remediations", files, "registries-allowlist", tt.live...), "Image", "cluster")
+			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/remediations"), "remediations", files, "registries-allowlist-exact", tt.live...), "Image", "cluster")
 			if o.ComplianceType != "mustonlyhave" {
 				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
 			}
@@ -106,7 +101,7 @@ registrySources: {allowedRegistries: [quay.io], insecureRegistries: [lab.example
 	}
 }
 
-// TestLogForwarder: inputRefs follow values, and outputs, pipelines and fields values don't set are kept.
+// TestLogForwarder: clusterlogforwarder-exact's inputRefs follow values, and outputs, pipelines and fields values don't set are kept.
 func TestLogForwarder(t *testing.T) {
 	const ours = `{name: logging-lokistack, type: lokiStack,
   lokiStack: {target: {name: logging-lokistack, namespace: openshift-logging}, authentication: {token: {from: serviceAccount}}},
@@ -145,7 +140,7 @@ pipelines:
   - {name: to-siem, inputRefs: [audit], outputRefs: [siem]}`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/loki"), "loki-spoke", files, "forwarder-clusterlogforwarder", tt.live...), "ClusterLogForwarder", "logging")
+			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/loki"), "loki-spoke", files, "forwarder-clusterlogforwarder-exact", tt.live...), "ClusterLogForwarder", "logging")
 			if o.ComplianceType != "mustonlyhave" {
 				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
 			}
@@ -154,7 +149,7 @@ pipelines:
 	}
 }
 
-// TestQuayComponents: each kind is listed once with the managed flag values set, keeping overrides,
+// TestQuayComponents: under registry-exact each kind is listed once with the managed flag values set, keeping overrides,
 // kinds values don't name and the rest of the spec.
 func TestQuayComponents(t *testing.T) {
 	files := valuesFile(t, `stack:
@@ -188,28 +183,21 @@ components:
   - {kind: quay, managed: true, overrides: {replicas: 3}}`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-registry", tt.live...), "QuayRegistry", "registry")
+			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-registry-exact", tt.live...), "QuayRegistry", "registry")
 			if o.ComplianceType != "mustonlyhave" {
 				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
 			}
 			wantYAML(t, nested(o, "spec"), tt.want)
 		})
 	}
-	// mustonlyhave on these would drop the Secret's other keys and the Namespace's labels.
-	bundle := resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-bundle")
-	for kind, name := range map[string]string{"Namespace": "quay-enterprise", "Secret": "quay-registry-config-bundle"} {
-		if got := find(t, bundle, kind, name).ComplianceType; got != "musthave" {
-			t.Errorf("%s complianceType %q, want musthave", kind, got)
-		}
-	}
 }
 
 // TestListsIdempotent: resolving over a spec a template wrote gives that spec again.
 func TestListsIdempotent(t *testing.T) {
 	for _, tt := range []struct{ element, template, kind, name string }{
-		{"remediations", "registries-allowlist", "Image", "cluster"},
-		{"loki", "forwarder-clusterlogforwarder", "ClusterLogForwarder", "logging"},
-		{"quay", "deploy-registry", "QuayRegistry", "registry"},
+		{"remediations", "registries-allowlist-exact", "Image", "cluster"},
+		{"loki", "forwarder-clusterlogforwarder-exact", "ClusterLogForwarder", "logging"},
+		{"quay", "deploy-registry-exact", "QuayRegistry", "registry"},
 	} {
 		t.Run(tt.element, func(t *testing.T) {
 			dir := filepath.Join(repoRoot, "stack", tt.element)

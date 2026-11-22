@@ -38,6 +38,7 @@ Under `stack.storageNodes.config`. Maps merge across layers; lists are replaced 
 | `numCPUs` | vSphere vCPUs. Empty inherits from the worker MachineSet. | `''` |
 | `numCoresPerSocket` | vSphere cores per socket. Empty inherits from the worker MachineSet. | `''` |
 | `memoryMiB` | vSphere memory in MiB. Empty inherits from the worker MachineSet. | `''` |
+| `taints` | Taints on new storage nodes. Empty uses node-role.kubernetes.io/&lt;role>, which ODF does not tolerate. To run ODF on them set [{key: node.ocs.openshift.io/storage, value: "true", effect: NoSchedule}]. Taints are only added: remove the node-role taints from an existing MachineSet by hand. Default changes to that ODF taint in 2.0.0. | `[]` |
 | `nodes` | Bare metal only: node names to designate as storage. Empty takes the first `replicas` nodes instead. | `[]` |
 
 ## Policies

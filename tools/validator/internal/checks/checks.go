@@ -109,6 +109,7 @@ func All() []Check {
 		&PolicySetCheck{},       // POLICY040
 		&PlacementCheck{},       // POLICY041
 		&GateCheck{},            // POLICY042
+		&DefaultChangeCheck{},   // POLICY043
 		&LabelCheck{},           // POLICY050
 		&BareMetalCheck{},       // POLICY051
 		&FleetPinCheck{},        // POLICY052 (Root, Branch set by run.buildRegistry)

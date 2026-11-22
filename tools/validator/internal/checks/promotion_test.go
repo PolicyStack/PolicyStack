@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/fixtures"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/testenv"
 )
 
-// TestPolicy053_Report: outage and safety rules block a promotion, any other error warns, and
-// warnings at the commit are left out.
+// TestPolicy053_Report: everything warns for now. Outage and safety rules say when they start to
+// fail, and warnings at the commit are left out.
 func TestPolicy053_Report(t *testing.T) {
 	clusters := []*fixtures.Cluster{
 		{Name: "prod-east-1", Revision: "v1.5.0", SourceFile: "fleet/prod-east-1.yaml"},
@@ -28,10 +29,10 @@ func TestPolicy053_Report(t *testing.T) {
 		{RuleID: "POLICY092", Severity: SevWarning, Message: "deprecated"},
 	}
 	want := []Finding{
-		{Severity: SevError, Cluster: "prod-west-1", File: "fleet/prod-west-1.yaml", Message: `revision "v1.5.0" fails RENDER000 at stack/odf/values.yaml:3: failed`},
-		{Severity: SevError, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY037: destructive`},
-		{Severity: SevError, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY041: ORed`},
-		{Severity: SevError, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY042: gate`},
+		{Severity: SevWarning, Cluster: "prod-west-1", File: "fleet/prod-west-1.yaml", Message: `revision "v1.5.0" fails RENDER000 at stack/odf/values.yaml:3: failed` + promotionNotice},
+		{Severity: SevWarning, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY037: destructive` + promotionNotice},
+		{Severity: SevWarning, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY041: ORed` + promotionNotice},
+		{Severity: SevWarning, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY042: gate` + promotionNotice},
 		{Severity: SevWarning, File: "fleet/prod-east-1.yaml", Message: `revision "v1.5.0" fails POLICY035 at values/environments/prod.yaml: typo`},
 	}
 	for i := range want {
@@ -46,12 +47,13 @@ func TestPolicy053_Report(t *testing.T) {
 	}
 }
 
-// TestPolicy053_Unreadable: a commit that can't be checked blocks, since no safety rule ran on it.
+// TestPolicy053_Unreadable: a commit that can't be checked is reported, and is to fail, since no
+// safety rule ran on it.
 func TestPolicy053_Unreadable(t *testing.T) {
 	cl := &fixtures.Cluster{Name: "prod", Revision: "v1", SourceFile: "fleet/prod.yaml"}
 	got := (&PromotionCheck{Root: t.TempDir()}).validate(t.Context(), "absent", []*fixtures.Cluster{cl})
-	if len(got) != 1 || got[0].Severity != SevError || got[0].Cluster != "prod" || got[0].File != cl.SourceFile {
-		t.Errorf("got %+v, want one error on the fleet file", got)
+	if len(got) != 1 || got[0].Severity != SevWarning || !strings.HasSuffix(got[0].Message, promotionNotice) || got[0].Cluster != "prod" || got[0].File != cl.SourceFile {
+		t.Errorf("got %+v, want one warning on the fleet file", got)
 	}
 }
 
@@ -90,19 +92,19 @@ func TestPolicy053_Promotion(t *testing.T) {
 		{name: "no revision is POLICY050's", fleet: "{}\n"},
 		{
 			name: "promotion validates the pinned tree", fleet: "revision: v2\n", rev: "v2", branch: "main",
-			want: []string{"good", `revision "v2" fails RENDER000 at marker: marker`},
+			want: []string{"good", `revision "v2" fails RENDER000 at marker: marker` + promotionNotice},
 		},
 		{
 			name: "an edit beside an unchanged pin", fleet: "revision: v1\nvalueFiles: []\n", rev: "v1",
-			want: []string{"bad", `revision "v1" fails RENDER000 at marker: marker`},
+			want: []string{"bad", `revision "v1" fails RENDER000 at marker: marker` + promotionNotice},
 		},
 		{
 			name: "a PR to another branch compares with the default", fleet: "revision: v2\n", rev: "v2", branch: "stacked", def: "main",
-			want: []string{"good", `revision "v2" fails RENDER000 at marker: marker`},
+			want: []string{"good", `revision "v2" fails RENDER000 at marker: marker` + promotionNotice},
 		},
 		{
-			name: "validator failure blocks", fleet: "revision: v2\n", rev: "v2", fail: errors.New("cannot load"),
-			want: []string{"good", `revision "v2" could not be validated: cannot load`},
+			name: "validator failure is reported", fleet: "revision: v2\n", rev: "v2", fail: errors.New("cannot load"),
+			want: []string{"good", `revision "v2" could not be validated: cannot load` + promotionNotice},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -123,8 +125,8 @@ func TestPolicy053_Promotion(t *testing.T) {
 			}
 			cl := &fixtures.Cluster{Name: "prod", Revision: tc.rev, SourceFile: filepath.Join("fleet", "prod.yaml")}
 			for _, f := range c.Run(Context{Clusters: []*fixtures.Cluster{cl}}) {
-				if f.Severity != SevError {
-					t.Errorf("severity %s, want error: %s", f.Severity, f.Message)
+				if f.Severity != SevWarning {
+					t.Errorf("severity %s, want warning: %s", f.Severity, f.Message)
 				}
 				got = append(got, f.Message)
 			}

@@ -17,7 +17,8 @@ Shipped with `enabled: false`. Turn one on in a values layer.
 
 | Entry | Description | Turn on with |
 |---|---|---|
-| Policy [`configure`](#policy-configure) | Bootstrap the registry and publish its console link (needs config.featureUserInitialize: true) | `policies.configure.enabled: true` |
+| Policy [`configure`](#policy-configure) | Bootstrap the registry and publish its console link | `policies.configure.enabled: true` |
+| template `deploy-registry-exact` | One QuayRegistry entry per component. Default changes to on in 2.0.0 | `policies.deploy.templates.registry-exact.enabled: true` |
 
 ## Settings
 
@@ -37,7 +38,7 @@ Under `stack.quay.config`. Maps merge across layers; lists are replaced whole.
 | `components.mirror` |  | `true` |
 | `components.monitoring` |  | `true` |
 | `components.tls` |  | `true` |
-| `featureUserInitialize` | Allow the first user to be created through the unauthenticated initialize API. Until a user exists, anyone who reaches the Route can claim a superuser name. While false, a new registry has no user to log in as: to create the first, set it true and turn on the configure policy in the same change. | `false` |
+| `featureUserInitialize` | Allow the first user to be created through the unauthenticated initialize API. Until a user exists, anyone who reaches the Route can claim a superuser name, so unset means only while the configure policy is on, whose Job creates that user. Set it true to create the first user yourself. | `null` |
 | `browserApiCallsXhrOnly` | Restrict browser API calls to XHR | `false` |
 | `featureUserCreation` | Allow self-service user creation | `false` |
 | `superUsers` | Quay superusers | `[quayadmin]` |
@@ -65,7 +66,7 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 ### Policy `configure`
 
-`configure-quay-<cluster>`: Bootstrap the registry and publish its console link (needs config.featureUserInitialize: true). Depends on `deploy-quay-<cluster>`. Off by default; turn on with `policies.configure.enabled: true`.
+`configure-quay-<cluster>`: Bootstrap the registry and publish its console link. Depends on `deploy-quay-<cluster>`. Off by default; turn on with `policies.configure.enabled: true`.
 
 | Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
@@ -77,8 +78,8 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 
 | Template | Action | Severity | Waits for | Renders | Description |
 |---|---|---|---|---|---|
-| `deploy-bundle` | enforce | medium |  | [bundle](converters/deploy/bundle.yaml) | Quay namespace and config bundle |
-| `deploy-registry` | enforce | medium | `install-quay-status`<br>compliant while pending | [registry](converters/deploy/registry.yaml) (mustonlyhave) | QuayRegistry |
+| `deploy-registry` | enforce | medium | `install-quay-status`<br>compliant while pending | [registry](converters/deploy/registry.yaml) | Quay namespace, config bundle and QuayRegistry |
+| `deploy-registry-exact` (off) | enforce | medium | `install-quay-status`<br>compliant while pending | [registry-exact](converters/deploy/registry-exact.yaml) (mustonlyhave) | One QuayRegistry entry per component. Default changes to on in 2.0.0 |
 
 ### Policy `install`
 

@@ -16,10 +16,14 @@ import (
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/revision"
 )
 
-// promotionBlocking are the rules whose error fails a promotion: a render failure is an outage,
-// and the others reach or destroy what they must not. Every other error at a pinned commit is a
-// warning, so a rule newer than the commit can't block a rollback to it.
+// promotionBlocking are the rules whose error is to fail a promotion: a render failure is an
+// outage, and the others reach or destroy what they must not. Every other error at a pinned commit
+// stays a warning, so a rule newer than the commit can't block a rollback to it.
 var promotionBlocking = []string{"RENDER000", "POLICY037", "POLICY041", "POLICY042"}
+
+// promotionNotice ends a warning that becomes an error. A new error ships as a warning for one
+// minor (compatibility.md#deprecation), so in 1.1 nothing here fails a run.
+const promotionNotice = " (a warning for now: an error from 1.2.0)"
 
 // PromotionCheck (POLICY053) validates the commit a changed fleet file pins. The other rules read
 // the working tree, which is not what a cluster pinned to a tag, a SHA or another branch gets.
@@ -91,9 +95,9 @@ func (c *PromotionCheck) promoted(ctx context.Context, clusters []*fixtures.Clus
 func (c *PromotionCheck) validate(ctx context.Context, commit string, clusters []*fixtures.Cluster) []Finding {
 	found, err := c.findings(ctx, commit, clusters)
 	if err != nil {
-		// Nothing at the commit was checked, so this blocks too.
-		return []Finding{{RuleID: c.ID(), Severity: SevError, Cluster: clusters[0].Name, File: clusters[0].SourceFile,
-			Message: fmt.Sprintf("revision %q could not be validated: %v", clusters[0].Revision, err)}}
+		// Nothing at the commit was checked, so this is to block too.
+		return []Finding{{RuleID: c.ID(), Severity: SevWarning, Cluster: clusters[0].Name, File: clusters[0].SourceFile,
+			Message: fmt.Sprintf("revision %q could not be validated: %v%s", clusters[0].Revision, err, promotionNotice)}}
 	}
 	return c.report(clusters, found)
 }
@@ -112,9 +116,9 @@ func (c *PromotionCheck) report(clusters []*fixtures.Cluster, found []Finding) [
 		if len(clusters) == 1 {
 			cluster = cl.Name
 		}
-		sev := SevWarning
+		notice := ""
 		if slices.Contains(promotionBlocking, f.RuleID) {
-			sev = SevError
+			notice = promotionNotice
 		}
 		where := f.RuleID
 		if f.File != "" {
@@ -123,8 +127,8 @@ func (c *PromotionCheck) report(clusters []*fixtures.Cluster, found []Finding) [
 				where += fmt.Sprintf(":%d", f.Line)
 			}
 		}
-		out = append(out, Finding{RuleID: c.ID(), Severity: sev, Element: f.Element, Cluster: cluster, File: cl.SourceFile,
-			Message: fmt.Sprintf("revision %q fails %s: %s", cl.Revision, where, f.Message)})
+		out = append(out, Finding{RuleID: c.ID(), Severity: SevWarning, Element: f.Element, Cluster: cluster, File: cl.SourceFile,
+			Message: fmt.Sprintf("revision %q fails %s: %s%s", cl.Revision, where, f.Message, notice)})
 	}
 	return out
 }

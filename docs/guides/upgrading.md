@@ -13,7 +13,7 @@ Upstream has one tag line, `vX.Y.Z`, semver. Each release tag holds the framewor
 
 Because each part has its own record, you can update them at different times: the framework to `v1.3.0` this week, `odf` next month, `acm` not at all. One rule orders them: an element is never on a newer release than the framework, so take the framework first. An element on an older release than the framework keeps working within the same major ([Versions](../reference/compatibility.md#versions)).
 
-A major breaks something you depend on, and its release notes say what to change. A stable element breaks only in a major; a preview element may break in a minor, with notes. Each element's `README.md` shows which it is ([Element stability](../reference/compatibility.md#element-stability)). Lifecycle engines and platforms are all preview.
+A major breaks something you depend on, and its release notes say what to change. Every element breaks only in a major, preview ones included. The one exception is a security fix with no compatible path, marked `breaking:` in the notes. Each element's `README.md` shows which it is ([Element stability](../reference/compatibility.md#element-stability)). Lifecycle engines and platforms are all preview.
 
 Each part reaches your clusters on its own path:
 
@@ -129,7 +129,7 @@ git push -u origin policystack/update-v1.1.0
 
 ### Upgrade steps
 
-A release that renames or moves a values key, which only a major does for a stable element, can ship an upgrade step: a file in upstream's `upgrades/` that says which key moves where. The launcher applies every step between your release and the target to your `values/` and `fleet/`, as the first commit on the update branch. It edits only the key: comments, quoting and the rest of the file stay. It never pushes and never touches a file Git doesn't track, so the change reaches clusters only when you merge the PR. A file it can't rewrite safely refuses the whole update before anything is written, and the message says what to change by hand. Format: [Upgrade steps](../reference/launcher.md#upgrade-steps).
+A release that renames or moves a values key, which only a major does, can ship an upgrade step: a file in upstream's `upgrades/` that says which key moves where. The launcher applies every step between your release and the target to your `values/` and `fleet/`, as the first commit on the update branch. It edits only the key: comments, quoting and the rest of the file stay. It never pushes and never touches a file Git doesn't track, so the change reaches clusters only when you merge the PR. A file it can't rewrite safely refuses the whole update before anything is written, and the message says what to change by hand. Format: [Upgrade steps](../reference/launcher.md#upgrade-steps).
 
 !!! example "The step in the plan above, on your layer"
 
@@ -171,7 +171,7 @@ POLICY052 checks only the major: on the update PR, a fleet file whose `revision`
 
 An element update merges upstream's changes to the element since its `_commit` with yours and moves `_commit`. Nothing outside `stack/<element>/` changes. Elements always update to the framework's release, so an element never gets ahead of it.
 
-- Read the element's entries in the release notes, prefixed with its name (`odf:`), and the Render Diff. For a preview element any minor may rename keys or Policies; search those entries for `breaking:`.
+- Read the element's entries in the release notes, prefixed with its name (`odf:`), and the Render Diff. Search those entries for `breaking:`, which only a security fix may carry within a major, and settle what POLICY043 warns about before the next major.
 - An element upstream removed (POLICY092 warned while it was deprecated) shows as `removed upstream` and stays as it is. It still works on the same major. An update to a new major is refused until you delete it (`git rm -r stack/<element>`) or eject it to keep it as yours.
 - An element you left out stays on its release and is offered again on the next update.
 

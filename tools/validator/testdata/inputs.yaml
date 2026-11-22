@@ -10,10 +10,14 @@ stack:
     policies:
       restore:
         enabled: false
-  # configure's bootstrap Job needs the initialize API, off by default.
-  quay:
+  # The values 2.0.0 defaults to (POLICY043). Compatibility renders today's defaults.
+  nfd:
     config:
-      featureUserInitialize: true
+      operandImage: ""
+      pciLabelFields: [vendor]
+  storageNodes:
+    config:
+      taints: [{key: node.ocs.openshift.io/storage, value: "true", effect: NoSchedule}]
   metallb:
     config:
       ipAddressPools: {internal: {addresses: [192.168.100.1-192.168.100.20]}}

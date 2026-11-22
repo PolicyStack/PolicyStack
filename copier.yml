@@ -42,7 +42,10 @@ _exclude:
     /tools/policystack/tests
     /tools/requirements-docs.txt
     /tools/test_doc_generator.py
+    /tools/validator/cmd/policystack-compat
+    /tools/validator/internal/compat
     /tools/validator/testdata/clusters
+    /tools/validator/testdata/compat
     /tools/validator/testdata/inputs.yaml
     /tools/validator/testdata/profiles
     {% endif %}

@@ -11,6 +11,15 @@ stack:
     enabled: true
 ```
 
+## Settings
+
+Under `stack.nfd.config`. Maps merge across layers; lists are replaced whole.
+
+| Key | Description | Default |
+|---|---|---|
+| `operandImage` | Operand image. Empty uses the operator's digest, which disconnected mirrors redirect. An existing NodeFeatureDiscovery keeps its spec.operand.image until you remove it. Default changes to empty in 2.0.0. | `registry.redhat.io/openshift4/ose-node-feature-discovery-rhel9:v4.20` |
+| `pciLabelFields` | PCI fields in the node labels: class, vendor, device, subsystem_vendor, subsystem_device. The NVIDIA GPU Operator needs [vendor], which labels GPUs pci-10de.present in place of pci-0302.present. Default changes to [vendor] in 2.0.0. | `[class]` |
+
 ## Operators
 
 Each renders into Policy `install` with `<name>-ns` and `<name>-status`. Pin with `operatorPolicies.<key>.versions` in a layer.

@@ -146,7 +146,7 @@ def changes(mirror: Path, old: str, new: str, scope: str) -> list[list[str]]:
 
 def breaking(mirror: Path, old: str, new: str, scope: str) -> bool:
     """A commit touching the scope is breaking: a Conventional Commit '!', or a subject (or its
-    description) starting with 'breaking:' (compatibility.md: preview breaks, unfixable
+    description) starting with 'breaking:' (compatibility.md: unfixable
     security fixes). A multi-scope commit flags each scope it touches."""
     paths = spec(mirror, new, scope)
     subjects = git("log", "--format=%s", f"{old}..{new}", "--", *paths, cwd=mirror)

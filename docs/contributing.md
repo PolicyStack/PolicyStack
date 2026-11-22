@@ -61,17 +61,19 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
 
 - The title is a Conventional Commit, such as `feat(validator): real POLICY080`. Squash merges make it
   the commit subject and the release-note line ([PR Title](reference/ci.md#pr-title)).
-- A breaking change is anything that changes the framework's [Public API](reference/compatibility.md#public-api),
-  a stable element's values keys or Policy names for existing users, a stable lifecycle engine, or
-  anything [Lifecycle](reference/compatibility.md#lifecycle) holds for a major at every maturity.
-  Mark it with `!` in the title: release-please reads it from the squash commit and bumps the major
-  ([Releases](#releases)).
-  Any other breaking change to a preview element or a preview lifecycle engine ships in a minor:
-  no `!`, and a subject that starts with `breaking:` and says what to change, such as
-  `feat(odf): breaking: rename config.pools to config.ipAddressPools` or
-  `feat(lifecycle): breaking: ...`. The notes then list it under `odf:` with a subject starting
-  `breaking:`, which adopters search for
-  ([Element stability](reference/compatibility.md#element-stability)).
+- Unchanged values keep their behaviour at every maturity
+  ([Unchanged values](reference/compatibility.md#unchanged-values)). Ship a change as a key that
+  defaults to the old behaviour or a template with `enabled: false`
+  ([Changing a default](develop/elements.md#changing-a-default)).
+- List each behaviour change in the PR with the compatible path you took. Agree any break, and any
+  validator rule that errors from the start, with a maintainer before writing it. A break is a
+  framework major, marked `!` in the title: release-please reads it from the squash commit
+  ([Releases](#releases)). The one exception is a security fix with no compatible path, such as
+  `fix(quay): breaking: ...`.
+- Before a converter change is done, run `make -C tools/validator compat RELEASE=<last tag> BASE=main`,
+  then `make -C tools/validator upgrade-test` ([Compatibility](reference/ci.md#compatibility)). When
+  the converter reads a value not yet in `tools/validator/testdata/compat/`, add it there as an ACM
+  template, and what it would overwrite to `seed.yaml`.
 - `ci`, `upstream` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`: any
   member of `@PolicyStack/maintainers`.
 - Update `docs/` in the same PR.
@@ -164,15 +166,15 @@ A library change is one PR:
 
 1. Change `lib/policy-library`, and in the same PR the elements, validator and docs that depend on it.
 2. Bump `version` in `lib/policy-library/Chart.yaml`. Patch: a fix, which may change output only
-   where it was a bug. Minor: a new optional key or define. Major: anything removed or renamed, or
+   where it failed to render or was rejected. Minor: a new optional key or define. Major: anything removed or renamed, or
    any other change to output for unchanged values
    ([policy-library versions](reference/compatibility.md#policy-library-versions)). `ct lint`
    in the [Upstream](reference/ci.md#upstream) `library` job fails a PR that changes
    `lib/policy-library` without a bump.
 3. An element that needs the new minor raises its floor to `^4.N.0`. The others keep theirs.
 4. Run the suites and commit the updated snapshots (`lib/tests/**/__snapshot__`). A snapshot diff
-   for values that don't use a new key means the change is a major, unless the PR names the bug
-   the diff fixes.
+   for values that don't use a new key means the change is a major, unless the old output failed
+   to render or was rejected.
 
     ```sh
     helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test
@@ -289,7 +291,7 @@ Rendered for fixture `hcp-kubevirt`, Policy `present-lifecycle-hcp-kubevirt` hol
 6.  **Engine-specific code.** Check each and extend it if the engine needs it:
     `lifecycle.releaseImage` picks `-x86_64` for `siteconfig` and `-multi` for every other engine;
     POLICY052 checks only that a pinned revision has `lifecycle/converters/_hypershift/`, so a fleet
-    file pinned to a revision without the new engine fails to render, which CI catches only when that
+    file pinned to a revision without the new engine fails to render, which CI reports only when that
     fleet file changes (POLICY053); POLICY051
     reads only `install.siteconfig.nodes`.
 

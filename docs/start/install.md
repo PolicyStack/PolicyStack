@@ -238,7 +238,7 @@ committed; nothing pushed
 
 An element may be older than your framework, never newer: a newer one may need framework code you don't have, and POLICY061 fails it. So `add` always copies at your framework's `_commit`, and refuses an element that first ships in a later release, naming the release to update the framework to first ([Framework updates](../guides/upgrading.md#framework-updates)).
 
-Each element is either stable or preview, shown in the picker and at the top of its `README.md`. A preview element may change incompatibly in a framework minor ([Element stability](../reference/compatibility.md#element-stability)). Each element's settings are in its `README.md`.
+Each element is either stable or preview, shown in the picker and at the top of its `README.md`. Both keep the same compatibility promise. Preview means not proven on live clusters ([Element stability](../reference/compatibility.md#element-stability)). Each element's settings are in its `README.md`.
 
 Elements you write yourself also go under `stack/`, without an answers file ([Writing an element](../develop/elements.md)).
 

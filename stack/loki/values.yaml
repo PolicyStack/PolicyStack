@@ -77,7 +77,15 @@ stack:
 
           clusterlogforwarder:
             description: "ClusterLogForwarder"
-            # musthave appends to lists, so removing a log type would never stop forwarding it
+            extraDependencies:
+              - name: collector-rbac
+            ignorePending: true
+
+          clusterlogforwarder-exact:
+            # clusterlogforwarder only adds. This also stops forwarding every log type not in
+            # forwardedLogTypes, and takes literal values only. Default changes to true in 2.0.0.
+            enabled: false
+            description: "Stop forwarding log types not in values. Default changes to on in 2.0.0"
             complianceType: mustonlyhave
             metadataComplianceType: musthave
             extraDependencies:

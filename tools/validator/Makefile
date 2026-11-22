@@ -14,7 +14,7 @@ INPUTS := tools/validator/testdata/inputs.yaml
 # Every chart that depends on policy-library, TestConformance's fixture included.
 CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(ROOT)/lifecycle $(ROOT)/tools/sample-element internal/chart/testdata/element
 
-.PHONY: build test lint fmt clean run tidy deps crds validate preview ci
+.PHONY: build test lint fmt clean run tidy deps crds validate preview ci compat upgrade-test
 
 # CRDs POLICY080 validates rendered objects against, at the ACM 2.16 floor (docs/develop/validation.md#crd-schemas),
 # committed in crds/ so validate runs offline. Upstream's Renovate bumps each SHA to its branch head;
@@ -78,16 +78,17 @@ crds:
 #    testdata/profiles file alone (docs/develop/validation.md#profiles). In CI, sort -u drops the
 #    annotations two runs both report.
 # 3. A copy's real fleet, when it has one. Upstream ships none. POLICY052 (fleet pins) and
-#    POLICY053 (promoted commits) run here only: the fixtures' revisions are not real pins.
+#    POLICY053 (promoted commits) run here only: the fixtures' revisions are not real pins. Nor
+#    is an example fleet's silence a choice, so POLICY043 (defaults a major changes) runs here only.
 validate: build
 	@cd $(ROOT) && failed=0; skip=; \
 	if [ -d $(FIXTURES) ]; then \
 	  skip="--skip POLICY071"; \
-	  $(VALIDATOR) --extra-values $(BASELINE) --include-sample-element --skip POLICY052,POLICY053,POLICY081 || failed=1; \
+	  $(VALIDATOR) --extra-values $(BASELINE) --include-sample-element --skip POLICY043,POLICY052,POLICY053,POLICY081 || failed=1; \
 	  acm=$$(mktemp); \
-	  $(VALIDATOR) --all-on --extra-values $(BASELINE),$(INPUTS) --include-sample-element --skip POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
+	  $(VALIDATOR) --all-on --extra-values $(BASELINE),$(INPUTS) --include-sample-element --skip POLICY043,POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
 	  for p in tools/validator/testdata/profiles/*.yaml; do \
-	    $(VALIDATOR) --extra-values "$(BASELINE),$$p" --include-sample-element --skip POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
+	    $(VALIDATOR) --extra-values "$(BASELINE),$$p" --include-sample-element --skip POLICY043,POLICY052,POLICY053,POLICY071 >> "$$acm" || failed=1; \
 	  done; \
 	  $(if $(CI),sort -u,cat) "$$acm"; rm -f "$$acm"; \
 	fi; \
@@ -111,6 +112,33 @@ preview: build
 	  $$([ -d $(FIXTURES) ] || echo --fixtures-dir fleet) --only RENDER000,POLICY081 --render-dir "$$dir" --evaluate || failed=1; \
 	find "$$dir" -name '*.yaml' | sort | $(if $(CLUSTER),xargs tail -n +1,cat); \
 	exit $$failed
+
+# Upstream only, as test is (docs/reference/ci.md#compatibility). compat renders the RELEASE tag or
+# commit and the working tree with the release's values, and fails on a difference BASE doesn't
+# already have and no label in LABELS approves. upgrade-test then applies both sides of each
+# difference on the config-policy-controller CPC_SHA pins.
+COMPAT_OUT ?= $(abspath bin/compat)
+CPC := bin/config-policy-controller-$(CPC_SHA)
+# envtest's API server, the Kubernetes of the OpenShift 4.21 in ACM 2.16's range.
+ENVTEST_K8S ?= 1.34.1
+
+compat:
+	@test -n "$(RELEASE)" || { echo "usage: make compat RELEASE=<tag> [BASE=<commit>] [LABELS=<a,b>]"; exit 2; }
+	@mkdir -p bin && go build -trimpath -o bin/policystack-compat ./cmd/policystack-compat && rm -rf "$(COMPAT_OUT)"
+	@cd $(ROOT) && rc=0; $(abspath bin/policystack-compat) --release "$(RELEASE)" --base "$(BASE)" --labels "$$LABELS" --out "$(COMPAT_OUT)" || rc=$$?; \
+	if [ -d "$(COMPAT_OUT)/release" ]; then diff -ru "$(COMPAT_OUT)/release" "$(COMPAT_OUT)/after" > "$(COMPAT_OUT)/changes.diff" || true; echo "Full diff: $(COMPAT_OUT)/changes.diff"; fi; \
+	exit $$rc
+
+$(CPC):
+	@mkdir -p bin && tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && \
+	dir=$$(cd "$$tmp" && go mod download -json github.com/stolostron/config-policy-controller@$(CPC_SHA) | jq -er .Dir) && \
+	GOFLAGS=-mod=readonly CGO_ENABLED=0 go build -C "$$dir" -o "$(abspath $@)" .
+
+upgrade-test: $(CPC)
+	@test -f "$(COMPAT_OUT)/changes.json" || { echo "run make compat first"; exit 2; }
+	@assets=$$(go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$$(go list -m -f '{{.Version}}' sigs.k8s.io/controller-runtime) use $(ENVTEST_K8S) --bin-dir "$(abspath bin/envtest)" -p path) && \
+	KUBEBUILDER_ASSETS="$$assets" UPGRADE_CHANGES="$(COMPAT_OUT)/changes.json" UPGRADE_CONTROLLER="$(abspath $(CPC))" \
+	  go test ./internal/compat -run '^TestUpgrade$$' -count=1 -parallel 4 -timeout 40m -v
 
 # test reads upstream's test data, which copier leaves out of a copy, so test and ci run upstream only.
 ci: lint validate test

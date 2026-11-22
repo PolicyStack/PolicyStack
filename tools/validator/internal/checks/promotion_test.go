@@ -81,8 +81,8 @@ func TestPolicy053_Promotion(t *testing.T) {
 
 	for _, tc := range []struct {
 		name, fleet, rev, branch, def string
-		fail                     error
-		want                     []string // the trees validated, then the messages reported
+		fail                          error
+		want                          []string // the trees validated, then the messages reported
 	}{
 		{name: "unchanged pin", fleet: "revision: v1\n", rev: "v1"},
 		{name: "pin of HEAD", fleet: "revision: main\n", rev: "main", branch: "main"},

@@ -8,6 +8,7 @@ repos:
     hooks:
       # Helm templates and converters are not YAML until rendered; snapshots are generated.
       - id: check-yaml
+        args: [--allow-multiple-documents]
         exclude: &unrendered (^|/)(templates|converters|__snapshot__)/
       - id: trailing-whitespace
         exclude: *unrendered

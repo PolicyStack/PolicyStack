@@ -57,6 +57,9 @@ type Options struct {
 	// BaseBranch is the branch the checked-out HEAD lands on, such as a PR's base branch. POLICY052
 	// resolves a revision naming it to HEAD.
 	BaseBranch string
+	// DefaultBranch is the branch Argo CD reads fleet files from. POLICY053 compares fleet files
+	// with it, or with BaseBranch when empty.
+	DefaultBranch string
 	// Element, when set, checks and renders only the chart of that name, and keeps only its findings
 	// from the repo-wide checks, which still see every element. Cluster, when set, renders only the
 	// fleet file of that name.
@@ -660,6 +663,10 @@ func buildRegistry(opts Options, runner *render.Runner, crds checks.CRDs) []chec
 		case *checks.FleetPinCheck:
 			v.Root, v.Branch = opts.RepoRoot, opts.BaseBranch
 			out = append(out, v)
+		case *checks.PromotionCheck:
+			v.Root, v.Branch, v.DefaultBranch, v.Fleet = opts.RepoRoot, opts.BaseBranch, opts.DefaultBranch, opts.FixturesDir
+			v.Validate = validateTree(opts)
+			out = append(out, v)
 		case *checks.CRDSchemaCheck:
 			v.CRDs = crds
 			out = append(out, v)
@@ -668,6 +675,31 @@ func buildRegistry(opts Options, runner *render.Runner, crds checks.CRDs) []chec
 		}
 	}
 	return out
+}
+
+// treeSkip are the rules the run on the working tree covers for a promoted commit: the fleet files
+// and install/ are read from that tree, whatever the pin.
+var treeSkip = []string{"POLICY050", "POLICY051", "POLICY052", "POLICY053", "POLICY071"}
+
+// validateTree returns checks.PromotionCheck's Validate: a run over another tree and fleet
+// directory, with this binary's rules and schemas.
+func validateTree(opts Options) func(ctx context.Context, root, fleet string) ([]checks.Finding, error) {
+	return func(ctx context.Context, root, fleet string) ([]checks.Finding, error) {
+		res, err := Run(ctx, Options{
+			RepoRoot:     root,
+			StackDir:     filepath.Join(root, "stack"),
+			LifecycleDir: filepath.Join(root, "lifecycle"),
+			ValuesDir:    filepath.Join(root, "values"),
+			FixturesDir:  fleet,
+			HelmBin:      opts.HelmBin,
+			CRDsDir:      opts.CRDsDir,
+			ExtraValues:  opts.ExtraValues,
+			Skip:         slices.Concat(opts.Skip, treeSkip),
+			Jobs:         opts.Jobs,
+			Logger:       opts.Logger,
+		})
+		return res.Findings, err
+	}
 }
 
 // filterRules applies --only, else --skip. An unknown ID is an error: a typo would otherwise run

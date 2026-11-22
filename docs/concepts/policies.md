@@ -107,12 +107,12 @@ Check with `oc get managedclustersetbinding global -n pstack`. Without it, each 
 
 ### Overriding the Placement
 
-A top-level `placement:` key in any values layer merges into the generated spec ([policy-library Placement](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#placement)). It applies to every element's Placement for every cluster reading that layer. POLICY080 checks the rendered Placement against its CRD (unknown fields, types), but nothing checks what the keys do, so a wrong selector shows up only on the hub.
+A top-level `placement:` key in any values layer merges into the generated spec ([policy-library Placement](https://github.com/PolicyStack/PolicyStack/blob/main/lib/policy-library/README.md#placement)). It applies to every element's Placement for every cluster reading that layer. POLICY080 checks the rendered Placement against its CRD (unknown fields, types) and POLICY041 rejects `predicates`. Nothing checks what the other keys select, so a wrong one shows up only on the hub.
 
 | Key | Effect |
 |---|---|
 | `claimSelector`, `celSelector` | ANDed into the generated predicate. Can only narrow the selection to this cluster or to nothing, so use them as a guard, such as "only on AWS clusters". |
-| `predicates` | Appended as extra predicates, which ACM ORs with the generated one. Almost always a mistake (below). |
+| `predicates` | Appended as extra predicates, which ACM ORs with the generated one. CI fails it (POLICY041, below). |
 | `tolerations` | Replaces the default tolerations. |
 | Any other `Placement.spec` field | Passed through. Fields such as `numberOfClusters` or `spreadPolicy` change nothing with one cluster. |
 
@@ -136,7 +136,9 @@ If the guard excludes the cluster, its Policies stop reaching it, which is a rem
             matchLabels: {environment: prod}
     ```
 
-    Every Application that reads this layer renders a Placement with two predicates, `name In (<its cluster>)` OR `environment=prod`. Each prod cluster then also receives every other prod cluster's Policies, built from their values. Their template names collide with its own, which ACM rejects (`Template name must be unique`).
+    Every Application that reads this layer renders a Placement with two predicates, `name In (<its cluster>)` OR `environment=prod`. Each prod cluster then also receives every other prod cluster's Policies, built from their values. Where both clusters render a template of the same name, ACM rejects the copy (`Template name must be unique`). The rest apply as written, so an unreviewed change on one cluster's branch can reach a cluster pinned to a tag.
+
+    The validator fails it (POLICY041), on the branch and at the commit a promotion pins (POLICY053). policy-library still renders the key, so the check protects only branches whose PRs require `ci`.
 
 ### Lifecycle
 

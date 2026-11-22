@@ -107,9 +107,12 @@ func All() []Check {
 		&SourceCheck{},          // POLICY038
 		&DeprecatedKeyCheck{},   // POLICY039
 		&PolicySetCheck{},       // POLICY040
+		&PlacementCheck{},       // POLICY041
+		&GateCheck{},            // POLICY042
 		&LabelCheck{},           // POLICY050
 		&BareMetalCheck{},       // POLICY051
 		&FleetPinCheck{},        // POLICY052 (Root, Branch set by run.buildRegistry)
+		&PromotionCheck{},       // POLICY053 (fields set by run.buildRegistry)
 		&PinningCheck{},         // POLICY060
 		&AnswersCheck{},         // POLICY061 (Root set by run.buildRegistry)
 		&LintCheck{},            // POLICY070 (Runner set by run.buildRegistry)

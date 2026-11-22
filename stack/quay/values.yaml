@@ -17,8 +17,11 @@ stack:
         mirror: true
         monitoring: true
         tls: true
-      # Allow the first user to be created through the initialize API
-      featureUserInitialize: true
+      # Allow the first user to be created through the unauthenticated initialize API. Until a
+      # user exists, anyone who reaches the Route can claim a superuser name. While false, a new
+      # registry has no user to log in as: to create the first, set it true and turn on the
+      # configure policy in the same change.
+      featureUserInitialize: false
       # Restrict browser API calls to XHR
       browserApiCallsXhrOnly: false
       # Allow self-service user creation
@@ -61,16 +64,23 @@ stack:
         dependencies:
           - name: install
         templates:
+          bundle:
+            description: "Quay namespace and config bundle"
+
           registry:
-            description: "Quay namespace, config bundle and QuayRegistry"
+            description: "QuayRegistry"
+            # musthave appends to lists, so changing a component would list it twice
+            complianceType: mustonlyhave
+            metadataComplianceType: musthave
             waitForOperator: quay
 
-      # Run the one-shot bootstrap Job and publish the console link. Opt-in: the Job is
+      # Run the one-shot bootstrap Job and publish the console link. Needs
+      # config.featureUserInitialize: true. Opt-in: the Job is
       # opinionated (it creates an initial user, org and repo). It verifies Quay's route
       # against the default ingress certificate and the cluster trust bundle.
       configure:
         enabled: false
-        description: "Bootstrap the registry and publish its console link"
+        description: "Bootstrap the registry and publish its console link (needs config.featureUserInitialize: true)"
         severity: low
         dependencies:
           - name: deploy

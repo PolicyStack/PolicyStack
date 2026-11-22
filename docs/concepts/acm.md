@@ -144,7 +144,7 @@ The OperatorPolicy owns approval: ACM rejects an OperatorPolicy whose `subscript
 | `enforce` | Policy | Creates, patches or deletes objects until they match, and approves InstallPlans. |
 | `InformOnly` | One template | Keeps that template `inform` even when its Policy enforces. |
 
-The Policy's `remediationAction` overrides the action of every template inside it. The only exception is a template set to `InformOnly`, which the add-on turns into `inform` on the cluster. Use it for checks that must never act: a readiness check, or a `mustnothave` that should report an object rather than delete it (the compliance element's findings templates are `mustnothave` ComplianceCheckResults; enforced, ACM would delete the scan results).
+The Policy's `remediationAction` overrides the action of every template inside it. The only exception is a template set to `InformOnly`, which the add-on turns into `inform` on the cluster. A values layer that clears it on an element's gate fails CI (POLICY042). Use it for checks that must never act: a readiness check, or a `mustnothave` that should report an object rather than delete it (the compliance element's findings templates are `mustnothave` ComplianceCheckResults; enforced, ACM would delete the scan results).
 
 Which action each Policy gets, and how to force every Policy to `inform` for a dry run, is on [Inform or enforce](elements.md#inform-or-enforce).
 

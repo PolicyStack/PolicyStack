@@ -1,18 +1,24 @@
 {{- /*
 Restricts where the cluster may pull and import images from. The registry lists differ per
 environment, so they come from the values cascade.
+
+mustonlyhave on the live spec with only the two lists replaced: musthave appends to lists, so a
+registry taken out of values would stay allowed, and the disconnected element's additionalTrustedCA
+lives in the same spec.
 */ -}}
 {{- $cfg := .Config }}
+{{- $import := list }}
+{{- range $r := $cfg.allowedRegistriesForImport }}
+{{- $import = append $import (dict "domainName" $r.domainName "insecure" ($r.insecure | default false)) }}
+{{- end }}
 apiVersion: config.openshift.io/v1
 kind: Image
 metadata:
   name: cluster
-spec:
-  allowedRegistriesForImport:
-    {{- range $r := $cfg.allowedRegistriesForImport }}
-    - domainName: {{ $r.domainName }}
-      insecure: {{ $r.insecure | default false }}
-    {{- end }}
-  registrySources:
-    allowedRegistries:
-      {{- toYaml $cfg.allowedRegistries | nindent 6 }}
+spec: >-
+  {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "config.openshift.io/v1" "Image" "" "cluster")) {{ "}}" }}
+  {{ "{{" }} $_ := set $spec "allowedRegistriesForImport" (fromJson `{{ toJson $import | replace "`" "\\u0060" }}`) {{ "}}" }}
+  {{ "{{" }} $sources := dig "registrySources" dict $spec {{ "}}" }}
+  {{ "{{" }} $_ := set $sources "allowedRegistries" (fromJson `{{ $cfg.allowedRegistries | default list | toJson | replace "`" "\\u0060" }}`) {{ "}}" }}
+  {{ "{{" }} $_ := set $spec "registrySources" $sources {{ "}}" }}
+  {{ "{{" }} $spec | toRawJson | toLiteral {{ "}}" }}

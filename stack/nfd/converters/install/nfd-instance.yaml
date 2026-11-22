@@ -1,3 +1,7 @@
+{{- /*
+PCI devices are labelled by vendor (pci-10de.present), which the NVIDIA GPU Operator selects on.
+No operand image: the operator uses the digest in its CSV, which disconnected mirrors redirect.
+*/ -}}
 apiVersion: nfd.openshift.io/v1
 kind: NodeFeatureDiscovery
 metadata:
@@ -7,7 +11,6 @@ spec:
   enableTaints: false
   instance: ''
   operand:
-    image: registry.redhat.io/openshift4/ose-node-feature-discovery-rhel9:v4.20
     imagePullPolicy: Always
     servicePort: 0
   prunerOnDelete: false
@@ -57,4 +60,4 @@ spec:
             - "0302"
             - "12"
           deviceLabelFields:
-            - "class"
+            - "vendor"

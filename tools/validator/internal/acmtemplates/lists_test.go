@@ -1,10 +1,8 @@
 package acmtemplates
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -42,184 +40,49 @@ func wantYAML(t *testing.T, got any, want string) {
 	}
 }
 
-// TestImageAllowlist: the rendered lists replace the live ones, so a registry taken out of values
-// is revoked, and every other field of the spec is kept.
-func TestImageAllowlist(t *testing.T) {
-	const image = "apiVersion: config.openshift.io/v1\nkind: Image\nmetadata: {name: cluster}\n"
-	const layer = `stack:
-  remediations:
-    config:
-      allowedRegistries: %s
-      allowedRegistriesForImport: %s
-`
-	for _, tt := range []struct {
-		name, allowed, imports, want string
-		live                         []string
-	}{
-		{
-			name: "absent", allowed: "[quay.io]", imports: "[{domainName: quay.io}]",
-			want: "{registrySources: {allowedRegistries: [quay.io]}, allowedRegistriesForImport: [{domainName: quay.io, insecure: false}]}",
-		},
-		{
-			name: "no spec", allowed: "[quay.io]", imports: "[]", live: []string{image},
-			want: "{registrySources: {allowedRegistries: [quay.io]}, allowedRegistriesForImport: []}",
-		},
-		{
-			name: "revoked and others kept", allowed: "[quay.io]", imports: "[{domainName: quay.io}]",
-			live: []string{image + `spec:
-  additionalTrustedCA: {name: registry-cas}
-  externalRegistryHostnames: [registry.example.com]
-  allowedRegistriesForImport: [{domainName: revoked.example, insecure: true}, {domainName: quay.io, insecure: false}]
-  registrySources:
-    allowedRegistries: [revoked.example, quay.io]
-    insecureRegistries: [lab.example]
-    containerRuntimeSearchRegistries: [quay.io]
-`},
-			want: `additionalTrustedCA: {name: registry-cas}
-externalRegistryHostnames: [registry.example.com]
-allowedRegistriesForImport: [{domainName: quay.io, insecure: false}]
-registrySources: {allowedRegistries: [quay.io], insecureRegistries: [lab.example], containerRuntimeSearchRegistries: [quay.io]}`,
-		},
-		{
-			name: "a backtick stays data", allowed: "['x`) }}{{ $spec = dict }}{{ (fromJson `']", imports: "[]",
-			live: []string{image + "spec: {additionalTrustedCA: {name: registry-cas}}\n"},
-			want: "{additionalTrustedCA: {name: registry-cas}, allowedRegistriesForImport: [], registrySources: {allowedRegistries: ['x`) }}{{ $spec = dict }}{{ (fromJson `']}}",
-		},
-		{
-			name: "every entry removed", allowed: "[]", imports: "[]",
-			live: []string{image + "spec: {registrySources: {allowedRegistries: [revoked.example]}}\n"},
-			want: "{registrySources: {allowedRegistries: []}, allowedRegistriesForImport: []}",
-		},
-		{
-			name: "null lists", allowed: "null", imports: "null",
-			want: "{registrySources: {allowedRegistries: []}, allowedRegistriesForImport: []}",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			files := valuesFile(t, fmt.Sprintf(layer, tt.allowed, tt.imports))
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/remediations"), "remediations", files, "registries-allowlist", tt.live...), "Image", "cluster")
-			if o.ComplianceType != "mustonlyhave" {
-				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
-			}
-			wantYAML(t, nested(o, "spec"), tt.want)
-		})
-	}
-}
-
-// TestLogForwarder: inputRefs follow values, and outputs, pipelines and fields values don't set are kept.
+// TestLogForwarder: the spec is exactly what values render, so a log type taken out stops forwarding.
 func TestLogForwarder(t *testing.T) {
-	const ours = `{name: logging-lokistack, type: lokiStack,
-  lokiStack: {target: {name: logging-lokistack, namespace: openshift-logging}, authentication: {token: {from: serviceAccount}}},
-  tls: {ca: {configMapName: openshift-service-ca.crt, key: service-ca.crt}}}`
-	const live = `apiVersion: observability.openshift.io/v1
-kind: ClusterLogForwarder
-metadata: {name: logging, namespace: openshift-logging}
-spec:
-  managementState: Unmanaged
-  serviceAccount: {name: collector}
-  collector: {tolerations: [{key: node-role.kubernetes.io/infra, operator: Exists}]}
-  outputs:
-    - ` + ours + `
-    - {name: siem, type: syslog}
-  pipelines:
-    - {name: logs-to-loki, inputRefs: [application, audit, infrastructure], outputRefs: [logging-lokistack, siem], filterRefs: [parse]}
-    - {name: to-siem, inputRefs: [audit], outputRefs: [siem]}
-`
 	files := valuesFile(t, "stack: {loki: {config: {forwardedLogTypes: [application]}}}\n")
-	for _, tt := range []struct {
-		name, want string
-		live       []string
-	}{
-		{name: "absent", want: `managementState: Managed
-serviceAccount: {name: collector}
-outputs: [` + ours + `]
-pipelines: [{name: logs-to-loki, inputRefs: [application], outputRefs: [logging-lokistack]}]`},
-		{name: "revoked and others kept", live: []string{live}, want: `managementState: Managed
-serviceAccount: {name: collector}
-collector: {tolerations: [{key: node-role.kubernetes.io/infra, operator: Exists}]}
-outputs:
-  - ` + ours + `
-  - {name: siem, type: syslog}
-pipelines:
-  - {name: logs-to-loki, inputRefs: [application], outputRefs: [logging-lokistack, siem], filterRefs: [parse]}
-  - {name: to-siem, inputRefs: [audit], outputRefs: [siem]}`},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/loki"), "loki-spoke", files, "forwarder-clusterlogforwarder", tt.live...), "ClusterLogForwarder", "logging")
-			if o.ComplianceType != "mustonlyhave" {
-				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
-			}
-			wantYAML(t, nested(o, "spec"), tt.want)
-		})
+	o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/loki"), "loki-spoke", files, "forwarder-clusterlogforwarder"), "ClusterLogForwarder", "logging")
+	if o.ComplianceType != "mustonlyhave" {
+		t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
 	}
+	wantYAML(t, nested(o, "spec"), `managementState: Managed
+serviceAccount: {name: collector}
+outputs:
+  - name: logging-lokistack
+    type: lokiStack
+    lokiStack: {target: {name: logging-lokistack, namespace: openshift-logging}, authentication: {token: {from: serviceAccount}}}
+    tls: {ca: {configMapName: openshift-service-ca.crt, key: service-ca.crt}}
+pipelines: [{name: logs-to-loki, inputRefs: [application], outputRefs: [logging-lokistack]}]`)
 }
 
-// TestQuayComponents: each kind is listed once with the managed flag values set, keeping overrides,
-// kinds values don't name and the rest of the spec.
+// TestQuayComponents: every kind is listed once with the managed flag values set, so the operator
+// has none to add and a changed flag replaces the old entry.
 func TestQuayComponents(t *testing.T) {
-	files := valuesFile(t, `stack:
-  quay:
-    config:
-      components: {quay: true, clair: false, postgres: false, clairpostgres: null, objectstorage: null,
-        redis: null, horizontalpodautoscaler: null, route: null, mirror: null, monitoring: null, tls: null}
-`)
-	const live = `apiVersion: quay.redhat.com/v1
-kind: QuayRegistry
-metadata: {name: registry, namespace: quay-enterprise}
-spec:
-  configBundleSecret: changed-by-hand
-  components:
-    - {kind: postgres, managed: false}
-    - {kind: postgres, managed: true, overrides: {volumeSize: 100Gi}}
-    - {kind: quay, managed: false, overrides: {replicas: 3}}
-    - {kind: cache, managed: false}
-`
-	for _, tt := range []struct {
-		name, want string
-		live       []string
-	}{
-		{name: "absent", want: `configBundleSecret: quay-registry-config-bundle
-components: [{kind: clair, managed: false}, {kind: postgres, managed: false}, {kind: quay, managed: true}]`},
-		{name: "changed and others kept", live: []string{live}, want: `configBundleSecret: quay-registry-config-bundle
-components:
-  - {kind: cache, managed: false}
-  - {kind: clair, managed: false}
-  - {kind: postgres, managed: false, overrides: {volumeSize: 100Gi}}
-  - {kind: quay, managed: true, overrides: {replicas: 3}}`},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-registry", tt.live...), "QuayRegistry", "registry")
-			if o.ComplianceType != "mustonlyhave" {
-				t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
-			}
-			wantYAML(t, nested(o, "spec"), tt.want)
-		})
+	files := valuesFile(t, "stack: {quay: {config: {components: {clair: false, postgres: false}}}}\n")
+	o := find(t, resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-registry"), "QuayRegistry", "registry")
+	if o.ComplianceType != "mustonlyhave" {
+		t.Errorf("complianceType %q, want mustonlyhave", o.ComplianceType)
 	}
+	wantYAML(t, nested(o, "spec"), `configBundleSecret: quay-registry-config-bundle
+components:
+  - {kind: clair, managed: false}
+  - {kind: clairpostgres, managed: true}
+  - {kind: horizontalpodautoscaler, managed: true}
+  - {kind: mirror, managed: true}
+  - {kind: monitoring, managed: true}
+  - {kind: objectstorage, managed: true}
+  - {kind: postgres, managed: false}
+  - {kind: quay, managed: true}
+  - {kind: redis, managed: true}
+  - {kind: route, managed: true}
+  - {kind: tls, managed: true}`)
 	// mustonlyhave on these would drop the Secret's other keys and the Namespace's labels.
 	bundle := resolveTemplate(t, filepath.Join(repoRoot, "stack/quay"), "quay", files, "deploy-bundle")
 	for kind, name := range map[string]string{"Namespace": "quay-enterprise", "Secret": "quay-registry-config-bundle"} {
 		if got := find(t, bundle, kind, name).ComplianceType; got != "musthave" {
 			t.Errorf("%s complianceType %q, want musthave", kind, got)
 		}
-	}
-}
-
-// TestListsIdempotent: resolving over a spec a template wrote gives that spec again.
-func TestListsIdempotent(t *testing.T) {
-	for _, tt := range []struct{ element, template, kind, name string }{
-		{"remediations", "registries-allowlist", "Image", "cluster"},
-		{"loki", "forwarder-clusterlogforwarder", "ClusterLogForwarder", "logging"},
-		{"quay", "deploy-registry", "QuayRegistry", "registry"},
-	} {
-		t.Run(tt.element, func(t *testing.T) {
-			dir := filepath.Join(repoRoot, "stack", tt.element)
-			release := tt.element + "-spoke"
-			first := find(t, resolveTemplate(t, dir, release, allOn, tt.template), tt.kind, tt.name)
-			live := asYAML(t, first.ObjectDefinition.Object)
-			second := find(t, resolveTemplate(t, dir, release, allOn, tt.template, live), tt.kind, tt.name)
-			if !reflect.DeepEqual(first.ObjectDefinition.Object, second.ObjectDefinition.Object) {
-				t.Errorf("second evaluation differs\n got %v\nwant %v", second.ObjectDefinition.Object, first.ObjectDefinition.Object)
-			}
-		})
 	}
 }

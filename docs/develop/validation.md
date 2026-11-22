@@ -435,27 +435,7 @@ POLICY037 fails a template that is `mustonlyhave` or `mustnothave`
 the [POLICY037](../reference/rules.md#rules) row): enforced, it wipes what the installer and
 operators wrote. Use `musthave`.
 
-One enforced form passes: taking an entry out of a list on a `config.openshift.io` object, which
-`musthave` can't do, since it only adds to lists. Build the whole `spec` from the live object, so
-every other field is kept:
-
-```yaml title="converter, as in stack/remediations/converters/registries/allowlist.yaml"
-spec: >-
-  {{ "{{" }} $spec := deepCopy (dig "spec" dict (lookup "config.openshift.io/v1" "Image" "" "cluster")) {{ "}}" }}
-  {{ "{{" }} $_ := set $spec "allowedRegistriesForImport" (fromJson `{{ toJson $import | replace "`" "\\u0060" }}`) {{ "}}" }}
-  {{ "{{" }} $spec | toRawJson | toLiteral {{ "}}" }}
-```
-
-```yaml title="values.yaml, on the template"
-complianceType: mustonlyhave
-metadataComplianceType: musthave
-```
-
-The first and last lines must be exactly these, naming the same object, with no other assignment to
-`$spec`. It works only in `object-templates`, not in `object-templates-raw`. The validator checks that
-shape only: keeping the other fields is up to the lines between.
-
-Any other template that must stay `mustonlyhave` or `mustnothave` can only be `InformOnly` (reported,
-never enforced). The validator also honours
+A template that must stay `mustonlyhave` or `mustnothave` can only be `InformOnly` (reported, never
+enforced); an element has no way to enforce it. The validator also honours
 `validator.policystk.io/allow-destructive: "<reason>"` on a ConfigurationPolicy, but policy-library
 can't set it today.

@@ -53,17 +53,14 @@ type policyTemplate struct {
 }
 
 type objectTemplate struct {
-	ComplianceType         string `json:"complianceType"`
-	MetadataComplianceType string `json:"metadataComplianceType"`
-	ObjectDefinition       struct {
+	ComplianceType   string `json:"complianceType"`
+	ObjectDefinition struct {
 		APIVersion string `json:"apiVersion"`
 		Kind       string `json:"kind"`
 		Metadata   struct {
 			Name      string `json:"name"`
 			Namespace string `json:"namespace"`
 		} `json:"metadata"`
-		// Spec is any: a string when one ACM template resolves the whole spec.
-		Spec any `json:"spec"`
 	} `json:"objectDefinition"`
 }
 

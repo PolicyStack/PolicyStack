@@ -18,7 +18,7 @@ element ([Reading the output](../develop/validation.md#reading-the-output)).
 
 CI runs `make -C tools/validator validate`, whose flags are fixed in the
 Makefile, so a PR can't skip a rule. `--skip`/`--only` work only when you run the binary by hand. The
-one rule with opt-outs in the repo is POLICY037: make the template `InformOnly`, or build the spec from the live one
+one opt-out in the repo is POLICY037's: make the template `InformOnly`
 ([Destructive templates](../develop/validation.md#destructive-templates)).
 
 ??? info "Terms the table uses"
@@ -62,7 +62,7 @@ one rule with opt-outs in the repo is POLICY037: make the template `InformOnly`,
 | POLICY033 | `pruneObjectBehavior` on a template that isn't enforced or has a dependency | Remove `pruneObjectBehavior` or the dependency ([Removal and pruning](../concepts/removal.md)) |
 | POLICY034 | `version` or `channel` in a values layer | Move it to the cluster's fleet file |
 | POLICY035 | A typo in `values/`: a key nothing reads | Fix the key the message names |
-| POLICY037 | `mustonlyhave` or `mustnothave` on an object OpenShift owns | `musthave`, `InformOnly`, or a spec built from the live one ([Destructive templates](../develop/validation.md#destructive-templates)) |
+| POLICY037 | `mustonlyhave` or `mustnothave` on an object OpenShift owns | `musthave`, or `InformOnly` ([Destructive templates](../develop/validation.md#destructive-templates)) |
 | POLICY038 | A `subscription.source` that is not a default catalog | Fix the name, or declare it under `global.catalogSources` ([Disconnected clusters](../guides/disconnected.md)) |
 | POLICY039 | A layer or fleet file still sets a key an element deprecated | Set the replacement the message names instead, before the version it names. A finding at an element's `values.yaml` is a malformed note: write it as `Deprecated: use <key>; removed in <version>` ([Deprecating a key](../develop/elements.md#deprecating-a-key-or-an-element)) |
 | POLICY041 | `placement.predicates` in a values file | Remove it. To narrow, use `placement.claimSelector` or `celSelector`; to reach another cluster, list the layer in that cluster's fleet file ([Overriding the Placement](../concepts/policies.md#overriding-the-placement)) |

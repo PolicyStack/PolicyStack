@@ -24,7 +24,7 @@ CRDS := crds
 # renovate: datasource=git-refs depName=https://github.com/stolostron/governance-policy-propagator branch=release-2.16
 PROPAGATOR_SHA ?= 2d03f8350c7da2a7a40892f11c88e91bb843abaf
 # renovate: datasource=git-refs depName=https://github.com/stolostron/config-policy-controller branch=release-2.16
-CPC_SHA ?= 815433ad946667d33eb3fdc93659049fa403b0bc
+CPC_SHA ?= 73e204e0b98c4a03e8c7aac8d6dc4da77c4a2ace
 # renovate: datasource=git-refs depName=https://github.com/stolostron/cert-policy-controller branch=release-2.16
 CERT_SHA ?= b274b410e6fa824b20cca59ab32d359320beed86
 # The open-cluster-management.io/api version propagator release-2.16 requires (v1.2.0).

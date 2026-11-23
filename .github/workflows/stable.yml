@@ -1,0 +1,32 @@
+name: Stable
+
+# Hands the PR number to stable-review.yml, which compares stable elements from the default branch's
+# copy of the gate, so a PR can't change what checks it (docs/reference/ci.md#stable). This job runs
+# no PR code, and a PR that edits it gains nothing: stable-review.yml checks the number against the
+# commit, and a missing run leaves the required stable status unset. copier leaves both files out of
+# a copy.
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr:
+    name: pr
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          PR: ${{ github.event.pull_request.number }}
+        run: echo "$PR" > "$RUNNER_TEMP/pr"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pr
+          path: ${{ runner.temp }}/pr
+          retention-days: 1

@@ -62,8 +62,9 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
 - The title is a Conventional Commit, such as `feat(validator): real POLICY080`. Squash merges make it
   the commit subject and the release-note line ([PR Title](reference/ci.md#pr-title)).
 - A breaking change is anything that changes the framework's [Public API](reference/compatibility.md#public-api),
-  a stable element's values keys or Policy names for existing users, a stable lifecycle engine, or
-  anything [Lifecycle](reference/compatibility.md#lifecycle) holds for a major at every maturity.
+  a stable element's values keys, Policy names or output for existing users, a stable lifecycle
+  engine, or anything [Lifecycle](reference/compatibility.md#lifecycle) holds for a major at every
+  maturity.
   Mark it with `!` in the title: release-please reads it from the squash commit and bumps the major
   ([Releases](#releases)).
   Any other breaking change to a preview element or a preview lifecycle engine ships in a minor:
@@ -72,8 +73,11 @@ CI also runs `validate` with Helm 4.2.1; that leg is advisory
   `feat(lifecycle): breaking: ...`. The notes then list it under `odf:` with a subject starting
   `breaking:`, which adopters search for
   ([Element stability](reference/compatibility.md#element-stability)).
-- `ci`, `upstream` and `pr-title` must pass, plus one approval from `.github/CODEOWNERS`: any
-  member of `@PolicyStack/maintainers`.
+- `ci`, `upstream`, `pr-title` and `stable` must pass, plus one approval from `.github/CODEOWNERS`:
+  any member of `@PolicyStack/maintainers`.
+- A PR that touches a stable element's keys, defaults or output waits on `stable` until a
+  maintainer other than its author signs off. The PR comment lists what changed, breaks apart from
+  other output changes ([Stable](reference/ci.md#stable)).
 - Update `docs/` in the same PR.
 - A fix for a bad render or policy that reached a cluster adds a test that would have caught it:
   extend the validator rule that covers it, or add a rule. Check files are named by topic, not rule

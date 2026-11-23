@@ -22,7 +22,7 @@ CHARTS := $(patsubst %/Chart.yaml,%,$(wildcard $(ROOT)/stack/*/Chart.yaml)) $(RO
 # crds/ differs from the pinned files.
 CRDS := crds
 # renovate: datasource=git-refs depName=https://github.com/stolostron/governance-policy-propagator branch=release-2.16
-PROPAGATOR_SHA ?= 2d03f8350c7da2a7a40892f11c88e91bb843abaf
+PROPAGATOR_SHA ?= d96d5cea510b75704ca5ac8c7ebebc615a82d02a
 # renovate: datasource=git-refs depName=https://github.com/stolostron/config-policy-controller branch=release-2.16
 CPC_SHA ?= 73e204e0b98c4a03e8c7aac8d6dc4da77c4a2ace
 # renovate: datasource=git-refs depName=https://github.com/stolostron/cert-policy-controller branch=release-2.16

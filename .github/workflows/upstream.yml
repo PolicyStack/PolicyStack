@@ -57,7 +57,8 @@ jobs:
             exit 1
           fi
 
-  # tools/validator: lint, the Go tests, and crds/ against the files the Makefile pins.
+  # tools/validator: lint, the Go tests, the stable gate's tests, and crds/ against the files the
+  # Makefile pins.
   validator:
     name: validator
     runs-on: ubuntu-latest
@@ -83,6 +84,11 @@ jobs:
       - run: make -C tools/validator lint
 
       - run: make -C tools/validator test
+
+      # .github/scripts/stable-gate.sh against one edited clone per case (docs/reference/ci.md#stable).
+      - name: Stable gate
+        if: ${{ !cancelled() }}
+        run: make -C tools/validator build && .github/scripts/stable-gate-test.sh
 
       # A changed CRD pin without the refetched files, or an edited file under crds/.
       - name: CRDs match their pins

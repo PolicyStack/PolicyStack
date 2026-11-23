@@ -158,6 +158,8 @@ For a stable element, breaking means any of:
 - A policy, template or operator entry renamed.
 - An enforcement default flipped.
 - The library floor raised to a new library major.
+- Different output for unchanged values, such as a converter that builds a different object from
+  the same keys, except as listed below.
 
 A new key, a new policy or template that ships off or inform-only, a moved operator channel or
 version default, or a library floor raised within the major is a framework minor. A fix that
@@ -305,7 +307,7 @@ a minor once its build, upgrade, scale and destroy paths have been checked on li
 | A hub never renders a library major it wasn't built for | The install chart injects `policystack.libraryMajors`; policy-library fails the render when its own major isn't listed |
 | Answers files say what was copied | POLICY061: every `_commit` is a `vX.Y.Z` tag, each element's names its own directory, and no element's is newer than the root's or on another major |
 | Stability is `stable` or `preview` | `tools/doc-generator.py`, run by the `element-readmes` hook, fails on any other value. It skips elements with a `.copier-answers.yml`, so in your repository it checks only elements you wrote or ejected |
-| A breaking change gets a major | Review only. The PR author marks it with `!`, a reviewer checks it, and release-please bumps the major. Upstream has no fleet files, so Render Diff shows the change only in your repository: on the update PR for clusters pinned to the default branch, and on the PR that moves a tag pin |
+| A breaking change gets a major | For a stable element, upstream's [Stable](ci.md#stable) check compares it with the merge base and holds the PR until a maintainer signs off; a break merges with `!`. It sees renders of upstream's test values only: converter branches no fixture reaches, narrowed value lists and what a change leaves on live clusters are review only. Everything else is review only: the PR author marks it with `!`, a reviewer checks it, and release-please bumps the major. Upstream has no fleet files, so Render Diff shows the change only in your repository: on the update PR for clusters pinned to the default branch, and on the PR that moves a tag pin |
 | Deprecation windows | Review only. POLICY039 warns on a deprecated key, but doesn't check the version its comment names |
 | A new error ships as a warning first | Review only |
 | A preview break says `breaking:` | Review only. `pr-title` accepts any subject |

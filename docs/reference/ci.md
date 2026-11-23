@@ -14,6 +14,7 @@ guard the framework.
 | [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart | Runs, including the `fleet/` pass |
 | [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
 | [Upstream](#upstream) (`upstream.yml`) | Every PR and `main` push | The policy-library lint or tests, a validator lint or test, a stale CRD, the doc generator tests or the site build fails | Absent: copier leaves it out |
+| [Stable](#stable) (`stable.yml`, `stable-review.yml`) | PRs into `main` | Never fails on a change: the required `stable` status waits for a maintainer's sign-off | Absent: copier leaves it out |
 
 A new push to a PR cancels its running CI, Upstream and Render Diff checks. CI, Upstream and Policy
 Validate can also be started from the Actions tab.
@@ -32,10 +33,10 @@ on a check that never reports.
 or was skipped ([alls-green](https://github.com/re-actors/alls-green)). A new job goes in its
 `needs`, not in the ruleset.
 
-Upstream PolicyStack's ruleset requires a third check, `upstream`, the same kind of last job in
-`upstream.yml`. A job in one workflow can't wait on a job in another, and `ci.yml` can't call
-`upstream.yml` because that file is missing from your repository, so upstream PRs are gated by the
-two checks together.
+Upstream PolicyStack's ruleset requires two more: `upstream`, the same kind of last job in
+`upstream.yml`, and `stable`, a commit status [Stable](#stable) sets. A job in one workflow can't
+wait on a job in another, and `ci.yml` can't call `upstream.yml` because that file is missing from
+your repository, so upstream PRs are gated by the checks together.
 
 !!! note
     No gating workflow has a `paths` filter. A required check whose workflow is skipped by `on.paths`
@@ -90,7 +91,7 @@ none of this runs there.
 | Job | Runs |
 | --- | ---- |
 | `library` | policy-library in `lib/`: `ct lint --config lib/ct.yaml`, which fails a change to `lib/policy-library` without a `version` bump and runs `helm lint --strict`; then the helm-unittest suites in `lib/tests` (`untt --strict`), failing on a snapshot that is not committed ([Library changes](../contributing.md#library-changes)) |
-| `validator` | `make -C tools/validator lint` (golangci-lint, `go mod tidy -diff`, govulncheck) and `test`; then `make crds`, failing when `tools/validator/crds/` differs from the files the Makefile pins ([CRD schemas](../develop/validation.md#crd-schemas)) |
+| `validator` | `make -C tools/validator lint` (golangci-lint, `go mod tidy -diff`, govulncheck) and `test`; the [Stable](#stable) gate's tests (`.github/scripts/stable-gate-test.sh`); then `make crds`, failing when `tools/validator/crds/` differs from the files the Makefile pins ([CRD schemas](../develop/validation.md#crd-schemas)) |
 | `launcher` | `uv lock --check` (`tools/policystack/uv.lock` matches `pyproject.toml`), then the launcher's tests (`pytest tools/policystack/tests`): unit tests, generic checks of this checkout's `stack/` and `values/`, and install, add and update run end to end through copier against a synthetic upstream that uses this checkout's `copier.yml` |
 | `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
 | `upstream` | The required check over `library`, `validator`, `launcher` and `docs` |
@@ -107,6 +108,63 @@ revision, read `docs/` at that revision on GitHub.
 !!! warning "Not checked by strict mode"
     Absolute links, `nav` and the content of included snippets
     ([Docs layout](../contributing.md#docs-layout)).
+
+## Stable
+
+Upstream only. A [stable element](compatibility.md#element-stability) changes incompatibly only in
+a major. This check makes sure no PR changes one without a maintainer seeing exactly what changed and
+signing off, whoever wrote it.
+
+| Part | Does |
+| ---- | ---- |
+| `stable.yml` | Runs on the PR and hands its number to `stable-review.yml`. Runs no PR code |
+| `stable-review.yml` `check` | Runs `.github/scripts/stable-gate.sh` from `main`, comparing every element that is `stable` at the merge base, or becomes stable, between the merge base and the PR. Read-only token |
+| `report` | Comments the findings, or deletes an earlier comment when there are none, and sets the commit status `stable` |
+| `sign-off` | Waits for a reviewer of the `stable-change` environment, then sets `stable` to success. Refuses an approval from the PR's author |
+
+`stable-review.yml` runs on `workflow_run`, so GitHub always takes it, and the gate script, from
+`main`: a PR can't edit the check that judges it, and fork PRs get the comment, which a
+`pull_request` workflow's read-only token can't write. A PR that breaks or edits `stable.yml` only
+leaves `stable` unset, and the PR can't merge.
+
+The comment sorts findings into three tables:
+
+| Table | Found by | Means |
+| ----- | -------- | ----- |
+| Breaking | Comparing files: the element removed or no longer `stable`; a `config` key removed or its type changed; a policy, template or operator entry removed or renamed, converter file names included; `enabled`, `remediationAction`, `complianceType` or `pruneObjectBehavior` changed where the entry exists on both sides; the library floor on a new major. Comparing renders: an object or policy template that no longer renders, a render that now fails, and a Policy's `disabled`, `remediationAction`, `complianceType` or `pruneObjectBehavior` rendered differently, whether the change comes from the element, a converter or policy-library. A dependency that stops resolving (POLICY011), such as `acm` `observability` on `odf` `ready`, whatever the other element's stability | A break as [Element stability](compatibility.md#element-stability) defines it. It merges with `!` in the title. Sign off without `!` only for a false positive, or a security fix titled `fix(<element>): breaking:` |
+| Output changed for unchanged values | Comparing renders: an object that changes, or a new one on by default | Breaking, unless it is a named bug fix, an operator channel or version move, or a new entry that ships off or inform-only. A maintainer decides |
+| Promoted | `stable` set on an element | From the next release it follows the stable rules |
+
+Each element renders turned on, three ways, as [Policy Validate](#policy-validate) does: the
+fixture fleet with its values, everything on (`--all-on` with `inputs.yaml`), and each profile.
+Both sides use the merge base's `values/` and `tools/validator/testdata/`, so a PR can't hide a
+change by editing the test values. In the everything-on and profile renders, new entries and the
+PlacementBinding subjects naming them are left out: they ship off.
+
+The status is `pending` while findings wait for a sign-off, `success` without findings or once
+signed off, and `failure` when the check itself fails. Each push gets its own run and needs its own
+sign-off. To sign off, open the run from the comment, **Review deployments**, `stable-change`,
+**Approve and deploy**. The status names who approved.
+
+**Prevent self-review** stops whoever triggered the run from approving it. A `workflow_run` run
+takes its actor from the PR run that triggered it: the PR's last pusher, fork PRs included. When
+someone else pushed last, the author isn't stopped there, so `sign-off` refuses the author's
+approval itself. Re-run the job for another maintainer to approve.
+
+!!! warning "Not seen"
+    The check compares renders of upstream's test values. A branch of a converter no fixture
+    reaches, a key that accepts fewer values (elements have no schema of allowed values), and what
+    a change leaves on live clusters (a field `musthave` keeps after the converter stops setting it)
+    are for the reviewer.
+
+### Setup
+
+In `PolicyStack/PolicyStack` settings, once:
+
+1. **Environments**, new `stable-change`: required reviewers `@PolicyStack/maintainers`, **Prevent
+   self-review** on, deployment branches `main` only. `sign-off` fails, leaving `stable` pending,
+   while the environment lacks either.
+2. The `main` ruleset: require the status check `stable`, with GitHub Actions as its source.
 
 ## PR Title
 

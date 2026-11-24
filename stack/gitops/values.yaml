@@ -62,7 +62,7 @@ stack:
 
       # Deploy the platform ArgoCD instance. Disable to install only the operator.
       instance:
-        description: "Platform ArgoCD instance"
+        description: "Platform ArgoCD instance - Change Test"
         dependencies:
           - name: install
         templates:

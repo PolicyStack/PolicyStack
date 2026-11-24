@@ -42,6 +42,7 @@ Before opening a PR, run what each job of [CI](reference/ci.md#ci) and
 
 ```sh
 prek run --all-files                       # lint
+gitleaks git --log-opts="--diff-merges=first-parent origin/main..HEAD" --redact   # lint: secret scan
 make -C tools/validator validate           # validate (Helm floor leg)
 make -C tools/validator lint test          # validator
 helm dependency update --skip-refresh lib/tests/fixtures/policy-stack-test && untt --strict lib/tests/fixtures/policy-stack-test   # library

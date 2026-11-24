@@ -17,6 +17,7 @@ golangci-lint = "2.15.0"
 "aqua:rhysd/actionlint" = "1.7.12"
 shellcheck = "0.11.0"
 zizmor = "1.32.0"
+gitleaks = "8.30.1"
 ruff = "0.17.4"
 lychee = "0.24.2"
 

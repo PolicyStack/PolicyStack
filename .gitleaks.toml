@@ -1,0 +1,12 @@
+# Read by gitleaks from the repository root: the gitleaks hook and the secret scan in ci.yml lint.
+# gitleaks' default rules plus the allowlist below. No PII, IP or email rules: values hold them.
+[extend]
+useDefault = true
+
+# Pinned commit SHAs, such as tools/validator/Makefile OCM_API_SHA: generic-api-key reads "API" as a
+# key name.
+[[allowlists]]
+description = "Pinned commit SHAs"
+targetRules = ["generic-api-key"]
+regexTarget = "match"
+regexes = ['''^[A-Z_]+_SHA \?= [0-9a-f]{40}$''']

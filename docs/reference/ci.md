@@ -9,7 +9,7 @@ guard the framework.
 
 | Workflow | Trigger | Fails when | In your repository |
 | -------- | ------- | ---------- | ------------------ |
-| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook or the validator fails | Runs |
+| [CI](#ci) (`ci.yml`) | Every PR and `main` push | A hook, the secret scan or the validator fails | Runs |
 | [PR Title](#pr-title) (`pr-title.yml`) | Every PR, including title edits | The title is not a Conventional Commit | Runs |
 | [Policy Validate](#policy-validate) (`validate.yml`) | Called by CI | A validator error, a bad fleet pin, a broken install chart | Runs, including the `fleet/` pass |
 | [Render Diff](#render-diff) (`render-diff.yml`) | PRs into the default branch changing `stack/`, `lifecycle/`, `lib/`, `values/`, `values.yaml`, `fleet/`, `tools/validator/` or Render Diff itself | Never: it only comments | Comments only when `fleet/` has files, so only in yours |
@@ -46,7 +46,7 @@ your repository, so upstream PRs are gated by the checks together.
 
 | Job | Runs |
 | --- | ---- |
-| `lint` | `prek run --all-files --show-diff-on-failure`: the [hooks](#hooks) in `.pre-commit-config.yaml`. It installs only the hooks' tools from `mise.toml` |
+| `lint` | `prek run --all-files --show-diff-on-failure`: the [hooks](#hooks) in `.pre-commit-config.yaml`. It installs only the hooks' tools from `mise.toml`. On a PR, then the [secret scan](#secret-scan) of the PR's commits |
 | `validate` | [Policy Validate](#policy-validate) |
 | `ci` | The required check over `lint` and `validate` |
 
@@ -61,6 +61,7 @@ prek is a pre-commit-compatible hook runner, installed by `mise install`. It rea
 | ---- | ------ |
 | `check-yaml`, `trailing-whitespace`, `end-of-file-fixer`, `check-merge-conflict`, `check-added-large-files` | prek builtins. `check-merge-conflict` runs with `--assume-in-merge`, so it also fails conflict markers committed after an update |
 | `actionlint` (workflow syntax), `zizmor` (workflow security audit) | Workflows. zizmor runs offline |
+| `gitleaks` | Staged changes, for secrets ([Secret scan](#secret-scan)). Never the whole tree, even under `--all-files` |
 | `shellcheck` | Shell scripts |
 | `ruff-check`, `ruff-format` | Every Python file (`tools/*.py`, `tools/policystack/`) |
 | `element-readmes` | Regenerates `stack/*/README.md`, except for elements with a `.copier-answers.yml`: their README is upstream's ([Element reference](../develop/elements.md#element-reference)) |
@@ -81,6 +82,47 @@ git add -u             # stage the rewritten files; add a new element's README b
 
 !!! tip
     `prek install` runs the hooks on every commit.
+
+### Secret scan
+
+[gitleaks](https://github.com/gitleaks/gitleaks) looks for credentials: API keys, tokens, private
+keys, and base64 `data` in Secret manifests. A plaintext `stringData` value is caught only when it
+looks like a key. Rules are gitleaks' defaults plus the allowlist in `.gitleaks.toml`. There are no
+PII, IP address or email rules, because values hold them.
+
+| Where | Scans |
+| ----- | ----- |
+| `lint` job, PRs only | Every commit between the PR's base and head, merges included (diffed against their first parent, so a conflict resolution counts) |
+| `gitleaks` hook | Staged changes, at commit time after `prek install`, or under `prek run`. CI stages nothing, so there it scans nothing |
+
+A secret that one commit adds and a later commit removes still fails the PR: it stays in the branch
+history. Rotate it, then rewrite the branch without it. Pushes to `main` aren't scanned again. With
+the ruleset from [Required checks](#required-checks), every commit reaches `main` through a PR;
+without it, a direct push is never scanned.
+
+!!! warning "Redaction"
+    `--redact` replaces the secret in the log. A match that spans lines, such as a Secret manifest
+    from `kind: Secret` to `data:`, prints its other lines as they are, `stringData` values included.
+
+To scan your branch's commits locally:
+
+```sh
+gitleaks git --log-opts="--diff-merges=first-parent origin/main..HEAD" --redact
+```
+
+#### False positives
+
+`.gitleaks.toml` is framework, so don't edit it. For a false positive in your files, end the line
+with a `gitleaks:allow` comment:
+
+```yaml
+imageDigestKey: 9f8a7c6b5d4e3f2a1b0c9d8e7f6a5b4c # gitleaks:allow
+```
+
+Inside a block scalar (`|` or `>`) the comment would become part of the value. There, add the
+finding's `<file>:<rule>:<line>` to `.gitleaksignore` at the repository root instead, one per line,
+for example `values/clusters/prod.yaml:generic-api-key:12`. The scan output prints each finding's
+file, rule and line. An entry matches by line number, so it stops matching when the line moves.
 
 ## Upstream
 

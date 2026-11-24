@@ -34,6 +34,14 @@ repos:
         language: system
         files: ^\.github/workflows/
 
+      # Staged changes only, even under --all-files: in ci.yml lint nothing is staged, and a later step
+      # scans the PR's commits. Rules in .gitleaks.toml.
+      - id: gitleaks
+        name: gitleaks
+        entry: gitleaks git --pre-commit --staged --redact --no-banner --verbose
+        language: system
+        pass_filenames: false
+
       - id: shellcheck
         name: shellcheck
         entry: shellcheck

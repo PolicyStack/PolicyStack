@@ -29,14 +29,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The secret scan reads the PR's commits.
+          fetch-depth: 0
 
       # The hooks' tools only, not Go, Helm, golangci-lint or uv.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
-          install_args: python prek aqua:rhysd/actionlint zizmor shellcheck ruff lychee
+          install_args: python prek aqua:rhysd/actionlint zizmor gitleaks shellcheck ruff lychee
 
       # Hooks in .pre-commit-config.yaml. A hook that rewrites a file fails and prints the diff.
       - run: prek run --all-files --show-diff-on-failure
+
+      # Every commit in the PR, rules in .gitleaks.toml. A merge is diffed against its first parent, so
+      # what a conflict resolution adds is scanned. The gitleaks hook sees staged changes only.
+      - name: gitleaks
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: gitleaks git --log-opts="--diff-merges=first-parent $BASE..$HEAD" --redact --no-banner --verbose
 
   validate:
     name: validate

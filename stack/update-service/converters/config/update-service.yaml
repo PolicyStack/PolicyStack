@@ -1,0 +1,35 @@
+{{- /*
+Red Hat's disconnected update procedure (Disconnected environments, "Updating a cluster in a
+disconnected environment using the OpenShift Update Service").
+
+Namespace: the procedure annotates it with an empty node selector, so a cluster-wide default node
+selector does not apply to the operand. install-update-service-ns creates the namespace; this adds
+the annotation.
+
+UpdateService: oc-mirror's updateService.yaml without its namespace, which oc-mirror leaves out on
+4.20 and 4.21. The operator names the Route <name>-route, and <name>-route-<namespace> must fit a
+63-character DNS label, so the name stays short. releases must be <registry>/<repository>: the
+operator splits it on the first / and, on failure, retries without ever writing a status.
+
+Registry CA: the operator reads none from the UpdateService. It copies key updateservice-registry of
+the ConfigMap image.config.openshift.io/cluster names in additionalTrustedCA. The disconnected
+element writes that key into registry-cas from config.registryCAs, so this element writes no CA.
+*/ -}}
+{{- $releases := required "stack.updateService.config.releases is required" .Config.releases }}
+{{- if not (regexMatch `^[^/@\s]+(/[^/:@\s]+)+$` $releases) }}{{ fail (printf "stack.updateService.config.releases: %q must be <registry>/<repository>, without tag or digest" $releases) }}{{ end }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-update-service
+  annotations:
+    openshift.io/node-selector: ""
+---
+apiVersion: updateservice.operator.openshift.io/v1
+kind: UpdateService
+metadata:
+  name: update-service
+  namespace: openshift-update-service
+spec:
+  replicas: 2
+  releases: {{ $releases | quote }}
+  graphDataImage: {{ required "stack.updateService.config.graphDataImage is required" .Config.graphDataImage | quote }}

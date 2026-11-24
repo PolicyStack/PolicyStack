@@ -9,7 +9,7 @@ A disconnected cluster cannot reach the internet. PolicyStack normally pulls fro
 | GitHub | Argo CD on the hub, your repository's CI, and the launcher | Internal Git. policy-library, the chart every element renders through, is in the repo (`lib/`), so Git is all Argo CD reads | By hand ([PolicyStack releases](#policystack-releases)) |
 | Container images and operator catalogs | Every cluster | oc-mirror's mirror sets and CatalogSources, applied by the `disconnected` element; `global.catalogSources` points every operator at the mirrored catalog | [Site layer](#site-layer) |
 | Public certificate authorities | Every cluster | Your mirror registry's CA and your internal servers' CAs, applied by the `disconnected` element | [Site layer](#site-layer) |
-| Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
+| Red Hat's upgrade graph | Every cluster's CVO | Your OSUS, run by the `update-service` element and set by the `upgrade` element or the HostedCluster | [Update Service](#update-service) |
 | Release images and RHCOS ISOs on quay.io and mirror.openshift.com | The hub, for clusters it builds | `install.releaseRepository`, and per-engine mirror settings | [Clusters the hub builds](#clusters-the-hub-builds) |
 
 Terms used on this page:
@@ -18,7 +18,7 @@ Terms used on this page:
 |---|---|
 | oc-mirror | [v2](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/disconnected_environments/mirroring-in-disconnected-environments) copies release images and operator catalogs into your registry and writes the cluster objects that point clusters at it into `working-dir/cluster-resources/`. You run it; PolicyStack applies its output. |
 | CVO | Cluster Version Operator. Runs on every cluster, reads ClusterVersion, fetches the upgrade graph and performs upgrades. |
-| OSUS | OpenShift Update Service. Serves a local copy of the upgrade graph. You run it; PolicyStack only points clusters at it. |
+| OSUS | OpenShift Update Service. Serves a local copy of the upgrade graph. The `update-service` element runs it on one cluster; the `upgrade` element points clusters at it. |
 | Site layer | A [values layer](../concepts/values.md) holding one datacenter's mirror data, such as `values/datacenters/dc2.yaml`. Every cluster at the site lists it in its fleet file's `valueFiles`. |
 | HostedCluster, standalone | A HostedCluster is the hub object describing a hosted control plane cluster, whose control plane runs as pods on the hub. Any other cluster is standalone. |
 
@@ -74,7 +74,7 @@ mirror:
 
 1.  Cover every `version` a fleet file targets and every hop on the way. A version outside the range is not in your OSUS graph, so its bump waits at the guard ([Update Service](#update-service)).
 2.  The payload architecture your clusters run (`amd64` in oc-mirror is the `x86_64` release tag). Clusters the hub builds with `hypershift` or `hive` run `multi`, `siteconfig` clusters run `amd64` ([Clusters the hub builds](#clusters-the-hub-builds)). Imported clusters keep the payload they were installed with. List both when you have both.
-3.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it.
+3.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it, whose two values go in `stack.updateService.config` ([Update Service](#update-service)).
 4.  ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: `stable-2.12` for ACM 2.17 (ACM release notes).
 
 ### PolicyStack releases
@@ -107,7 +107,7 @@ yq ea -p yaml -o yaml -P '[.] | map(del(.status)) | {"clusterResources": .}' \
   $(ls | grep -v -e updateService -e signature-configmap.yaml)
 ```
 
-- `updateService.yaml` is an UpdateService, which needs the OSUS operator, so `resources` goes NonCompliant on any cluster without it. Apply it by hand on the cluster that runs OSUS.
+- `updateService.yaml` is an UpdateService, which needs the OSUS operator, so `resources` goes NonCompliant on any cluster without it. The `update-service` element creates it instead ([Update Service](#update-service)).
 - oc-mirror writes the signature ConfigMap twice, as `signature-configmap.json` and `signature-configmap.yaml`. The command keeps the JSON copy; `-p yaml` reads it, as JSON is valid YAML.
 
 Paste the output, indented, as `stack.disconnected.config.clusterResources`:
@@ -196,7 +196,7 @@ oc get mcp # nodes take new mirror sets through a pool update; wait for UPDATED 
 The hub needs the mirrored catalog before PolicyStack exists to apply it, because the bootstrap installs ACM and GitOps from it.
 
 1. Install the hub disconnected, following Red Hat's docs, with the mirror registry's CA in the install-config `additionalTrustBundle`. The steps below apply no CA, so the hub must already trust the mirror.
-2. Apply oc-mirror's output by hand, except the UpdateService:
+2. Apply oc-mirror's output by hand, except the UpdateService, which the `update-service` element creates ([Update Service](#update-service)):
 
     ```sh
     cd working-dir/cluster-resources
@@ -214,7 +214,7 @@ Every policy is on; turn one off with `policies.<policy>.enabled: false`. With e
 | Policy | Applies |
 |---|---|
 | `resources` | `config.clusterResources`, as is. |
-| `registry-ca` | ConfigMap `openshift-config/registry-cas` from `config.registryCAs`, and `additionalTrustedCA` on `image.config.openshift.io/cluster`. |
+| `registry-ca` | ConfigMap `openshift-config/registry-cas` from `config.registryCAs`, and `additionalTrustedCA` on `image.config.openshift.io/cluster`. With the `update-service` element enabled, also key `updateservice-registry` ([Registry CA](#registry-ca)). |
 | `trusted-ca` | ConfigMap `openshift-config/trusted-cas`, with the Proxy's `trustedCA` pointing at it. Lands in every injected trust bundle, including the one the `gitops` element mounts into the repo server of an Argo CD instance it manages (not the hub's own, [above](#git-and-the-hubs-argo-cd)). |
 | `operatorhub` | `OperatorHub` `disableAllDefaultSources: true`. |
 
@@ -249,6 +249,62 @@ No template sets `pruneObjectBehavior` (ACM's setting that deletes what a policy
 ## Update Service
 
 The `upgrade` element holds a fleet `version` until it appears in the ClusterVersion's `availableUpdates`, which the CVO fills from the upgrade graph ([The upgrade element](upgrades.md#the-upgrade-element)). A disconnected cluster gets no graph unless `stack.upgrade.config.upstream` points at your OSUS ([Site layer](#site-layer)), so every `version` bump waits forever. Hosted clusters take it from the HostedCluster instead ([Hosted clusters](#hosted-clusters)).
+
+### Run OSUS
+
+The [`update-service`](https://github.com/PolicyStack/PolicyStack/tree/main/stack/update-service) element follows Red Hat's [disconnected update procedure](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/disconnected_environments/updating-a-cluster-in-a-disconnected-environment): it installs the OpenShift Update Service Operator and creates one UpdateService from the two values in oc-mirror's `updateService.yaml`. Enable it on one cluster, usually the hub. One instance serves a whole site; run a second, on another cluster, only when an environment must get different update recommendations.
+
+```yaml
+# values/clusters/<hubName>.yaml
+stack:
+  updateService:
+    enabled: true
+    config:
+      releases: mirror.dc2.example.com:8443/openshift/release-images # (1)!
+      graphDataImage: mirror.dc2.example.com:8443/openshift/graph-image:latest # (2)!
+```
+
+1.  `spec.releases` from `updateService.yaml`: the repository holding the mirrored release images, with no tag or digest. A tag, a digest or a missing repository fails the render. Red Hat requires the release images in a repository of their own, or OSUS uses excessive memory.
+2.  `spec.graphDataImage` from the same file. oc-mirror pushes a new one on every run, and the operator resolves the tag to a digest every 5 minutes, so OSUS picks up a new graph without a values change.
+
+| Policy | Applies | Waits for |
+|---|---|---|
+| `install-update-service-<cluster>` | Namespace `openshift-update-service`, an OperatorGroup targeting only it, and package `cincinnati-operator`, channel `v1` | |
+| `config-update-service-<cluster>` | The namespace's `openshift.io/node-selector: ""` annotation, so a cluster default node selector does not restrict the OSUS pods, then UpdateService `update-service` with 2 replicas | `install` Compliant |
+| `ready-update-service-<cluster>` | Inform only. NonCompliant until UpdateService `ReconcileCompleted` is True, Deployment `update-service` is Available and Route `update-service-route` is admitted | `config` Compliant |
+
+`ready` checks all three because the operator sets `ReconcileCompleted` once it has written the Deployment, even when the Route failed, and never checks that the Deployment is Available.
+
+#### Registry CA
+
+The operator reads the release registry's CA from one place: key `updateservice-registry` of the ConfigMap named by `image.config.openshift.io/cluster` `additionalTrustedCA`. With the `disconnected` element on, that ConfigMap is `registry-cas`. While `update-service` is enabled, the `disconnected` element copies the `registryCAs` entry for the `releases` host into that key. Nothing else to set.
+
+!!! warning
+    - Enable `disconnected` on the same cluster, with the `releases` host in `registryCAs` keyed as `host..port`. Without it UpdateService `RegistryCACertFound` is False and, for a registry signed by a private CA, the graph builder cannot read the release images.
+    - The graph builder trusts that key and nothing else, so the entry must hold the full chain to the registry's root CA.
+
+Disabling `update-service` removes the key again, as `registry-cas` is `mustonlyhave`.
+
+### Point clusters at it
+
+Once `ready-update-service-<hubName>` is Compliant, read the graph URL on that cluster:
+
+```sh
+oc get updateservice update-service -n openshift-update-service \
+  -o jsonpath='{.status.policyEngineURI}/api/upgrades_info/v1/graph{"\n"}'
+curl -sk --header Accept:application/json '<url>?channel=stable-4.20' | jq '.nodes | length' # (1)!
+```
+
+1.  The number of releases OSUS offers in that channel. 0 means none of the mirrored releases are in it.
+
+Set the URL as `stack.upgrade.config.upstream` in the site layer ([Site layer](#site-layer)) and as `install.hostedCluster.spec.updateService` for hosted clusters ([Hosted clusters](#hosted-clusters)). The Route serves the OSUS cluster's default ingress certificate. Every standalone cluster whose CVO does not trust it, the OSUS cluster included, needs its CA in `config.trustedCA`.
+
+??? info "Removing OSUS"
+    No template prunes, so disabling the element leaves the operator and the UpdateService running. Repoint `stack.upgrade.config.upstream` first, then follow [Stopping and uninstalling](operators.md#stopping-and-uninstalling): Red Hat deletes the UpdateService before the operator.
+
+    ```sh
+    oc delete updateservice update-service -n openshift-update-service
+    ```
 
 OSUS only offers releases in your mirror. `availableUpdates` empty or missing the target means one of:
 

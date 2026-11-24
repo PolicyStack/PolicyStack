@@ -1,0 +1,63 @@
+stack:
+  updateService:
+    enabled: false
+
+    # One UpdateService, update-service, in openshift-update-service with 2 replicas. Copy both
+    # values from the updateService.yaml oc-mirror writes to working-dir/cluster-resources with
+    # mirror.platform.graph: true. The registry CA is stack.disconnected.config.registryCAs' entry
+    # for the releases host.
+    config:
+      # Mirrored release image repository without tag or digest, spec.releases (mirror.example.com:8443/openshift/release-images)
+      releases: ""
+      # Graph data image oc-mirror builds, spec.graphDataImage (mirror.example.com:8443/openshift/graph-image:latest)
+      graphDataImage: ""
+
+    default:
+      remediationAction: enforce
+      severity: medium
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      install:
+        description: "Install and manage the OpenShift Update Service Operator"
+
+      config:
+        description: "Deploy the UpdateService serving the mirrored upgrade graph"
+        dependencies:
+          - name: install
+        templates:
+          update-service:
+            description: "Namespace node selector annotation and the UpdateService"
+            # The UpdateService CRD only exists after the operator installs
+            waitForOperator: update-service
+
+      ready:
+        description: "Reports NonCompliant until the update service serves the graph"
+        # A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        dependencies:
+          - name: config
+        templates:
+          update-service:
+            description: "UpdateService reconciled, its Deployment Available and its Route admitted"
+            remediationAction: InformOnly
+
+    operatorPolicies:
+      update-service:
+        description: "OpenShift Update Service Operator"
+        displayName: "OpenShift Update Service"
+        namespace: openshift-update-service
+        clusterMonitoring: true
+        operatorGroup:
+          name: update-service-operator-group
+          targetNamespaces:
+            - openshift-update-service
+        subscription:
+          name: cincinnati-operator
+          channel: v1
+        versions: []

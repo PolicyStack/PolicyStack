@@ -1,0 +1,36 @@
+{{- /*
+ReconcileCompleted alone proves nothing: the operator sets it True once its Deployment write
+succeeds, even when the Route step failed, and never reads the Deployment's status. Available means
+the graph builder and policy engine pass their readiness probes. An admitted Route is what fills
+status.policyEngineURI, the URL clusters point stack.upgrade.config.upstream at.
+*/ -}}
+apiVersion: updateservice.operator.openshift.io/v1
+kind: UpdateService
+metadata:
+  name: update-service
+  namespace: openshift-update-service
+status:
+  conditions:
+    - type: ReconcileCompleted
+      status: "True"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: update-service
+  namespace: openshift-update-service
+status:
+  conditions:
+    - type: Available
+      status: "True"
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: update-service-route
+  namespace: openshift-update-service
+status:
+  ingress:
+    - conditions:
+        - type: Admitted
+          status: "True"

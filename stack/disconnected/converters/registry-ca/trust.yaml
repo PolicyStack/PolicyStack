@@ -2,9 +2,20 @@
 Trusts each mirror registry's CA for image pulls. Renders nothing when config.registryCAs is
 empty, so the policy is compliant without touching the image config.
 
+With the update-service element enabled, registry-cas also carries key updateservice-registry: the
+CA of that element's releases host, the only place the OpenShift Update Service Operator reads a
+registry CA from. Nothing is added when registryCAs has no entry for that host.
+
 A raw list because the objects need different complianceType.
 */ -}}
-{{- with .Config.registryCAs }}
+{{- $cas := .Config.registryCAs }}
+{{- $osus := dig "updateService" dict .Values.stack }}
+{{- if $osus.enabled }}
+{{- with get $cas (dig "config" "releases" "" $osus | splitList "/" | first | replace ":" "..") }}
+{{- $cas = set (deepCopy $cas) "updateservice-registry" . }}
+{{- end }}
+{{- end }}
+{{- with $cas }}
 - complianceType: mustonlyhave
   metadataComplianceType: musthave
   objectDefinition:

@@ -48,3 +48,8 @@ stack:
       trustedCA: |
         -----BEGIN CERTIFICATE-----
         -----END CERTIFICATE-----
+  # Required: the UpdateService has no default for either.
+  updateService:
+    config:
+      releases: mirror.example.com:8443/openshift/release-images
+      graphDataImage: mirror.example.com:8443/openshift/graph-image:latest

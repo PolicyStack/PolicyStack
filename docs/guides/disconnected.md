@@ -30,22 +30,49 @@ Order of work: mirror, set up Git, write the site layer, bring up the hub, then 
 
 ### What to mirror
 
-The mirrored operator catalog must hold every package, at the channel, that the elements you enable subscribe to. Otherwise that element's `install` OperatorPolicy stays NonCompliant, with the Subscription reporting that no operator was found in the channel. No tool generates the list; read it from the elements:
+The mirrored operator catalog must hold every package, at the channel, that the elements you enable subscribe to. Otherwise that element's `install` OperatorPolicy stays NonCompliant, with the Subscription reporting that no operator was found in the channel. The validator's `imageset` command writes the whole ImageSetConfiguration: it renders every element the fleet files you name enable, as Argo CD would, and lists every release and operator package they need. Run it from the repository root:
 
 ```sh
-yq -N '.stack[].operatorPolicies[] | .subscription.name + " " + .subscription.channel' \
-  stack/{acm,gitops,metallb}/values.yaml  # the elements you enable
-# advanced-cluster-management release-2.17
-# openshift-gitops-operator latest
-# metallb-operator stable
+make -C tools/validator build
+tools/validator/bin/policystack-validator imageset > imageset-config.yaml # (1)!
+tools/validator/bin/policystack-validator imageset acm-dc2 prod-west-1 prod-west-2 > imageset-config.yaml # (2)!
 ```
 
-The elements you enable are the `stack.<key>.enabled: true` entries in the layers your fleet files list. A layer that overrides a channel sets `stack.<key>.operatorPolicies.<op>.subscription.channel`; mirror that channel too. Two more things go in the list:
+1.  Every fleet file in `fleet/` and `fleet/hubs/`.
+2.  Only the clusters this mirror serves, hub included. A name matches `fleet/<name>.yaml` and `fleet/hubs/<name>.yaml`. `--fleet-dir` reads another directory.
 
-- Every package an operator requires. ODF's `odf-operator`, for one, pulls in `ocs-operator`, `mcg-operator` and more; take the list from the product's disconnected docs.
-- Every version a layer pins. A missing version fails the same way. A channel listed without `minVersion`/`maxVersion` keeps only its newest bundle, so a layer that pins `versions` ([Operator versions](operators.md#pinning)) needs a range on that channel covering the pin.
+Each part of the output comes from the render:
 
-Every shipped element subscribes from `redhat-operators`; your own elements may use `certified-operators` or others, which then need their catalog mirrored too.
+| Output | From |
+|---|---|
+| `platform.channels` | Each fleet file's `channel`, `stable-<minor>` when unset. `minVersion` and `maxVersion` are the lowest and highest `version` on that channel. A fleet file without `version` adds no release, and with no `version` at all there is no `platform` section. |
+| `platform.graph` | `true`, for your OSUS ([Update Service](#update-service)). |
+| `operators[].catalog` | The catalog each OperatorPolicy names before `global.catalogSources` renames it, `redhat-operators` becoming `registry.redhat.io/redhat/redhat-operator-index`. The tag is the cluster's OpenShift minor, from `version`, else from `channel`, so clusters on two minors get two catalogs. |
+| `packages` | Every OperatorPolicy the clusters render, except `mustnothave` ones, with its channel, which is also written as `defaultChannel`: oc-mirror rejects a catalog whose listed channels leave out the catalog's default. Pinned `versions` and `startingCSV` ([Operator versions](operators.md#pinning)) become the channel's `minVersion` and `maxVersion`, without `maxVersion` while any cluster leaves that operator unpinned on the channel. A subscription with no channel lists none, and oc-mirror takes the head of every channel. |
+
+The command exits 1 and prints only the error when:
+
+- a fleet file is invalid (POLICY050), or sets neither `version` nor `channel`;
+- an element fails to render (RENDER000);
+- an OperatorPolicy holds an ACM template, or a pin does not end in an `x.y.z` version (`metallb-operator.v4.20.0-202511040000` and `nfd.4.20.0-202511040403` both do);
+- a package is subscribed without a channel and either pinned or also subscribed with one.
+
+A package from a catalog OpenShift does not ship is left out and named in a comment at the top: its index image is unknown, so add that catalog by hand.
+
+Three things the render cannot see. Add them before you mirror:
+
+- **Packages no element names.** An operator that installs others, such as ACM installing `multicluster-engine` or ODF's `odf-operator` pulling in `ocs-operator`, `mcg-operator` and more. Take the list from the product's disconnected docs and pass each as `--package <name>[:<channel>]`, repeated. It joins `redhat-operators` at every minor in the output; without a channel, oc-mirror takes the head of every channel:
+
+    ```sh
+    tools/validator/bin/policystack-validator imageset \
+      --package multicluster-engine:stable-2.12 --package ocs-operator --package mcg-operator \
+      acm-dc2 prod-west-1 prod-west-2 > imageset-config.yaml
+    ```
+
+- **Architectures.** oc-mirror mirrors `amd64` unless `platform.architectures` says otherwise.
+- **The old minor, during a minor upgrade.** The tag follows the fleet file's `version`, the release it targets. Once the bump to 4.21 merges, the output has only `v4.21`, while the clusters still use the `v4.20` catalog until you switch them ([Changing the site data](#changing-the-site-data)). Keep the previous run's `v4.20` block until every cluster has moved.
+
+The output for a hub that enables `acm` and `gitops` and spokes that enable `metallb`, run with the `--package` above but without the ODF packages, after adding `architectures` by hand:
 
 ```yaml
 # imageset-config.yaml
@@ -55,27 +82,35 @@ mirror:
   platform:
     channels:
       - name: stable-4.20
-        minVersion: 4.20.8
-        maxVersion: 4.20.12 # (1)!
-    architectures: [multi] # (2)!
-    graph: true # (3)!
+        minVersion: 4.20.8 # (1)!
+        maxVersion: 4.20.12
+    graph: true # (2)!
+    architectures: [multi] # (3)!
   operators:
     - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.20
       packages:
         - name: advanced-cluster-management
-          channels: [{name: release-2.17}]
-        - name: multicluster-engine # (4)!
-          channels: [{name: stable-2.12}]
-        - name: openshift-gitops-operator
-          channels: [{name: latest}]
+          defaultChannel: release-2.17
+          channels:
+            - name: release-2.17
         - name: metallb-operator
-          channels: [{name: stable}]
+          defaultChannel: stable
+          channels:
+            - name: stable
+        - name: multicluster-engine # (4)!
+          defaultChannel: stable-2.12
+          channels:
+            - name: stable-2.12
+        - name: openshift-gitops-operator
+          defaultChannel: latest
+          channels:
+            - name: latest
 ```
 
-1.  Cover every `version` a fleet file targets and every hop on the way. A version outside the range is not in your OSUS graph, so its bump waits at the guard ([Update Service](#update-service)).
-2.  The payload architecture your clusters run (`amd64` in oc-mirror is the `x86_64` release tag). Clusters the hub builds with `hypershift` or `hive` run `multi`, `siteconfig` clusters run `amd64` ([Clusters the hub builds](#clusters-the-hub-builds)). Imported clusters keep the payload they were installed with. List both when you have both.
-3.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it, whose two values go in `stack.updateService.config` ([Update Service](#update-service)).
-4.  ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: `stable-2.12` for ACM 2.17 (ACM release notes).
+1.  The graph needs both ends of an upgrade: the CVO finds no update from a release that is not in it. Before a `version` bump merges, the clusters still run the old release, so lower `minVersion` to the oldest release a cluster runs. A target outside the range is not in your OSUS graph either, so its bump waits at the guard ([Update Service](#update-service)).
+2.  Mirrors the graph data your OSUS serves, and makes oc-mirror write an `updateService.yaml` for it, whose two values go in `stack.updateService.config` ([Update Service](#update-service)).
+3.  Added by hand. The payload architecture your clusters run (`amd64` in oc-mirror is the `x86_64` release tag). Clusters the hub builds with `hypershift` or `hive` run `multi`, `siteconfig` clusters run `amd64` ([Clusters the hub builds](#clusters-the-hub-builds)). Imported clusters keep the payload they were installed with. List both when you have both.
+4.  From `--package`. ACM installs it itself, so no element lists it. Mirror the channel that pairs with your ACM release: `stable-2.12` for ACM 2.17 (ACM release notes).
 
 ### PolicyStack releases
 

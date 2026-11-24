@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/checks"
+	"github.com/PolicyStack/PolicyStack/tools/validator/internal/imageset"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/reporter"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/revision"
 	"github.com/PolicyStack/PolicyStack/tools/validator/internal/run"
@@ -22,6 +23,9 @@ import (
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "resolve-revision" {
 		os.Exit(resolveRevision(os.Args[2:]))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "imageset" {
+		os.Exit(printImageSet(os.Args[2:]))
 	}
 	if err := realMain(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -167,6 +171,61 @@ func resolveRevision(args []string) int {
 		return 1
 	}
 	fmt.Println(sha)
+	return 0
+}
+
+// printImageSet prints the oc-mirror ImageSetConfiguration the named fleet files, or every one,
+// need. Exit 1 when it cannot be built, 2 on bad usage.
+func printImageSet(args []string) int {
+	fs := flag.NewFlagSet("imageset", flag.ContinueOnError)
+	repoRoot := fs.String("repo-root", ".", "path to repo root")
+	fleetDir := fs.String("fleet-dir", "", "fleet files, hubs in its hubs/ (default <repo>/fleet)")
+	extraValues := fs.String("extra-values", "", "comma-separated values files appended to every cascade (default <repo>/tools/validator/testdata/baseline.yaml, which supplies `selector`)")
+	helmBin := fs.String("helm-bin", "helm", "helm binary")
+	var packages []imageset.Package
+	fs.Func("package", "`name[:channel]` to mirror from redhat-operators that no element subscribes to; repeatable", func(s string) error {
+		p, err := imageset.ParsePackage(s)
+		packages = append(packages, p)
+		return err
+	})
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: policystack-validator imageset [flags] [--] [<fleet file name>...]")
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	root, err := filepath.Abs(*repoRoot)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 2
+	}
+	if *fleetDir == "" {
+		*fleetDir = filepath.Join(root, "fleet")
+	}
+	if *extraValues == "" {
+		*extraValues = filepath.Join(root, "tools/validator/testdata/baseline.yaml")
+	}
+	extras, err := absPaths(splitCSV(*extraValues))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 2
+	}
+	out, err := imageset.Generate(context.Background(), run.Options{
+		RepoRoot:     root,
+		StackDir:     filepath.Join(root, "stack"),
+		LifecycleDir: filepath.Join(root, "lifecycle"),
+		ValuesDir:    filepath.Join(root, "values"),
+		FixturesDir:  *fleetDir,
+		HelmBin:      *helmBin,
+		ExtraValues:  extras,
+		Logger:       slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})),
+	}, fs.Args(), packages)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	_, _ = os.Stdout.Write(out)
 	return 0
 }
 

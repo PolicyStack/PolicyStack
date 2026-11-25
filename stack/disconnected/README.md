@@ -21,7 +21,8 @@ Under `stack.disconnected.config`. Maps merge across layers; lists are replaced 
 
 | Key | Description | Default |
 |---|---|---|
-| `clusterResources` | Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps | `[]` |
+| `clusterResources` | Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog. The signature ConfigMap goes in releaseSignatures | `[]` |
+| `releaseSignatures` | Release signatures the CVO verifies an update against, the binaryData of oc-mirror's signature-configmap.json: sha256-&lt;release digest hex>-&lt;n>: &lt;base64 signature>. A removed key leaves the cluster | `{}` |
 | `registryCAs` | Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM. | `{}` |
 | `trustedCA` | PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed. | `''` |
 
@@ -54,6 +55,14 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration, SC-7 Boundary 
 | Template | Action | Severity | Renders | Description |
 |---|---|---|---|---|
 | `resources-objects` | enforce | high | [objects](converters/resources/objects.yaml) | oc-mirror cluster resources |
+
+### Policy `signatures`
+
+`signatures-disconnected-<cluster>`: Release signatures for upgrades.
+
+| Template | Action | Severity | Renders | Description |
+|---|---|---|---|---|
+| `signatures-release` | enforce | high | [release](converters/signatures/release.yaml) (mustonlyhave) | mirrored-release-signatures ConfigMap |
 
 ### Policy `trusted-ca`
 

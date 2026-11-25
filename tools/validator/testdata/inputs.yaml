@@ -48,6 +48,9 @@ stack:
       trustedCA: |
         -----BEGIN CERTIFICATE-----
         -----END CERTIFICATE-----
+      # The signatures policy renders only with releaseSignatures set.
+      releaseSignatures:
+        sha256-0000000000000000000000000000000000000000000000000000000000000000-1: c2lnbmF0dXJl
   # Required: the UpdateService has no default for either.
   updateService:
     config:

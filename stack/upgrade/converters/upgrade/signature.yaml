@@ -1,0 +1,38 @@
+{{- /*
+Inform-only signature check, off by default. The CVO verifies the target release image against the
+signatures in ConfigMaps in openshift-config-managed labelled
+release.openshift.io/verification-signatures, which is the only source a disconnected cluster has,
+and refuses the update when none matches. Enabled, the trigger waits for this template
+(templates/policy.yaml), so a missing signature fails here, naming the digest, before desiredUpdate
+is written.
+
+The digest is the target's availableUpdates image. Quiet when the target is not offered (the guard
+reports that), once the CVO has taken it as its desired version, and once it is reached.
+*/ -}}
+{{ "{{" }}- if {{ include "upgrade.standalone" . }} {{ "}}" }}
+{{ "{{" }}- $target := "{{ .Values.version }}" {{ "}}" }}
+{{ "{{" }}- $status := (index (lookup "config.openshift.io/v1" "ClusterVersion" "" "version" | default dict) "status" | default dict) {{ "}}" }}
+{{ "{{" }}- $desired := (index (index $status "desired" | default dict) "version" | default "") {{ "}}" }}
+{{ "{{" }}- $current := "" {{ "}}" }}
+{{ "{{" }}- range $h := (index $status "history" | default list) {{ "}}" }}
+{{ "{{" }}-   if and (eq $current "") (eq (index $h "state") "Completed") {{ "}}" }}{{ "{{" }}- $current = (index $h "version") {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $image := "" {{ "}}" }}
+{{ "{{" }}- range $u := (index $status "availableUpdates" | default list) {{ "}}" }}
+{{ "{{" }}-   if eq (index $u "version") $target {{ "}}" }}{{ "{{" }}- $image = (index $u "image" | default "") {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- $done := eq $desired $target {{ "}}" }}
+{{ "{{" }}- if and (ne $current "") (regexMatch "^[0-9]+[.][0-9]+[.][0-9]+" $target) {{ "}}" }}
+{{ "{{" }}-   $done = or $done (semverCompare (printf ">= %s" $target) $current) {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if and (not $done) (contains "@sha256:" $image) {{ "}}" }}
+{{ "{{" }}-   $prefix := printf "sha256-%s-" (index (splitList "@sha256:" $image) 1) {{ "}}" }}
+{{ "{{" }}-   $found := false {{ "}}" }}
+{{ "{{" }}-   range $cm := (index (lookup "v1" "ConfigMap" "openshift-config-managed" "" "release.openshift.io/verification-signatures" | default dict) "items" | default list) {{ "}}" }}
+{{ "{{" }}-     range $k, $v := (index $cm "binaryData" | default dict) {{ "}}" }}{{ "{{" }}- if hasPrefix $prefix $k {{ "}}" }}{{ "{{" }}- $found = true {{ "}}" }}{{ "{{" }}- end {{ "}}" }}{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}-   end {{ "}}" }}
+{{ "{{" }}-   if not $found {{ "}}" }}
+{{ "{{" }}-     fail (printf "no release signature for %s (%s) in openshift-config-managed; add its sha256-<hex>-<n> keys to stack.disconnected.config.releaseSignatures" $target $image) {{ "}}" }}
+{{ "{{" }}-   end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}

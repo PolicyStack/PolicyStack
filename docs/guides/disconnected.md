@@ -139,11 +139,11 @@ Build `clusterResources` from oc-mirror's output, which it writes under the dire
 ```sh
 cd <dir>/working-dir/cluster-resources
 yq ea -p yaml -o yaml -P '[.] | map(del(.status)) | {"clusterResources": .}' \
-  $(ls | grep -v -e updateService -e signature-configmap.yaml)
+  $(ls | grep -v -e updateService -e signature-configmap)
 ```
 
 - `updateService.yaml` is an UpdateService, which needs the OSUS operator, so `resources` goes NonCompliant on any cluster without it. The `update-service` element creates it instead ([Update Service](#update-service)).
-- oc-mirror writes the signature ConfigMap twice, as `signature-configmap.json` and `signature-configmap.yaml`. The command keeps the JSON copy; `-p yaml` reads it, as JSON is valid YAML.
+- `signature-configmap.json` and `signature-configmap.yaml` are the same release signature ConfigMap. It goes in `releaseSignatures` instead ([Release signatures](#release-signatures)).
 
 Paste the output, indented, as `stack.disconnected.config.clusterResources`:
 
@@ -214,11 +214,40 @@ stack:
 !!! warning "Before you enable the element"
     - **Existing image config CA.** An image config whose `additionalTrustedCA` names another ConfigMap is repointed at `registry-cas`, and that ConfigMap's registries stop being trusted for pulls. Copy its keys into `config.registryCAs` first: `oc get image.config cluster -o jsonpath={.spec.additionalTrustedCA.name}`.
     - **Default catalogs disappear.** The `operatorhub` policy sets `disableAllDefaultSources: true`, so `redhat-operators` and the other default CatalogSources go away. Any Subscription not renamed by `global.catalogSources`, including ones created by hand, stops resolving. Put the mapping and the mirrored CatalogSource in place in the same commit that enables the element.
-    - **Release signatures.** Before an upgrade the CVO checks the release image's signature. A disconnected cluster reads it from ConfigMap `openshift-config-managed/mirrored-release-signatures`, which oc-mirror writes when it mirrors releases. Without a signature for the release, the upgrade stops with ClusterVersion `ReleaseAccepted=False` and a message that the release cannot be verified. Each oc-mirror run writes that ConfigMap with only its own releases ([Changing the site data](#changing-the-site-data)).
+    - **Release signatures.** Before an upgrade the CVO checks the release image's signature. A disconnected cluster reads it from ConfigMap `openshift-config-managed/mirrored-release-signatures`, which oc-mirror writes when it mirrors releases. Without a signature for the release, the upgrade stops with ClusterVersion `ReleaseAccepted=False` and a message that the release cannot be verified ([Release signatures](#release-signatures)).
+
+### Release signatures
+
+`config.releaseSignatures` becomes ConfigMap `openshift-config-managed/mirrored-release-signatures`, under the name oc-mirror gives it. Its keys are the ConfigMap's `binaryData`, as oc-mirror writes them: `sha256-<release digest>-<n>`, each holding one base64 signature. Merge each oc-mirror run's signatures into the site layer:
+
+```sh
+yq -i '.stack.disconnected.config.releaseSignatures *= (load("<dir>/working-dir/cluster-resources/signature-configmap.json").binaryData | ... style="")' \
+  values/datacenters/dc2.yaml # (1)!
+```
+
+1.  `*=` merges: keys from earlier runs stay, so the layer holds every release a cluster may still upgrade to, while each oc-mirror run writes only its own. `style=""` writes block YAML instead of the JSON's flow style. `yq -i` also drops blank lines and normalizes comment spacing in the file, so review the diff, or keep `releaseSignatures` in a layer file of its own.
+
+```yaml
+# values/datacenters/dc2.yaml, after the command
+stack:
+  disconnected:
+    config:
+      releaseSignatures:
+        sha256-3c8e...b1f2-1: owGbwMvMwMEoOU9... # (1)!
+```
+
+1.  Shortened. A key that doesn't match `sha256-<64 hex>-<n>`, or a value that isn't base64, fails the render.
+
+The `signatures` policy owns the ConfigMap with `mustonlyhave` on `binaryData`: delete a key and the signature leaves every cluster, so the layer is the whole list. It doesn't touch the ConfigMap's other labels and annotations. With `releaseSignatures` empty, the default, the policy doesn't render.
+
+!!! warning "Signatures already in clusterResources"
+    If `clusterResources` still holds `mirrored-release-signatures` from the earlier command, setting `releaseSignatures` fails the render: two templates would rewrite the same ConfigMap. Move its `binaryData` into `releaseSignatures` and drop it from `clusterResources` in the same commit.
+
+To hold an upgrade until its signature is on the cluster, turn on the upgrade element's [signature check](upgrades.md#release-signature-check) in this layer.
 
 ### Check it
 
-On the hub, `oc get policies.policy.open-cluster-management.io -n <cluster>` lists `pstack.resources-disconnected-<cluster>`, `pstack.registry-ca-disconnected-<cluster>`, `pstack.trusted-ca-disconnected-<cluster>` and `pstack.operatorhub-disconnected-<cluster>`, all Compliant. A NonCompliant one names the object at fault ([Compliance states](../concepts/acm.md#compliance-states)). On the cluster:
+On the hub, `oc get policies.policy.open-cluster-management.io -n <cluster>` lists `pstack.resources-disconnected-<cluster>`, `pstack.registry-ca-disconnected-<cluster>`, `pstack.trusted-ca-disconnected-<cluster>`, `pstack.operatorhub-disconnected-<cluster>` and, with `releaseSignatures` set, `pstack.signatures-disconnected-<cluster>`, all Compliant. A NonCompliant one names the object at fault ([Compliance states](../concepts/acm.md#compliance-states)). On the cluster:
 
 ```sh
 oc get imagedigestmirrorsets,catalogsources -A
@@ -244,13 +273,14 @@ The hub needs the mirrored catalog before PolicyStack exists to apply it, becaus
 
 ## What the element applies
 
-Every policy is on; turn one off with `policies.<policy>.enabled: false`. With empty input, `resources`, `registry-ca` and `trusted-ca` apply nothing; the Policy stays, Compliant.
+Every policy is on; turn one off with `policies.<policy>.enabled: false`. With empty input, `resources`, `registry-ca` and `trusted-ca` apply nothing; the Policy stays, Compliant. `signatures` renders only when `releaseSignatures` is set.
 
 | Policy | Applies |
 |---|---|
 | `resources` | `config.clusterResources`, as is. |
 | `registry-ca` | ConfigMap `openshift-config/registry-cas` from `config.registryCAs`, and `additionalTrustedCA` on `image.config.openshift.io/cluster`. With the `update-service` element enabled, also key `updateservice-registry` ([Registry CA](#registry-ca)). |
 | `trusted-ca` | ConfigMap `openshift-config/trusted-cas`, with the Proxy's `trustedCA` pointing at it. Lands in every injected trust bundle, including the one the `gitops` element mounts into the repo server of an Argo CD instance it manages (not the hub's own, [above](#git-and-the-hubs-argo-cd)). |
+| `signatures` | ConfigMap `openshift-config-managed/mirrored-release-signatures` from `config.releaseSignatures` ([Release signatures](#release-signatures)). |
 | `operatorhub` | `OperatorHub` `disableAllDefaultSources: true`. |
 
 ### trusted-cas
@@ -272,10 +302,10 @@ Every policy is on; turn one off with `policies.<policy>.enabled: false`. With e
 
 ## Changing the site data
 
-No template sets `pruneObjectBehavior` (ACM's setting that deletes what a policy created once the policy goes, [Removal and pruning](../concepts/removal.md)). So an object dropped from `clusterResources`, a policy turned off, or the element disabled stays on the cluster: an old CatalogSource keeps its pod running and the OperatorHub stays disabled. The two CA ConfigMaps are `mustonlyhave`, so a removed key does disappear, but emptying `registryCAs` or `trustedCA` leaves the last ConfigMap and its reference in place. Delete them by hand.
+No template sets `pruneObjectBehavior` (ACM's setting that deletes what a policy created once the policy goes, [Removal and pruning](../concepts/removal.md)). So an object dropped from `clusterResources`, a policy turned off, or the element disabled stays on the cluster: an old CatalogSource keeps its pod running and the OperatorHub stays disabled. The two CA ConfigMaps and the signature ConfigMap are `mustonlyhave`, so a removed key does disappear, but emptying `registryCAs`, `trustedCA` or `releaseSignatures` leaves the last ConfigMap in place, and for the two CAs the reference to it. Delete them by hand.
 
 - **A new oc-mirror run.** Regenerate the list and replace `clusterResources` whole: oc-mirror v2's mirror sets cover the entire image set on every run, and a list in a later layer replaces the earlier one rather than adding to it, so a second layer cannot hold "the new objects".
-- **Old signatures.** Each run writes one ConfigMap, `mirrored-release-signatures`, with only that run's releases. Clusters keep keys they already have (`musthave` never removes them), but a new cluster gets only the current run's. Keep `minVersion` low enough to cover every release a cluster may still upgrade to, or copy the earlier run's `binaryData` entries into the new ConfigMap.
+- **Old signatures.** Each run writes `signature-configmap.json` with only that run's releases. The [yq command](#release-signatures) merges it into `releaseSignatures`, so earlier releases stay. Delete a release's keys once no cluster will upgrade to it.
 - **A new catalog version** (`v4-20` to `v4-21`, when clusters move minor):
     1. Mirror the new index and add its CatalogSource to `clusterResources`, next to the old one.
     2. Once a cluster finishes its upgrade to 4.21, set `global.catalogSources.redhat-operators: cs-redhat-operator-index-v4-21` in `values/clusters/<cluster>.yaml`. The new index may hold bundles that need 4.21. Maps merge, so this one key overrides the site's.
@@ -419,6 +449,8 @@ HyperShift writes a hosted cluster's image config, Proxy, node mirror configurat
             enabled: false
           operatorhub:
             enabled: false
+          signatures: # (5)!
+            enabled: false
         config:
           clusterResources: # (4)!
             - apiVersion: operators.coreos.com/v1alpha1
@@ -434,7 +466,8 @@ HyperShift writes a hosted cluster's image config, Proxy, node mirror configurat
     1.  A hub ConfigMap with key `ca-bundle.crt`, in the HostedCluster's namespace. Name it per cluster: `install.manifests` are deleted when their cluster is destroyed, so a ConfigMap two clusters share disappears with the first one.
     2.  Hub objects created before the cluster ([Install keys](../reference/lifecycle.md#install-keys)). A list, so it replaces any `manifests` from another layer, and the fleet file's `install` overrides this file's. Keep all of a cluster's manifests in one place.
     3.  `install.namespace`, `clusters` by default.
-    4.  Replaces the site's list, CatalogSources only. Restate each in full: without this, the guest inherits the site's mirror sets and signature ConfigMap.
+    4.  Replaces the site's list, CatalogSources only. Restate each in full: without this, the guest inherits the site's mirror sets.
+    5.  `releaseSignatures` is a map, so the guest inherits the site's. HyperShift upgrades the guest from the HostedCluster, not through the guest's ClusterVersion.
 
 ### Hive clusters
 

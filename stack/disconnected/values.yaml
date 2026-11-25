@@ -4,8 +4,10 @@ stack:
 
     # Site data, usually set once in a datacenter layer
     config:
-      # Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog and the release signature ConfigMaps
+      # Objects from oc-mirror's working-dir/cluster-resources, applied as they are: ImageDigestMirrorSet, ImageTagMirrorSet, CatalogSource, ClusterCatalog. The signature ConfigMap goes in releaseSignatures
       clusterResources: []
+      # Release signatures the CVO verifies an update against, the binaryData of oc-mirror's signature-configmap.json: sha256-<release digest hex>-<n>: <base64 signature>. A removed key leaves the cluster
+      releaseSignatures: {}
       # Mirror registry CAs for image pulls, keyed by host, or host..port for a port (registry.example.com..8443). Values are PEM.
       registryCAs: {}
       # PEM bundle added to the cluster trust bundle, e.g. the CA of an internal Git or Helm server. Appended to the CAs in user-ca-bundle, which is never changed.
@@ -44,6 +46,15 @@ stack:
         templates:
           proxy:
             description: "trusted-cas ConfigMap and Proxy trustedCA"
+
+      # Own ConfigMap openshift-config-managed/mirrored-release-signatures with config.releaseSignatures. Renders only when that is set
+      signatures:
+        description: "Release signatures for upgrades"
+        templates:
+          release:
+            description: "mirrored-release-signatures ConfigMap"
+            complianceType: mustonlyhave
+            metadataComplianceType: musthave
 
       # Disable the default OperatorHub catalog sources, which cannot be reached
       operatorhub:

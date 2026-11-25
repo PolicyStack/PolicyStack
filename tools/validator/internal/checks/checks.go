@@ -64,9 +64,10 @@ type Context struct {
 	Fleet []FleetFile
 	// Clusters is every fleet file. Set for PhaseRepo only.
 	Clusters []*fixtures.Cluster
-	// RenderedPolicies[chart][policy] is set when a fleet file's render of the chart holds the
-	// Policy of policies.<policy>. Set for PhaseRepo only.
-	RenderedPolicies map[string]map[string]bool
+	// RenderedDependencies[chart][policy] holds, for each Policy of policies.<policy> that some fleet
+	// file's render of the chart holds, its kind Policy dependency names without the cluster suffix.
+	// Set for PhaseRepo only.
+	RenderedDependencies map[string]map[string]map[string]bool
 	// AllRendered is not populated. Cross-element POLICY002 runs in run.Run.
 	AllRendered map[string][]byte
 	Logger      *slog.Logger

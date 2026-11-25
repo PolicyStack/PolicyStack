@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"cmp"
 	"strings"
 	"testing"
 
@@ -27,16 +28,20 @@ func certManager(t *testing.T) *chart.Element {
 `)
 }
 
-// runDeps runs POLICY011 as if a fleet file rendered every policy of each element.
+// runDeps runs POLICY011 as if a fleet file rendered every policy of each element with the
+// dependencies its values.yaml declares.
 func runDeps(els ...*chart.Element) []Finding {
-	rendered := map[string]map[string]bool{}
+	rendered := map[string]map[string]map[string]bool{}
 	for _, el := range els {
-		rendered[el.ChartName] = map[string]bool{}
-		for k := range el.Values.Component.Policies {
-			rendered[el.ChartName][k] = true
+		rendered[el.ChartName] = map[string]map[string]bool{}
+		for k, p := range el.Values.Component.Policies {
+			rendered[el.ChartName][k] = map[string]bool{}
+			for _, d := range p.Dependencies {
+				rendered[el.ChartName][k][d.Name+"-"+cmp.Or(d.Element, el.ChartName)] = true
+			}
 		}
 	}
-	return (&DependencyCheck{}).Run(Context{AllElements: els, RenderedPolicies: rendered})
+	return (&DependencyCheck{}).Run(Context{AllElements: els, RenderedDependencies: rendered})
 }
 
 func TestPolicy011_ValidReferencesAreSilent(t *testing.T) {
@@ -153,8 +158,9 @@ func TestPolicy011_DanglingAndBadReferences(t *testing.T) {
 }
 
 // TestPolicy011_MissingElementOnlyWhereRendered: an element: naming no element under stack/ is
-// reported only when a fleet file's render holds the Policy declaring it. run.Run fills
-// RenderedPolicies from Helm's output, so Helm alone decides what enabled means.
+// reported only when a fleet file's render holds the Policy declaring it with that dependency.
+// run.Run fills RenderedDependencies from Helm's output, so Helm alone decides what enabled means
+// and which layer's dependencies win.
 func TestPolicy011_MissingElementOnlyWhereRendered(t *testing.T) {
 	el := loadElement(t, `stack:
   loki:
@@ -172,16 +178,18 @@ func TestPolicy011_MissingElementOnlyWhereRendered(t *testing.T) {
 `, "apiVersion: v2\nname: loki\nversion: 0.1.0\n", nil)
 	for _, tc := range []struct {
 		name     string
-		rendered map[string]map[string]bool
+		rendered map[string]map[string]map[string]bool
 		want     bool
 	}{
 		{name: "no fleet files"},
-		{name: "rendered", rendered: map[string]map[string]bool{"loki": {"stack": true}}, want: true},
-		{name: "only another policy rendered", rendered: map[string]map[string]bool{"loki": {"other": true}}},
-		{name: "another chart's policy of that name", rendered: map[string]map[string]bool{"odf": {"stack": true}}},
+		{name: "rendered", rendered: map[string]map[string]map[string]bool{"loki": {"stack": {"ready-odf": true}}}, want: true},
+		{name: "rendered with a layer's dependencies", rendered: map[string]map[string]map[string]bool{"loki": {"stack": {"hub-loki": true}}}},
+		{name: "rendered without dependencies", rendered: map[string]map[string]map[string]bool{"loki": {"stack": {}}}},
+		{name: "only another policy rendered", rendered: map[string]map[string]map[string]bool{"loki": {"other": {"ready-odf": true}}}},
+		{name: "another chart's policy of that name", rendered: map[string]map[string]map[string]bool{"odf": {"stack": {"ready-odf": true}}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := (&DependencyCheck{}).Run(Context{AllElements: []*chart.Element{el}, RenderedPolicies: tc.rendered})
+			got := (&DependencyCheck{}).Run(Context{AllElements: []*chart.Element{el}, RenderedDependencies: tc.rendered})
 			if tc.want != (len(got) == 1) || len(got) > 1 {
 				t.Fatalf("want reported=%v, got %+v", tc.want, got)
 			}
@@ -333,5 +341,52 @@ func TestPolicy011_EveryLifecycleComponent(t *testing.T) {
 		if len(got) != 1 || !strings.Contains(got[0].Message, "gaurd") {
 			t.Errorf("order %s,%s: got %+v", order[0].StackKey, order[1].StackKey, got)
 		}
+	}
+}
+
+// TestPolicy011_UnrenderedDependencies: a rendered dependency on a policy some element renders is
+// reported, as a warning, when no render of that fleet file holds it. Anything POLICY011 cannot
+// place, another cluster's or a non-PolicyStack Policy, is left alone.
+func TestPolicy011_UnrenderedDependencies(t *testing.T) {
+	a := elementNamed(t, "a", "a", `
+    policies:
+      p:
+        templates:
+          t: {}
+      q:
+        templates:
+          t2: {}
+`)
+	odf := elementNamed(t, "odf", "odf", `
+    policies:
+      ready:
+        templates:
+          t: {}
+      bare: {}
+`)
+	for _, tc := range []struct {
+		name, target string
+		rendered     []string
+		want         bool
+	}{
+		{"other element off", "ready-odf-c", []string{"p-a-c"}, true},
+		{"other element on", "ready-odf-c", []string{"p-a-c", "ready-odf-c"}, false},
+		{"same element off", "q-a-c", []string{"p-a-c"}, true},
+		{"never renders", "bare-odf-c", nil, false},
+		{"unknown element", "ready-loki-c", nil, false},
+		{"another cluster", "ready-odf-d", nil, false},
+		{"outside PolicyStack", "hand-made", nil, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rendered := map[string]bool{}
+			for _, r := range tc.rendered {
+				rendered[r] = true
+			}
+			dep := RenderedDependency{Policy: "p", Target: tc.target, Finding: Finding{RuleID: "POLICY011", Severity: SevWarning}}
+			got := UnrenderedDependencies([]*chart.Element{a, odf}, "c", rendered, []RenderedDependency{dep})
+			if tc.want != (len(got) == 1) || len(got) > 1 {
+				t.Fatalf("want reported=%v, got %+v", tc.want, got)
+			}
+		})
 	}
 }

@@ -6,10 +6,17 @@ templating; sizing comes from values.
 
 A raw list so ACM resolves it all or nothing: a failed bucket lookup applies nothing, and the
 MultiClusterObservability never exists without its Thanos secret.
+
+With s3.bucket set, the Thanos config comes from values and the credentials from s3.credentialsSecret.
+toJson quotes them, since access keys may hold YAML-significant characters. s3.caSecret is mounted
+into the Thanos pods; MCO ignores the path in ca_file, so tlsSecretMountPath is set as well.
 */ -}}
 {{- $o := .Config.observability }}
 {{- $ns := $o.namespace }}
 {{- $bucket := $o.bucket }}
+{{- $s3 := $o.s3 | default dict }}
+{{- $ca := and $s3.bucket $s3.caSecret }}
+{{- $caPath := "/etc/s3/certs" }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: v1
@@ -32,6 +39,22 @@ MultiClusterObservability never exists without its Thanos secret.
       thanos.yaml: |
         type: s3
         config:
+          {{- if $s3.bucket }}
+          {{- $cred := required "acm: config.observability.s3.credentialsSecret is required with s3.bucket" $s3.credentialsSecret }}
+          bucket: {{ $s3.bucket | quote }}
+          endpoint: {{ required "acm: config.observability.s3.endpoint is required with s3.bucket" $s3.endpoint | quote }}
+          {{- with $s3.region }}
+          region: {{ . | quote }}
+          {{- end }}
+          insecure: {{ $s3.insecure | default false }}
+          access_key: {{ "{{" }} fromSecret "{{ $ns }}" "{{ $cred }}" "AWS_ACCESS_KEY_ID" | base64dec | toJson {{ "}}" }}
+          secret_key: {{ "{{" }} fromSecret "{{ $ns }}" "{{ $cred }}" "AWS_SECRET_ACCESS_KEY" | base64dec | toJson {{ "}}" }}
+          {{- if $ca }}
+          http_config:
+            tls_config:
+              ca_file: {{ $caPath }}/ca.crt
+          {{- end }}
+          {{- else }}
           bucket: {{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_NAME" {{ "}}" }}
           endpoint: '{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_HOST" {{ "}}" }}:{{ "{{" }} fromConfigMap "{{ $ns }}" "{{ $bucket }}" "BUCKET_PORT" {{ "}}" }}'
           insecure: false
@@ -40,6 +63,7 @@ MultiClusterObservability never exists without its Thanos secret.
           http_config:
             tls_config:
               ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+          {{- end }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: observability.open-cluster-management.io/v1beta2
@@ -54,6 +78,10 @@ MultiClusterObservability never exists without its Thanos secret.
         metricObjectStorage:
           name: thanos-object-storage
           key: thanos.yaml
+          {{- if $ca }}
+          tlsSecretName: {{ $ca | quote }}
+          tlsSecretMountPath: {{ $caPath }}
+          {{- end }}
         storageClass: {{ $o.storageClass }}
         alertmanagerStorageSize: {{ $o.alertmanagerStorageSize }}
         compactStorageSize: {{ $o.compactStorageSize }}

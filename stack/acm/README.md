@@ -19,6 +19,7 @@ Shipped with `enabled: false`. Turn one on in a values layer.
 |---|---|---|
 | Policy [`addons`](#policy-addons) | Policy addon tuning | `policies.addons.enabled: true` |
 | Policy [`observability`](#policy-observability) | Long-term metric storage | `policies.observability.enabled: true` |
+| template `observability-metrics` (needs Policy `observability`) | Custom metrics allowlist | `policies.observability.templates.metrics.enabled: true` |
 | Policy [`search`](#policy-search) | ACM Search persistent storage | `policies.search.enabled: true` |
 
 ## Settings
@@ -44,6 +45,16 @@ Under `stack.acm.config`. Maps merge across layers; lists are replaced whole.
 | `observability.receiveStorageSize` |  | `100Gi` |
 | `observability.ruleStorageSize` |  | `1Gi` |
 | `observability.storeStorageSize` |  | `10Gi` |
+| `observability.s3` | External S3-compatible storage (AWS S3, MinIO, Ceph RGW) in place of the NooBaa bucket. Setting bucket turns it on and drops the ObjectBucketClaim. To stop waiting for ODF, also set policies.observability.dependencies to [{name: hub}] in the same layer. Switching a hub from NooBaa leaves the ObjectBucketClaim and the metrics in it: delete it by hand. |  |
+| `observability.s3.bucket` | Bucket name, 3-63 characters. Empty uses the NooBaa bucket. | `''` |
+| `observability.s3.endpoint` | host[:port], no scheme or path, for example s3.us-east-1.amazonaws.com or minio.example.com:9000 | `''` |
+| `observability.s3.region` | Empty lets the client ask the bucket. Set it for AWS when the IAM policy denies s3:GetBucketLocation. | `''` |
+| `observability.s3.insecure` | Plain HTTP instead of HTTPS. This does not skip certificate checks: use caSecret for a private CA. | `false` |
+| `observability.s3.credentialsSecret` | Secret in the observability namespace holding AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY. Required with bucket. | `''` |
+| `observability.s3.caSecret` | Secret in the observability namespace whose ca.crt verifies the endpoint. It replaces the system roots, so it must hold the whole chain. Empty trusts the public CAs. Clearing it or bucket later leaves tlsSecretName on the MultiClusterObservability: remove that by hand. | `''` |
+| `observability.customMetrics` | Metrics collected on top of the default allowlist, written by template metrics. |  |
+| `observability.customMetrics.names` | Metric names | `[]` |
+| `observability.customMetrics.recordingRules` | Entries {record, expr}: expr is a PromQL query run on each managed cluster at every collection interval, and its result is sent to the hub as the metric named by record. | `[]` |
 | `addons` | Policy addon tuning, keyed by addon name. The shipped defaults raise the stock concurrency and rate limits, which are the usual bottleneck at scale. | 2 entries, below |
 
 <details><summary><code>addons</code> default</summary>
@@ -117,6 +128,7 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 |---|---|---|---|---|---|
 | `observability-bucket` | enforce | medium |  | [bucket](converters/observability/bucket.yaml) | Observability namespace and Thanos bucket |
 | `observability-mco` | enforce | medium | `observability-bucket`<br>compliant while pending | [mco](converters/observability/mco.yaml) | MultiClusterObservability and its object storage config |
+| `observability-metrics` (off) | enforce | medium | `observability-bucket` | [metrics](converters/observability/metrics.yaml) (mustonlyhave) | Custom metrics allowlist |
 
 ### Policy `search`
 

@@ -19,7 +19,9 @@ import (
 //
 // Runs repo-wide so `element:` references resolve against the other elements under stack/. An
 // `element:` naming no element under stack/ is reported only when a fleet file's render holds the
-// Policy declaring it, so a copy may leave out the elements its disabled policies name.
+// Policy declaring it with that dependency, so a copy may leave out the elements its disabled
+// policies name, or that a layer replaced the dependency on. UnrenderedDependencies covers what
+// only the renders show.
 type DependencyCheck struct{}
 
 func (DependencyCheck) ID() string   { return "POLICY011" }
@@ -29,8 +31,8 @@ func (DependencyCheck) Phase() Phase { return PhaseRepo }
 // not, since a values layer may turn it on.
 type elementIndex struct {
 	el *chart.Element
-	// rendered[name] is set when a fleet file's render holds the Policy of policies.<name>.
-	rendered map[string]bool
+	// rendered[name] holds the dependencies of the Policy of policies.<name> in fleet file renders.
+	rendered map[string]map[string]bool
 	// policyRenders[name] reports whether the chart emits the Policy, which needs a template or an
 	// operator. Every policy of the element is a key.
 	policyRenders map[string]bool
@@ -64,7 +66,7 @@ func (c *DependencyCheck) Run(ctx Context) []Finding {
 			continue
 		}
 		ix := indexElement(el)
-		ix.rendered = ctx.RenderedPolicies[el.ChartName]
+		ix.rendered = ctx.RenderedDependencies[el.ChartName]
 		byChart[el.ChartName] = ix
 		ixs = append(ixs, ix)
 	}
@@ -185,7 +187,7 @@ func (c *DependencyCheck) checkDep(ix *elementIndex, all map[string]*elementInde
 	if d.Element != "" {
 		t, ok := all[d.Element]
 		if !ok {
-			if !ix.rendered[owner] {
+			if !ix.rendered[owner][d.Name+"-"+d.Element] {
 				return out
 			}
 			var known []string
@@ -209,6 +211,74 @@ func (c *DependencyCheck) checkDep(ix *elementIndex, all map[string]*elementInde
 	}
 	if !renders {
 		add(fmt.Sprintf("%s: dependency %q in %s has no template or operator, so policy-library never emits a Policy for it and this dependency can never be satisfied", where, d.Name, scope))
+	}
+	return out
+}
+
+// RenderedDependency is a kind Policy dependency of a Policy in one fleet file's render.
+type RenderedDependency struct {
+	Policy  string  // policies.<key> of the declaring Policy
+	Target  string  // the name as rendered: <policy>-<element>-<cluster> for a PolicyStack Policy
+	Finding Finding // the warning UnrenderedDependencies reports for it
+}
+
+// PolicyDependencies returns the kind Policy dependencies of every Policy in ctx.Rendered, its own
+// and its templates' extraDependencies, each warning located at the policy's entry in the last
+// cascade file defining it.
+func PolicyDependencies(ctx Context) []RenderedDependency {
+	pols, _ := policies(ctx, "")
+	var out []RenderedDependency
+	for _, p := range pols {
+		if p.Kind != "Policy" {
+			continue
+		}
+		deps := slices.Clone(p.Spec.Dependencies)
+		for _, t := range p.Spec.PolicyTemplates {
+			deps = append(deps, t.ExtraDependencies...)
+		}
+		deps = slices.DeleteFunc(deps, func(d dependency) bool { return d.Kind != "Policy" })
+		if len(deps) == 0 {
+			continue
+		}
+		where, file, loc := origin(ctx, "Policy", p.Metadata.Name, "dependencies")
+		for _, d := range deps {
+			out = append(out, RenderedDependency{
+				Policy: strings.TrimSuffix(p.Metadata.Name, "-"+ctx.Cluster.ReleaseName),
+				Target: d.Name,
+				Finding: Finding{
+					RuleID: "POLICY011", Severity: SevWarning,
+					Element: ctx.Element.ChartName, Cluster: ctx.Cluster.ClusterName,
+					Message: fmt.Sprintf("%s: dependency %q is a Policy no element renders for this cluster, so ACM leaves this Policy Pending. Turn that policy on, or replace the dependency in a layer", where, d.Name),
+					File:    file, Line: loc.Line, Col: loc.Col,
+				},
+			})
+		}
+	}
+	return out
+}
+
+// UnrenderedDependencies reports the dependencies in one fleet file's renders on a PolicyStack
+// Policy those renders don't hold, such as acm observability waiting on odf ready with odf off.
+// rendered holds the Policy names of every element's render for the fleet file and cluster is its
+// cluster suffix. Only targets named like a policy of an element in all that has a template or
+// operator are reported: anything else may be outside PolicyStack.
+func UnrenderedDependencies(all []*chart.Element, cluster string, rendered map[string]bool, deps []RenderedDependency) []Finding {
+	known := map[string]bool{}
+	for _, el := range all {
+		if el == nil || el.Values == nil {
+			continue
+		}
+		for name, renders := range indexElement(el).policyRenders {
+			if renders {
+				known[name+"-"+el.ChartName+"-"+cluster] = true
+			}
+		}
+	}
+	var out []Finding
+	for _, d := range deps {
+		if known[d.Target] && !rendered[d.Target] {
+			out = append(out, d.Finding)
+		}
 	}
 	return out
 }

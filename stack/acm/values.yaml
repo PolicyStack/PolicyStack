@@ -28,6 +28,33 @@ stack:
         receiveStorageSize: 100Gi
         ruleStorageSize: 1Gi
         storeStorageSize: 10Gi
+        # External S3-compatible storage (AWS S3, MinIO, Ceph RGW) in place of the NooBaa bucket.
+        # Setting bucket turns it on and drops the ObjectBucketClaim. To stop waiting for ODF, also
+        # set policies.observability.dependencies to [{name: hub}] in the same layer. Switching a hub
+        # from NooBaa leaves the ObjectBucketClaim and the metrics in it: delete it by hand.
+        s3:
+          # Bucket name, 3-63 characters. Empty uses the NooBaa bucket.
+          bucket: ""
+          # host[:port], no scheme or path, for example s3.us-east-1.amazonaws.com or minio.example.com:9000
+          endpoint: ""
+          # Empty lets the client ask the bucket. Set it for AWS when the IAM policy denies s3:GetBucketLocation.
+          region: ""
+          # Plain HTTP instead of HTTPS. This does not skip certificate checks: use caSecret for a private CA.
+          insecure: false
+          # Secret in the observability namespace holding AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+          # Required with bucket.
+          credentialsSecret: ""
+          # Secret in the observability namespace whose ca.crt verifies the endpoint. It replaces the
+          # system roots, so it must hold the whole chain. Empty trusts the public CAs. Clearing it
+          # or bucket later leaves tlsSecretName on the MultiClusterObservability: remove that by hand.
+          caSecret: ""
+        # Metrics collected on top of the default allowlist, written by template metrics.
+        customMetrics:
+          # Metric names
+          names: []
+          # Entries {record, expr}: expr is a PromQL query run on each managed cluster at every
+          # collection interval, and its result is sent to the hub as the metric named by record.
+          recordingRules: []
       # Policy addon tuning, keyed by addon name. The shipped defaults raise the
       # stock concurrency and rate limits, which are the usual bottleneck at scale.
       addons:
@@ -70,7 +97,8 @@ stack:
             waitForOperator: acm
 
       # Long-term metric storage via Thanos in a NooBaa bucket. Requires ODF on the
-      # same cluster, so this waits for it.
+      # same cluster, so this waits for it. With config.observability.s3 set, override
+      # dependencies to [{name: hub}] so it doesn't.
       observability:
         enabled: false
         description: "Long-term metric storage"
@@ -88,6 +116,19 @@ stack:
             extraDependencies:
               - name: bucket
             ignorePending: true
+
+          # Owns the custom allowlist whole, so a name or rule removed from customMetrics stops being
+          # collected. Turning the template off leaves the ConfigMap: delete it by hand.
+          metrics:
+            enabled: false
+            description: "Custom metrics allowlist"
+            complianceType: mustonlyhave
+            # MCO adds a backup label to the ConfigMap
+            metadataComplianceType: musthave
+            # Recording rules are PromQL, not ACM templates
+            disableTemplating: true
+            extraDependencies:
+              - name: bucket
 
       # Persistent storage for ACM Search
       search:

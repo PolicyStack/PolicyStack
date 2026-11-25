@@ -212,8 +212,17 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		name    string
 	}
 	dupAccum := map[clusterKey][]rendered{}
-	// Policies some fleet file's render holds, per chart, for POLICY011.
-	renderedPolicies := map[string]map[string]bool{}
+	// The dependencies of the Policies some fleet file's render holds, per chart, for POLICY011.
+	renderedDeps := map[string]map[string]map[string]bool{}
+	// Per fleet file, the Policies every element renders and their dependencies, for POLICY011. Keyed
+	// by file: a hub and a spoke may share a name.
+	type clusterRender struct {
+		cluster  string
+		policies map[string]bool
+		deps     []checks.RenderedDependency
+		failed   bool
+	}
+	clusterRenders := map[string]*clusterRender{}
 	var dupMu sync.Mutex
 
 	sem := make(chan struct{}, opts.Jobs)
@@ -259,12 +268,30 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 				key := clusterKey{policyNs: ns, clusterName: c.Cluster.ClusterName}
 				comp := c.Element.Values.Component
 				keys := checks.PolicyKeys(c)
+				deps := checks.PolicyDependencies(c)
 				dupMu.Lock()
+				byPolicy := renderedDeps[c.Element.ChartName]
+				if byPolicy == nil {
+					byPolicy = map[string]map[string]bool{}
+					renderedDeps[c.Element.ChartName] = byPolicy
+				}
+				cr := clusterRenders[p.cl.SourceFile]
+				if cr == nil {
+					cr = &clusterRender{cluster: c.Cluster.ClusterName, policies: map[string]bool{}}
+					clusterRenders[p.cl.SourceFile] = cr
+				}
+				cr.failed = cr.failed || renderFinding != nil
+				if !v3[c.Element.ChartName] {
+					cr.deps = append(cr.deps, deps...)
+				}
 				for _, k := range keys {
-					if renderedPolicies[c.Element.ChartName] == nil {
-						renderedPolicies[c.Element.ChartName] = map[string]bool{}
+					if byPolicy[k] == nil {
+						byPolicy[k] = map[string]bool{}
 					}
-					renderedPolicies[c.Element.ChartName][k] = true
+					cr.policies[k+"-"+rel] = true
+				}
+				for _, d := range deps {
+					byPolicy[d.Policy][strings.TrimSuffix(d.Target, "-"+c.Cluster.ClusterName)] = true
 				}
 				for _, pol := range comp.Policies {
 					if pol.Name == "" {
@@ -311,6 +338,16 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		}
 	}
 
+	// POLICY011 on the renders: a dependency on a Policy no element renders for that fleet file. It
+	// needs every element's render of the fleet file, so not with --element or a failed render.
+	if !skipped("POLICY011", opts) && opts.Element == "" {
+		for _, cr := range clusterRenders {
+			if !cr.failed {
+				addFindings(checks.UnrenderedDependencies(all, cr.cluster, cr.policies, cr.deps))
+			}
+		}
+	}
+
 	// Phase 3: repo-wide checks.
 	layers, err := valueLayers(rootValues, opts.ValuesDir)
 	if err != nil {
@@ -323,7 +360,7 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 			fleet = append(fleet, checks.FleetFile{Name: cl.Name, Hub: cl.Hub, Files: append(r.ValueFiles, cl.SourceFile)})
 		}
 	}
-	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Clusters: clusters, RenderedPolicies: renderedPolicies, Logger: opts.Logger}
+	repoCtx := checks.Context{AllElements: all, Layers: layers, Fleet: fleet, Clusters: clusters, RenderedDependencies: renderedDeps, Logger: opts.Logger}
 	for _, ck := range enabled {
 		if ck.Phase() != checks.PhaseRepo {
 			continue

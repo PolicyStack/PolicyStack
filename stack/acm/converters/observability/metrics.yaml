@@ -1,0 +1,23 @@
+{{- /*
+Custom metrics allowlist. MultiClusterObservability merges it with its default allowlist and sends
+the result to every managed cluster. Each recording rule is a query the managed cluster's collector
+runs at every collection interval.
+
+The collector parses each rule as JSON with the expression pasted in unescaped, so expr is
+JSON-escaped here and values hold plain PromQL.
+*/ -}}
+{{- $o := .Config.observability }}
+{{- $m := $o.customMetrics | default dict }}
+{{- $rules := list }}
+{{- range $m.recordingRules }}
+{{- $expr := required "acm: every customMetrics.recordingRules entry needs expr" .expr | toJson | trimPrefix "\"" | trimSuffix "\"" }}
+{{- $rules = append $rules (dict "record" (required "acm: every customMetrics.recordingRules entry needs record" .record) "expr" $expr) }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-metrics-custom-allowlist
+  namespace: {{ $o.namespace }}
+data:
+  metrics_list.yaml: |
+    {{- toYaml (dict "names" ($m.names | default list) "recording_rules" $rules) | nindent 4 }}

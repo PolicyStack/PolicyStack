@@ -32,6 +32,7 @@ type policyObject struct {
 }
 
 type dependency struct {
+	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
 

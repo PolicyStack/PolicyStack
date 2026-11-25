@@ -26,3 +26,28 @@ stack:
           networking:
             interfaces:
               bond0: {mac: "aa:bb:cc:dd:ee:ff"}
+  # acm observability on external S3 with a private CA and the custom metrics allowlist, which
+  # all-on leaves on NooBaa
+  acm:
+    enabled: true
+    config:
+      observability:
+        s3:
+          bucket: metrics
+          endpoint: minio.example.com:9000
+          region: us-east-1
+          credentialsSecret: thanos-s3
+          caSecret: s3-ca
+        customMetrics:
+          names: [node_memory_MemTotal_bytes]
+          recordingRules:
+            - record: apiserver:p90
+              expr: 'histogram_quantile(0.90, sum(rate(apiserver_request_duration_seconds_bucket{job="apiserver"}[5m])) by (le))'
+    policies:
+      observability:
+        enabled: true
+        dependencies:
+          - name: hub
+        templates:
+          metrics:
+            enabled: true

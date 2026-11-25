@@ -638,9 +638,19 @@ func TestAllOn(t *testing.T) {
 	}
 }
 
+// policy011Helm stands in for helm template: it renders Policy p for release a-c when a values file
+// turns something on, depending on hub-a-c when a values file names hub and on ready-odf-c otherwise.
+const policy011Helm = `#!/bin/sh
+[ "$1" = template ] || exit 0
+values=$(for f; do [ -f "$f" ] && cat "$f"; done)
+echo "$values" | grep -q 'enabled: true' || exit 0
+dep=ready-odf-c
+echo "$values" | grep -q 'name: hub' && dep=hub-a-c
+printf 'kind: Policy\nmetadata:\n  name: p-a-c\nspec:\n  dependencies:\n    - {kind: Policy, name: %s}\n' "$dep"
+`
+
 // TestPolicy011Wiring runs the check through Run: a missing element: target is reported only when a
-// fleet file's render, --all-on included, holds the Policy naming it. The stand-in helm renders
-// Policy p for release a-c when a values file turns something on.
+// fleet file's render, --all-on included, holds the Policy naming it with that dependency.
 func TestPolicy011Wiring(t *testing.T) {
 	for _, tc := range []struct {
 		name, clusterFile string
@@ -649,6 +659,7 @@ func TestPolicy011Wiring(t *testing.T) {
 		{name: "disabled everywhere"},
 		{name: "cluster file enables it", clusterFile: "stack:\n  a:\n    enabled: true\n", want: true},
 		{name: "all-on", allOn: true, want: true},
+		{name: "layer replaces the dependency", clusterFile: "stack:\n  a:\n    enabled: true\n    policies:\n      p:\n        dependencies:\n          - name: hub\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -661,7 +672,7 @@ func TestPolicy011Wiring(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			write("helm", "#!/bin/sh\n[ \"$1\" = template ] || exit 0\nfor f; do [ -f \"$f\" ] && cat \"$f\"; done | grep -q 'enabled: true' && printf 'kind: Policy\\nmetadata:\\n  name: p-a-c\\n'\nexit 0\n", 0o755)
+			write("helm", policy011Helm, 0o755)
 			write("stack/a/Chart.yaml", "apiVersion: v2\nname: a\nversion: 0.1.0\n", 0o644)
 			write("stack/a/values.yaml", "stack:\n  a:\n    enabled: false\n    policies:\n      p:\n        dependencies:\n          - name: ready\n            element: odf\n", 0o644)
 			write("values.yaml", "policyNamespace: policies\n", 0o644)
@@ -687,5 +698,129 @@ func TestPolicy011Wiring(t *testing.T) {
 				t.Errorf("findings %+v, want reported=%v", res.Findings, tc.want)
 			}
 		})
+	}
+}
+
+// runPolicy011 writes files (path to body, helm as the stand-in helm) to a new repository and runs
+// POLICY011 on it with element, empty for every element.
+func runPolicy011(t *testing.T, files map[string]string, element string) (Result, string) {
+	t.Helper()
+	root := t.TempDir()
+	for rel, body := range files {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := Run(t.Context(), Options{
+		RepoRoot:     root,
+		StackDir:     filepath.Join(root, "stack"),
+		LifecycleDir: filepath.Join(root, "lifecycle"),
+		ValuesDir:    filepath.Join(root, "values"),
+		FixturesDir:  filepath.Join(root, "fleet"),
+		HelmBin:      filepath.Join(root, "helm"),
+		Element:      element,
+		Only:         []string{"POLICY011"},
+		Logger:       slog.New(slog.DiscardHandler),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res, root
+}
+
+// policy011Repo is element a with policy p, which depends on q, and policy q, plus fleet/c.yaml.
+var policy011Repo = map[string]string{
+	"stack/a/Chart.yaml":  "apiVersion: v2\nname: a\nversion: 0.1.0\n",
+	"stack/a/values.yaml": "stack:\n  a:\n    enabled: true\n    policies:\n      p:\n        dependencies:\n          - name: q\n        templates:\n          t: {}\n      q:\n        templates:\n          t2: {}\n",
+	"values.yaml":         "policyNamespace: policies\n",
+	"fleet/c.yaml":        "revision: main\n",
+}
+
+// TestPolicy011UnrenderedWiring: a rendered dependency on a policy that no render of the fleet file
+// holds is a warning at the policy's entry, skipped with --element, which renders one element only.
+// The stand-in helm renders p-a-c depending on q-a-c, and q-a-c when a values file says q-on.
+func TestPolicy011UnrenderedWiring(t *testing.T) {
+	const helm = `#!/bin/sh
+[ "$1" = template ] || exit 0
+values=$(for f; do [ -f "$f" ] && cat "$f"; done)
+printf 'kind: Policy\nmetadata:\n  name: p-a-c\nspec:\n  dependencies:\n    - {kind: Policy, name: q-a-c}\n'
+echo "$values" | grep -q 'q-on' && printf -- '---\nkind: Policy\nmetadata:\n  name: q-a-c\n'
+exit 0
+`
+	for _, tc := range []struct {
+		name, clusterFile, element string
+		want                       bool
+	}{
+		{name: "q off", want: true},
+		{name: "q on", clusterFile: "# q-on\n"},
+		{name: "one element", element: "a"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files := maps.Clone(policy011Repo)
+			files["helm"] = helm
+			if tc.clusterFile != "" {
+				files["values/clusters/c.yaml"] = tc.clusterFile
+			}
+			res, root := runPolicy011(t, files, tc.element)
+			if !tc.want {
+				if len(res.Findings) != 0 {
+					t.Errorf("findings %+v, want none", res.Findings)
+				}
+				return
+			}
+			if len(res.Findings) != 1 {
+				t.Fatalf("findings %+v, want one", res.Findings)
+			}
+			f := res.Findings[0]
+			if f.Severity != checks.SevWarning || f.Cluster != "c" || !strings.Contains(f.Message, `policies.p: dependency "q-a-c"`) ||
+				f.File != filepath.Join(root, "stack/a/values.yaml") || f.Line != 7 {
+				t.Errorf("unexpected finding %+v", f)
+			}
+		})
+	}
+}
+
+// TestPolicy011HubAndSpokeOfOneName: fleet/hubs/c.yaml and fleet/c.yaml are separate renders, so q
+// rendered for the spoke does not satisfy the hub's p. The stand-in helm renders p-a-c depending on
+// q-a-c for the hub's values file, and q-a-c for the spoke's.
+func TestPolicy011HubAndSpokeOfOneName(t *testing.T) {
+	files := maps.Clone(policy011Repo)
+	files["helm"] = `#!/bin/sh
+[ "$1" = template ] || exit 0
+values=$(for f; do [ -f "$f" ] && cat "$f"; done)
+echo "$values" | grep -q '# hub' && printf 'kind: Policy\nmetadata:\n  name: p-a-c\nspec:\n  dependencies:\n    - {kind: Policy, name: q-a-c}\n'
+echo "$values" | grep -q '# spoke' && printf 'kind: Policy\nmetadata:\n  name: q-a-c\n'
+exit 0
+`
+	files["fleet/c.yaml"] = "revision: main\nvalueFiles: [spoke.yaml]\n"
+	files["fleet/hubs/c.yaml"] = "revision: main\nvalueFiles: [hub.yaml]\n"
+	files["values/spoke.yaml"] = "# spoke\n"
+	files["values/hub.yaml"] = "# hub\n"
+	res, root := runPolicy011(t, files, "")
+	if len(res.Findings) != 1 || res.Findings[0].Severity != checks.SevWarning || !strings.Contains(res.Findings[0].Message, `"q-a-c"`) {
+		t.Fatalf("findings %+v, want the hub's warning on q-a-c (%s)", res.Findings, root)
+	}
+}
+
+// TestPolicy011ExtraDependencyWiring: a template's kind Policy extraDependency on an element missing
+// from stack/ is reported once the render holds it, like a policy's dependency.
+func TestPolicy011ExtraDependencyWiring(t *testing.T) {
+	files := map[string]string{
+		"helm": `#!/bin/sh
+[ "$1" = template ] || exit 0
+printf 'kind: Policy\nmetadata:\n  name: p-a-c\nspec:\n  policy-templates:\n    - extraDependencies:\n        - {kind: Policy, name: ready-odf-c}\n'
+`,
+		"stack/a/Chart.yaml":  "apiVersion: v2\nname: a\nversion: 0.1.0\n",
+		"stack/a/values.yaml": "stack:\n  a:\n    enabled: true\n    policies:\n      p:\n        templates:\n          t:\n            extraDependencies:\n              - {kind: Policy, name: ready, element: odf}\n",
+		"values.yaml":         "policyNamespace: policies\n",
+		"fleet/c.yaml":        "revision: main\n",
+	}
+	res, _ := runPolicy011(t, files, "")
+	if len(res.Findings) != 1 || res.Findings[0].Severity != checks.SevError || !strings.Contains(res.Findings[0].Message, `names element "odf"`) {
+		t.Fatalf("findings %+v, want the missing element error", res.Findings)
 	}
 }

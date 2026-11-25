@@ -60,7 +60,8 @@ The element is on by default for every cluster. It renders nothing, not even a P
 |---|---|---|---|---|
 | `channel-upgrade-prod-east-1` | `channel` or `stack.upgrade.config.upstream` set | `channel-pin` | enforce | Sets ClusterVersion `spec.channel` and `spec.upstream`, each only when set. Not held by the guard, so a disconnected cluster reaches its update service before the guard needs it. |
 | `upgrade-upgrade-prod-east-1` | `version` set | `upgrade-guard` | InformOnly | NonCompliant unless `version` is in `availableUpdates`, is already the desired version, or is at or below the running version. |
-| | | `upgrade-trigger` | enforce | Waits for the guard. Sets `desiredUpdate.version` only while `version` is newer than the running version and no update is progressing. Clears `image` and `force` ([Brownfield clusters](#brownfield-clusters)). |
+| | | `upgrade-signature` | InformOnly | Off by default ([Release signature check](#release-signature-check)). NonCompliant while no signature for the target release is on the cluster. |
+| | | `upgrade-trigger` | enforce | Waits for the guard, and for `upgrade-signature` when it is on. Sets `desiredUpdate.version` only while `version` is newer than the running version and no update is progressing. Clears `image` and `force` ([Brownfield clusters](#brownfield-clusters)). |
 | | | `upgrade-progress` | InformOnly | Waits for the trigger. NonCompliant until the cluster has completed `version`. |
 
 - In the Policy names, `<cluster>` is the ManagedCluster name, or `hubName` on a hub.
@@ -93,9 +94,33 @@ For a hub, the namespace is `local-cluster` and the name uses `hubName`: `-n loc
 |---|---|---|
 | Guard NonCompliant, minor bump | `channel` still names the old minor (or is unset), whose graph has no edge to `version` | Set `channel` to the new minor. |
 | Guard NonCompliant, version is in the channel | `version` needs an intermediate hop, is only a conditional update (known risks, listed by `oc adm upgrade --include-not-recommended`), or `availableUpdates` is empty | Pick a version `oc adm upgrade` recommends; hop in several bumps. Conditional updates are not supported: keep `version` at the running version, run `oc adm upgrade --allow-not-recommended --to <version>` by hand, and set `version` to it once the update completes. Empty list: check the channel and the update service ([Update service](#update-service)). |
+| Progress NonCompliant on a disconnected cluster, the `ReleaseAccepted` message says the update cannot be verified | No signature for the target release on the cluster, so the CVO refuses it | Add the release's signature ([Release signatures](disconnected.md#release-signatures)). Turn on the [signature check](#release-signature-check) to catch this before the trigger. |
+| Signature NonCompliant, `no release signature for <version> (<image>)` | The signature check is on and no ConfigMap in `openshift-config-managed` holds a signature for that digest | Add it ([Release signatures](disconnected.md#release-signatures)). The trigger waits until it reaches the cluster. |
 | Progress NonCompliant, the `ReleaseAccepted` message names a failed precondition | `Upgradeable=False` blocks a minor upgrade, often an admin-ack | Fix the cause on the cluster, such as setting the acknowledgement in ConfigMap `admin-acks` in `openshift-config` as the message says. There is no force for standalone clusters. |
 | All Compliant, cluster runs an older `version` than the fleet's | Lowered or reverted `version`: a target at or below the running version counts as reached | OpenShift does not downgrade. Set `version` to what the cluster runs. A bump reverted after the update started still finishes. |
 | All Compliant, cluster runs a newer version than the fleet's | Someone ran `oc adm upgrade --to` past the fleet `version`. The trigger only moves clusters forward to `version`, so it lets this through and nothing flags it | Set `version` to what the cluster runs. |
+
+### Release signature check
+
+Before it upgrades, the CVO verifies the target release image against a signature. It reads ConfigMaps in `openshift-config-managed` labelled `release.openshift.io/verification-signatures`, and a connected cluster also downloads signatures from Red Hat. A disconnected cluster has only the ConfigMaps. Without one, the trigger writes `desiredUpdate`, the CVO refuses the release with `ReleaseAccepted=False`, and the cluster sits there until someone reads the ClusterVersion.
+
+`upgrade-signature` checks first. It takes the target's image digest from `availableUpdates` and looks for a binaryData key `sha256-<digest>-<n>` in those ConfigMaps, whichever element or person created them. While none matches it is NonCompliant, naming the version and image, and the trigger waits. It reports nothing when the target isn't offered (the guard reports that), once the CVO has taken the target, and once the cluster reached it.
+
+It is off by default: turned on for every cluster it would hold upgrades wherever signatures aren't mirrored. Turn it on in the disconnected site layer, next to the signatures ([Release signatures](disconnected.md#release-signatures)):
+
+```yaml
+# values/datacenters/dc2.yaml
+stack:
+  upgrade:
+    policies:
+      upgrade:
+        templates:
+          signature:
+            enabled: true
+```
+
+!!! note
+    Leave it off on connected clusters. Their only labelled ConfigMap is the CVO's own `signatures-managed`, which holds signatures it has already verified, never the next target's, so the check would hold every upgrade.
 
 ### Brownfield clusters
 

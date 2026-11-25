@@ -43,6 +43,14 @@ stack:
             customMessage: &cvoReason
               noncompliant: '{{ .DefaultMessage }}{{ range .Policy.status.relatedObjects }}{{ range (dig "object" "status" "conditions" list .) }}{{ if or (eq .type "Progressing") (and (eq .type "Failing" "Invalid") (eq .status "True")) (and (eq .type "ReleaseAccepted" "RetrievedUpdates") (eq .status "False")) }}; {{ .type }}: {{ .message }}{{ end }}{{ end }}{{ end }}'
 
+          # Inform-only release signature check, off by default. Enabled, the trigger also waits for it,
+          # so a disconnected cluster without the target's signature reports the digest instead of
+          # stalling at ReleaseAccepted=False. Signatures: stack.disconnected.config.releaseSignatures
+          signature:
+            enabled: false
+            description: "Target release signature"
+            remediationAction: InformOnly
+
           # Upgrade trigger, held until the guard reports the target is reachable
           trigger:
             description: "ClusterVersion desiredUpdate"

@@ -13,6 +13,14 @@ stack:
     enabled: true
 ```
 
+## Optional pieces
+
+Shipped with `enabled: false`. Turn one on in a values layer.
+
+| Entry | Description | Turn on with |
+|---|---|---|
+| template `upgrade-signature` | Target release signature | `policies.upgrade.templates.signature.enabled: true` |
+
 ## Settings
 
 Upgrade graph
@@ -45,4 +53,5 @@ Standards: NIST SP 800-53. Controls: CM-2 Baseline Configuration. Categories: CM
 |---|---|---|---|---|---|
 | `upgrade-guard` | inform (always) | high |  | [guard](converters/upgrade/guard.yaml) (mustnothave) | Target version reachability |
 | `upgrade-progress` | inform (always) | medium | `upgrade-trigger`<br>compliant while pending | [progress](converters/upgrade/progress.yaml) (mustnothave) | Upgrade completion |
+| `upgrade-signature` (off) | inform (always) | high |  | [signature](converters/upgrade/signature.yaml) | Target release signature |
 | `upgrade-trigger` | enforce | high | `upgrade-guard`<br>compliant while pending | [trigger](converters/upgrade/trigger.yaml) | ClusterVersion desiredUpdate |

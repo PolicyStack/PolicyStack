@@ -1,1 +1,4 @@
+{{- /* signatures renders only when config.releaseSignatures is set, so a cluster without it gets no Policy */ -}}
+{{- $d := .Values.stack.disconnected }}
+{{- $_ := set $d.policies.signatures "enabled" (and (eq (include "policy-library.enabled" $d.policies.signatures) "true") (not (empty $d.config.releaseSignatures))) }}
 {{- include "policy-library.render" . -}}

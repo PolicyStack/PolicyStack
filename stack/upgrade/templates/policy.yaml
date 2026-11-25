@@ -9,6 +9,11 @@ when its input is set, so a cluster with neither gets nothing, not even a Placem
 {{- $p := $u.policies }}
 {{- $channel := and (eq (include "policy-library.enabled" $p.channel) "true") (not (and (empty .Values.channel) (empty $u.config.upstream))) }}
 {{- $upgrade := and (eq (include "policy-library.enabled" $p.upgrade) "true") (not (empty .Values.version)) }}
+{{- /* An enabled signature check holds the trigger like the guard does */ -}}
+{{- $t := $p.upgrade.templates }}
+{{- if eq (include "policy-library.enabled" $t.signature) "true" }}
+{{- $_ := set $t.trigger "extraDependencies" (append ($t.trigger.extraDependencies | default list) (dict "name" "signature")) }}
+{{- end }}
 {{- $_ := set $p.channel "enabled" $channel }}
 {{- $_ = set $p.upgrade "enabled" $upgrade }}
 {{- $_ = set $u "enabled" (and $u.enabled (or $channel $upgrade)) }}

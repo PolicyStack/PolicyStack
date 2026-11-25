@@ -116,10 +116,10 @@ func TestReleaseSignaturesInvalid(t *testing.T) {
 	dir := filepath.Join(repoRoot, "stack/disconnected")
 	helm := testenv.Helm(t)
 	for name, config := range map[string]string{
-		`key "sha256-abc"`: "{releaseSignatures: {sha256-abc: c2ln}}",
-		sigKey + " is not a base64": "{releaseSignatures: {" + sigKey + ": 'not base64!'}}",
+		`key "sha256-abc"`:                            "{releaseSignatures: {sha256-abc: c2ln}}",
+		sigKey + " is not a base64":                   "{releaseSignatures: {" + sigKey + ": 'not base64!'}}",
 		sigKey + " is not a base64 signature. A null": "{releaseSignatures: {" + sigKey + ": null}}",
-		"which config.releaseSignatures owns": "{releaseSignatures: {" + sigKey + ": c2ln}, clusterResources: [{apiVersion: v1, kind: ConfigMap, metadata: {name: mirrored-release-signatures, namespace: openshift-config-managed}}]}",
+		"which config.releaseSignatures owns":         "{releaseSignatures: {" + sigKey + ": c2ln}, clusterResources: [{apiVersion: v1, kind: ConfigMap, metadata: {name: mirrored-release-signatures, namespace: openshift-config-managed}}]}",
 	} {
 		t.Run(name, func(t *testing.T) {
 			tr := render.New(helm).Template(context.Background(), dir, "disconnected", disconnectedFile(t, config), nil)

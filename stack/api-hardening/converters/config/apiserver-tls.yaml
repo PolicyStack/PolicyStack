@@ -1,0 +1,18 @@
+{{- /*
+Red Hat's "Configuring the TLS security profile for the control plane": set spec.tlsSecurityProfile
+on APIServer cluster, which the control plane components inherit. Old and Custom are left out: Old
+weakens TLS, and musthave appends Custom ciphers, so a cipher could never be removed. Changing
+type leaves the previous profile's empty key behind; the operators read only type.
+
+skipObject skips the object on hosted control plane guests, where the profile is HostedCluster
+spec.configuration.apiServer.tlsSecurityProfile.
+*/ -}}
+{{- include "api-hardening.oneOf" (dict "key" "apiServerTLSProfile" "value" .Config.apiServerTLSProfile "allowed" (list "Intermediate" "Modern")) }}
+apiVersion: config.openshift.io/v1
+kind: APIServer
+metadata:
+  name: cluster
+spec:
+  tlsSecurityProfile:
+    type: '{{ "{{" }} skipObject ({{ include "api-hardening.hosted" . }}) {{ "}}" }}{{ .Config.apiServerTLSProfile }}'
+    {{ lower .Config.apiServerTLSProfile }}: {}

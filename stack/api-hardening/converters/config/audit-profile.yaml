@@ -1,0 +1,17 @@
+{{- /*
+Red Hat's "Configuring the audit log policy": set spec.audit.profile on APIServer cluster. It
+applies to the Kubernetes, OpenShift and OAuth API servers and the OAuth server. None is left out:
+Red Hat advises against disabling audit logging. customRules is left out: musthave appends list
+entries, so it could never change or reorder an existing rule.
+
+skipObject skips the object on hosted control plane guests, where the audit profile is
+HostedCluster spec.configuration.apiServer.audit.
+*/ -}}
+{{- include "api-hardening.oneOf" (dict "key" "auditProfile" "value" .Config.auditProfile "allowed" (list "Default" "WriteRequestBodies" "AllRequestBodies")) }}
+apiVersion: config.openshift.io/v1
+kind: APIServer
+metadata:
+  name: cluster
+spec:
+  audit:
+    profile: '{{ "{{" }} skipObject ({{ include "api-hardening.hosted" . }}) {{ "}}" }}{{ .Config.auditProfile }}'

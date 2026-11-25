@@ -1,0 +1,29 @@
+{{- /*
+Red Hat's "Removing the kubeadmin user": delete Secret kube-system/kubeadmin, which cannot be undone.
+Its prerequisites are at least one identity provider and a user with the cluster-admin role;
+without another cluster-admin the cluster must be reinstalled. The object renders only when OAuth
+cluster lists an identity provider and a ClusterRoleBinding to ClusterRole cluster-admin names a
+User or Group outside system: (and not kube:admin). Neither check proves someone can log in.
+Clusters on external OIDC have no identity providers, so they never pass.
+
+Raw because several ACM statements compute the condition. HyperShift recreates the Secret on hosted
+control plane guests, so it never renders there.
+*/ -}}
+{{ "{{-" }} $admin := false {{ "}}" }}
+{{ "{{-" }} range $crb := dig "items" (list) (lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" "") {{ "}}" }}
+{{ "{{-" }} if and (eq (dig "roleRef" "kind" "" $crb) "ClusterRole") (eq (dig "roleRef" "name" "" $crb) "cluster-admin") {{ "}}" }}
+{{ "{{-" }} range $s := dig "subjects" (list) $crb {{ "}}" }}
+{{ "{{-" }} $name := dig "name" "" $s {{ "}}" }}
+{{ "{{-" }} if and (has (dig "kind" "" $s) (list "User" "Group")) (not (hasPrefix "system:" $name)) (ne $name "kube:admin") {{ "}}" }}{{ "{{-" }} $admin = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if and (not ({{ include "api-hardening.hosted" . }})) $admin (dig "spec" "identityProviders" (list) (lookup "config.openshift.io/v1" "OAuth" "" "cluster")) {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: kubeadmin
+      namespace: kube-system
+{{ "{{-" }} end {{ "}}" }}

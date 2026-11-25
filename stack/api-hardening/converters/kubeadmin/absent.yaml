@@ -1,0 +1,17 @@
+{{- /*
+InformOnly: NonCompliant while Secret kube-system/kubeadmin exists, so a cluster that removal skips
+for a missing identity provider or cluster-admin user does not read green.
+
+Raw so the name stays literal: ACM treats a templated name as unset, and a mustnothave without a
+name would match every Secret in kube-system. HyperShift owns the Secret on hosted control plane
+guests, so it never renders there.
+*/ -}}
+{{ "{{-" }} if not ({{ include "api-hardening.hosted" . }}) {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: kubeadmin
+      namespace: kube-system
+{{ "{{-" }} end {{ "}}" }}

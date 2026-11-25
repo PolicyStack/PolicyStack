@@ -1,0 +1,31 @@
+{{- /*
+Red Hat's "Creating custom notification banners": one cluster-scoped ConsoleNotification per
+consoleBanners entry. The CRD exists only with the Console capability. An entry removed from
+consoleBanners stays on the cluster, unmanaged.
+
+skipObject in location skips each banner on hosted control plane guests.
+*/ -}}
+{{- range $name, $b := .Config.consoleBanners }}
+{{- $location := $b.location | default "BannerTop" }}
+{{- include "api-hardening.oneOf" (dict "key" (printf "consoleBanners.%s.location" $name) "value" $location "allowed" (list "BannerTop" "BannerBottom" "BannerTopBottom")) }}
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleNotification
+metadata:
+  name: {{ $name }}
+spec:
+  text: {{ required (printf "stack.apiHardening.config.consoleBanners.%s.text is required" $name) $b.text | quote }}
+  location: '{{ "{{" }} skipObject ({{ include "api-hardening.hosted" $ }}) {{ "}}" }}{{ $location }}'
+  {{- with $b.link }}
+  {{- if not (hasPrefix "https://" (.href | default "")) }}{{ fail (printf "stack.apiHardening.config.consoleBanners.%s.link.href must start with https://" $name) }}{{ end }}
+  link:
+    href: {{ .href | quote }}
+    text: {{ required (printf "stack.apiHardening.config.consoleBanners.%s.link.text is required" $name) .text | quote }}
+  {{- end }}
+  {{- with $b.color }}
+  color: {{ . | quote }}
+  {{- end }}
+  {{- with $b.backgroundColor }}
+  backgroundColor: {{ . | quote }}
+  {{- end }}
+{{- end }}

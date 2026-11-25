@@ -1,0 +1,17 @@
+{{- /*
+Red Hat's "Configuring the TLS security profile for the Ingress Controller": set
+spec.tlsSecurityProfile on IngressController default. Unset, it follows the APIServer profile.
+Old and Custom are left out for the reasons in apiserver-tls.yaml.
+
+skipObject skips the object on hosted control plane guests.
+*/ -}}
+{{- include "api-hardening.oneOf" (dict "key" "ingressTLSProfile" "value" .Config.ingressTLSProfile "allowed" (list "Intermediate" "Modern")) }}
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: default
+  namespace: openshift-ingress-operator
+spec:
+  tlsSecurityProfile:
+    type: '{{ "{{" }} skipObject ({{ include "api-hardening.hosted" . }}) {{ "}}" }}{{ .Config.ingressTLSProfile }}'
+    {{ lower .Config.ingressTLSProfile }}: {}

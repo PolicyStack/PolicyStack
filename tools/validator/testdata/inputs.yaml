@@ -53,3 +53,10 @@ stack:
     config:
       releases: mirror.example.com:8443/openshift/release-images
       graphDataImage: mirror.example.com:8443/openshift/graph-image:latest
+  # console-banners ranges over consoleBanners, empty by default.
+  apiHardening:
+    config:
+      consoleBanners:
+        maintenance:
+          text: Scheduled maintenance Saturday 02:00 UTC
+          link: {href: "https://status.example.com", text: Status}

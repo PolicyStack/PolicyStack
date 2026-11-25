@@ -1,0 +1,72 @@
+stack:
+  apiHardening:
+    enabled: false
+
+    # Each setting is applied only by its template, and every template ships enabled: false. The
+    # APIServer and IngressController templates write with musthave, so turning one off leaves the
+    # cluster as it is. Hosted control plane guests skip every object: set encryption, audit and the
+    # APIServer TLS profile on the HostedCluster; it has no console banner or ingress profile setting.
+    config:
+      # APIServer spec.encryption.type: aesgcm, aescbc, or identity to decrypt
+      etcdEncryption: aesgcm
+      # APIServer spec.audit.profile: Default, WriteRequestBodies or AllRequestBodies
+      auditProfile: WriteRequestBodies
+      # APIServer spec.tlsSecurityProfile type: Intermediate or Modern. The default IngressController follows it unless ingressTLSProfile is applied
+      apiServerTLSProfile: Intermediate
+      # Default IngressController spec.tlsSecurityProfile type: Intermediate or Modern
+      ingressTLSProfile: Intermediate
+      # ConsoleNotification name: {text, location, link: {href, text}, color, backgroundColor}. text is required, location is BannerTop (default), BannerBottom or BannerTopBottom, link.href starts with https://. The layer that turns console-banners on fills it
+      consoleBanners: {}
+
+    default:
+      remediationAction: enforce
+      severity: high
+      categories:
+        - SC System and Communications Protection
+        - AU Audit and Accountability
+        - AC Access Control
+      controls:
+        - SC-28 Protection of Information at Rest
+        - AU-2 Event Logging
+        - SC-8 Transmission Confidentiality and Integrity
+        - AC-8 System Use Notification
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      config:
+        description: "API server, ingress and console hardening settings"
+        templates:
+          etcd-encryption:
+            enabled: false
+            description: "APIServer etcd encryption type"
+          audit-profile:
+            enabled: false
+            description: "APIServer audit log profile"
+          apiserver-tls:
+            enabled: false
+            description: "APIServer TLS security profile"
+          ingress-tls:
+            enabled: false
+            description: "Default IngressController TLS security profile"
+          console-banners:
+            enabled: false
+            description: "Web console notification banners"
+            severity: low
+            # The element owns each ConsoleNotification, so a field removed from an entry is removed on the cluster
+            complianceType: mustonlyhave
+
+      # Turns on both templates. removal deletes the Secret; absent reports it until then.
+      kubeadmin:
+        enabled: false
+        description: "Remove the kubeadmin user once an identity provider and a cluster-admin user exist"
+        categories:
+          - AC Access Control
+        controls:
+          - AC-2 Account Management
+        templates:
+          removal:
+            description: "Deletes Secret kube-system/kubeadmin once an identity provider and a non-system cluster-admin binding exist"
+          absent:
+            description: "Reports NonCompliant while Secret kube-system/kubeadmin exists"
+            remediationAction: InformOnly

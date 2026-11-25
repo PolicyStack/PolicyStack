@@ -1,0 +1,13 @@
+apiVersion: v2
+name: api-hardening
+description: "Opt-in API hardening: etcd encryption, audit profile, TLS security profiles, console banners and kubeadmin removal"
+home: https://policystk.io/elements/api-hardening/
+type: application
+version: 0.1.0
+annotations:
+  policystk.io/stability: preview
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "^4.0.0"
+    repository: "file://../../lib/policy-library"

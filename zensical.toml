@@ -36,6 +36,7 @@ nav = [
   ] },
   { "Elements" = [
     { "ACS" = "elements/acs.md" },
+    { "API Hardening" = "elements/api-hardening.md" },
     { "Compliance" = "elements/compliance.md" },
     { "File Integrity" = "elements/file-integrity.md" },
   ] },

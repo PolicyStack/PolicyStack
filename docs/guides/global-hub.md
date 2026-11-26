@@ -6,12 +6,12 @@ Import each managed hub in **hosted mode** (a Global Hub import mode, unrelated 
 
 ## What Global Hub does
 
-Global Hub is an operator on one ACM hub, the **global hub**. The ACM hubs it imports are **managed hubs**. An agent on each managed hub streams its Policies, compliance, events and ManagedClusters through Kafka into PostgreSQL, and Grafana reads them there. It can also move clusters between managed hubs (`ManagedClusterMigration`, Technology Preview).
+Global Hub is an operator on one ACM hub, the **global hub**, installed there by the [`global-hub` element](../elements/global-hub.md). The ACM hubs it imports are **managed hubs**. An agent on each managed hub streams its Policies, compliance, events and ManagedClusters through Kafka into PostgreSQL, and Grafana reads them there. It can also move clusters between managed hubs (`ManagedClusterMigration`, Technology Preview).
 
 It does not push configuration: global policy distribution was removed in 1.7. Each hub's PolicyStack and ACM still deliver everything.
 
 !!! warning "Minimum version"
-    Use Global Hub 1.8.2 ([RHSA-2026:68515](https://access.redhat.com/errata/RHSA-2026:68515)) or 1.7.3 ([RHSA-2026:67842](https://access.redhat.com/errata/RHSA-2026:67842)) or later. Earlier releases let one managed hub spoof another's compliance data ([CVE-2026-71576](https://access.redhat.com/security/cve/CVE-2026-71576)). 1.8 pairs with ACM 2.17, 1.7 with 2.16.
+    Use Global Hub 1.8.2 ([RHSA-2026:68515](https://access.redhat.com/errata/RHSA-2026:68515)) or 1.7.3 ([RHSA-2026:67842](https://access.redhat.com/errata/RHSA-2026:67842)) or later. Earlier releases let a compromised managed hub falsify or delete other hubs' compliance, inventory and health data ([CVE-2026-71576](https://access.redhat.com/security/cve/CVE-2026-71576)). The element installs 1.8, which Red Hat supports on ACM 2.15 to 2.17; 1.7 supports 2.14 to 2.16 ([Version](../elements/global-hub.md#version)).
 
 ## What the mode decides
 
@@ -57,7 +57,7 @@ metadata:
 
 ## Layout
 
-Install PolicyStack on the global hub and on every managed hub, all with the same `gitRepo` and each with its own `hubName` ([Install PolicyStack](../start/install.md#install-policystack)). All hubs read the same `fleet/`.
+Install PolicyStack on the global hub and on every managed hub, all with the same `gitRepo` and each with its own `hubName` ([Install PolicyStack](../start/install.md#install-policystack)). All hubs read the same `fleet/`. Enable the `global-hub` element in the global hub's layer only.
 
 ```text
 fleet/
@@ -158,6 +158,9 @@ oc get configurationpolicy -n hub-a                # on hub-a: each step and its
 ## Changing a managed hub's mode
 
 Fleet files stay where they are. Detach means deleting hub-a's ManagedCluster on the global hub (`oc delete managedcluster hub-a`), ACM's way to remove a cluster from management.
+
+!!! warning "Detaching a hosted-mode hub"
+    Red Hat known issue [ACM-15014](https://issues.redhat.com/browse/ACM-15014): detaching a hosted-mode managed hub deletes and recreates its `open-cluster-management-agent-addon` namespace and every add-on in it. There is no workaround.
 
 `hive` and `siteconfig` clusters survive the change. Losing the hub that builds them (detaching from the global hub, or removing hub-a's `local-cluster`) deletes their `lifecycle-<cluster>` Applications, but no lifecycle template sets `pruneObjectBehavior`, so nothing is deleted on hub-a ([Removal and pruning](../concepts/removal.md)). The hub that takes over adopts them by their marker because `hub` is unchanged ([Abandon](lifecycle.md#abandon)). `hypershift` clusters of a hosted-mode hub keep it in hosted mode: destroy them first, since a default-mode hub can't run `hypershift`.
 

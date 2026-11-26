@@ -1,0 +1,65 @@
+stack:
+  globalHub:
+    enabled: false
+
+    # One MulticlusterGlobalHub, multiclusterglobalhub in multicluster-global-hub. The operator
+    # deploys and manages its own Kafka (AMQ Streams), PostgreSQL and Grafana. On a disconnected hub
+    # it takes AMQ Streams from the catalog global.catalogSources maps redhat-operators to.
+    config:
+      # High runs two replicas of the manager and Grafana and three Kafka brokers, Basic one of each: High or Basic. Kafka keeps the broker count it was created with. spec.availabilityConfig
+      availabilityConfig: High
+      # How long PostgreSQL keeps history, in years (y) and months (m): 18m, 1y, 1y6m. spec.dataLayer.postgres.retention
+      retention: 18m
+      # StorageClass of the Kafka and PostgreSQL volumes; empty uses the cluster default. Set it before the first enable: changing it later breaks the PostgreSQL reconcile. spec.dataLayer.storageClass
+      storageClass: ""
+
+    default:
+      remediationAction: enforce
+      severity: medium
+      categories:
+        - CM Configuration Management
+      controls:
+        - CM-2 Baseline Configuration
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      install:
+        description: "Install and manage the Multicluster Global Hub Operator"
+
+      config:
+        description: "Deploy the MulticlusterGlobalHub instance"
+        dependencies:
+          - name: install
+        templates:
+          global-hub:
+            description: "The MulticlusterGlobalHub"
+            # The MulticlusterGlobalHub CRD only exists after the operator installs
+            waitForOperator: global-hub
+
+      ready:
+        description: "Reports NonCompliant until every Global Hub component is available"
+        # A status can only be observed, so this policy never enforces
+        remediationAction: inform
+        dependencies:
+          - name: config
+        templates:
+          global-hub:
+            description: "MulticlusterGlobalHub in phase Running"
+            remediationAction: InformOnly
+
+    operatorPolicies:
+      global-hub:
+        description: "Multicluster Global Hub Operator"
+        displayName: "Multicluster Global Hub Operator"
+        namespace: multicluster-global-hub
+        clusterMonitoring: true
+        operatorGroup:
+          name: global-hub-operator-group
+          targetNamespaces:
+            - multicluster-global-hub
+        subscription:
+          name: multicluster-global-hub-operator-rh
+          # Global Hub 1.8, supported on ACM 2.15 to 2.17 global hubs
+          channel: release-1.8
+        versions: []

@@ -89,3 +89,25 @@ stack:
           secret: {name: http-basic, username: username, password: password}
         retired:
           enabled: false
+  # The element fails the render without an identity provider; one per type, plus one disabled.
+  oauth:
+    config:
+      identityProviders:
+        local: {type: HTPasswd, secret: oauth-htpasswd}
+        sso:
+          type: OpenID
+          secret: sso-client
+          clientID: openshift
+          issuer: https://sso.example.com/realms/openshift
+          claims: {preferredUsername: [preferred_username], name: [name], email: [email], groups: [groups]}
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            -----END CERTIFICATE-----
+        corp:
+          type: LDAP
+          url: ldaps://ldap.example.com/ou=users,dc=example,dc=com?uid
+          bindDN: cn=openshift,ou=services,dc=example,dc=com
+          secret: ldap-bind
+          attributes: {id: [dn], preferredUsername: [uid], name: [cn], email: [mail]}
+        retired: {enabled: false}
+      clusterAdmins: [alice]

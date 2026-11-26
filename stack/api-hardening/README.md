@@ -39,6 +39,7 @@ Under `stack.apiHardening.config`. Maps merge across layers; lists are replaced 
 | `apiServerTLSProfile` | APIServer spec.tlsSecurityProfile type: Intermediate or Modern. The default IngressController follows it unless ingressTLSProfile is applied | `Intermediate` |
 | `ingressTLSProfile` | Default IngressController spec.tlsSecurityProfile type: Intermediate or Modern | `Intermediate` |
 | `consoleBanners` | ConsoleNotification name: {text, location, link: {href, text}, color, backgroundColor}. text is required, location is BannerTop (default), BannerBottom or BannerTopBottom, link.href starts with https://. The layer that turns console-banners on fills it | `{}` |
+| `kubeadminRequireLogin` | kubeadmin removal also waits until a cluster-admin User, or a member of a cluster-admin Group, has logged in through a provider OAuth cluster lists, and the authentication ClusterOperator is Available, not Progressing and not Degraded | `false` |
 
 ## Policies
 

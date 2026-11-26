@@ -1,0 +1,17 @@
+{{- /*
+Inform-only: the API server accepts an identity provider the OAuth server can't use, such as a
+copied Secret without the expected key or an unreadable CA bundle, and only the authentication
+operator reports it. A wrong password or client secret shows only as a failed login. Nothing waits
+for this template. skipObject skips it on hosted control plane guests, which run the
+authentication operator on the management cluster.
+*/ -}}
+apiVersion: config.openshift.io/v1
+kind: ClusterOperator
+metadata:
+  name: authentication
+status:
+  conditions:
+    - type: Available
+      status: '{{ "{{" }} skipObject ({{ include "oauth.hosted" . }}) {{ "}}" }}True'
+    - type: Degraded
+      status: "False"

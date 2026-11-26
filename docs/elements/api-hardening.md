@@ -30,7 +30,7 @@ stack:
 | `apiserver-tls` | `apiServerTLSProfile` | `Intermediate` | `Intermediate`, `Modern` |
 | `ingress-tls` | `ingressTLSProfile` | `Intermediate` | `Intermediate`, `Modern` |
 | `console-banners` | `consoleBanners` | `{}`, fill it ([Console banners](#console-banners)) | |
-| Policy `kubeadmin` | | | |
+| Policy `kubeadmin` | `kubeadminRequireLogin` | `false` | `true` waits for a cluster-admin login ([kubeadmin](#removing-kubeadmin)) |
 
 Any other value fails the render once its template is on. Each section below says why a value Red Hat allows is left out.
 
@@ -161,7 +161,14 @@ Follows [Removing the kubeadmin user](https://docs.redhat.com/en/documentation/o
 Until then it renders nothing. `kubeadmin-absent` reports NonCompliant for as long as the Secret exists, so the Policy shows what is pending instead of a misleading Compliant.
 
 !!! danger "Check that someone can log in first"
-    The element checks that the binding exists, not that it works. A binding to a Group nobody belongs to, or a user whose identity provider is misconfigured, passes. Log in through the identity provider as that cluster-admin before turning the Policy on.
+    By default the element checks that the binding exists, not that it works. A binding to a Group nobody belongs to, or a user whose identity provider is misconfigured, passes. Log in through the identity provider as that cluster-admin before turning the Policy on, or set `kubeadminRequireLogin`.
+
+`config.kubeadminRequireLogin: true` adds two conditions to removal:
+
+- **Login:** a User bound to `cluster-admin`, or a member of a Group bound to it, has an identity from a provider `OAuth` `cluster` lists now. The OAuth server records the identity (`local:alice`) at the user's first login and never removes it. This proves a login once worked under that provider name, not that it works with the current Secret or account. Log in again after changing a provider's credentials.
+- **Settled:** the `authentication` ClusterOperator is Available, not Progressing and not Degraded, so a provider change still rolling out holds removal back.
+
+It ships `false`, which keeps the two-condition check above. Any value other than `true` or `false` fails the render. With `mappingMethod: lookup` an administrator creates identities by hand, so the login condition proves only that someone created one. The [OAuth](oauth.md) element writes the identity providers and a cluster-admin Group that meet the two default conditions.
 
 - Clusters using external OIDC authentication have no OAuth identity providers, so `kubeadmin-removal` never deletes the Secret there and the Policy stays NonCompliant. Leave `kubeadmin` off for them.
 - The installer's certificate-based `kubeconfig` still works after `kubeadmin` is gone. Keep it as the break-glass credential.

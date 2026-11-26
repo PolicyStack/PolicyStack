@@ -1,0 +1,42 @@
+stack:
+  oauth:
+    enabled: false
+
+    # The element owns OAuth cluster: an identity provider or setting not set here is removed from it,
+    # including providers and login page templates added by hand. Hosted control plane guests skip
+    # every object: set identity providers on the HostedCluster's spec.configuration.oauth.
+    config:
+      # Identity provider name: {type, mappingMethod, secret, enabled, ...}. type is HTPasswd, OpenID or LDAP. mappingMethod is claim (default), lookup or add. secret is a Secret in the hub's policy namespace, copied to openshift-config as oauth-<name>, holding key htpasswd (HTPasswd, required), clientSecret (OpenID, required) or bindPassword (LDAP, with bindDN). OpenID also takes clientID and issuer (https://, both required), claims {preferredUsername, name, email, groups}, extraScopes and extraAuthorizeParameters. LDAP takes url (ldap:// or ldaps://, required), bindDN, insecure and attributes {id (required), preferredUsername, name, email}. OpenID and LDAP take ca, a PEM CA bundle, written to ConfigMap oauth-<name>-ca. enabled: false removes the provider. The name is 1-50 lowercase letters, digits and hyphens and appears in every user's identity, so keep it. The login page lists providers by name. The layer that turns the element on fills it
+      identityProviders: {}
+      # Users in Group oauth-cluster-admins, which ClusterRoleBinding oauth-cluster-admins binds to ClusterRole cluster-admin. Empty writes neither; emptying it later leaves both as last written
+      clusterAdmins: []
+      # Lifetime of an access token in seconds; 0 is the OAuth server default, 86400 (24h). spec.tokenConfig.accessTokenMaxAgeSeconds
+      accessTokenMaxAgeSeconds: 0
+      # A token unused this long stops working: a duration such as 15m or 1h30m, at least 300s. Empty never times out. spec.tokenConfig.accessTokenInactivityTimeout
+      accessTokenInactivityTimeout: ''
+
+    default:
+      remediationAction: enforce
+      severity: high
+      categories:
+        - IA Identification and Authentication
+        - AC Access Control
+      controls:
+        - IA-2 Identification and Authentication (Organizational Users)
+        - AC-2 Account Management
+        - AC-12 Session Termination
+      standards:
+        - NIST SP 800-53
+
+    policies:
+      config:
+        description: "Identity providers, token lifetimes and the cluster-admin group"
+        templates:
+          oauth:
+            description: "OAuth cluster, the Secrets and CA bundles it reads, and the cluster-admin Group and binding"
+            # The element owns every object it writes, so a field removed from values is removed on the cluster
+            complianceType: mustonlyhave
+            metadataComplianceType: musthave
+          oauth-ready:
+            description: "Reports NonCompliant until the authentication ClusterOperator is Available and not Degraded"
+            remediationAction: InformOnly

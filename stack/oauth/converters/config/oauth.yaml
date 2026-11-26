@@ -1,0 +1,121 @@
+{{- /*
+Red Hat's "Configuring identity providers" and "Configuring the internal OAuth server": one OAuth
+cluster holding every identity provider and the token settings, the Secrets and CA ConfigMaps it
+reads in openshift-config, and Group oauth-cluster-admins bound to ClusterRole cluster-admin.
+
+One template on purpose: a hub Secret that is missing fails copySecretData, and with it the whole
+ConfigurationPolicy, so OAuth is never written naming a Secret the cluster doesn't have. The
+documents are ordered so that the Secrets and CA bundles apply before OAuth.
+
+skipObject skips every object on hosted control plane guests, where identity providers are
+HostedCluster spec.configuration.oauth.
+*/ -}}
+{{- include "oauth.validate" .Config }}
+{{- $skip := printf "{{ skipObject (%s) }}" (include "oauth.hosted" .) }}
+{{- $hubNamespace := .Values.policyNamespace }}
+{{- $ref := dict "HTPasswd" "htpasswd" "OpenID" "openID" "LDAP" "ldap" }}
+{{- range $name, $i := .Config.identityProviders }}
+{{- if include "policy-library.enabled" $i }}
+{{- with $i.secret }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth-{{ $name }}
+  namespace: openshift-config
+type: '{{ $skip }}Opaque'
+data: '{{ "{{" }}hub copySecretData "{{ $hubNamespace }}" "{{ . }}" hub{{ "}}" }}'
+{{- end }}
+{{- with $i.ca }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth-{{ $name }}-ca
+  namespace: openshift-config
+data:
+  ca.crt: |
+    {{ $skip | replace " }}" " -}}" }}
+    {{- include "oauth.ca" . | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
+---
+apiVersion: config.openshift.io/v1
+kind: OAuth
+metadata:
+  name: cluster
+spec:
+  identityProviders:
+    {{- range $name, $i := .Config.identityProviders }}
+    {{- if include "policy-library.enabled" $i }}
+    - name: {{ $name | quote }}
+      mappingMethod: {{ $i.mappingMethod | default "claim" }}
+      type: '{{ $skip }}{{ $i.type }}'
+      {{ get $ref $i.type }}:
+        {{- if eq $i.type "HTPasswd" }}
+        fileData:
+          name: oauth-{{ $name }}
+        {{- else if eq $i.type "OpenID" }}
+        clientID: {{ $i.clientID | quote }}
+        clientSecret:
+          name: oauth-{{ $name }}
+        issuer: {{ $i.issuer | quote }}
+        {{- with $i.claims }}
+        claims: {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $i.extraScopes }}
+        extraScopes: {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $i.extraAuthorizeParameters }}
+        extraAuthorizeParameters: {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- else }}
+        url: {{ $i.url | quote }}
+        insecure: {{ $i.insecure | default false }}
+        {{- with $i.bindDN }}
+        bindDN: {{ . | quote }}
+        bindPassword:
+          name: oauth-{{ $name }}
+        {{- end }}
+        attributes: {{- toYaml $i.attributes | nindent 10 }}
+        {{- end }}
+        {{- if $i.ca }}
+        ca:
+          name: oauth-{{ $name }}-ca
+        {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- if or .Config.accessTokenMaxAgeSeconds .Config.accessTokenInactivityTimeout }}
+  tokenConfig:
+    {{- with .Config.accessTokenMaxAgeSeconds }}
+    accessTokenMaxAgeSeconds: {{ int64 . }}
+    {{- end }}
+    {{- with .Config.accessTokenInactivityTimeout }}
+    accessTokenInactivityTimeout: {{ . | quote }}
+    {{- end }}
+  {{- end }}
+{{- with .Config.clusterAdmins }}
+---
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: oauth-cluster-admins
+users:
+  {{- range . }}
+  - '{{ $skip }}{{ . | replace "'" "''" }}'
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oauth-cluster-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ $skip }}cluster-admin'
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oauth-cluster-admins
+{{- end }}

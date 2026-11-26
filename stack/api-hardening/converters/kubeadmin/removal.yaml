@@ -6,9 +6,57 @@ cluster lists an identity provider and a ClusterRoleBinding to ClusterRole clust
 User or Group outside system: (and not kube:admin). Neither check proves someone can log in.
 Clusters on external OIDC have no identity providers, so they never pass.
 
+kubeadminRequireLogin also requires that such a User, or a member of such a Group, has an identity
+from a provider OAuth cluster lists now, and that the authentication ClusterOperator is Available,
+not Progressing and not Degraded. The OAuth server records the identity at a user's first login and
+never removes it, so this proves a login once worked under that provider name, not that it works
+with the current credentials. The user.openshift.io lookups run only once OAuth lists a provider:
+external OIDC removes that API. Off, the output is as before.
+
 Raw because several ACM statements compute the condition. HyperShift recreates the Secret on hosted
 control plane guests, so it never renders there.
 */ -}}
+{{- if not (has .Config.kubeadminRequireLogin (list true false nil)) }}{{ fail "stack.apiHardening.config.kubeadminRequireLogin must be true or false" }}{{ end }}
+{{- if .Config.kubeadminRequireLogin }}
+{{ "{{-" }} $idps := dig "spec" "identityProviders" (list) (lookup "config.openshift.io/v1" "OAuth" "" "cluster") {{ "}}" }}
+{{ "{{-" }} $admin := false {{ "}}" }}
+{{ "{{-" }} if and $idps (not ({{ include "api-hardening.hosted" . }})) {{ "}}" }}
+{{ "{{-" }} range $crb := dig "items" (list) (lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" "") {{ "}}" }}
+{{ "{{-" }} if and (eq (dig "roleRef" "kind" "" $crb) "ClusterRole") (eq (dig "roleRef" "name" "" $crb) "cluster-admin") {{ "}}" }}
+{{ "{{-" }} range $s := dig "subjects" (list) $crb {{ "}}" }}
+{{ "{{-" }} $name := dig "name" "" $s {{ "}}" }}
+{{ "{{-" }} if and (has (dig "kind" "" $s) (list "User" "Group")) (not (hasPrefix "system:" $name)) (ne $name "kube:admin") {{ "}}" }}
+{{ "{{-" }} $users := list $name {{ "}}" }}
+{{ "{{-" }} if eq (dig "kind" "" $s) "Group" {{ "}}" }}{{ "{{-" }} $users = dig "users" (list) (lookup "user.openshift.io/v1" "Group" "" $name) {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} range $u := $users {{ "}}" }}
+{{ "{{-" }} range $id := dig "identities" (list) (lookup "user.openshift.io/v1" "User" "" $u) {{ "}}" }}
+{{ "{{-" }} range $idp := $idps {{ "}}" }}
+{{ "{{-" }} if hasPrefix (printf "%s:" (dig "name" "" $idp)) $id {{ "}}" }}{{ "{{-" }} $admin = true {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $available := false {{ "}}" }}
+{{ "{{-" }} $settled := true {{ "}}" }}
+{{ "{{-" }} range $c := dig "status" "conditions" (list) (lookup "config.openshift.io/v1" "ClusterOperator" "" "authentication") {{ "}}" }}
+{{ "{{-" }} if eq (dig "type" "" $c) "Available" {{ "}}" }}{{ "{{-" }} $available = eq (dig "status" "" $c) "True" {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if and (has (dig "type" "" $c) (list "Progressing" "Degraded")) (ne (dig "status" "" $c) "False") {{ "}}" }}{{ "{{-" }} $settled = false {{ "}}" }}{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} $admin = and $admin $available $settled {{ "}}" }}
+{{ "{{-" }} end {{ "}}" }}
+{{ "{{-" }} if $admin {{ "}}" }}
+- complianceType: mustnothave
+  objectDefinition:
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: kubeadmin
+      namespace: kube-system
+{{ "{{-" }} end {{ "}}" }}
+{{- else }}
 {{ "{{-" }} $admin := false {{ "}}" }}
 {{ "{{-" }} range $crb := dig "items" (list) (lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" "") {{ "}}" }}
 {{ "{{-" }} if and (eq (dig "roleRef" "kind" "" $crb) "ClusterRole") (eq (dig "roleRef" "name" "" $crb) "cluster-admin") {{ "}}" }}
@@ -27,3 +75,4 @@ control plane guests, so it never renders there.
       name: kubeadmin
       namespace: kube-system
 {{ "{{-" }} end {{ "}}" }}
+{{- end }}

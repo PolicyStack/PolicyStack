@@ -1,0 +1,13 @@
+{{- /*
+Red Hat documents no instance check, only the operator pod and the Grafana route. The operator sets
+phase Running only when the manager, PostgreSQL and Kafka are available, and Grafana once ACM's
+resources are ready; condition Ready is derived from the same decision. A component that never
+becomes available leaves the phase at Progressing, never Error, so this check is where it shows.
+*/ -}}
+apiVersion: operator.open-cluster-management.io/v1alpha4
+kind: MulticlusterGlobalHub
+metadata:
+  name: multiclusterglobalhub
+  namespace: multicluster-global-hub
+status:
+  phase: Running

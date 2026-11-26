@@ -39,6 +39,7 @@ nav = [
     { "API Hardening" = "elements/api-hardening.md" },
     { "Compliance" = "elements/compliance.md" },
     { "File Integrity" = "elements/file-integrity.md" },
+    { "Global Hub" = "elements/global-hub.md" },
   ] },
   { "Develop" = [
     { "Writing an element" = "develop/elements.md" },

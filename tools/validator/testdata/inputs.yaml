@@ -63,3 +63,7 @@ stack:
         maintenance:
           text: Scheduled maintenance Saturday 02:00 UTC
           link: {href: "https://status.example.com", text: Status}
+  # storageClass renders only when set, empty by default.
+  globalHub:
+    config:
+      storageClass: gp3-csi

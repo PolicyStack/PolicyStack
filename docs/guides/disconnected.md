@@ -61,7 +61,7 @@ A package from a catalog OpenShift does not ship is left out and named in a comm
 
 Three things the render cannot see. Add them before you mirror:
 
-- **Packages no element names.** An operator that installs others, such as ACM installing `multicluster-engine` or ODF's `odf-operator` pulling in `ocs-operator`, `mcg-operator` and more. Take the list from the product's disconnected docs and pass each as `--package <name>[:<channel>]`, repeated. It joins `redhat-operators` at every minor in the output; without a channel, oc-mirror takes the head of every channel:
+- **Packages no element names.** An operator that installs others, such as ACM installing `multicluster-engine`, Global Hub installing `amq-streams`, or ODF's `odf-operator` pulling in `ocs-operator`, `mcg-operator` and more. Take the list from the product's disconnected docs and pass each as `--package <name>[:<channel>]`, repeated. It joins `redhat-operators` at every minor in the output; without a channel, oc-mirror takes the head of every channel:
 
     ```sh
     tools/validator/bin/policystack-validator imageset \

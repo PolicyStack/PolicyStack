@@ -1,0 +1,39 @@
+{{- /*
+Red Hat's Global Hub install ("Installing Multicluster Global Hub in a connected environment"),
+creating the instance the console offers after the operator installs.
+
+The operator reconciles only while exactly one MulticlusterGlobalHub exists cluster-wide, and
+watches its operands only in its own namespace, so the name and namespace are fixed. Spec fields
+this file leaves out keep their CRD defaults: enableMetrics and installAgentOnLocal true, Kafka
+topics gh-spec and gh-status.*. The CRD checks neither availabilityConfig nor retention, so both are
+checked here: the operator gives the manager and Grafana two replicas only for High and Kafka one
+broker only for Basic, case-sensitively, so any other value mixes the two.
+
+Disconnected: the operator subscribes to amq-streams from redhat-operators. When
+global.catalogSources renames redhat-operators, the two strimzi-catalog-source annotations point
+that Subscription at the mirrored catalog. Channel and package keep the operator's defaults; Global
+Hub 1.7 and 1.8 apply those two annotations only together with the namespace one.
+*/ -}}
+{{- $ha := .Config.availabilityConfig }}
+{{- if not (has $ha (list "High" "Basic")) }}{{ fail (printf "stack.globalHub.config.availabilityConfig: %q must be High or Basic" $ha) }}{{ end }}
+{{- $retention := toString .Config.retention }}
+{{- if or (not $retention) (not (regexMatch `^([0-9]+y)?([0-9]+m)?$` $retention)) }}{{ fail (printf "stack.globalHub.config.retention: %q must be years and months, such as 18m, 1y or 1y6m" $retention) }}{{ end }}
+{{- $catalog := index ((.Values.global).catalogSources | default dict) "redhat-operators" }}
+apiVersion: operator.open-cluster-management.io/v1alpha4
+kind: MulticlusterGlobalHub
+metadata:
+  name: multiclusterglobalhub
+  namespace: multicluster-global-hub
+  {{- with $catalog }}
+  annotations:
+    global-hub.open-cluster-management.io/strimzi-catalog-source-name: {{ . | quote }}
+    global-hub.open-cluster-management.io/strimzi-catalog-source-namespace: openshift-marketplace
+  {{- end }}
+spec:
+  availabilityConfig: {{ $ha }}
+  dataLayer:
+    {{- with .Config.storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
+    postgres:
+      retention: {{ $retention | quote }}

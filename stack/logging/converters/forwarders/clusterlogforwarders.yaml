@@ -1,0 +1,69 @@
+{{- /*
+One ClusterLogForwarder per enabled forwarder, with one output and one pipeline, both named after
+it. Each secret key wires one field: token and username/password the output's authentication, ca,
+certificate and key its tls. All read the copied Secret <name>-output.
+*/ -}}
+{{- include "logging.validateForwarders" .Config.forwarders }}
+{{- range $name, $f := .Config.forwarders }}
+{{- if include "policy-library.enabled" $f }}
+{{- $s := $f.secret | default dict }}
+---
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: {{ $name }}
+  namespace: openshift-logging
+spec:
+  managementState: Managed
+  serviceAccount:
+    name: {{ $name }}-collector
+  outputs:
+    - name: {{ $name }}
+      type: {{ $f.type }}
+      {{ $f.type }}:
+        url: {{ $f.url | quote }}
+        {{- if eq $f.type "syslog" }}
+        rfc: {{ $f.rfc | default "RFC5424" }}
+        {{- end }}
+        {{- with $f.index }}
+        index: {{ . | quote }}
+        {{- end }}
+        {{- if and $s.token (eq $f.type "splunk") }}
+        authentication:
+          token:
+            {{- include "logging.secretRef" (dict "key" $s.token "name" $name) | nindent 12 }}
+        {{- else if $s.token }}
+        authentication:
+          token:
+            from: secret
+            secret:
+              key: {{ $s.token | quote }}
+              name: {{ $name }}-output
+        {{- else if $s.username }}
+        authentication:
+          username:
+            {{- include "logging.secretRef" (dict "key" $s.username "name" $name) | nindent 12 }}
+          password:
+            {{- include "logging.secretRef" (dict "key" $s.password "name" $name) | nindent 12 }}
+        {{- end }}
+      {{- if or $s.ca $s.certificate }}
+      tls:
+        {{- with $s.ca }}
+        ca:
+          {{- include "logging.secretRef" (dict "key" . "name" $name) | nindent 10 }}
+        {{- end }}
+        {{- with $s.certificate }}
+        certificate:
+          {{- include "logging.secretRef" (dict "key" . "name" $name) | nindent 10 }}
+        key:
+          {{- include "logging.secretRef" (dict "key" $s.key "name" $name) | nindent 10 }}
+        {{- end }}
+      {{- end }}
+  pipelines:
+    - name: {{ $name }}
+      inputRefs:
+        {{- toYaml $f.logTypes | nindent 8 }}
+      outputRefs:
+        - {{ $name }}
+{{- end }}
+{{- end }}

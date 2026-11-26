@@ -67,3 +67,25 @@ stack:
   globalHub:
     config:
       storageClass: gp3-csi
+  # forwarders ranges over forwarders, empty by default. One entry per type, plus one disabled.
+  logging:
+    config:
+      forwarders:
+        audit-syslog:
+          type: syslog
+          url: tls://siem.example.com:6514
+          logTypes: [audit]
+          secret: {name: audit-syslog-tls, ca: ca-bundle.crt, certificate: tls.crt, key: tls.key}
+        app-splunk:
+          type: splunk
+          url: https://splunk.example.com:8088
+          logTypes: [application, infrastructure]
+          index: openshift
+          secret: {name: splunk-hec, token: hecToken}
+        infra-http:
+          type: http
+          url: https://logs.example.com/ingest
+          logTypes: [infrastructure]
+          secret: {name: http-basic, username: username, password: password}
+        retired:
+          enabled: false

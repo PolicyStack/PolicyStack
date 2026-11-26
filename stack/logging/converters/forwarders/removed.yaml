@@ -1,0 +1,48 @@
+{{- /*
+Objects a forwarder must not leave behind, deleted under enforce:
+- every object of an enabled: false entry, including ClusterRoleBinding
+  metadata-reader-openshift-logging-<name>-collector, which the operator creates and never deletes;
+- for an enabled entry, the binding of each log type logTypes no longer lists, so dropping one
+  revokes its collection, and Secret <name>-output once secret is unset.
+An entry deleted from config.forwarders leaves its objects unmanaged on the cluster.
+*/ -}}
+{{- include "logging.validateForwarders" .Config.forwarders }}
+{{- range $name, $f := .Config.forwarders }}
+{{- $on := include "policy-library.enabled" $f }}
+{{- if not $on }}
+---
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: {{ $name }}
+  namespace: openshift-logging
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}-collector
+  namespace: openshift-logging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metadata-reader-openshift-logging-{{ $name }}-collector
+{{- end }}
+{{- if not (and $on ($f.secret | default dict).name) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-output
+  namespace: openshift-logging
+{{- end }}
+{{- range list "application" "infrastructure" "audit" }}
+{{- if not (and $on (has . ($f.logTypes | default list))) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}-collect-{{ . }}-logs
+{{- end }}
+{{- end }}
+{{- end }}

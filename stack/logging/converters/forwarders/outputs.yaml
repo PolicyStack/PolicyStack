@@ -1,0 +1,21 @@
+{{- /*
+Secret <name>-output per enabled forwarder with secret.name, copied from that Secret in the hub's
+policy namespace. Its own template, which nothing waits for: a hub Secret that is missing fails only
+this template, and the forwarder reading it reports through ready.
+*/ -}}
+{{- include "logging.validateForwarders" .Config.forwarders }}
+{{- $hubNamespace := .Values.policyNamespace }}
+{{- range $name, $f := .Config.forwarders }}
+{{- if include "policy-library.enabled" $f }}
+{{- with ($f.secret | default dict).name }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-output
+  namespace: openshift-logging
+type: Opaque
+data: '{{ "{{" }}hub copySecretData "{{ $hubNamespace }}" "{{ . }}" hub{{ "}}" }}'
+{{- end }}
+{{- end }}
+{{- end }}

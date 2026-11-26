@@ -2,6 +2,11 @@ stack:
   logging:
     enabled: false
 
+    # Read only by the forwarders policy, which ships enabled: false.
+    config:
+      # ClusterLogForwarder name in openshift-logging: {type, url, logTypes, rfc, index, secret, enabled}. type is syslog, splunk or http. url is tls://, tcp:// or udp:// for syslog, https:// or http:// otherwise. logTypes lists application, infrastructure and/or audit. rfc is RFC5424 (default) or RFC3164, syslog only. index is the Splunk index, Splunk only. secret is {name, ca, certificate, key, token, username, password}: name is a Secret in the hub's policy namespace, each other key names the Secret key that feeds one field. enabled: false deletes the forwarder; deleting the entry leaves it unmanaged. The name is 3-54 characters, ends with a letter or digit and is not logging. The layer that turns forwarders on fills it
+      forwarders: {}
+
     default:
       remediationAction: enforce
       severity: medium
@@ -15,6 +20,48 @@ stack:
     policies:
       install:
         description: "Policy for any operator installation"
+
+      # Forward logs to receivers outside the cluster, one ClusterLogForwarder per
+      # config.forwarders entry. Independent of the loki element's forwarder.
+      forwarders:
+        enabled: false
+        description: "Forward logs to syslog, Splunk or HTTP receivers"
+        categories:
+          - AU Audit and Accountability
+        controls:
+          - AU-4(1) Transfer to Alternate Storage
+          - AU-9(2) Store on Separate Physical Systems or Components
+        dependencies:
+          - name: install
+        templates:
+          collectors:
+            description: "Collector ServiceAccount and log type ClusterRoleBindings per forwarder"
+
+          # Nothing waits for it, so a missing hub Secret blocks no other forwarder
+          outputs:
+            description: "Output Secret per forwarder, copied from the hub"
+
+          clusterlogforwarders:
+            description: "ClusterLogForwarder per forwarder"
+            waitForOperator: cluster-logging
+            # The element owns each forwarder, so a field removed from an entry is removed on the cluster
+            complianceType: mustonlyhave
+            metadataComplianceType: musthave
+            extraDependencies:
+              - name: collectors
+
+          ready:
+            description: "Reports NonCompliant until each forwarder is Ready and every collector pod is ready"
+            remediationAction: InformOnly
+
+          removed:
+            description: "Deletes disabled forwarders, unused log type bindings and unused output Secrets"
+            waitForOperator: cluster-logging
+            complianceType: mustnothave
+            # Revoke a binding or Secret only once the forwarder no longer uses it, or the operator
+            # undeploys the collector
+            extraDependencies:
+              - name: clusterlogforwarders
 
     operatorPolicies:
       cluster-logging:

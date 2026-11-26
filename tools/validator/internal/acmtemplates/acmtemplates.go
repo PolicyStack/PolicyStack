@@ -49,6 +49,7 @@ var kinds = []struct {
 	{"v1", "Node", "nodes", false},
 	{"v1", "Secret", "secrets", true},
 	{"agent-install.openshift.io/v1beta1", "Agent", "agents", true},
+	{"apps/v1", "DaemonSet", "daemonsets", true},
 	{"apps/v1", "StatefulSet", "statefulsets", true},
 	{"cert-manager.io/v1", "Certificate", "certificates", true},
 	{"cluster.open-cluster-management.io/v1", "ManagedCluster", "managedclusters", false},

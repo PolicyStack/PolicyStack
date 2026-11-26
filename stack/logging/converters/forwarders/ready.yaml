@@ -1,0 +1,28 @@
+{{- /*
+Inform-only readiness gate per enabled forwarder. The operator sets Ready once it has applied the
+collector DaemonSet, without waiting for the pods, so the DaemonSet's numberReady is compared to its
+desiredNumberScheduled, which is only known on the managed cluster.
+*/ -}}
+{{- include "logging.validateForwarders" .Config.forwarders }}
+{{- range $name, $f := .Config.forwarders }}
+{{- if include "policy-library.enabled" $f }}
+---
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: {{ $name }}
+  namespace: openshift-logging
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $name }}
+  namespace: openshift-logging
+status:
+  numberReady: '{{ "{{" }} index ((lookup "apps/v1" "DaemonSet" "openshift-logging" "{{ $name }}").status | default dict) "desiredNumberScheduled" | default 1 | toInt {{ "}}" }}'
+{{- end }}
+{{- end }}

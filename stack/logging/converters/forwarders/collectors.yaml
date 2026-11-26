@@ -1,0 +1,31 @@
+{{- /*
+Per enabled forwarder: ServiceAccount <name>-collector and a ClusterRoleBinding
+<name>-collect-<type>-logs for each logTypes entry. The prefixes keep them apart from the loki
+element's ServiceAccount collector and its bindings, which are named after the ClusterRoles.
+*/ -}}
+{{- include "logging.validateForwarders" .Config.forwarders }}
+{{- range $name, $f := .Config.forwarders }}
+{{- if include "policy-library.enabled" $f }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}-collector
+  namespace: openshift-logging
+{{- range $f.logTypes }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}-collect-{{ . }}-logs
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collect-{{ . }}-logs
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-collector
+    namespace: openshift-logging
+{{- end }}
+{{- end }}
+{{- end }}

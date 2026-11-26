@@ -101,19 +101,20 @@ mise run ps -- install ~/<repo> # (4)!
 3.  Installs the tools the release's `mise.toml` pins. Your repository gets the same `mise.toml`, so it reuses them.
 4.  An absolute path outside `~/policystack`: mise runs the task from `~/policystack`, and the launcher refuses a directory inside a Git work tree. The first run installs the Python packages `tools/policystack/uv.lock` pins.
 
-In a terminal, the launcher asks three things. Arrow keys move, space ticks, Enter confirms, and typing filters a list by name:
+In a terminal, the launcher asks four things. Arrow keys move, space ticks, Enter confirms, and typing filters a list by name:
 
 | Prompt | Lists | Pick |
 |---|---|---|
 | `Release` | Every release, newest first. A release upstream later found broken is shown with its reason and can't be picked ([Blocked releases](../reference/launcher.md#blocked-releases)) | The newest |
 | `Elements` | Every element with its stability. The line under the list shows the highlighted element's description and what it needs. `acm`, `gitops` and `upgrade` are ticked and locked | What you want now. [Add elements](#add-elements) works later too |
-| `Example values files` | Upstream's `values/`, each with the elements it turns on | None, unless one fits ([Example files](#example-files)) |
+| `Example values files` | Upstream's `values/`, each with the elements it turns on and those it only configures | None, or the [topology layers](../concepts/values.md#topology-layers) that fit your clusters ([Example files](#example-files)) |
+| `Hub name (hubName), for fleet/hubs/<hub>.yaml; empty: none` | Free text, checked as you type | Your `<hub>`. The launcher writes `fleet/hubs/<hub>.yaml` with `revision: main` into the first commit. Leave it empty to write the file later ([Add the hub's fleet file](#add-the-hubs-fleet-file)) |
 
 It then prints what it will create and asks `Proceed?`. The same install without prompts, as a script would run it:
 
 ```sh
 mise run ps -- install --to v1.0.0 --elements odf,loki \
-  --examples values/clusters/prod-east-1.yaml ~/fleet
+  --examples values/clusters/prod-east-1.yaml --hub hub-east ~/fleet
 ```
 
 ```text
@@ -126,16 +127,18 @@ PolicyStack v1.0.0 into /home/me/fleet
     + user-monitoring enabled by values/clusters/prod-east-1.yaml
   not added, named only by policies that ship disabled; POLICY011 fails once a cluster enables one: loki -> coo, loki -> logging
   example files, yours from now on: values/clusters/prod-east-1.yaml
+  hub fleet file: fleet/hubs/hub-east.yaml (revision: main)
 copying framework (1/10)
 copying acm (2/10)
 ...
 copying user-monitoring (10/10)
 created /home/me/fleet: one commit on main, nothing pushed. Next (docs/start/install.md):
   git -C /home/me/fleet remote add origin <your repository URL> && git -C /home/me/fleet push -u origin main
-  write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml, then: mise run validate
+  helm install policystack /home/me/fleet/install -n openshift-gitops --set hubName=hub-east --set gitRepo=<your repository URL>
+  write fleet/<cluster>.yaml, then: mise run validate
 ```
 
-The `+` lines are elements you didn't pick that the install adds, and why ([Dependencies](#dependencies)). Each element takes a few seconds to copy. If anything fails, or you press Ctrl-C, the directory is removed and you can run it again. Every flag and refusal: [install](../reference/launcher.md#install).
+The `+` lines are elements you didn't pick that the install adds, and why ([Dependencies](#dependencies)). With no hub name (`--hub ''`, an empty answer, or no `--hub` and no terminal to ask in), no fleet file is written and the last line reads `write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml, then: mise run validate`. The `helm install` line is the one in [Install PolicyStack](#install-policystack), with your hub name filled in. Each element takes a few seconds to copy. If anything fails, or you press Ctrl-C, the directory is removed and you can run it again. Every flag and refusal: [install](../reference/launcher.md#install).
 
 Push it, and trust its `mise.toml`. `mise install` adds only tools that the release you picked pins differently from the one you fetched the launcher from. From here on, run the launcher from your repository with `mise run ps`; delete `~/policystack`.
 
@@ -246,11 +249,13 @@ Elements you write yourself also go under `stack/`, without an answers file ([Wr
 
 Some elements depend on another: `odf`, for one, waits on Policies of `storage-nodes`. `install` and `add` copy every such dependency with the element that needs it (`+ storage-nodes needed by odf`).
 
-A dependency named only by a policy that ships disabled is not copied: `loki`'s optional policies wait on `coo` and `logging`, and the summary lists them under `not added`. Once a fleet file enables such a policy without its element, CI fails it with [POLICY011](../reference/rules.md), naming it; add the element then. In your repository the validator checks elements and values only through the clusters in `fleet/` ([What `validate` runs](../develop/validation.md#what-validate-runs)).
+A dependency named only by a policy that ships disabled is not copied: `loki`'s optional policies wait on `coo` and `logging`, and the summary lists them under `not added`. Once a fleet file enables such a policy without its element, CI fails it with [POLICY011](../reference/rules.md), naming it; add the element then. In your repository `validate` checks nothing until `fleet/` has a file. From then on it renders elements only for the clusters in `fleet/`, but checks the keys of every file under `values/` (POLICY035), listed by a fleet file or not ([What `validate` runs](../develop/validation.md#what-validate-runs)).
 
 ### Example files
 
-A picked example file is copied byte for byte into your `values/` and is yours from then on: updates never merge upstream's changes into it. It turns its elements on as soon as a fleet file lists it, which is why `install` copies the elements it enables. Read it before listing it ([Example files](../concepts/values.md#example-files)).
+A picked example file is copied byte for byte into your `values/` and is yours from then on: updates never merge upstream's changes into it. It turns its elements on as soon as a fleet file lists it. `install` copies every element an example names under `stack`, turned on (`+ machine-health enabled by ...`) or only configured (`+ image-registry configured by values/topologies/single-node.yaml`), because POLICY035 fails a key that names an element your repository doesn't have. Read it before listing it ([Example files](../concepts/values.md#example-files)).
+
+The four `values/topologies/` files describe a node layout (hub, single-node, compact, standard) and turn no element on, so listing one changes nothing on a cluster until a layer enables an element it configures ([Topology layers](../concepts/values.md#topology-layers)). Pick the ones that match your clusters.
 
 ### Without the launcher
 
@@ -282,7 +287,7 @@ git add stack/odf && git commit -m "feat: add odf ($fw)"
 2.  Add a ruleset on the default branch (**Settings > Rules > Rulesets**). Without one nothing blocks a merge:
 
     - Require a pull request with code owner review.
-    - Require the status checks `ci` and `pr-title`. The picker lists only checks that have run, so open one PR first (the fleet PR in [Add the hub's fleet file](#add-the-hubs-fleet-file) works), or type the names.
+    - Require the status checks `ci` and `pr-title`. The picker lists only checks that have run, so open one PR first (the layer PR in [Add the hub's fleet file](#add-the-hubs-fleet-file) works), or type the names.
     - Block force pushes and deletion.
 
     These checks run on every PR ([CI workflows](../reference/ci.md), [Validator rules](../reference/rules.md)):
@@ -337,7 +342,7 @@ git add stack/odf && git commit -m "feat: add odf ($fw)"
               availabilityConfig: Basic  # (1)!
         ```
 
-        1.  Single replicas, for lab and single node hubs. The default is `High`.
+        1.  Single replicas. Red Hat requires it on a single node hub; on a lab hub it saves resources. The default is `High`.
 
         Pass it with `-f`:
 
@@ -347,6 +352,8 @@ git add stack/odf && git commit -m "feat: add odf ($fw)"
         ```
 
         Commit this file and list it in the [hub's fleet file](#add-the-hubs-fleet-file). At handover the `acm` element enforces `availabilityConfig` on the MultiClusterHub, and without this layer it switches the hub to `High`.
+
+        If you copied `values/topologies/single-node.yaml`, it sets the same key: pass `-f values/topologies/single-node.yaml` instead, and list it in the hub's fleet file.
 
         On a disconnected hub, also pass the layer that sets `global.catalogSources`, which points each Subscription at your mirrored catalog, such as `-f values/datacenters/<dc>.yaml` ([Disconnected clusters](../guides/disconnected.md#the-hub)).
 
@@ -454,7 +461,9 @@ revision: main  # (1)!
 
 1.  A branch the cluster follows, or a tag or SHA it stays on ([Revision](../reference/fleet.md#revision)). Name your default branch if it isn't `main`.
 
-PR it to the default branch and merge. Within about 6 minutes (the ApplicationSet polls Git every 3 minutes) every directory under `stack/` gets an Application named `<element>-<hub>`, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`.
+If you gave the launcher a hub name, it wrote this file into the first commit, which is already on the default branch. Check that the file name matches the `hubName` you installed with: under another name the hub reads no file and gets no Applications. Otherwise write the file now, PR it to the default branch and merge.
+
+Within about 6 minutes of the merge, or of `helm install` when the file was already there (the ApplicationSet polls Git every 3 minutes), every directory under `stack/` gets an Application named `<element>-<hub>`, one per element you copied. Each shows Synced and Healthy and renders nothing, because every element ships off except `upgrade`, which acts only when a fleet file sets `version` or `channel`. The exception is a `values/clusters/<hub>.yaml` you copied as an example: the hub reads it without it being listed, so its elements apply at once.
 
 ```sh
 oc get applications.argoproj.io -n openshift-gitops | grep <hub>  # (1)!
@@ -480,10 +489,14 @@ List each layer under `valueFiles`, lowest precedence first ([Order](../concepts
 # fleet/hubs/<hub>.yaml
 revision: main
 valueFiles:
-  - environments/hub.yaml  # (1)!
+  - environments/hub.yaml        # (1)!
+  - topologies/single-node.yaml  # (2)!
+  - topologies/hub.yaml          # (3)!
 ```
 
-1.  Add `acm/<hub>.yaml` too if you wrote it under [Single node or disconnected hub](#install-the-operators).
+1.  The layer above.
+2.  The hub's own node layout, if you copied the topology layers: `single-node.yaml`, `compact.yaml` or `standard.yaml` ([Topology layers](../concepts/values.md#topology-layers)).
+3.  Facts every hub shares. It keeps PolicyStack off the Argo CD instance that delivers it once `gitops` is on, and changes nothing before. List it last. If you wrote `acm/<hub>.yaml` under [Single node or disconnected hub](#install-the-operators), list that just before it.
 
 !!! warning "Listed layers apply at once, with `enforce`"
     Every shipped element enforces by default, so the hub changes as soon as the PR merges. If you copied a layer from upstream's examples ([Example files](../concepts/values.md#example-files)), read it first: they turn elements on. Or put `global.remediationAction: inform` in `values/clusters/<hub>.yaml` to report without changing anything ([Dry run](../guides/rollout.md#dry-run)).

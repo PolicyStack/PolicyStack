@@ -350,6 +350,9 @@ Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values
     | `platforms/kubevirt.yaml` | `install` only: `KubeVirt`, 2-node `workers` pool |
     | `platforms/agent.yaml` | `install` only: `Agent`, no default NodePool |
     | `tenants/payments.yaml` | GitOps operator plus a payments team Argo CD |
+    | `topologies/single-node.yaml` | ACM `availabilityConfig: Basic`; image registry on one RWO `lvms-vg1` volume, one replica, `Recreate`. Turns nothing on |
+    | `topologies/compact.yaml`, `topologies/standard.yaml` | Nothing yet: the element defaults fit. The header says which elements to keep off and why |
+    | `topologies/hub.yaml` | `gitops` `instance` and `link` policies off. Turns nothing on |
     | `acm/acm-dc1.yaml` | Hub ACM and GitOps, commented out ([why](../start/install.md#hand-the-operators-to-policystack)) |
     | `clusters/acm-dc1.yaml` | Hub elements, and which are off and why (`cim` for SiteConfig clusters) |
     | `clusters/prod-east-1.yaml` | Infra nodes, machine health, user monitoring |
@@ -358,3 +361,31 @@ Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values
     | `clusters/aws-prod.yaml` | ODF to Loki chain. Rename to the real ManagedCluster name first |
 
     `tenants/payments.yaml` and `clusters/aws-prod.yaml` are only key-checked (POLICY035) until a fleet file lists them. Render errors in them show up on that pull request.
+
+### Topology layers
+
+`values/topologies/` holds one layer per node layout. Unlike most other examples, they turn no element on: each sets only what an element needs to be correct on that layout, read once some other layer enables the element. Listing one changes nothing on a cluster until then. On a running cluster where the element is already on, it does: `single-node.yaml` moves an enabled registry from S3 to a PVC on `lvms-vg1`, and on a hub after handover sets the MultiClusterHub to `Basic`. Check the PR's [Render Diff](../reference/ci.md#render-diff). Each file's header lists the elements left off and why, mostly because their rollout reboots nodes or depends on the platform.
+
+| File | Cluster | Sets |
+|---|---|---|
+| `single-node.yaml` | One node, control plane and worker | ACM `availabilityConfig: Basic`. The image registry on an LVM Storage volume (`lvms-vg1`, `ReadWriteOnce`) with one replica and the `Recreate` rollout, as Red Hat requires for a RWO volume |
+| `compact.yaml` | Three control-plane nodes that run workloads | Nothing yet |
+| `standard.yaml` | Three control-plane nodes and a worker pool | Nothing yet |
+| `hub.yaml` | Any ACM hub, added to its topology layer | `stack.gitops.policies.instance` and `link` off, so PolicyStack never reconciles the Argo CD instance that delivers it ([Enable the elements](../start/install.md#enable-the-elements)) |
+
+A cluster lists one topology layer after its environment, datacenter and platform layers. A hub lists its topology layer and then `hub.yaml`, last. The two set different keys, so neither overrides the other:
+
+```yaml
+# fleet/hubs/acm-edge.yaml
+revision: main
+valueFiles:
+  - environments/prod.yaml
+  - platforms/baremetal.yaml
+  - topologies/single-node.yaml
+  - acm/acm-edge.yaml        # (1)!
+  - topologies/hub.yaml
+```
+
+1.  Only if you wrote it ([Hand the operators to PolicyStack](../start/install.md#hand-the-operators-to-policystack)).
+
+`single-node.yaml` configures `image-registry`. `install` copies that element with the file; without it, POLICY035 fails `stack.imageRegistry names no element` ([Example files](../start/install.md#example-files)). On a new single-node hub, also pass the file to [Install the operators](../start/install.md#install-the-operators), so the MultiClusterHub starts on `Basic`.

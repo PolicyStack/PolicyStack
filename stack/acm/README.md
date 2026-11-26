@@ -28,7 +28,7 @@ Under `stack.acm.config`. Maps merge across layers; lists are replaced whole.
 
 | Key | Description | Default |
 |---|---|---|
-| `availabilityConfig` | High or Basic. Basic runs single replicas and suits lab hubs. | `High` |
+| `availabilityConfig` | High (default) runs two replicas of most hub components, Basic one. Red Hat requires Basic on a single-node hub. | `High` |
 | `selfManaged` | Whether the hub also manages itself as `local-cluster` | `true` |
 | `search` | ACM Search database storage |  |
 | `search.size` |  | `100Gi` |

@@ -174,4 +174,5 @@ oc --context prod-east-1 get argocd -n openshift-gitops         # the instance
 
 - [How an element is built](../concepts/elements.md): where Policies and their names come from.
 - [Rolling out changes](../guides/rollout.md): promote, roll back, remove an element.
+- [Fleet recipes](../guides/fleet-recipes.md): onboard many clusters, or promote a group of them, in one PR.
 - [Building clusters](../guides/lifecycle.md): let the hub build the cluster. Skip the import and add `hub`, `version` and `install` to the fleet file.

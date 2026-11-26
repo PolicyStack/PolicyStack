@@ -227,7 +227,10 @@ func TestLoadDir_testdata(t *testing.T) {
 		{"prod-east-1", "", ""},
 		{"sno-edge", "acm-dc1", ""},
 		{"sno-retired", "acm-dc1", "absent"},
+		{"topo-compact", "", ""},
+		{"topo-standard", "", ""},
 		{"acm-dc1", "", ""},
+		{"hub-sno", "", ""},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %d clusters, want %d", len(got), len(want))

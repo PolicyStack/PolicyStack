@@ -148,16 +148,20 @@ def elements(gitdir: Path, tag: str) -> dict[str, Element]:
     return out
 
 
-def examples(gitdir: Path, tag: str, catalog: dict[str, Element]) -> dict[str, tuple]:
-    """values/** at tag -> the elements each file turns on (stack.<key>.enabled: true)."""
+def examples(gitdir: Path, tag: str, catalog: dict[str, Element]) -> dict[str, dict[str, bool]]:
+    """values/** at tag -> {element: turned on (stack.<key>.enabled: true)} for every element
+    the file names: one it only configures is needed too, or POLICY035 fails the key."""
     paths = git("ls-tree", "-r", "--name-only", tag, "values/", cwd=gitdir).split()
     by_key = {camel(n): n for n in catalog}
     out = {}
     for p, data in read(gitdir, tag, paths).items():
         doc = load(data) if p.endswith((".yaml", ".yml")) else None
         stack = (doc or {}).get("stack") or {}
-        on = {k for k, v in stack.items() if isinstance(v, dict) and v.get("enabled") is True}
-        out[p] = tuple(sorted(by_key[k] for k in on & by_key.keys()))
+        out[p] = {
+            by_key[k]: isinstance(v, dict) and v.get("enabled") is True
+            for k, v in sorted(stack.items())
+            if k in by_key
+        }
     return out
 
 

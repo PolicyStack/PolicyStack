@@ -35,7 +35,8 @@ mise runs every task from the directory that holds `mise.toml`, wherever you cal
 ### install
 
 ```text
-policystack install [--src URL] [--to vX.Y.Z] [--pre] [--elements a,b] [--examples values/x.yaml,...] DIR
+policystack install [--src URL] [--to vX.Y.Z] [--pre] [--elements a,b] [--examples values/x.yaml,...]
+                    [--hub NAME] DIR
 ```
 
 Your repository doesn't exist yet, so `install` runs as `mise run ps -- install` in the launcher
@@ -49,16 +50,36 @@ fetched from an upstream release ([Create your repository](../start/install.md#c
 | `--pre` | Off | Also list prereleases in the picker, and take the newest of them as the default without a terminal |
 | `--elements` | A picker. Required without a terminal; may be `''` | Comma-separated elements |
 | `--examples` | A picker; without a terminal, none | Comma-separated files from upstream's `values/` |
+| `--hub` | A prompt; without a terminal, none. May be `''` for none | The hub's `hubName`. Writes `fleet/hubs/<hub>.yaml` containing only `revision: main` ([Add the hub's fleet file](../start/install.md#add-the-hubs-fleet-file)) |
 
 It copies the framework, then each element in its own scope: `acm`, `gitops` and `upgrade`
-(always, locked in the picker), the ones you picked, every element a picked example file turns on
-(`stack.<key>.enabled: true`), and every hard dependency of those, transitively. A hard dependency
+(always, locked in the picker), the ones you picked, every element a picked example file names
+under `stack`, turned on (`stack.<key>.enabled: true`) or only configured, since POLICY035 fails a
+key that names a missing element, and every hard dependency of those, transitively. The summary
+prints a `+ <element> enabled by <file>`, `+ <element> configured by <file>` or
+`+ <element> needed by <element>` line for each element you didn't pick; `acm`, `gitops` and
+`upgrade` get none. A hard dependency
 is an `element:` named by a policy that doesn't ship `enabled: false`. One named only by such a
 disabled policy is listed under `not added` and not copied. The picked example files are copied
 byte for byte and are yours from then on. Then `git init -b main` and one commit,
-`chore: PolicyStack <tag>`. Nothing is pushed.
+`chore: PolicyStack <tag>`, which also holds the hub's fleet file when `--hub` named one. That
+file lists no layers, but the hub always reads `values/clusters/<hub>.yaml` last: if you picked
+that example, the hub applies it as soon as `helm install` runs, and the summary says so in a
+`note:` line. Otherwise the file changes nothing on the hub. Nothing is pushed.
 
 A failure or Ctrl-C before the commit removes `DIR`.
+
+`--hub` is checked first, before anything is fetched or written. It must be a lowercase DNS label
+of at most 30 characters, the [naming budget](../concepts/policies.md#naming-limits), and not
+`null`, which `helm install --set hubName=null` reads as no value:
+
+```text
+policystack: hub 'Hub-East': hubName is a lowercase DNS label of at most 30 characters (a-z, 0-9 and '-', starting and ending with a letter or digit)
+policystack: hub null: helm --set hubName=null reads as no value; pick another name
+```
+
+The prompt applies the same check as you type and strips spaces around the answer. `--hub` is
+taken as given, so `--hub ' hub-east'` is refused.
 
 ### add
 

@@ -213,6 +213,15 @@ func TestResolve_testdata(t *testing.T) {
 		"foo-sno-retired": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml", "values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",
 		},
+		"foo-topo-compact": {
+			"stack/foo/values.yaml", "values.yaml", "values/topologies/compact.yaml",
+		},
+		"foo-topo-standard": {
+			"stack/foo/values.yaml", "values.yaml", "values/topologies/standard.yaml",
+		},
+		"foo-hub-sno": {
+			"stack/foo/values.yaml", "values.yaml", "values/topologies/single-node.yaml", "values/topologies/hub.yaml",
+		},
 		"foo-acm-dc1": {
 			"stack/foo/values.yaml", "values.yaml", "values/environments/prod.yaml",
 			"values/datacenters/dc1.yaml", "values/platforms/baremetal.yaml",

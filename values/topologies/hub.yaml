@@ -1,0 +1,26 @@
+# Facts for an ACM hub, whatever its topology. A hub lists it last, after its topology layer:
+#   # fleet/hubs/<hubName>.yaml
+#   revision: main
+#   valueFiles:
+#     - environments/prod.yaml
+#     - platforms/baremetal.yaml
+#     - topologies/single-node.yaml   # or compact.yaml or standard.yaml
+#     - acm/<hubName>.yaml            # if you wrote one at install
+#     - topologies/hub.yaml
+# values/clusters/<hubName>.yaml is read after all of them.
+#
+# Turns on no element: nothing on a hub is both needed and safe to switch on from a shared layer.
+# This hub's ACM and Argo CD deliver PolicyStack, and the acm and gitops elements stay off until
+# handover (docs/start/install.md#hand-the-operators-to-policystack), which you do in
+# acm/<hubName>.yaml. Listing this file changes nothing on the hub until gitops is on; after that it
+# removes the instance and link Policies if a layer had them on.
+stack:
+  # Keeps PolicyStack from reconciling the Argo CD instance that delivers it, from the day gitops is
+  # turned on here: a bad value in instance would break the path that delivers the fix. link is the
+  # console link to that instance and depends on instance, so it would stay Pending.
+  gitops:
+    policies:
+      instance:
+        enabled: false
+      link:
+        enabled: false

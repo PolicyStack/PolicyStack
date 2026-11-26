@@ -27,6 +27,7 @@ nav = [
   ] },
   { "Guides" = [
     { "Rolling out changes" = "guides/rollout.md" },
+    { "Fleet recipes" = "guides/fleet-recipes.md" },
     { "Operator versions" = "guides/operators.md" },
     { "Building clusters" = "guides/lifecycle.md" },
     { "OpenShift upgrades" = "guides/upgrades.md" },

@@ -6,6 +6,7 @@ Needs git 2.43 or later (merge-file --object-id). From mise: mise run ps -- --he
 import argparse
 import difflib
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -28,6 +29,8 @@ MAJOR = (
     "major release: follow docs/guides/upgrading.md#majors (every hub from this branch, then merge)"
 )
 OPTIONAL = "named only by policies that ship disabled; POLICY011 fails once a cluster enables one"
+# hubName: a lowercase DNS label within the naming budget (docs/concepts/policies.md#naming-limits)
+HUB_NAME = re.compile(r"[a-z0-9]([a-z0-9-]{0,28}[a-z0-9])?")
 
 
 def _tty() -> bool:
@@ -84,6 +87,18 @@ def _element_rows(elements: dict[str, cat.Element], names) -> list:
         needs = f"needs {', '.join(e.hard)}. " if e.hard else ""
         rows.append((e.name, e.stability, needs + e.description, False))
     return rows
+
+
+def _bad_hub(name: str) -> str:
+    """Why name can't be hubName, or "" if it can or is empty (no hub fleet file)."""
+    if name == "null":
+        return "hub null: helm --set hubName=null reads as no value; pick another name"
+    if name and not HUB_NAME.fullmatch(name):
+        return (
+            f"hub {name!r}: hubName is a lowercase DNS label of at most 30 characters "
+            "(a-z, 0-9 and '-', starting and ending with a letter or digit)"
+        )
+    return ""
 
 
 def _confirm() -> None:
@@ -144,6 +159,8 @@ def _copy(url: str, mirror: Path, tag: str, root: Path, scopes) -> None:
 
 def install(a) -> None:
     dst = Path(a.dir).absolute()
+    if why := _bad_hub(a.hub or ""):
+        raise Refused(why)
     if dst.exists() and any(dst.iterdir()):
         raise Refused(f"{dst}: exists and is not empty")
     parent = next(p for p in (dst, *dst.parents) if p.exists())
@@ -166,18 +183,35 @@ def install(a) -> None:
         rows = _element_rows(elements, elements)
         a.elements = _checkbox("Elements", rows, cat.LOCKED, locked)
     if a.examples is None and _tty():
-        rows = [(p, "", f"enables {', '.join(e) or 'nothing'}", False) for p, e in examples.items()]
+        rows = []
+        for p, named in examples.items():
+            cfg = ", ".join(e for e, on in named.items() if not on)
+            on = ", ".join(e for e, on in named.items() if on) or "nothing"
+            rows.append((p, "", f"enables {on}" + f"; configures {cfg}" * bool(cfg), False))
         a.examples = _checkbox("Example values files (yours once copied)", rows)
+    if a.hub is None and _tty():
+        ask = "Hub name (hubName), for fleet/hubs/<hub>.yaml; empty: none"
+        hub = questionary.text(ask, validate=lambda s: _bad_hub(s.strip()) or True)
+        a.hub = hub.unsafe_ask().strip()
+    fleet = f"fleet/hubs/{a.hub}.yaml" if a.hub else ""
     picked, files = set(a.elements), a.examples or []
     _unknown(picked, elements, "elements")
     _unknown(files, examples, "example files")
-    implied = {e: f"enabled by {f}" for f in files for e in set(examples[f]) - picked}
+    implied = {}  # "enabled by" wins over "configured by"; LOCKED are copied anyway
+    for f in files:
+        for e, on in examples[f].items():
+            if e not in picked | set(cat.LOCKED) and (on or e not in implied):
+                implied[e] = f"{'enabled' if on else 'configured'} by {f}"
     final, why = cat.closure(elements, picked | set(cat.LOCKED) | implied.keys())
     print(f"PolicyStack {tag} into {dst}")
     print("  framework: install/, lifecycle/, lib/, tools/, CI, mise.toml")
     _summary(elements, final, why, implied)
     if files:
         print(f"  example files, yours from now on: {', '.join(files)}")
+    if fleet:
+        print(f"  hub fleet file: {fleet} (revision: main)")
+        if f"values/clusters/{a.hub}.yaml" in files:  # read last by every hub Application
+            print(f"  note: the hub applies values/clusters/{a.hub}.yaml at helm install, no PR")
     _confirm()
     try:  # all or nothing: a failure or Ctrl-C removes what this run created
         dst.mkdir(parents=True, exist_ok=True)
@@ -185,16 +219,24 @@ def install(a) -> None:
         _copy(a.src, mirror, tag, dst, [".", *(f"stack/{e}" for e in sorted(final))])
         for path, data in repo.read(mirror, tag, files).items():
             repo.write(dst / path, data)
+        if fleet:  # lists no layers: the hub applies only values/clusters/<hub>.yaml
+            repo.write(dst / fleet, b"revision: main\n")
         git("add", "-A", cwd=dst)
         git("commit", "-q", "-m", f"chore: PolicyStack {tag}", cwd=dst)
     except BaseException:
         with repo.undoing():
             shutil.rmtree(dst, ignore_errors=True)
         raise
+    write = (
+        f"  helm install policystack {dst}/install -n openshift-gitops --set hubName={a.hub} "
+        "--set gitRepo=<your repository URL>\n  write fleet/<cluster>.yaml"
+        if fleet
+        else "  write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml"
+    )
     print(
         f"created {dst}: one commit on main, nothing pushed. Next (docs/start/install.md):\n"
         f"  git -C {dst} remote add origin <your repository URL> && git -C {dst} push -u origin main\n"
-        "  write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml, then: mise run validate"
+        f"{write}, then: mise run validate"
     )
 
 
@@ -433,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
     i.add_argument("--pre", action="store_true", help="also list prereleases (vX.Y.Z-rc.N)")
     i.add_argument("--elements", type=_csv, help="comma-separated element names")
     i.add_argument("--examples", type=_csv, help="comma-separated values/ files")
+    i.add_argument("--hub", help="hubName, to write fleet/hubs/<hub>.yaml; default: ask, or none")
     s = sub.add_parser("add", help="add elements at the framework's release")
     s.add_argument("elements", nargs="*")
     u = sub.add_parser("update", help="update on branch policystack/update-<release>")

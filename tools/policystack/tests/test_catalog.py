@@ -94,6 +94,9 @@ def test_examples(elements):
     ex = cat.examples(ROOT, "HEAD", elements)
     assert set(ex) == {str(p.relative_to(ROOT)) for p in ROOT.glob("values/**/*") if p.is_file()}
     assert all(set(v) <= set(elements) for v in ex.values()) and any(ex.values())
+    # configured, not turned on: install still copies it, or POLICY035 fails the key
+    assert ex["values/topologies/single-node.yaml"] == {"acm": False, "image-registry": False}
+    assert ex["values/clusters/prod-east-1.yaml"]["machine-health"] is True
 
 
 @pytest.mark.parametrize(

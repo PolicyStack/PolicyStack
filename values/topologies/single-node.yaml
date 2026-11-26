@@ -1,0 +1,56 @@
+# Facts for a single-node cluster (SNO): one node is the control plane and the only worker, with
+# no MachineSets and no second node to fail over to. Listed as topologies/single-node.yaml in a
+# fleet file's valueFiles, after the environment, datacenter and platform layers:
+#   revision: main
+#   valueFiles:
+#     - environments/prod.yaml
+#     - platforms/baremetal.yaml
+#     - topologies/single-node.yaml
+#     - topologies/hub.yaml       # a single-node hub only, always last
+# values/clusters/<cluster>.yaml is read after all of them.
+#
+# Turns on no element, so listing it changes nothing on a cluster where its elements are off. Every
+# key below is read only once a layer turns its element on, and then sets the element up the way one node needs. On a new
+# hub, also pass this file to Install the operators (docs/start/install.md), so the MultiClusterHub
+# starts on Basic and handover doesn't change it:
+#   helm template install/operators -f stack/acm/values.yaml -f stack/gitops/values.yaml \
+#     -f values/topologies/single-node.yaml
+#
+# Storage is LVM Storage, Red Hat's storage for single-node clusters. Turn on stack.lvm once the
+# node has an empty disk: its defaults create StorageClass lvms-vg1 and make it the cluster default.
+# Left off here because it claims every empty disk on the node, and on a platform that already has
+# a default StorageClass (gp3-csi on AWS) it would add a second default.
+#
+# Deliberately not configured, and why:
+#   odf, storageNodes, localStorage - ODF needs three nodes; LVM Storage replaces it here.
+#   infraNodes, workerNodes - no separate pool. The node is in the master MachineConfigPool, so a
+#     worker KubeletConfig changes nothing. Kubelet settings go in masterNodes.
+#   machineHealth - nothing to replace: the node is not in a MachineSet.
+#   masterNodes, partitioning - their MachineConfig rollout reboots the only node, so the cluster is
+#     down until it is back. Enable them in a maintenance window, per cluster.
+stack:
+  # Red Hat says to set availabilityConfig to Basic on a single-node hub (ACM "MultiClusterHub
+  # advanced configuration"). High, the default, runs two replicas of most hub components; on one
+  # node both run there, using more resources for no failover. Basic runs one, and the
+  # MultiClusterHub passes it on to the MultiClusterEngine. ACM never picks Basic itself. Read only
+  # where stack.acm is on: a hub, after handover.
+  acm:
+    config:
+      availabilityConfig: Basic
+
+  # Registry on an LVM Storage volume. A ReadWriteOnce volume mounts on one node only, so Red Hat
+  # requires one replica and the Recreate rollout for it ("Configure block registry storage for bare
+  # metal"). The s3 policy needs ODF, which a single node can't run.
+  imageRegistry:
+    config:
+      storageType: pvc
+      replicas: 1
+      rolloutStrategy: Recreate
+      pvc:
+        accessMode: ReadWriteOnce
+        storageClass: lvms-vg1
+    policies:
+      pvc:
+        enabled: true
+      s3:
+        enabled: false

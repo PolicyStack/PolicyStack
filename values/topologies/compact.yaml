@@ -1,0 +1,29 @@
+# Facts for a compact cluster: three control-plane nodes that also run workloads, and no separate
+# worker pool. Listed as topologies/compact.yaml in a fleet file's valueFiles, after the
+# environment, datacenter and platform layers:
+#   revision: main
+#   valueFiles:
+#     - environments/prod.yaml
+#     - platforms/baremetal.yaml
+#     - topologies/compact.yaml
+#     - topologies/hub.yaml       # a compact hub only, always last
+# values/clusters/<cluster>.yaml is read after all of them.
+#
+# Sets nothing yet: the element defaults already fit three nodes (two registry replicas on RWX or
+# S3 storage, three ODF OSD replicas, ACM availabilityConfig High). Listing it changes nothing on
+# the cluster. Put settings every compact cluster of yours shares here.
+#
+# How the elements behave on three nodes:
+#   storageNodes - its baremetal policy finds no dedicated workers and labels the three
+#     control-plane nodes, so ODF runs on them. Its aws and vmware policies add new machines
+#     instead, and the cluster is no longer compact.
+#   odf - shares the three nodes with workloads and keeps resourceProfile balanced. Red Hat picks the
+#     profile by the CPU and memory ODF can get, not by layout: where the nodes can't spare what
+#     balanced needs, set stack.odf.config.resourceProfile: lean in that cluster's values.
+#   infraNodes, workerNodes - no worker pool. The nodes are in the master MachineConfigPool, so a
+#     worker KubeletConfig changes nothing, and infraNodes adds machines like storageNodes does.
+#   machineHealth - nothing to replace: control-plane machines are not in a MachineSet.
+#   masterNodes, partitioning - kubelet and CPU settings go here, but their MachineConfig rollout
+#     reboots the control-plane nodes one at a time, and with them the workloads. Enable them in a
+#     maintenance window, per cluster.
+#stack:

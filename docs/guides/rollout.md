@@ -15,7 +15,7 @@ Rollout follows from two facts ([Fleet files](../concepts/overview.md#fleet-file
 | Tag, such as `v1.5.0` | Only when a fleet PR moves `revision` to a tag that has it | Production: each move is reviewed and gets its own [Render Diff](#reviewing-a-change) |
 | Commit SHA | Same as a tag | One-off pins, such as a [dry run](#dry-run) |
 
-A common setup: nonprod pins `main`, prod pins tags, and a fleet PR promotes prod one cluster or one wave at a time.
+A common setup: nonprod pins `main`, prod pins tags, and a fleet PR promotes prod one cluster or one wave at a time ([Promote a ring in one PR](fleet-recipes.md#promote-a-ring-in-one-pr)).
 
 !!! note "What a pin does not freeze"
     Operators left on `versions: []` upgrade whenever their channel ships a new CSV ([Operator versions](operators.md)). The fleet keys `version` and `channel` apply when the fleet file merges, whatever the pin ([OpenShift upgrades](upgrades.md)).

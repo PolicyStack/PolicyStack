@@ -297,6 +297,8 @@ new file to both.
     | `bm-ha` | SiteConfig three masters and a worker |
     | `hcp-retired`, `hive-retired`, `sno-retired` | `state: absent` |
     | `name-budget-30-characters-long` | The 30-character name every element must fit ([Naming limits](../concepts/policies.md#naming-limits)) |
+    | `topo-compact`, `topo-standard` | `values/topologies/compact.yaml` and `standard.yaml` ([Topology layers](../concepts/values.md#topology-layers)) |
+    | `hubs/hub-sno` | A single-node hub: `topologies/single-node.yaml` then `topologies/hub.yaml` |
 
 ## ACM templates
 

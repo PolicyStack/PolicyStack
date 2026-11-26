@@ -3,7 +3,8 @@ stack:
     enabled: false
 
     config:
-      # High or Basic. Basic runs single replicas and suits lab hubs.
+      # High (default) runs two replicas of most hub components, Basic one. Red Hat requires Basic
+      # on a single-node hub.
       availabilityConfig: High
       # Whether the hub also manages itself as `local-cluster`
       selfManaged: true

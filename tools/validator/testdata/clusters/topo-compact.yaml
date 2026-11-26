@@ -1,0 +1,3 @@
+revision: main
+valueFiles:
+  - topologies/compact.yaml

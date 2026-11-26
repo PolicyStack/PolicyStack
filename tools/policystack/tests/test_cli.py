@@ -84,6 +84,22 @@ def test_install_inside_a_work_tree_refused(repo_dir, capsys):
     assert not (repo_dir / "nested").exists()
 
 
+@pytest.mark.parametrize(
+    "hub",
+    ["Hub-East", "hub_east", "hub.east", "-hub", "hub-", " ", " hub-east", "a" * 31, "null"],
+)
+def test_install_bad_hub_refused(tmp_path, capsys, hub):
+    """hubName is checked before anything is written."""
+    rc, err = run(capsys, "install", "--elements", "", f"--hub={hub}", str(tmp_path / "x"))
+    assert rc == 1 and err.startswith("policystack: hub ") and "Traceback" not in err
+    assert not (tmp_path / "x").exists()
+
+
+def test_hub_name_limits():
+    assert [cli._bad_hub(n) for n in ("", "0", "a" * 30, "hub-east-1")] == [""] * 4
+    assert "at most 30 characters" in cli._bad_hub("a" * 31)
+
+
 def test_csv_strips():
     assert cli._csv("odf, loki ,,") == ["odf", "loki"]  # ux/D18
     assert cli._csv("") == []

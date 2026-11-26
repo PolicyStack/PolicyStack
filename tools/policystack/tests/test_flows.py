@@ -6,6 +6,7 @@ import io
 import shutil
 import stat
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from conftest import ROOT, init, release, sh, write
@@ -65,7 +66,8 @@ def up(tmp_path_factory):
         "README.md": "upstream\n",
         "docs/index.md": "docs\n",
         "values/clusters/prod.yaml": (
-            "stack:\n  machineHealth:\n    enabled: true\n  userMonitoring:\n    enabled: true\n"
+            # configures userMonitoring without turning it on: install copies it too (POLICY035)
+            "stack:\n  machineHealth:\n    enabled: true\n  userMonitoring:\n"
             "    config:\n      prometheus:\n        # two weeks\n        retention: 15d\n"
         ),
         CONDITIONS: COND,
@@ -200,6 +202,7 @@ def test_install(installed, up):
         "copying framework (1/9)",
         "+ storage-nodes needed by odf",
         "+ machine-health enabled by values/clusters/prod.yaml",
+        "+ user-monitoring configured by values/clusters/prod.yaml",
         (
             "not added, named only by policies that ship disabled; POLICY011 fails once a "
             "cluster enables one: loki -> coo"
@@ -226,6 +229,10 @@ def test_install(installed, up):
     assert not (ad / "docs").exists() and not (ad / "README.md").exists()
     assert (ad / "tools/create-element.sh").stat().st_mode & stat.S_IXUSR
     assert log(ad, "HEAD") == ["chore: PolicyStack v1.0.0"]
+    assert not (ad / "fleet").exists()  # no --hub and no terminal: no fleet file
+    assert out.endswith(
+        "  write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml, then: mise run validate\n"
+    )
     assert sh(ad, "git", "remote") == "" and sh(ad, "git", "status", "--porcelain") == ""
 
 
@@ -243,6 +250,65 @@ def test_install_refusals(up, tmp_path, capsys, argv, err):
     args = {"--to": "v1.0.0", "--elements": ""} | dict(zip(argv[::2], argv[1::2]))
     rc, out = ps(capsys, "install", "--src", up, *sum(args.items(), ()), str(tmp_path / "x"))
     assert rc == 1 and err in out and not (tmp_path / "x").exists()
+
+
+def test_install_hub(up, tmp_path, capsys):
+    """--hub writes the hub's fleet file, listing no layers, into the install's one commit."""
+    ad = tmp_path / "x"
+    argv = ("install", "--src", up, "--to", "v1.0.0", "--elements", "", "--hub", "hub-east")
+    rc, out = ps(capsys, *argv, str(ad))
+    assert rc == 0 and "  hub fleet file: fleet/hubs/hub-east.yaml (revision: main)\n" in out
+    assert out.endswith(
+        f"  helm install policystack {ad}/install -n openshift-gitops --set hubName=hub-east "
+        "--set gitRepo=<your repository URL>\n"
+        "  write fleet/<cluster>.yaml, then: mise run validate\n"
+    )
+    assert sh(ad, "git", "show", "HEAD:fleet/hubs/hub-east.yaml") == "revision: main\n"
+    assert [p.name for p in (ad / "fleet").rglob("*")] == ["hubs", "hub-east.yaml"]
+    assert log(ad, "HEAD") == ["chore: PolicyStack v1.0.0"]
+    assert sh(ad, "git", "status", "--porcelain") == ""
+    assert "note:" not in out
+
+
+def test_install_hub_cluster_file_noted(up, tmp_path, capsys):
+    """The hub reads values/clusters/<hub>.yaml unlisted, so picking it as an example is noted."""
+    argv = ("install", "--src", up, "--to", "v1.0.0", "--elements", "", "--hub", "prod")
+    rc, out = ps(capsys, *argv, "--examples", "values/clusters/prod.yaml", str(tmp_path / "x"))
+    assert rc == 0
+    assert "  note: the hub applies values/clusters/prod.yaml at helm install, no PR\n" in out
+
+
+def test_install_empty_hub_is_none(up, tmp_path, capsys):
+    """--hub '' is no hub, as --to '' is no release."""
+    ad = tmp_path / "x"
+    rc, out = ps(
+        capsys, "install", "--src", up, "--to", "v1.0.0", "--elements", "", "--hub", "", str(ad)
+    )
+    assert rc == 0 and "hub fleet file" not in out and not (ad / "fleet").exists()
+    assert "write fleet/hubs/<hub>.yaml and fleet/<cluster>.yaml" in out
+
+
+def test_install_hub_prompt(up, tmp_path, monkeypatch, capsys):
+    """In a terminal without --hub the launcher asks, validates as it types, and strips."""
+    asked = {}
+
+    def text(message, validate):
+        asked.update(message=message, validate=validate)
+        return SimpleNamespace(unsafe_ask=lambda: " hub-east ")
+
+    monkeypatch.setattr(cli, "_tty", lambda: True)
+    monkeypatch.setattr(cli.questionary, "text", text)
+    monkeypatch.setattr(
+        cli.questionary, "confirm", lambda *_, **__: SimpleNamespace(unsafe_ask=lambda: True)
+    )
+    ad = tmp_path / "x"
+    argv = ("install", "--src", up, "--to", "v1.0.0", "--elements", "", "--examples", "")
+    assert ps(capsys, *argv, str(ad))[0] == 0
+    assert asked["message"] == "Hub name (hubName), for fleet/hubs/<hub>.yaml; empty: none"
+    check = asked["validate"]
+    assert check("") is True and check(" hub-east ") is True
+    assert "lowercase DNS label" in check("Hub_East")
+    assert (ad / "fleet/hubs/hub-east.yaml").read_text() == "revision: main\n"
 
 
 def test_install_default_is_newest(up, tmp_path):

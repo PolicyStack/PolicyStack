@@ -1,0 +1,25 @@
+# Facts for a standard cluster: three control-plane nodes and a separate pool of worker nodes.
+# Listed as topologies/standard.yaml in a fleet file's valueFiles, after the environment,
+# datacenter and platform layers:
+#   revision: main
+#   valueFiles:
+#     - environments/prod.yaml
+#     - platforms/aws.yaml
+#     - topologies/standard.yaml
+#     - topologies/hub.yaml       # a standard hub only, always last
+# values/clusters/<cluster>.yaml is read after all of them.
+#
+# Sets nothing yet: the element defaults are written for this topology (two registry replicas,
+# three infra and storage nodes per zone, three ODF OSD replicas, ACM availabilityConfig High).
+# Listing it changes nothing on the cluster. Put settings every standard cluster of yours shares
+# here.
+#
+# Not turned on here, and why:
+#   machineHealth - fits this topology, but what a failed check does depends on the platform. On
+#     AWS and vSphere it replaces the machine. On bare metal installed with MachineSets, deleting the
+#     Machine deprovisions the host, which cleans its disks. Turn it on in the platform layer or per
+#     cluster, as values/clusters/prod-east-1.yaml does.
+#   workerNodes, masterNodes - their KubeletConfig rollout reboots every node of the pool, one at a
+#     time. Enable them in a maintenance window, per cluster.
+#   infraNodes - adds machines, and how many is a per-cluster decision.
+#stack:

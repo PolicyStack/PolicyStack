@@ -78,7 +78,7 @@ func TestLoggingForwardersWiring(t *testing.T) {
 		if len(outputs) != 1 {
 			t.Fatalf("%s outputs %v, want one", tt.name, outputs)
 		}
-		var got any = outputs[0]
+		got := outputs[0]
 		for _, k := range tt.path {
 			got, _ = got.(map[string]any)[k]
 		}

@@ -110,6 +110,64 @@ func TestAPIHardeningKubeadmin(t *testing.T) {
 	}
 }
 
+// TestAPIHardeningKubeadminRequireLogin: with kubeadminRequireLogin, removal also needs a
+// cluster-admin User, or a member of a cluster-admin Group, with an identity from a provider OAuth
+// lists now, and the authentication ClusterOperator Available and not Degraded.
+func TestAPIHardeningKubeadminRequireLogin(t *testing.T) {
+	const (
+		idp       = `{apiVersion: config.openshift.io/v1, kind: OAuth, metadata: {name: cluster}, spec: {identityProviders: [{name: local, type: HTPasswd}]}}`
+		userCRB   = `{apiVersion: rbac.authorization.k8s.io/v1, kind: ClusterRoleBinding, metadata: {name: u}, roleRef: {kind: ClusterRole, name: cluster-admin}, subjects: [{kind: User, name: alice}]}`
+		groupCRB  = `{apiVersion: rbac.authorization.k8s.io/v1, kind: ClusterRoleBinding, metadata: {name: g}, roleRef: {kind: ClusterRole, name: cluster-admin}, subjects: [{kind: Group, name: oauth-cluster-admins}]}`
+		group     = `{apiVersion: user.openshift.io/v1, kind: Group, metadata: {name: oauth-cluster-admins}, users: [bob, alice]}`
+		empty     = `{apiVersion: user.openshift.io/v1, kind: Group, metadata: {name: oauth-cluster-admins}, users: null}`
+		loggedIn  = `{apiVersion: user.openshift.io/v1, kind: User, metadata: {name: alice}, identities: ["local:alice"]}`
+		otherIdP  = `{apiVersion: user.openshift.io/v1, kind: User, metadata: {name: alice}, identities: ["removed:alice"]}`
+		lookalike = `{apiVersion: user.openshift.io/v1, kind: User, metadata: {name: alice}, identities: ["local-old:alice"]}`
+	)
+	co := func(available, progressing, degraded string) string {
+		return `{apiVersion: config.openshift.io/v1, kind: ClusterOperator, metadata: {name: authentication},
+  status: {conditions: [{type: Available, status: "` + available + `"}, {type: Progressing, status: "` + progressing + `"}, {type: Degraded, status: "` + degraded + `"}]}}`
+	}
+	healthy := co("True", "False", "False")
+	noIDP := `{apiVersion: config.openshift.io/v1, kind: OAuth, metadata: {name: cluster}, spec: {}}`
+	for _, tt := range []struct {
+		name   string
+		live   []string
+		remove bool
+	}{
+		{"user logged in", []string{idp, userCRB, loggedIn, healthy}, true},
+		{"group member logged in", []string{idp, groupCRB, group, loggedIn, healthy}, true},
+		{"user never logged in", []string{idp, userCRB, healthy}, false},
+		{"empty group", []string{idp, groupCRB, empty, loggedIn, healthy}, false},
+		{"group missing", []string{idp, groupCRB, loggedIn, healthy}, false},
+		{"identity from removed provider", []string{idp, userCRB, otherIdP, healthy}, false},
+		{"provider name prefix", []string{idp, userCRB, lookalike, healthy}, false},
+		{"authentication degraded", []string{idp, userCRB, loggedIn, co("True", "False", "True")}, false},
+		{"authentication unavailable", []string{idp, userCRB, loggedIn, co("False", "False", "False")}, false},
+		{"authentication progressing", []string{idp, userCRB, loggedIn, co("True", "True", "False")}, false},
+		{"no identity provider", []string{noIDP, userCRB, loggedIn, healthy}, false},
+		{"authentication missing", []string{idp, userCRB, loggedIn}, false},
+		{"hosted guest", []string{idp, userCRB, loggedIn, healthy, hostedGuest}, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := apiHardening(t, "stack: {apiHardening: {config: {kubeadminRequireLogin: true}}}\n", "kubeadmin-removal", tt.live...)
+			if !tt.remove {
+				if len(got) != 0 {
+					t.Fatalf("removal rendered %+v, want nothing", got)
+				}
+				return
+			}
+			if o := find(t, got, "Secret", "kubeadmin"); o.ComplianceType != "mustnothave" {
+				t.Errorf("removal complianceType %q, want mustnothave", o.ComplianceType)
+			}
+		})
+	}
+	// Off, a binding to a Group nobody belongs to still passes, as documented.
+	if got := apiHardening(t, "", "kubeadmin-removal", idp, groupCRB, empty); len(got) != 1 {
+		t.Errorf("default removal %+v, want the Secret deleted", got)
+	}
+}
+
 // TestAPIHardeningRejected: a value outside a key's documented set fails the render.
 func TestAPIHardeningRejected(t *testing.T) {
 	runner := render.New(testenv.Helm(t))
@@ -124,6 +182,7 @@ func TestAPIHardeningRejected(t *testing.T) {
 		{"banner text", `{consoleBanners: {b: {location: BannerTop}}}`, "consoleBanners.b.text is required"},
 		{"banner location", `{consoleBanners: {b: {text: x, location: Top}}}`, `consoleBanners.b.location: "Top" must be one of`},
 		{"banner http", `{consoleBanners: {b: {text: x, link: {href: "http://x", text: y}}}}`, "consoleBanners.b.link.href must start with https://"},
+		{"require login string", `{kubeadminRequireLogin: "false"}`, "kubeadminRequireLogin must be true or false"},
 		{"banner link text", `{consoleBanners: {b: {text: x, link: {href: "https://x"}}}}`, "consoleBanners.b.link.text is required"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

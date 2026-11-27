@@ -57,6 +57,7 @@ var kinds = []struct {
 	{"compliance.openshift.io/v1alpha1", "ComplianceRemediation", "complianceremediations", true},
 	{"compliance.openshift.io/v1alpha1", "ComplianceScan", "compliancescans", true},
 	{"compliance.openshift.io/v1alpha1", "ComplianceSuite", "compliancesuites", true},
+	{"config.openshift.io/v1", "ClusterOperator", "clusteroperators", false},
 	{"config.openshift.io/v1", "ClusterVersion", "clusterversions", false},
 	{"config.openshift.io/v1", "DNS", "dnses", false},
 	{"config.openshift.io/v1", "Image", "images", false},
@@ -81,6 +82,8 @@ var kinds = []struct {
 	{"route.openshift.io/v1", "Route", "routes", true},
 	{"siteconfig.open-cluster-management.io/v1alpha1", "ClusterInstance", "clusterinstances", true},
 	{"storage.k8s.io/v1", "StorageClass", "storageclasses", false},
+	{"user.openshift.io/v1", "Group", "groups", false},
+	{"user.openshift.io/v1", "User", "users", false},
 }
 
 // hubObjects are operator-owned hub objects that hub templates index into, failing loudly when absent.

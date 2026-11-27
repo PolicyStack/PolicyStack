@@ -1,0 +1,13 @@
+apiVersion: v2
+name: oauth
+description: "Cluster OAuth: htpasswd, OpenID Connect and LDAP identity providers, token lifetimes and a cluster-admin group"
+home: https://policystk.io/elements/oauth/
+type: application
+version: 0.1.0
+annotations:
+  policystk.io/stability: preview
+dependencies:
+  - name: policy-library
+    alias: stack
+    version: "^4.0.0"
+    repository: "file://../../lib/policy-library"

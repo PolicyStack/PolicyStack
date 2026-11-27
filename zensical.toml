@@ -42,6 +42,7 @@ nav = [
     { "File Integrity" = "elements/file-integrity.md" },
     { "Global Hub" = "elements/global-hub.md" },
     { "Logging" = "elements/logging.md" },
+    { "OAuth" = "elements/oauth.md" },
   ] },
   { "Develop" = [
     { "Writing an element" = "develop/elements.md" },

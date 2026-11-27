@@ -19,10 +19,10 @@ Under `stack.teamGitops.config`. Maps merge across layers; lists are replaced wh
 |---|---|---|
 | `namespacePrefix` | Namespace prefix; each team gets &lt;prefix>-&lt;team> | `openshift-gitops` |
 | `argoName` | Name of the ArgoCD resource inside each team namespace | `argocd-dev` |
-| `teams` | Teams to create, keyed by name. Values override `defaults` below, e.g. `dev: {rbacPolicies: ["g, dev-leads, role:admin"]}` or `test: {ha: true, resources: {server: {limits: {cpu: "1"}}}}`. Which clusters get which teams is decided by where you set this in the cascade. | `{}` |
+| `teams` | Teams to create, keyed by name. Values override `defaults` below, e.g. `dev: {rbacPolicies: ["g, dev-leads, role:admin"]}` or `test: {ha: true, resources: {server: {limits: {cpu: "1"}}}}`. Per-team switches, each left out of the ArgoCD spec until set: `applicationSet: true` runs the ApplicationSet controller, `disableAdmin: true` disables the local admin user. Set `false` to turn either back off; deleting the key leaves the live value in place. Which clusters get which teams is decided by where you set this in the cascade. | `{}` |
 | `defaults` | Applied to every team unless the team overrides them |  |
 | `defaults.rbacPolicies` | RBAC every team instance gets, before its own entries | `['g, system:cluster-admins, role:admin']` |
-| `defaults.resources` | Requests and limits per ArgoCD component | 5 entries, below |
+| `defaults.resources` | Requests and limits per ArgoCD component. applicationSet applies only to teams with applicationSet: true. An empty controller renders nothing, so the operator default applies; emptying it after setting it leaves the last value live | 7 entries, below |
 
 <details><summary><code>defaults.resources</code> default</summary>
 
@@ -62,6 +62,14 @@ ha:
   limits:
     cpu: 500m
     memory: 256Mi
+applicationSet:
+  requests:
+    cpu: 125m
+    memory: 128Mi
+  limits:
+    cpu: '1'
+    memory: 512Mi
+controller: {}
 ```
 
 </details>

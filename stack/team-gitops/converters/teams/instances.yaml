@@ -48,4 +48,18 @@ spec:
   ha:
     enabled: {{ $spec.ha | default false }}
     resources: {{- toYaml $res.ha | nindent 6 }}
+  {{- with $res.controller }}
+  controller:
+    resources: {{- toYaml . | nindent 6 }}
+  {{- end }}
+  {{- if kindIs "bool" $spec.applicationSet }}
+  applicationSet:
+    enabled: {{ $spec.applicationSet }}
+    {{- if $spec.applicationSet }}
+    resources: {{- toYaml $res.applicationSet | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  {{- if kindIs "bool" $spec.disableAdmin }}
+  disableAdmin: {{ $spec.disableAdmin }}
+  {{- end }}
 {{- end }}

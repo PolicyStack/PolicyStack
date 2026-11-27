@@ -4,7 +4,7 @@
 stack:
   teamGitops:
     config:
-      teams: {dev: {}}
+      teams: {dev: {applicationSet: true, disableAdmin: true}}
   # restore undoes workloads: variants.yaml covers it.
   infraNodes:
     policies:

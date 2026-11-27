@@ -5,7 +5,8 @@ repository and run unchanged in yours: copier copies them with the framework, an
 change them, so don't edit them ([Tiers](compatibility.md#tiers)). [Upstream](#upstream) (`upstream.yml`) checks PolicyStack
 itself and runs only in upstream PolicyStack. For an adopter, the checks that cover real clusters are
 the `fleet/` pass of [Policy Validate](#policy-validate) and [Render Diff](#render-diff); the rest
-guard the framework.
+guard the framework. A repository hosted on GitLab runs the same adopter checks from
+`.gitlab-ci.yml` ([GitLab CI](#gitlab-ci)).
 
 | Workflow | Trigger | Fails when | In your repository |
 | -------- | ------- | ---------- | ------------------ |
@@ -350,6 +351,89 @@ push that changes nothing deletes it.
       the result goes to the job summary instead of a comment.
     - About 30 seconds per distinct commit rendered.
 
+## GitLab CI
+
+copier copies `.gitlab-ci.yml` into every repository, next to `.github/`. GitHub ignores it, and
+GitLab ignores `.github/workflows/`. It is framework, so don't edit it. It runs the adopter checks
+of [CI](#ci), [Policy Validate](#policy-validate) and [Render Diff](#render-diff), with the same
+commands and the tool versions in `mise.toml`:
+
+| Job | Pipelines | Same as | Fails the pipeline |
+| --- | --------- | ------- | ------------------ |
+| `validate` | Every MR, every push to the default branch, **Build > Pipelines > New pipeline** | [Policy Validate](#policy-validate), Helm 3.18.4 | Yes |
+| `validate (helm 4.2.1)` | The same | Policy Validate's advisory leg | No (`allow_failure`) |
+| `gitleaks` | Every MR | The [secret scan](#secret-scan) of every commit in the MR | Yes |
+| `render-diff` | MRs into the default branch that change the paths in [Render Diff](#render-diff), `.gitlab-ci.yml` included | [Render Diff](#render-diff), posted as an MR note | No (`allow_failure`) |
+
+The hooks in [CI](#ci) `lint` and [PR Title](#pr-title) don't run on GitLab. Run the hooks locally
+with `prek install` ([Hooks](#hooks)). There is no `ci` job either: the pipeline's own status is the
+gate. While **Settings > CI/CD > General pipelines > Auto-cancel redundant pipelines** is on, a new
+push to an MR cancels its running pipeline. Pushes to the default branch run to the end.
+
+Every job runs in `ghcr.io/jdx/mise`, pinned by tag and digest, and installs only the tools it
+needs from `mise.toml`, plus `make`, `jq` and `openssl` from the image's Debian release, and yq at the
+version `.gitlab-ci.yml` pins. GitLab caches the tools and Go modules in `.mise/` for each job.
+
+Differences from GitHub:
+
+- Validator findings print as text in the job log, not as inline annotations.
+- GitLab Free runs an MR pipeline on the MR's last commit, not merged with its target (merged
+  results pipelines are Premium). GitHub checks the merge, so `validate` and `render-diff` merge the
+  MR into the target's tip themselves before they run. When that merge conflicts, both fail:
+  `validate` blocks the MR, `render-diff` shows a warning. Resolve the conflict and push.
+- A fork's MR pipeline runs in the fork, so `validate` resolves fleet pins against the fork's
+  branches and tags, and `render-diff` doesn't run. Change `fleet/` from a branch in your project.
+- The full patch is the job's `render-diff.patch` artifact. The note's **Full patch** link opens the
+  job's artifacts.
+- The note's text says "PR": it comes from the same script as the GitHub comment.
+
+### Merge gate
+
+GitLab has no named required checks. A pipeline gates a merge once **Pipelines must succeed** is
+on. Set these up once, on any tier:
+
+1. **Settings > Merge requests > Merge checks**: turn on **Pipelines must succeed**. A pipeline that
+   passed with warnings counts as succeeded, so the advisory jobs don't block.
+2. **Settings > Repository > Protected branches**: on the default branch, set **Allowed to push and
+   merge** to **No one** and **Allowed to merge** to **Maintainers**. Every change then reaches the
+   branch through an MR, so `gitleaks` scans every commit.
+
+!!! warning "GitLab Free can't require review"
+    Required approvals, approval rules and **Require Code Owner approval** need GitLab Premium or
+    Ultimate. On Free, an approval is optional and never blocks a merge. Code owners are Premium too,
+    and GitLab never reads `.github/CODEOWNERS`: it looks in the root, `docs/` and `.gitlab/`.
+    Anyone allowed to merge can merge an MR nobody else has read, `fleet/` changes included. With
+    **Allowed to merge** set to **Maintainers**, review comes down to your Maintainers' discipline. [Protect the repository](../start/install.md#protect-the-repository)
+    describes the GitHub ruleset this replaces.
+
+### Render Diff token
+
+GitLab's job token can't write MR notes, so the note needs a token of its own. Without one, the
+result is only in the job log.
+
+1. Create a token with the `api` scope and the **Reporter** role on the project:
+    - GitLab Self-Managed or Dedicated, any tier: a project access token (**Settings > Access
+      tokens**).
+    - GitLab.com Free: project access tokens need Premium, so use a service account (GitLab 18.11
+      or later): create one, add it to the project as **Reporter**, and create a personal access
+      token for it. On Premium, a project access token works.
+2. **Settings > CI/CD > Variables**: add it as `RENDER_DIFF_TOKEN`, **Masked**, not **Protected**.
+   MR pipelines from unprotected branches never get protected variables.
+
+The note is sticky: later pushes update it, and the next run that finds no change deletes it. A run
+for an older push leaves the note alone. The job runs only while the MR changes a path it watches,
+so if a later push reverts every such change, delete the note by hand.
+
+!!! danger "Who can read the token"
+    Every job in an MR pipeline gets the variable, and the MR's own `.gitlab-ci.yml` decides what
+    those jobs run. So anyone who can push a branch can read the token. That is why it gets the
+    Reporter role: it can't do anything a member who pushes branches can't already do, while they are
+    a member. A copied token outlives their membership, so give it an expiry date and rotate it when
+    someone loses push access. By default a fork's MR pipeline runs in the fork, with the fork's
+    variables, and skips `render-diff`. If a
+    member runs a fork's pipeline in your project instead, the fork's `.gitlab-ci.yml` gets your
+    variables, the token included.
+
 ## Dependencies
 
 Upstream, Renovate, a bot that opens dependency update PRs, bumps everything in the table below.
@@ -365,6 +449,7 @@ with framework updates ([Upgrading PolicyStack](../guides/upgrading.md)).
 | `tools/requirements*.txt` | PyYAML, Zensical |
 | `tools/policystack/uv.lock` | copier, questionary, ruamel.yaml and their dependencies, for the launcher |
 | `.github/workflows/` | Actions, by commit SHA |
+| `.gitlab-ci.yml` | The mise image, by tag and digest. The yq version in `render-diff` is bumped by hand |
 | `tools/validator/Makefile` | The CRD source SHAs. A bump needs `make crds` and the refetched `tools/validator/crds/` committed on the PR ([CRD schemas](../develop/validation.md#crd-schemas)) |
 
 policy-library is not a dependency Renovate moves: it is `lib/policy-library` in this repo, and

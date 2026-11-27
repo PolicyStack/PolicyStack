@@ -1,0 +1,157 @@
+# GitLab CI for a PolicyStack fleet repository: the validator, the secret scan and Render Diff, as
+# ci.yml, validate.yml and render-diff.yml run them on GitHub (docs/reference/ci.md#gitlab-ci).
+# Framework file: copier updates it, so don't edit it. Tool versions come from mise.toml.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Pushes to the default branch don't cancel each other.
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      auto_cancel:
+        on_new_commit: none
+    - if: $CI_PIPELINE_SOURCE == "web"
+  auto_cancel:
+    on_new_commit: interruptible
+
+default:
+  # The -debian image has mise, git and curl. Bump the tag and the digest together.
+  image: ghcr.io/jdx/mise:2026.11.7-debian@sha256:0e4c7634244a6e09b99bf2b5aa2934d29837c400a6af53dd6fb3690b92b1d31f
+  interruptible: true
+  timeout: 20m
+
+variables:
+  # 0 fetches every branch and tag at full depth: POLICY052 and Render Diff resolve pins against
+  # them, and the scan reads the MR's commits.
+  GIT_DEPTH: "0"
+  GOTOOLCHAIN: local
+  DEBIAN_FRONTEND: noninteractive
+  # Installs and caches inside the project, where GitLab can cache them. Tools are installed by
+  # name below, so mise exec never installs the rest of mise.toml.
+  MISE_DATA_DIR: $CI_PROJECT_DIR/.mise
+  MISE_CACHE_DIR: $CI_PROJECT_DIR/.mise/cache
+  MISE_AUTO_INSTALL: "false"
+  GOMODCACHE: $CI_PROJECT_DIR/.mise/go/mod
+  GOFLAGS: -modcacherw # Go writes the module cache read-only, which the runner then can't clean
+  GOCACHE: $CI_PROJECT_DIR/.mise/go/build
+
+.tools:
+  cache:
+    key:
+      prefix: $CI_JOB_NAME_SLUG
+      files: [mise.toml, tools/validator/go.sum]
+    paths: [.mise/]
+
+# GitLab Free runs an MR pipeline on the MR's head, not merged with its target. GitHub checks the
+# merge, and POLICY052 and Render Diff depend on it, so the job merges the MR into its target's tip.
+.merged:
+  before_script:
+    - |
+      if [ -n "${CI_MERGE_REQUEST_IID:-}" ]; then
+        git checkout -q --detach "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+        git -c user.name=ci -c user.email=ci@localhost merge -q --no-ff --no-edit "${CI_MERGE_REQUEST_SOURCE_BRANCH_SHA:-$CI_COMMIT_SHA}" ||
+          { echo "The MR conflicts with $CI_MERGE_REQUEST_TARGET_BRANCH_NAME. Resolve the conflict and push."; exit 1; }
+      fi
+
+validate:
+  extends: [.tools, .merged]
+  variables:
+    DEFAULT_BRANCH: $CI_DEFAULT_BRANCH # POLICY053: Argo CD reads fleet/ there
+  script:
+    - apt-get update -qq && apt-get install -qq -y --no-install-recommends make >/dev/null
+    - mise install go helm
+    # CI= drops the GitHub annotations, so findings print as text. It also makes the validator skip
+    # POLICY080 without CRDs instead of failing, so check for them here.
+    - ls tools/validator/crds/*.yaml >/dev/null
+    # BASE_BRANCH is the MR's target, which GitHub passes as GITHUB_BASE_REF (POLICY052).
+    - mise exec -- make -C tools/validator validate CI= BASE_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}"
+
+# Advisory, as in validate.yml: the next GitOps Helm. Keep the version equal to validate.yml's.
+validate (helm 4.2.1):
+  extends: validate
+  variables:
+    MISE_HELM_VERSION: "4.2.1"
+  allow_failure: true
+
+# Every commit in the MR, rules in .gitleaks.toml. A merge is diffed against its first parent, so
+# what a conflict resolution adds is scanned. SOURCE_BRANCH_SHA is the MR's head in a merged
+# results pipeline (Premium), where CI_COMMIT_SHA is GitLab's merge.
+gitleaks:
+  extends: .tools
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - mise install gitleaks
+    - mise exec -- gitleaks git --log-opts="--diff-merges=first-parent $CI_MERGE_REQUEST_DIFF_BASE_SHA..${CI_MERGE_REQUEST_SOURCE_BRANCH_SHA:-$CI_COMMIT_SHA}" --redact --no-banner --verbose
+
+# Notes on the MR what each fleet cluster's rendered Policies gain, lose or change, with
+# .github/scripts/render-diff.sh. Not a gate. The note needs RENDER_DIFF_TOKEN; without it the
+# result is only in the job log.
+render-diff:
+  extends: [.tools, .merged]
+  rules:
+    # Argo CD reads fleet files from the default branch only. A fork's pipeline runs in the fork,
+    # whose branches are not the ones Argo CD reads, so it is skipped.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH && $CI_PROJECT_ID == $CI_MERGE_REQUEST_PROJECT_ID
+      changes:
+        - stack/**/*
+        - lifecycle/**/*
+        - lib/**/*
+        - values/**/*
+        - values.yaml
+        - fleet/**/*
+        - .gitlab-ci.yml
+        - .github/scripts/render-diff.sh
+        - tools/validator/**/*
+  allow_failure: true
+  variables:
+    DEFAULT_BRANCH: $CI_DEFAULT_BRANCH
+    RUN_URL: $CI_JOB_URL/artifacts/browse
+    # The script's GitHub outputs: the summary goes to the log.
+    RUNNER_TEMP: /tmp
+    GITHUB_OUTPUT: /tmp/render-diff.out
+    GITHUB_STEP_SUMMARY: /dev/stdout
+  artifacts:
+    paths: [render-diff.patch]
+  script:
+    - apt-get update -qq && apt-get install -qq -y --no-install-recommends make jq openssl >/dev/null
+    - mise install go helm yq@4.54.3
+    - |
+      # The script renders HEAD^1, the target's tip, against HEAD. Without a merge commit the MR
+      # adds nothing to the target. As in render-diff.yml, without fleet files there is no cluster.
+      changed=false
+      fleet=$(for c in HEAD^1 HEAD; do git ls-tree --name-only "$c" -- fleet/ fleet/hubs/; done | grep '\.yaml$' || true)
+      if ! git rev-parse -q --verify HEAD^2 >/dev/null; then
+        echo "The MR adds nothing to $CI_MERGE_REQUEST_TARGET_BRANCH_NAME."
+      elif [ -z "$fleet" ]; then
+        echo "No fleet files, nothing to render."
+      else
+        mise exec -- make -C tools/validator build
+        : > "$GITHUB_OUTPUT"
+        mise exec yq@4.54.3 -- .github/scripts/render-diff.sh
+        changed=$(sed -n '/^changed=/{s///p;q}' "$GITHUB_OUTPUT")
+      fi
+      [ "$changed" = false ] || cp "$RUNNER_TEMP/render-diff/render-diff.patch" render-diff.patch
+    - |
+      # One note, kept up to date by later pushes and deleted once nothing changes. A run for an
+      # older push leaves it to the run for the MR's head.
+      [ -n "${RENDER_DIFF_TOKEN:-}" ] || { echo "RENDER_DIFF_TOKEN is not set: no note."; exit 0; }
+      mr=$CI_API_V4_URL/projects/$CI_MERGE_REQUEST_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID
+      marker='<!-- render-diff -->'
+      gl() { curl -fsS --retry 3 -H "PRIVATE-TOKEN: $RENDER_DIFF_TOKEN" "$@"; }
+      head=$(gl "$mr" | jq -r .sha)
+      [ "$head" = "${CI_MERGE_REQUEST_SOURCE_BRANCH_SHA:-$CI_COMMIT_SHA}" ] || { echo "The MR has moved on to $head: no note."; exit 0; }
+      me=$(gl "$CI_API_V4_URL/user" | jq .id)
+      id='' page=1
+      while [ -z "$id" ]; do
+        notes=$(gl "$mr/notes?sort=asc&per_page=100&page=$page")
+        [ "$notes" != "[]" ] || break
+        id=$(jq -r --argjson me "$me" --arg m "$marker" 'map(select(.author.id == $me and (.body | startswith($m))))[0].id // empty' <<< "$notes")
+        page=$((page + 1))
+      done
+      if [ "$changed" = true ]; then
+        { echo "$marker"; cat "$RUNNER_TEMP/render-diff/body.md"; } > "$RUNNER_TEMP/note.md"
+        if [ -n "$id" ]; then gl -X PUT "$mr/notes/$id" --data-urlencode body@"$RUNNER_TEMP/note.md" >/dev/null
+        else gl -X POST "$mr/notes" --data-urlencode body@"$RUNNER_TEMP/note.md" >/dev/null; fi
+      elif [ -n "$id" ]; then
+        gl -X DELETE "$mr/notes/$id"
+      fi

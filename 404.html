@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- Root 404 on gh-pages (upstream.yml pages job). An unversioned link, such as /start/install/ from
+     a README or a Chart.yaml home, redirects into latest. A missing page inside a version stays a
+     404. -->
+<html lang="en">
+<meta charset="utf-8">
+<title>PolicyStack</title>
+<p>Page not found. <a href="/">PolicyStack docs</a></p>
+<script>
+  fetch("/versions.json").then((r) => r.json()).then((versions) => {
+    const names = versions.flatMap((v) => [v.version, ...v.aliases]);
+    if (names.includes(location.pathname.split("/")[1])) return;
+    location.replace(`/latest${location.pathname}${location.search}${location.hash}`);
+  });
+</script>
+</html>

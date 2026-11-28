@@ -1,0 +1,2306 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://policystk.io/1.1/elements/api-hardening/">
+      
+      
+      
+        <link rel="prev" href="../acs/">
+      
+      
+        <link rel="next" href="../compliance/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.1.0">
+    
+    
+      
+        <title>API Hardening - PolicyStack</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.4ab2de0c.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PolicyStack" class="md-header__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PolicyStack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Hardening
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../start/install/" class="md-tabs__link">
+          
+  
+  Get started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/overview/" class="md-tabs__link">
+          
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/rollout/" class="md-tabs__link">
+          
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../acs/" class="md-tabs__link">
+          
+  
+  Elements
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/elements/" class="md-tabs__link">
+          
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/fleet/" class="md-tabs__link">
+          
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PolicyStack" class="md-nav__button md-logo" aria-label="PolicyStack" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+
+    </a>
+    PolicyStack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/PolicyStack/PolicyStack" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    PolicyStack/PolicyStack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Get started
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Get started
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../start/first-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  First cluster
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Concepts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Concepts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How PolicyStack works
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ApplicationSets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/acm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACM policies in brief
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How an element is built
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Values cascade
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Placement and naming
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cluster lifecycle
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/removal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Removal and pruning
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/rollout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rolling out changes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/fleet-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet recipes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/operators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operator versions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Building clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenShift upgrades
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disconnected/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Disconnected clusters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Upgrading PolicyStack
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Elements
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Elements
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ACS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Hardening
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Hardening
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#turn-it-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Turn it on
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-creates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What it creates
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#etcd-encryption" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        etcd encryption
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audit-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Audit profile
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tls-security-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        TLS security profiles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-banners" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Console banners
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removing-kubeadmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removing kubeadmin
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compliance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Integrity
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../global-hub/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Hub
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Logging
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oauth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OAuth
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Develop
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Develop
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/elements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing an element
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Fleet files
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install chart
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/sizing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Hub sizing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Lifecycle keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/launcher/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Launcher
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Validator rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI workflows
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Contributing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+    <a href="https://github.com/PolicyStack/PolicyStack/edit/main/docs/elements/api-hardening.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="api-hardening">API Hardening<a class="headerlink" href="#api-hardening" title="Permanent link">&para;</a></h1>
+<p>The <a href="https://github.com/PolicyStack/PolicyStack/tree/main/stack/api-hardening"><code>api-hardening</code></a> element applies cluster-wide security settings that Red Hat documents as day-2 procedures: etcd encryption, the API server audit profile, TLS security profiles for the API server and the default ingress controller, console banners, and removing the <code>kubeadmin</code> user. It installs no operator. Every setting ships off, and you turn each one on by itself.</p>
+<h2 id="turn-it-on">Turn it on<a class="headerlink" href="#turn-it-on" title="Permanent link">&para;</a></h2>
+<p>Enabling the element alone renders no Policy. Turn on the settings you want, and change a value only where the default doesn't suit you:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># values/environments/prod.yaml</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">apiHardening</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">apiServerTLSProfile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Modern</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="nt">templates</span><span class="p">:</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">          </span><span class="nt">etcd-encryption</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">          </span><span class="nt">audit-profile</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">          </span><span class="nt">apiserver-tls</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">      </span><span class="nt">kubeadmin</span><span class="p">:</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Template or Policy</th>
+<th>Key under <code>stack.apiHardening.config</code></th>
+<th>Default</th>
+<th>Allowed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>etcd-encryption</code></td>
+<td><code>etcdEncryption</code></td>
+<td><code>aesgcm</code></td>
+<td><code>aesgcm</code>, <code>aescbc</code>, <code>identity</code></td>
+</tr>
+<tr>
+<td><code>audit-profile</code></td>
+<td><code>auditProfile</code></td>
+<td><code>WriteRequestBodies</code></td>
+<td><code>Default</code>, <code>WriteRequestBodies</code>, <code>AllRequestBodies</code></td>
+</tr>
+<tr>
+<td><code>apiserver-tls</code></td>
+<td><code>apiServerTLSProfile</code></td>
+<td><code>Intermediate</code></td>
+<td><code>Intermediate</code>, <code>Modern</code></td>
+</tr>
+<tr>
+<td><code>ingress-tls</code></td>
+<td><code>ingressTLSProfile</code></td>
+<td><code>Intermediate</code></td>
+<td><code>Intermediate</code>, <code>Modern</code></td>
+</tr>
+<tr>
+<td><code>console-banners</code></td>
+<td><code>consoleBanners</code></td>
+<td><code>{}</code>, fill it (<a href="#console-banners">Console banners</a>)</td>
+<td></td>
+</tr>
+<tr>
+<td>Policy <code>kubeadmin</code></td>
+<td><code>kubeadminRequireLogin</code></td>
+<td><code>false</code></td>
+<td><code>true</code> waits for a cluster-admin login (<a href="#removing-kubeadmin">kubeadmin</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>Any other value fails the render once its template is on. Each section below says why a value Red Hat allows is left out.</p>
+<div class="admonition warning">
+<p class="admonition-title">Hosted control planes</p>
+<p>Every template skips its objects on a hosted control plane (HCP) guest, a cluster whose <code>Infrastructure</code> reports <code>controlPlaneTopology: External</code>. There HyperShift writes the guest's <code>APIServer</code> and <code>kubeadmin</code> Secret from the HostedCluster on the management cluster and overwrites edits made in the guest. Set them on the HostedCluster instead: <code>spec.secretEncryption</code> for etcd encryption, <code>spec.configuration.apiServer</code> for audit and TLS, <code>spec.configuration.oauth</code> for identity providers, which also removes <code>kubeadmin</code>. The guest router follows the APIServer profile. The HostedCluster has no setting for console banners or a separate router profile, so this element applies neither on HCP. The skipped templates show Compliant.</p>
+</div>
+<h2 id="what-it-creates">What it creates<a class="headerlink" href="#what-it-creates" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Templates</th>
+<th>Writes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config-api-hardening-&lt;cluster&gt;</code></td>
+<td><code>config-etcd-encryption</code>, <code>config-audit-profile</code>, <code>config-apiserver-tls</code></td>
+<td>One field each of <code>APIServer</code> <code>cluster</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>config-ingress-tls</code></td>
+<td><code>spec.tlsSecurityProfile</code> of <code>IngressController</code> <code>default</code> in <code>openshift-ingress-operator</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>config-console-banners</code></td>
+<td>One <code>ConsoleNotification</code> per <code>consoleBanners</code> entry</td>
+</tr>
+<tr>
+<td><code>kubeadmin-api-hardening-&lt;cluster&gt;</code></td>
+<td><code>kubeadmin-removal</code>, <code>kubeadmin-absent</code></td>
+<td>Deletes Secret <code>kube-system/kubeadmin</code> (<a href="#removing-kubeadmin">kubeadmin</a>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>APIServer</code> and <code>IngressController</code> are shared with other elements and with the cluster's own operators (<code>cert-manager</code> sets serving certificates, <code>infra-nodes</code> sets ingress node placement). Their templates use <code>musthave</code>, so each sets only its own field and leaves the rest alone. The element owns each <code>ConsoleNotification</code>, so <code>console-banners</code> uses <code>mustonlyhave</code>: a field removed from an entry is removed from the banner. Changing one of these fields rolls out new API server or router pods; expect several minutes of rolling restarts per change.</p>
+<div class="admonition note">
+<p class="admonition-title">Turning a template off doesn't revert</p>
+<p><code>musthave</code> never removes a field. A template turned off, or the element disabled, leaves the cluster on the last value it applied. To go back, keep the template on with the Red Hat default, <code>Default</code> for audit and <code>Intermediate</code> for the APIServer TLS profile, or <code>identity</code> to decrypt etcd, and turn it off once the cluster reports it. The ingress default is no profile, which follows the APIServer's; see <a href="#tls-security-profiles">TLS security profiles</a>.</p>
+</div>
+<h2 id="etcd-encryption">etcd encryption<a class="headerlink" href="#etcd-encryption" title="Permanent link">&para;</a></h2>
+<p>Follows <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/etcd/etcd-encrypt">Enabling etcd encryption</a>. Sets <code>APIServer</code> <code>spec.encryption.type</code>. The API servers then encrypt the values of Secrets, ConfigMaps, Routes, OAuth access tokens and OAuth authorize tokens. Names, namespaces and resource types stay in plain text.</p>
+<ul>
+<li><code>aesgcm</code> and <code>aescbc</code> both use 32-byte keys that the cluster rotates every 7 days. Red Hat prefers neither.</li>
+<li>Changing between them re-encrypts everything automatically.</li>
+<li><code>identity</code> decrypts.</li>
+<li>KMS is left out. It is Technology Preview in 4.20, needs a <code>TechPreviewNoUpgrade</code> cluster, and its API is still changing.</li>
+</ul>
+<p>Encrypting or decrypting takes 20 minutes or longer, depending on the size of etcd. The policy goes Compliant as soon as the field is set, not when encryption finishes. Check progress with:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">for</span><span class="w"> </span>r<span class="w"> </span><span class="k">in</span><span class="w"> </span>openshiftapiserver<span class="w"> </span>kubeapiserver<span class="w"> </span>authentication.operator.openshift.io<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>oc<span class="w"> </span>get<span class="w"> </span><span class="nv">$r</span><span class="w"> </span>-o<span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{range .items[0].status.conditions[?(@.type=="Encrypted")]}{.reason}{": "}{.message}{"\n"}{end}'</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">done</span>
+</span></code></pre></div>
+<p>All three report <code>EncryptionCompleted</code> when done, or <code>DecryptionCompleted</code> after <code>identity</code>. <code>EncryptionInProgress</code> or <code>DecryptionInProgress</code> means it is still running. After a change between <code>aesgcm</code> and <code>aescbc</code> the condition stays <code>EncryptionCompleted</code> throughout, because data under the old key still counts as encrypted, so it can't tell you the re-encryption has finished.</p>
+<div class="admonition warning">
+<p class="admonition-title">Backups</p>
+<p>Don't back up etcd until encryption completes, or the backup may be only partly encrypted. Restoring an encrypted backup needs its keys, which the backup writes to <code>static_kuberesources_&lt;datetimestamp&gt;.tar.gz</code>. Store that file apart from the snapshot.</p>
+</div>
+<h2 id="audit-profile">Audit profile<a class="headerlink" href="#audit-profile" title="Permanent link">&para;</a></h2>
+<p>Follows <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/security_and_compliance/audit-log-policy-config">Configuring the audit log policy</a>. Sets <code>APIServer</code> <code>spec.audit.profile</code>, which applies to the Kubernetes, OpenShift and OAuth API servers and the OAuth server.</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Logs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Default</code></td>
+<td>Metadata of every request, plus OAuth token request bodies. What every cluster starts with</td>
+</tr>
+<tr>
+<td><code>WriteRequestBodies</code></td>
+<td><code>Default</code> plus the body of every create, update, patch and delete</td>
+</tr>
+<tr>
+<td><code>AllRequestBodies</code></td>
+<td><code>WriteRequestBodies</code> plus the body of every read. Most CPU, memory and disk I/O</td>
+</tr>
+</tbody>
+</table>
+<p>Secrets, Routes and OAuthClients are logged at metadata level whatever the profile. <code>None</code> is left out: it disables audit logging, which Red Hat advises against. Per-group <code>customRules</code> are left out too: <code>musthave</code> appends list entries, so it could never change or reorder a rule, and rules apply first match first.</p>
+<p>The Kubernetes API server rolls out a new revision. It has finished when this prints <code>AllNodesAtLatestRevision</code>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>oc<span class="w"> </span>get<span class="w"> </span>kubeapiserver<span class="w"> </span>-o<span class="o">=</span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{range .items[0].status.conditions[?(@.type=="NodeInstallerProgressing")]}{.reason}{"\n"}{.message}{"\n"}{end}'</span>
+</span></code></pre></div>
+<h2 id="tls-security-profiles">TLS security profiles<a class="headerlink" href="#tls-security-profiles" title="Permanent link">&para;</a></h2>
+<p>Follows <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/security_and_compliance/tls-security-profiles">Configuring TLS security profiles</a>.</p>
+<ul>
+<li><code>apiserver-tls</code> sets <code>APIServer</code> <code>spec.tlsSecurityProfile</code>. The Kubernetes API server, controller manager and scheduler, the OpenShift and OAuth API servers, the OAuth server, etcd and the Machine Config Server use it. The kubelet doesn't: it has its own profile in <code>KubeletConfig</code>.</li>
+<li><code>ingress-tls</code> sets the default <code>IngressController</code>'s profile, which the router uses for <code>*.apps</code>.</li>
+</ul>
+<p>An ingress controller without its own profile uses the API server's. So <code>apiserver-tls</code> alone changes the router too, and <code>ingress-tls</code> is only needed for a different router profile. Once <code>ingress-tls</code> has applied a profile, the router stops following the API server, even after the template is turned off. To make it follow again, turn the template off and remove the field:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>oc<span class="w"> </span>patch<span class="w"> </span>ingresscontroller<span class="w"> </span>default<span class="w"> </span>-n<span class="w"> </span>openshift-ingress-operator<span class="w"> </span>--type<span class="o">=</span>json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-p<span class="w"> </span><span class="s1">'[{"op":"remove","path":"/spec/tlsSecurityProfile"}]'</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Minimum TLS</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Intermediate</code></td>
+<td>1.2</td>
+<td>Most clients. The default for both</td>
+</tr>
+<tr>
+<td><code>Modern</code></td>
+<td>1.3</td>
+<td>Clients that all support TLS 1.3. Anything older can no longer connect</td>
+</tr>
+</tbody>
+</table>
+<p><code>Old</code> is left out because it lowers the minimum to TLS 1.0. <code>Custom</code> is left out because <code>musthave</code> merges cipher lists: a cipher once applied could never be removed. Changing profile leaves the previous profile's empty key, such as <code>modern: {}</code>, on the object. The operators read only <code>type</code>, so it does nothing.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A profile's ciphers can change between OpenShift releases, so an upgrade may roll out the API servers or routers again.</p>
+</div>
+<p>The router reports the ciphers and minimum version in effect in <code>oc get ingresscontroller default -n openshift-ingress-operator -o jsonpath='{.status.tlsProfile}'</code>.</p>
+<h2 id="console-banners">Console banners<a class="headerlink" href="#console-banners" title="Permanent link">&para;</a></h2>
+<p>Follows <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/web_console/customizing-web-console#creating-custom-notification-banners_customizing-web-console">Creating custom notification banners</a>. Each <code>consoleBanners</code> entry becomes a cluster-scoped <code>ConsoleNotification</code>, named by its key, shown on every console page:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">stack</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">apiHardening</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">consoleBanners</span><span class="p">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nt">authorized-use</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">          </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="s">"Authorized</span><span class="nv"> </span><span class="s">use</span><span class="nv"> </span><span class="s">only.</span><span class="nv"> </span><span class="s">Activity</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">monitored."</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">          </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">BannerTopBottom</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">          </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">"#fff"</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">          </span><span class="nt">backgroundColor</span><span class="p">:</span><span class="w"> </span><span class="s">"#c9190b"</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="nt">maintenance</span><span class="p">:</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">          </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="s">"Maintenance</span><span class="nv"> </span><span class="s">Saturday</span><span class="nv"> </span><span class="s">02:00</span><span class="nv"> </span><span class="s">UTC"</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">          </span><span class="nt">link</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">href</span><span class="p">:</span><span class="w"> </span><span class="s">"https://status.example.com"</span><span class="p p-Indicator">,</span><span class="nt"> text</span><span class="p">:</span><span class="w"> </span><span class="s">"Status</span><span class="nv"> </span><span class="s">page"</span><span class="p p-Indicator">}</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nt">policies</span><span class="p">:</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">      </span><span class="nt">config</span><span class="p">:</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">        </span><span class="nt">templates</span><span class="p">:</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">          </span><span class="nt">console-banners</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text</code></td>
+<td>Yes</td>
+<td>The message</td>
+</tr>
+<tr>
+<td><code>location</code></td>
+<td>No</td>
+<td><code>BannerTop</code> (default), <code>BannerBottom</code> or <code>BannerTopBottom</code></td>
+</tr>
+<tr>
+<td><code>link</code></td>
+<td>No</td>
+<td><code>href</code>, which must start with <code>https://</code>, and <code>text</code>, both required</td>
+</tr>
+<tr>
+<td><code>color</code>, <code>backgroundColor</code></td>
+<td>No</td>
+<td>Any CSS color</td>
+</tr>
+</tbody>
+</table>
+<p>Layers merge <code>consoleBanners</code> by key. A field removed from an entry, such as <code>link</code>, is removed from the banner. An entry removed from it, or set to <code>null</code> in a later layer, stays on the cluster unmanaged; delete it with <code>oc delete consolenotification &lt;name&gt;</code>. On a cluster installed without the Console capability the <code>ConsoleNotification</code> kind doesn't exist, and the template reports NonCompliant.</p>
+<h2 id="removing-kubeadmin">Removing kubeadmin<a class="headerlink" href="#removing-kubeadmin" title="Permanent link">&para;</a></h2>
+<p>Follows <a href="https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/authentication_and_authorization/removing-kubeadmin">Removing the kubeadmin user</a>. The installer creates <code>kubeadmin</code> as a temporary cluster-admin. Red Hat's procedure deletes Secret <code>kube-system/kubeadmin</code>, which can't be undone, and only after two prerequisites. Deleting it before another user is cluster-admin means reinstalling the cluster.</p>
+<p><code>kubeadmin-removal</code> deletes the Secret only when the cluster meets both:</p>
+<ol>
+<li><code>OAuth</code> <code>cluster</code> lists at least one identity provider.</li>
+<li>A ClusterRoleBinding to ClusterRole <code>cluster-admin</code> names a User or Group outside <code>system:</code> and other than <code>kube:admin</code>.</li>
+</ol>
+<p>Until then it renders nothing. <code>kubeadmin-absent</code> reports NonCompliant for as long as the Secret exists, so the Policy shows what is pending instead of a misleading Compliant.</p>
+<div class="admonition danger">
+<p class="admonition-title">Check that someone can log in first</p>
+<p>By default the element checks that the binding exists, not that it works. A binding to a Group nobody belongs to, or a user whose identity provider is misconfigured, passes. Log in through the identity provider as that cluster-admin before turning the Policy on, or set <code>kubeadminRequireLogin</code>.</p>
+</div>
+<p><code>config.kubeadminRequireLogin: true</code> adds two conditions to removal:</p>
+<ul>
+<li><strong>Login:</strong> a User bound to <code>cluster-admin</code>, or a member of a Group bound to it, has an identity from a provider <code>OAuth</code> <code>cluster</code> lists now. The OAuth server records the identity (<code>local:alice</code>) at the user's first login and never removes it. This proves a login once worked under that provider name, not that it works with the current Secret or account. Log in again after changing a provider's credentials.</li>
+<li><strong>Settled:</strong> the <code>authentication</code> ClusterOperator is Available, not Progressing and not Degraded, so a provider change still rolling out holds removal back.</li>
+</ul>
+<p>It ships <code>false</code>, which keeps the two-condition check above. Any value other than <code>true</code> or <code>false</code> fails the render. With <code>mappingMethod: lookup</code> an administrator creates identities by hand, so the login condition proves only that someone created one. The <a href="../oauth/">OAuth</a> element writes the identity providers and a cluster-admin Group that meet the two default conditions.</p>
+<ul>
+<li>Clusters using external OIDC authentication have no OAuth identity providers, so <code>kubeadmin-removal</code> never deletes the Secret there and the Policy stays NonCompliant. Leave <code>kubeadmin</code> off for them.</li>
+<li>The installer's certificate-based <code>kubeconfig</code> still works after <code>kubeadmin</code> is gone. Keep it as the break-glass credential.</li>
+<li>Clusters built by Hive or the assisted installer keep a copy of the <code>kubeadmin</code> password on the hub (<code>spec.clusterMetadata.adminPasswordSecretRef</code>). It stops working once the Secret is deleted.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../acs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ACS">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                ACS
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../compliance/" class="md-footer__link md-footer__link--next" aria-label="Next: Compliance">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Compliance
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      
+<div class="md-progress" data-md-component="progress" role="progressbar" aria-label="Loading"></div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+          
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.progress","navigation.sections","navigation.tabs","navigation.tabs.sticky","navigation.top","search.highlight","toc.integrate"],"redirect":"../../redirect.json","search":"../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"alias":true,"provider":"mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d31f0ffa.min.js"></script>
+      
+    
+  </body>
+</html>

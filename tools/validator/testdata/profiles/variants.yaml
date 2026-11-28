@@ -51,3 +51,18 @@ stack:
         templates:
           metrics:
             enabled: true
+  # compliance with a second binding and applyAll, which all-on leaves on the one default binding
+  compliance:
+    enabled: true
+    policies:
+      remediate:
+        enabled: true
+    config:
+      waivers:
+        rule-waived: "Accepted. SEC-1"
+      bindings:
+        stig:
+          applyAll: true
+          exclude: [rule-excluded]
+        moderate:
+          profiles: [ocp4-moderate, ocp4-moderate-node, rhcos4-moderate]

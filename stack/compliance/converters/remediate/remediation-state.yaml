@@ -30,4 +30,21 @@ ACM never writes status.
 {{ "{{" }}- end {{ "}}" }}
 {{- end }}
 {{- end }}
+{{- /* applyAll's remediations: only those not Applied, so the message names just the problems. */}}
+{{- with include "compliance.managed" . }}
+{{ . }}
+{{ "{{" }}- range $managed {{ "}}" }}
+{{ "{{" }}- if ne (dig "status" "applicationState" "" .) "Applied" {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceRemediation
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ $.Config.namespace }}
+    status:
+      applicationState: Applied
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{- end }}
 {{ "{{" }}- end {{ "}}" }}

@@ -1,9 +1,17 @@
 {{- /*
-Reports remediations applied but not declared true, including ones removed from config. Reverting
-reboots nodes, so it takes an explicit false. Asserting NotApplied cannot write: ACM never writes status.
+Reports remediations applied but neither declared true nor set by applyAll, including ones removed
+from config or excluded after applyAll applied them. Reverting reboots nodes, so it takes an
+explicit false. Asserting NotApplied cannot write: ACM never writes status.
 */ -}}
+{{- with include "compliance.managed" . }}
+{{ . }}
+{{ "{{" }}- $auto := list {{ "}}" }}
+{{ "{{" }}- range $managed {{ "}}" }}
+{{ "{{" }}- $auto = append $auto .metadata.name {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{- end }}
 {{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceRemediation" "{{ .Config.namespace }}" "").items {{ "}}" }}
-{{ "{{" }}- if and .spec.apply (not (has (regexReplaceAll "-[0-9]+" .metadata.name "") ({{ include "compliance.declaredRemediations" . }}))) {{ "}}" }}
+{{ "{{" }}- if and .spec.apply (not (has (regexReplaceAll "-[0-9]+" .metadata.name "") ({{ include "compliance.declaredRemediations" . }}))){{ if include "compliance.managed" . }} (not (has .metadata.name $auto)){{ end }} {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: compliance.openshift.io/v1alpha1

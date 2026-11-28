@@ -4,7 +4,7 @@ failed, since most are NOT-APPLICABLE on one role. ERROR, on the result or a nod
 did not run, so a waiver does not hide it.
 */ -}}
 {{ "{{" }}- $waived := {{ include "compliance.waivedRules" . }} {{ "}}" }}
-{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }},compliance.openshift.io/check-status in (FAIL,ERROR,INCONSISTENT),{{ .Config.severity }}").items {{ "}}" }}
+{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ .Config.namespace }}" "" "{{ include "compliance.suites" . }},compliance.openshift.io/check-status in (FAIL,ERROR,INCONSISTENT),{{ .Config.severity }}").items {{ "}}" }}
 {{ "{{" }}- $nodes := cat (dig "metadata" "annotations" "compliance.openshift.io/inconsistent-source" "" .) (dig "metadata" "annotations" "compliance.openshift.io/most-common-status" "" .) {{ "}}" }}
 {{ "{{" }}- if or (eq .status "ERROR") (regexMatch "ERROR" $nodes) (and (not (has (dig "metadata" "annotations" "compliance.openshift.io/rule" "" .) $waived)) (or (eq .status "FAIL") (regexMatch "FAIL" $nodes))) {{ "}}" }}
 - complianceType: mustnothave

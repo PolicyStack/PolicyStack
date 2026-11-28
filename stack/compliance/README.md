@@ -30,6 +30,7 @@ Under `stack.compliance.config`. Maps merge across layers; lists are replaced wh
 | `namespace` | Compliance Operator namespace | `openshift-compliance` |
 | `binding` | ScanSettingBinding name, also the suite label on its scans and results | `stig` |
 | `profiles` | Profiles bound to the scan | `[ocp4-stig, ocp4-stig-node, rhcos4-stig]` |
+| `bindings` | More ScanSettingBindings beside `binding`, and each binding's apply settings, by binding name. An entry takes `profiles` (required, except on the entry named after `binding`, which scans `profiles` above; a profile belongs to one binding only), `applyAll` (true applies every remediation of the binding once every scan is DONE, except excluded and waived rules and the names in `remediations`; needs policy `remediate`) and `exclude` (rule names, the compliance.openshift.io/rule annotation, that applyAll leaves alone). | `{}` |
 | `rawResultStorage` | Where raw scan results are persisted |  |
 | `rawResultStorage.enabled` |  | `true` |
 | `rawResultStorage.storageClass` | StorageClass for raw results. Omit to use the cluster default. | `''` |

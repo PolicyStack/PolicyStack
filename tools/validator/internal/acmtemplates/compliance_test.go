@@ -2,6 +2,7 @@ package acmtemplates
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -458,6 +459,18 @@ func TestComplianceValuesRejected(t *testing.T) {
 		{"sibling conflict", `remediations: {ocp4-stig-a: true, ocp4-stig-a-1: false}`, "conflicts"},
 		{"cross benchmark conflict", `remediations: {ocp4-cis-foo: true, ocp4-cis-1-9-foo: false}`, "conflicts"},
 		{"consistent siblings", `remediations: {ocp4-stig-a: true, ocp4-stig-a-1: true}`, ""},
+		{"binding without profiles", `bindings: {extra: {applyAll: true}}`, "bindings.extra.profiles is empty"},
+		{"profiles on the default binding", `bindings: {stig: {profiles: [ocp4-cis]}}`, "set config.profiles for the default binding"},
+		{"profile in two bindings", `bindings: {extra: {profiles: [ocp4-moderate, ocp4-stig]}}`, "ocp4-stig is already in binding"},
+		{"string applyAll", `bindings: {stig: {applyAll: "true"}}`, "applyAll must be true or false"},
+		{"exclude not a list", `bindings: {stig: {exclude: rule}}`, "exclude must be a list of rule names"},
+		{"exclude entry not a string", `bindings: {stig: {exclude: [1]}}`, "exclude must be a list of rule names"},
+		{"result name in exclude", `bindings: {stig: {exclude: [rhcos4-stig-master-rule]}}`, "is a result name"},
+		{"binding not a map", `bindings: {stig: true}`, "bindings.stig must be a map"},
+		{"apply settings on the default binding", `bindings: {stig: {applyAll: true, exclude: [rule]}}`, ""},
+		{"extra binding", `bindings: {extra: {profiles: [ocp4-moderate], applyAll: false}}`, ""},
+		{"null binding", `bindings: {extra: null}`, ""},
+		{"duplicate within one binding", `profiles: [ocp4-stig, ocp4-stig]`, ""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			files := complianceFiles(t, "stack:\n  compliance:\n    config:\n      "+tt.config+"\n")
@@ -547,5 +560,187 @@ func TestComplianceStructure(t *testing.T) {
 	names := strings.Join(slices.Sorted(maps.Keys(defaults)), " ")
 	if !strings.Contains(names, "findings-compliance") || strings.Contains(names, "remediate-compliance") {
 		t.Errorf("default Policies: %s", names)
+	}
+}
+
+const bindingsValues = `stack:
+  compliance:
+    config:
+      remediations:
+        ocp4-stig-named: false
+      waivers:
+        rule-waived: "Accepted. SEC-1"
+      bindings:
+        stig:
+          applyAll: true
+          exclude: [rule-excluded]
+        moderate:
+          profiles: [ocp4-moderate, rhcos4-moderate]
+        dropped: null
+`
+
+// suiteScan is a ComplianceScan of suite that started an hour ago.
+func suiteScan(name, suite, phase string) string {
+	return strings.Replace(scan(name, phase, "NON-COMPLIANT", time.Hour), "suite: stig", "suite: "+suite, 1)
+}
+
+// suiteRemediation is a ComplianceRemediation of suite, labelled as the aggregator labels it.
+func suiteRemediation(name, suite string, apply bool, state string) string {
+	return fmt.Sprintf(`apiVersion: compliance.openshift.io/v1alpha1
+kind: ComplianceRemediation
+metadata:
+  name: %s
+  namespace: openshift-compliance
+  labels: {compliance.openshift.io/suite: %s, compliance.openshift.io/scan-name: x}
+spec: {apply: %v, current: {object: {kind: MachineConfig}}}
+status: {applicationState: %s}
+`, name, suite, apply, state)
+}
+
+func TestComplianceBindings(t *testing.T) {
+	raw := renderRaw(t, complianceDir, "compliance", complianceFiles(t, bindingsValues))
+
+	setting := resolve(t, raw["scan-setting"])
+	for name, want := range map[string][]any{
+		"stig":     {"ocp4-stig", "ocp4-stig-node", "rhcos4-stig"},
+		"moderate": {"ocp4-moderate", "rhcos4-moderate"},
+	} {
+		b := find(t, setting, "ScanSettingBinding", name)
+		if b.ComplianceType != "mustonlyhave" {
+			t.Errorf("binding %s: %s", name, b.ComplianceType)
+		}
+		got := []any{}
+		for _, p := range nested(b, "profiles").([]any) {
+			got = append(got, p.(map[string]any)["name"])
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("binding %s profiles %v, want %v", name, got, want)
+		}
+	}
+	if n := len(slices.DeleteFunc(slices.Clone(setting), func(o object) bool { return o.ObjectDefinition.GetKind() != "ScanSettingBinding" })); n != 2 {
+		t.Errorf("%d bindings, want 2: a null entry is removed", n)
+	}
+
+	got := summary(t, resolve(t, raw["findings-scan-state"], suiteScan("ocp4-moderate", "moderate", "DONE"), suiteScan("x", "dropped", "PENDING"),
+		strings.Replace(scan("rhcos4-moderate-worker", "DONE", "ERROR", time.Hour), "suite: stig", "suite: moderate", 1),
+		result("s", "r", "PASS", "high", "")))
+	want := []string{
+		"musthave ComplianceCheckResult/", // moderate has no results yet
+		"musthave ComplianceScan/rhcos4-moderate-worker",
+		"musthave ComplianceSuite/moderate", "musthave ComplianceSuite/stig",
+		"musthave Profile/ocp4-moderate", "musthave Profile/ocp4-stig", "musthave Profile/ocp4-stig-node", "musthave Profile/rhcos4-moderate", "musthave Profile/rhcos4-stig",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("scan-state: got %v, want %v", got, want)
+	}
+
+	live := []string{
+		result("stig-fail", "rule-a", "FAIL", "high", ""),
+		suiteResult("moderate-fail", "rule-a", "FAIL", "high", "moderate", ""),
+		suiteResult("moderate-waived", "rule-waived", "FAIL", "high", "moderate", ""),
+		suiteResult("dropped-fail", "rule-a", "FAIL", "high", "dropped", ""),
+	}
+	if got, want := summary(t, resolve(t, raw["findings-high"], live...)), []string{"mustnothave ComplianceCheckResult/moderate-fail", "mustnothave ComplianceCheckResult/stig-fail"}; !slices.Equal(got, want) {
+		t.Errorf("findings-high: got %v, want %v", got, want)
+	}
+	if got, want := summary(t, resolve(t, raw["findings-waived"], live...)), []string{"musthave ComplianceCheckResult/moderate-waived"}; !slices.Equal(got, want) {
+		t.Errorf("findings-waived: got %v, want %v", got, want)
+	}
+}
+
+func TestComplianceApplyAll(t *testing.T) {
+	raw := renderRaw(t, complianceDir, "compliance", complianceFiles(t, bindingsValues))
+	done := []string{suiteScan("ocp4-stig", "stig", "DONE"), suiteScan("ocp4-moderate", "moderate", "DONE")}
+	results := []string{
+		result("ocp4-stig-plain", "rule-plain", "FAIL", "high", ""),
+		result("ocp4-stig-split", "rule-split", "FAIL", "high", ""),
+		result("ocp4-stig-excluded", "rule-excluded", "FAIL", "high", ""),
+		result("ocp4-stig-waived", "rule-waived", "FAIL", "high", ""),
+		result("ocp4-stig-named", "rule-named", "FAIL", "high", ""),
+		result("ocp4-stig-unset", "rule-unset", "FAIL", "high", ""),
+		result("ocp4-stig-net-2", "rule-net-2", "FAIL", "high", ""), // a rule whose name ends in digits
+		suiteResult("ocp4-moderate-plain", "rule-plain", "FAIL", "high", "moderate", ""),
+	}
+	remediations := func(states map[string]string) []string {
+		out := []string{}
+		for _, n := range []string{"plain", "split", "split-1", "excluded", "excluded-1", "waived", "named", "named-1", "unset", "net-2", "orphan"} {
+			state := cmp.Or(states[n], "NotApplied")
+			out = append(out, suiteRemediation("ocp4-stig-"+n, "stig", state != "NotApplied", state))
+		}
+		return append(out, suiteRemediation("ocp4-moderate-plain", "moderate", false, "NotApplied"),
+			foreign(suiteRemediation("ocp4-stig-foreign", "stig", false, "NotApplied")))
+	}
+	live := slices.Concat(done, results, remediations(nil))
+
+	// Excluded, waived and named families are left alone, -N siblings included (their rule is on the
+	// result of the base name); an unset variable or unmet dependency is
+	// set too, and the operator holds it back. moderate has no applyAll.
+	want := map[string]bool{"ocp4-stig-plain": true, "ocp4-stig-split": true, "ocp4-stig-split-1": true, "ocp4-stig-unset": true, "ocp4-stig-net-2": true, "ocp4-stig-orphan": true, "ocp4-stig-named": false}
+	objs := resolve(t, raw["remediate-remediations"], live...)
+	if len(objs) != len(want) {
+		t.Fatalf("got %v, want %v", summary(t, objs), want)
+	}
+	for _, o := range objs {
+		n := o.ObjectDefinition.GetName()
+		if apply, ok := want[n]; !ok || o.ComplianceType != "musthave" || nested(o, "spec", "apply") != apply {
+			t.Errorf("%s: %s apply %v", n, o.ComplianceType, nested(o, "spec", "apply"))
+		}
+	}
+	for name, l := range map[string][]string{
+		"another binding's scan runs":    slices.Concat([]string{done[0], suiteScan("ocp4-moderate", "moderate", "RUNNING")}, results, remediations(nil)),
+		"a binding has no scan yet":      slices.Concat(done[:1], results, remediations(nil)),
+		"a scan of a dropped binding is": slices.Concat(done[:1], []string{suiteScan("x", "dropped", "DONE")}, results, remediations(nil)),
+	} {
+		if got := resolve(t, raw["remediate-remediations"], l...); len(got) != 0 {
+			t.Errorf("%s: wrote %v", name, summary(t, got))
+		}
+	}
+
+	states := map[string]string{"plain": "Applied", "split": "Pending", "split-1": "MissingDependencies", "unset": "NeedsReview", "net-2": "Applied", "orphan": "Error", "excluded": "Applied", "named-1": "Applied"}
+	live = slices.Concat(done, results, remediations(states))
+	stateWant := []string{"musthave ComplianceRemediation/ocp4-stig-named", "musthave ComplianceRemediation/ocp4-stig-orphan", "musthave ComplianceRemediation/ocp4-stig-split", "musthave ComplianceRemediation/ocp4-stig-split-1", "musthave ComplianceRemediation/ocp4-stig-unset"}
+	stateObjs := resolve(t, raw["remediate-remediation-state"], live...)
+	if got := summary(t, stateObjs); !slices.Equal(got, stateWant) {
+		t.Errorf("remediation-state: got %v, want %v", got, stateWant)
+	}
+	for _, o := range stateObjs {
+		if n := o.ObjectDefinition.GetName(); n != "ocp4-stig-named" && field(o, "status", "applicationState") != "Applied" {
+			t.Errorf("%s asserts %v", n, nested(o, "status"))
+		}
+	}
+
+	// Set by applyAll is declared. Excluded after it was applied, or named false, is drift.
+	if got, want := summary(t, resolve(t, raw["findings-drift"], live...)), []string{"musthave ComplianceRemediation/ocp4-stig-excluded", "musthave ComplianceRemediation/ocp4-stig-named-1"}; !slices.Equal(got, want) {
+		t.Errorf("drift: got %v, want %v", got, want)
+	}
+
+	// A failed rule with a remediation, applied or not, stays a finding until a scan passes it.
+	findings := summary(t, resolve(t, raw["findings-high"], live...))
+	for _, n := range []string{"ocp4-stig-plain", "ocp4-stig-split", "ocp4-stig-excluded", "ocp4-moderate-plain"} {
+		if !slices.Contains(findings, "mustnothave ComplianceCheckResult/"+n) {
+			t.Errorf("%s is not a finding: %v", n, findings)
+		}
+	}
+}
+
+// TestComplianceHardened renders values/environments/hardened.yaml and applies it on a cluster
+// whose scans are done.
+func TestComplianceHardened(t *testing.T) {
+	files := append(slices.Clone(allOn), filepath.Join(repoRoot, "values/environments/hardened.yaml"))
+	raw := renderRaw(t, complianceDir, "compliance", files)
+	if got, want := summary(t, slices.DeleteFunc(resolve(t, raw["scan-setting"]), func(o object) bool { return o.ObjectDefinition.GetKind() != "ScanSettingBinding" })),
+		[]string{"mustonlyhave ScanSettingBinding/nist-moderate", "mustonlyhave ScanSettingBinding/stig"}; !slices.Equal(got, want) {
+		t.Errorf("bindings: got %v, want %v", got, want)
+	}
+	live := []string{suiteScan("ocp4-stig", "stig", "DONE"), suiteScan("ocp4-moderate", "nist-moderate", "DONE")}
+	for _, b := range []struct{ suite, scan string }{{"stig", "rhcos4-stig-worker"}, {"nist-moderate", "rhcos4-moderate-worker"}} {
+		for _, rule := range []string{"service-sshd-disabled", "sysctl-kernel-dmesg-restrict"} {
+			name := b.scan + "-" + rule
+			live = append(live, suiteResult(name, rule, "FAIL", "medium", b.suite, ""), suiteRemediation(name, b.suite, false, "NotApplied"))
+		}
+	}
+	want := []string{"musthave ComplianceRemediation/rhcos4-moderate-worker-sysctl-kernel-dmesg-restrict", "musthave ComplianceRemediation/rhcos4-stig-worker-sysctl-kernel-dmesg-restrict"}
+	if got := summary(t, resolve(t, raw["remediate-remediations"], live...)); !slices.Equal(got, want) {
+		t.Errorf("remediations: got %v, want %v", got, want)
 	}
 }

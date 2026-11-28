@@ -138,15 +138,38 @@ none of this runs there.
 | `launcher` | `uv lock --check` (`tools/policystack/uv.lock` matches `pyproject.toml`), then the launcher's tests (`pytest tools/policystack/tests`): unit tests, generic checks of this checkout's `stack/` and `values/`, and install, add and update run end to end through copier against a synthetic upstream that uses this checkout's `copier.yml` |
 | `docs` | Doc generator tests (`python -m unittest tools/test_doc_generator.py`), then `zensical build --strict` |
 | `upstream` | The required check over `library`, `validator`, `launcher` and `docs` |
-| `publish` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: the site to `gh-pages` |
 | `release` | `main` pushes in `PolicyStack/PolicyStack` only, after `upstream`: release-please opens or updates the release PR and, once it merges, tags it `vX.Y.Z` ([Releases](../contributing.md#releases)) |
+| `pages` | After `release`: builds the versioned site with mike ([Documentation site](#documentation-site)) |
+| `publish` | After `pages`: pushes the site to `gh-pages` |
 
 ### Documentation site
 
 The `docs` job builds `docs/` with `zensical build --strict`, which fails on a relative `.md` link or
-anchor that doesn't resolve, or a missing snippet file. On `main`, `publish` pushes `site/` to the
-`gh-pages` branch as a single commit, using a GitHub App. The site is unversioned: for an older
-revision, read `docs/` at that revision on GitHub.
+anchor that doesn't resolve, or a missing snippet file.
+
+The published site is versioned, so readers see the docs of the release they run, not of `main`:
+
+| Path | Built from | Updated |
+| ---- | ---------- | ------- |
+| `/dev/` | `main` | Every `main` push |
+| `/X.Y/` | The newest `vX.Y.Z` tag of that minor | When a release is tagged |
+| `/latest/` | A copy of the newest `/X.Y/` | With it. `/` redirects here |
+
+On every `main` push, `pages` rebuilds `dev` and looks up the newest `vX.Y.Z` tag. If `versions.json`
+on `gh-pages` doesn't list that release as `latest`, it builds the tag as `X.Y` and moves `latest`
+to it. It checks the tag on each run instead of reacting to the release, so a release whose `pages`
+or `publish` failed is deployed by the next `main` push.
+Prereleases (`vX.Y.Z-rc.N`) get no version; `dev` covers them.
+
+`publish` then replaces `gh-pages` with a single commit, using a GitHub App. Argo CD repo-servers
+fetch every branch, so the built HTML keeps no history. `.github/pages/404.html` becomes the root
+404 page: it redirects an unversioned link, such as `/start/install/` in a README or a `Chart.yaml`
+`home`, to the same path under `/latest/`.
+
+!!! note "Docs changes reach `/latest/` with the next release"
+    Each version is built from its tag. A docs fix merged to `main` shows on `/dev/` at once and on
+    `/latest/` with the next release. `docs/` changes alone don't cut a release
+    ([Releases](../contributing.md#releases)).
 
 !!! warning "Not checked by strict mode"
     Absolute links, `nav` and the content of included snippets

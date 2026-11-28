@@ -164,3 +164,8 @@ pymdownx.superfences.custom_fences = [
 
 [project.extra]
 generator = false
+
+# Version selector. dev follows main, X.Y each release, latest the newest (upstream.yml pages job).
+[project.extra.version]
+provider = "mike"
+alias = true

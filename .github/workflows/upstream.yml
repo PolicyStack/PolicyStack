@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 # Pull request runs cancel each other. Runs on main queue, so a publish is never cut off; a newer
-# pending run replaces an older one, which is what an unversioned site wants.
+# pending run replaces an older one, which never reached release, and its dev docs are stale.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -141,12 +141,6 @@ jobs:
       # Fails on a relative .md link or anchor that does not resolve, or a missing snippet.
       - run: zensical build --strict
 
-      - if: github.event_name == 'push'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: site
-          path: site/
-
   # The required check. A failed, cancelled or skipped job above turns it red.
   upstream:
     name: upstream
@@ -158,51 +152,6 @@ jobs:
       - uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
-
-  # A separate job so the write token never shares a runner with pip-installed build code. Forks skip
-  # it: they have neither the App nor the gh-pages ruleset.
-  publish:
-    name: publish
-    if: github.event_name == 'push' && github.repository == 'PolicyStack/PolicyStack'
-    needs: upstream
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Its deployment branch policy releases the App key to main only.
-    environment: github-pages
-    steps:
-      # The gh-pages ruleset lets only this App push. GITHUB_TOKEN cannot be a ruleset bypass actor,
-      # and its pushes do not start a Pages build.
-      - id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
-          private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
-          permission-contents: write
-
-      # The deploy action works through a git worktree, so it needs a checkout.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: site
-          path: site/
-
-      # Zensical drops dotfiles. Without .nojekyll, Pages runs the site through Jekyll.
-      # single-commit wipes the CNAME Pages settings write, so the custom domain ships with each build.
-      - run: |
-          touch site/.nojekyll
-          echo policystk.io > site/CNAME
-
-      # single-commit: the branch holds one snapshot. Built HTML has no useful history, and Argo CD
-      # repo-servers fetch every branch, gh-pages included.
-      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
-        with:
-          folder: site
-          branch: gh-pages
-          single-commit: true
-          token: ${{ steps.app-token.outputs.token }}
 
   # Opens the release PR and, once it merges, tags it vX.Y.Z and creates the GitHub release
   # (docs/contributing.md#releases). An App token, so CI runs on the release PR: GITHUB_TOKEN's PRs
@@ -230,3 +179,99 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           config-file: .release-please/config.json
           manifest-file: .release-please/manifest.json
+
+  # Builds the versioned site with mike into a one-commit gh-pages bundle. No token here: mike and
+  # Zensical are pip-installed code. dev follows main; latest is X.Y, built from the newest vX.Y.Z
+  # tag. The tag is looked up on every run, not read from release's outputs, so a release whose
+  # pages or publish failed is deployed by the next main push. Skipped with release, so on forks
+  # too: they have neither the App nor the gh-pages ruleset.
+  pages:
+    name: pages
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          install_args: python
+
+      - run: pip install -r tools/requirements-docs.txt
+
+      # --alias-type copy: branch-published Pages does not serve mike's default symlinks. A flag, not
+      # a zensical.toml setting, so it also applies to tags cut before this job existed.
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # --refmap=: no origin/gh-pages. mike refuses to commit when that ref is unrelated to the
+          # local branch, which the switch below and every single-commit publish make it.
+          git fetch -q --no-tags --depth=1 --refmap= origin gh-pages:gh-pages
+          mkdir out && git rev-parse gh-pages > out/base
+          # One-time switch from the unversioned site: mike starts from an empty tree. Delete after
+          # the first publish.
+          if ! git cat-file -e gh-pages:versions.json 2>/dev/null; then
+            git branch -qf gh-pages "$(git commit-tree "$(git mktree </dev/null)" -m 'docs: switch to mike')"
+          fi
+          mike deploy --alias-type copy dev
+          # Prereleases (vX.Y.Z-rc.N) get no docs of their own: dev covers them.
+          tag=$(git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' |
+                grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          version=${tag#v}
+          if ! git show gh-pages:versions.json |
+               jq -e --arg v "$version" 'any(.[]; .title == $v and (.aliases | index("latest")))' >/dev/null; then
+            git fetch -q --no-tags --depth=1 origin tag "$tag"
+            git checkout -q "$tag"
+            mike deploy --alias-type copy --update-aliases --title "$version" "${version%.*}" latest
+            git switch -q --detach "$GITHUB_SHA"
+          fi
+          mike set-default latest
+          # Root files mike does not write. CNAME: every publish replaces the branch, and with it the
+          # file Pages settings write. .nojekyll: without it Pages runs the site through Jekyll.
+          # 404.html sends unversioned links into latest.
+          tree=$({ git ls-tree gh-pages | awk -F '\t' '$2 != "404.html" && $2 != "CNAME" && $2 != ".nojekyll"'
+                   printf '100644 blob %s\t%s\n' \
+                     "$(git hash-object -w .github/pages/404.html)" 404.html \
+                     "$(echo policystk.io | git hash-object -w --stdin)" CNAME \
+                     "$(git hash-object -w /dev/null)" .nojekyll; } | git mktree)
+          # gh-pages stays one commit: Argo CD repo-servers fetch every branch. mike reads only the tree.
+          git branch -qf gh-pages "$(git commit-tree "$tree" -m "docs: $(git rev-parse --short HEAD)")"
+          git bundle create -q out/gh-pages.bundle gh-pages
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gh-pages
+          path: out/
+
+  # A separate job so the write token never shares a runner with pip-installed build code.
+  publish:
+    name: publish
+    needs: pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Its deployment branch policy releases the App key to main only.
+    environment: github-pages
+    steps:
+      # The gh-pages ruleset lets only this App push. GITHUB_TOKEN cannot be a ruleset bypass actor,
+      # and its pushes do not start a Pages build.
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: gh-pages
+
+      # The lease fails this push, rather than overwrite, if gh-pages moved after pages fetched it.
+      - env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git init -q
+          git fetch -q gh-pages.bundle gh-pages
+          git push -q --force-with-lease="refs/heads/gh-pages:$(cat base)" \
+            "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" FETCH_HEAD:refs/heads/gh-pages

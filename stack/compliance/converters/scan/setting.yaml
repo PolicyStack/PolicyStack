@@ -46,18 +46,19 @@ A raw list because the objects need different complianceType.
       apiGroup: rbac.authorization.k8s.io
       kind: Role
       name: compliance-operator-agg-patch-role
-{{- /* Binds the configured profiles to the ScanSetting. The binding starts the scan. */}}
+{{- /* Binds each binding's profiles to the ScanSetting. The binding starts the scan. */}}
 {{- /* musthave would merge lists and keep a removed profile bound */}}
+{{- range $name, $b := include "compliance.bindings" . | fromYaml }}
 - complianceType: mustonlyhave
   metadataComplianceType: musthave
   objectDefinition:
     apiVersion: compliance.openshift.io/v1alpha1
     kind: ScanSettingBinding
     metadata:
-      name: {{ .Config.binding }}
-      namespace: {{ .Config.namespace }}
+      name: {{ $name }}
+      namespace: {{ $cfg.namespace }}
     profiles:
-      {{- range $p := $cfg.profiles }}
+      {{- range $p := $b.profiles }}
       - apiGroup: compliance.openshift.io/v1alpha1
         kind: Profile
         name: {{ $p }}
@@ -66,3 +67,4 @@ A raw list because the objects need different complianceType.
       apiGroup: compliance.openshift.io/v1alpha1
       kind: ScanSetting
       name: default
+{{- end }}

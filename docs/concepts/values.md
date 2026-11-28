@@ -342,6 +342,7 @@ Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values
     |---|---|
     | `environments/prod.yaml` | Prod baseline: cert-manager, External Secrets, Compliance Operator, remediations (samples on, registry allowlist off), DNS |
     | `environments/nonprod.yaml` | Nothing |
+    | `environments/hardened.yaml` | Compliance: STIG and NIST moderate side by side, every remediation applied but a few that break clusters. Listed after an environment. Reboots every node, more than once |
     | `datacenters/dc1.yaml` | `install.baseDomain` only, so nothing for an imported cluster |
     | `datacenters/dc2.yaml` | Registry allowlist through the dc2 mirror. Applies only where a cluster enables `remediations` |
     | `platforms/aws.yaml` | Node policies: clone the worker MachineSet. `install`: Hive |
@@ -360,7 +361,7 @@ Upstream's [values/](https://github.com/PolicyStack/PolicyStack/tree/main/values
     | `clusters/nonprod-west-1.yaml` | Registry enforcement, MetalLB pool, user monitoring |
     | `clusters/aws-prod.yaml` | ODF to Loki chain. Rename to the real ManagedCluster name first |
 
-    `tenants/payments.yaml` and `clusters/aws-prod.yaml` are only key-checked (POLICY035) until a fleet file lists them. Render errors in them show up on that pull request.
+    `tenants/payments.yaml`, `environments/hardened.yaml` and `clusters/aws-prod.yaml` are only key-checked (POLICY035) until a fleet file lists them. Render errors in them show up on that pull request.
 
 ### Topology layers
 

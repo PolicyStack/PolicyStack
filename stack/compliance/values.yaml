@@ -12,6 +12,13 @@ stack:
         - ocp4-stig
         - ocp4-stig-node
         - rhcos4-stig
+      # More ScanSettingBindings beside `binding`, and each binding's apply settings, by binding name.
+      # An entry takes `profiles` (required, except on the entry named after `binding`, which scans
+      # `profiles` above; a profile belongs to one binding only), `applyAll` (true applies every
+      # remediation of the binding once every scan is DONE, except excluded and waived rules and the
+      # names in `remediations`; needs policy `remediate`) and `exclude` (rule names, the
+      # compliance.openshift.io/rule annotation, that applyAll leaves alone).
+      bindings: {}
       # Where raw scan results are persisted
       rawResultStorage:
         enabled: true

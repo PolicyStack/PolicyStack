@@ -1,0 +1,48 @@
+# Hardened baseline: DISA STIG and NIST SP 800-53 moderate scanned side by side, with every
+# automated remediation of both applied. Opt-in, listed after the environment layer it hardens:
+#   # fleet/<cluster>.yaml
+#   valueFiles:
+#     - environments/prod.yaml
+#     - environments/hardened.yaml
+#
+# Try it on a scratch cluster first. What it costs:
+#   - Several hundred remediations apply, many of them MachineConfigs, so every node reboots, more
+#     than once. Nothing pauses the MachineConfigPools, and each scan after a round of fixes can
+#     find more: remediations that depend on others (usbguard, kubelet protect-kernel-defaults)
+#     apply only after a later scan sees their dependency pass. The schedule is daily; rescan to
+#     go faster (docs/elements/compliance.md#timing).
+#   - KubeletConfig remediations, such as the eviction thresholds, are not undone by apply: false.
+#   - Rules that are set at install (FIPS, separate partitions) can't be fixed on a running
+#     cluster. They stay findings until you waive them with the reason you reviewed.
+#
+# Excluded from applyAll, in both benchmarks, so they stay findings until you decide:
+#   - project-config-and-template-network-policy, -resource-quota: rewrite the default project
+#     template so every new project gets a deny-by-default NetworkPolicy and a ResourceQuota. The
+#     first blocks the kube-apiserver from reaching admission webhooks in those projects, the second
+#     rejects every pod that sets no resource limits.
+#   - service-sshd-disabled: disables sshd on every node. Red Hat's STIG notes warn against
+#     applying it.
+#   - reject-unsigned-images-by-default: stops the nodes pulling any unsigned image.
+stack:
+  compliance:
+    enabled: true
+    policies:
+      remediate:
+        enabled: true
+    config:
+      bindings:
+        # config.binding, which scans config.profiles: ocp4-stig, ocp4-stig-node, rhcos4-stig
+        stig:
+          applyAll: true
+          exclude: &exclude
+            - project-config-and-template-network-policy
+            - project-config-and-template-resource-quota
+            - service-sshd-disabled
+            - reject-unsigned-images-by-default
+        nist-moderate:
+          profiles:
+            - ocp4-moderate
+            - ocp4-moderate-node
+            - rhcos4-moderate
+          applyAll: true
+          exclude: *exclude

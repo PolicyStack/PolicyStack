@@ -2,6 +2,10 @@
 Sets spec.apply from config.remediations. Only touches objects that exist, because enforcing a
 missing name would create an empty remediation that ACM reports as Compliant. remediation-state
 reports the missing names.
+
+applyAll sets the rest of its bindings' remediations true. A rescan sets apply back to false on
+every remediation not yet Applied, so these are written again after each scan. The operator holds
+back an unset variable (NeedsReview) and an unmet dependency (MissingDependencies) itself.
 */ -}}
 {{ include "compliance.scansDone" . }}
 {{ "{{" }}- if $done {{ "}}" }}
@@ -19,5 +23,19 @@ reports the missing names.
       apply: {{ $apply }}
 {{ "{{" }}- end {{ "}}" }}
 {{- end }}
+{{- end }}
+{{- with include "compliance.managed" . }}
+{{ . }}
+{{ "{{" }}- range $managed {{ "}}" }}
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: compliance.openshift.io/v1alpha1
+    kind: ComplianceRemediation
+    metadata:
+      name: {{ "{{" }} .metadata.name {{ "}}" }}
+      namespace: {{ $.Config.namespace }}
+    spec:
+      apply: true
+{{ "{{" }}- end {{ "}}" }}
 {{- end }}
 {{ "{{" }}- end {{ "}}" }}

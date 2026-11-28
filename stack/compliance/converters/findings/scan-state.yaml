@@ -6,7 +6,7 @@ results, so a scan in progress is not a violation. The Healthy phase does not ex
 reports a scan that failed, examined nothing, or has not started in 48 hours (a cordoned node stops
 rescans silently; the default schedule is daily). ACM never writes status.
 */ -}}
-{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceScan" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
+{{ "{{" }}- range (lookup "compliance.openshift.io/v1alpha1" "ComplianceScan" "{{ .Config.namespace }}" "" "{{ include "compliance.suites" . }}").items {{ "}}" }}
 {{ "{{" }}- $bad := and (eq (dig "status" "phase" "" .) "DONE") (has (dig "status" "result" "" .) (list "ERROR" "NOT-AVAILABLE" "NOT-APPLICABLE")) {{ "}}" }}
 {{ "{{" }}- with (dig "status" "startTimestamp" "" .) {{ "}}" }}
 {{ "{{" }}- if gt (sub (now).Unix (toDate "2006-01-02T15:04:05Z07:00" .).Unix) 172800 {{ "}}" }}
@@ -25,24 +25,25 @@ rescans silently; the default schedule is daily). ACM never writes status.
       phase: Healthy
 {{ "{{" }}- end {{ "}}" }}
 {{ "{{" }}- end {{ "}}" }}
+{{- range $name, $b := include "compliance.bindings" . | fromYaml }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: compliance.openshift.io/v1alpha1
     kind: ComplianceSuite
     metadata:
-      name: {{ .Config.binding }}
-      namespace: {{ .Config.namespace }}
-{{ "{{" }}- if not (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ .Config.namespace }}" "" "compliance.openshift.io/suite={{ .Config.binding }}").items {{ "}}" }}
+      name: {{ $name }}
+      namespace: {{ $.Config.namespace }}
+{{ "{{" }}- if not (lookup "compliance.openshift.io/v1alpha1" "ComplianceCheckResult" "{{ $.Config.namespace }}" "" "compliance.openshift.io/suite={{ $name }}").items {{ "}}" }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: compliance.openshift.io/v1alpha1
     kind: ComplianceCheckResult
     metadata:
-      namespace: {{ .Config.namespace }}
+      namespace: {{ $.Config.namespace }}
       labels:
-        compliance.openshift.io/suite: {{ .Config.binding }}
+        compliance.openshift.io/suite: {{ $name }}
 {{ "{{" }}- end {{ "}}" }}
-{{- range $p := .Config.profiles }}
+{{- range $p := $b.profiles }}
 - complianceType: musthave
   objectDefinition:
     apiVersion: compliance.openshift.io/v1alpha1
@@ -50,4 +51,5 @@ rescans silently; the default schedule is daily). ACM never writes status.
     metadata:
       name: {{ $p }}
       namespace: {{ $.Config.namespace }}
+{{- end }}
 {{- end }}

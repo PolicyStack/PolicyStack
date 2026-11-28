@@ -21,11 +21,13 @@ Defaults ([README](https://github.com/PolicyStack/PolicyStack/blob/main/stack/co
 | `profiles` | `[ocp4-stig, ocp4-stig-node, rhcos4-stig]` |
 | `binding` | `stig`, the ScanSettingBinding's name, whatever the profiles |
 | `rawResultStorage` | On, default StorageClass |
-| `waivers`, `remediations` | Empty |
+| `bindings`, `waivers`, `remediations` | Empty |
 
 Without a default StorageClass, set `rawResultStorage.storageClass` or `rawResultStorage.enabled: false`. Otherwise the raw-results PVC stays Pending and scans never finish.
 
 Scans run on the operator's own `default` ScanSetting schedule: daily, on master and worker nodes. Remediation is off ([Remediations](#remediations)).
+
+For a hardened cluster, the example layer [`values/environments/hardened.yaml`](https://github.com/PolicyStack/PolicyStack/blob/main/values/environments/hardened.yaml) scans STIG and NIST SP 800-53 moderate side by side and applies every remediation of both, except the few its header lists as cluster-breaking. Read its header and [Apply all](#apply-all) before you list it: every node reboots, more than once.
 
 !!! warning "Hosted control planes"
     Red Hat ships the operator on HCP as Technology Preview, with `PLATFORM=HyperShift` set in the Subscription's `config` and a worker `nodeSelector`. This element sets neither, so a hosted cluster (HCP guest) can't scan and shows NonCompliant in `findings-scan-state`. Leave the element off there.
@@ -39,7 +41,7 @@ The element writes the rows marked Element, plus `spec.apply` on declared remedi
 | Profile | Operator content | A benchmark, shipped in the operator's content. Platform profiles (`ocp4-stig`) check the cluster's API objects; node profiles (`ocp4-stig-node`, `rhcos4-stig`) check each node |
 | ScanSetting `default` | Operator; the element patches storage only | How and when to scan. Its schedule and roles stay the operator's |
 | Role, RoleBinding `compliance-operator-agg-patch-*` | Element | Lets the operator's remediation aggregator update ComplianceRemediations |
-| ScanSettingBinding (`ssb`) `<binding>` | Element | Binds the profiles to the setting. Creating it starts the first scan |
+| ScanSettingBinding (`ssb`) `<binding>` | Element | Binds the profiles to the setting. Creating it starts the first scan. One more per `bindings` entry ([Benchmarks](#benchmarks)) |
 | ComplianceSuite `<binding>` | Operator | Groups the binding's scans |
 | ComplianceScan | Operator | One per profile, and one per role for node profiles: `ocp4-stig`, `ocp4-stig-node-master`, `rhcos4-stig-worker` |
 | ComplianceCheckResult (`ccr`) | Operator | One rule's result in one scan, named `<scan>-<rule>`. Status `PASS`, `FAIL`, `ERROR`, `MANUAL`, `INCONSISTENT` and others. The rule's own name is on annotation `compliance.openshift.io/rule` |
@@ -76,9 +78,9 @@ In the console: **Governance > Policies > `findings-compliance-<cluster>`**, the
 |---|---|---|
 | `findings-scan-state` | `findings-compliance-<cluster>` | No suite or no results yet, a configured Profile doesn't exist, or a scan ended `ERROR`, `NOT-AVAILABLE` or `NOT-APPLICABLE` or hasn't started in 48 hours (often a cordoned node). `oc get compliancescan -n openshift-compliance` shows which |
 | `findings-high`, `-medium`, `-low` | `findings-compliance-<cluster>` | Results with that severity that failed and aren't waived. `-low` takes every severity other than high and medium, unset included. See below for `ERROR` and `INCONSISTENT` |
-| `findings-drift` | `findings-compliance-<cluster>` | A ComplianceRemediation is applied (`spec.apply: true`) but not declared `true` in `config.remediations` |
+| `findings-drift` | `findings-compliance-<cluster>` | A ComplianceRemediation is applied (`spec.apply: true`) but neither declared `true` in `config.remediations` nor set by [`applyAll`](#apply-all) |
 | `findings-waived` | `findings-compliance-<cluster>` | Never. Lists each result of a waived rule with its current status |
-| `remediate-remediation-state` | `remediate-compliance-<cluster>` | A declared remediation hasn't reached its state. The message lists each as `<name>=<applicationState>`, `missing` when it doesn't exist |
+| `remediate-remediation-state` | `remediate-compliance-<cluster>` | A declared remediation hasn't reached its state, or one `applyAll` sets isn't `Applied`. The message lists each as `<name>=<applicationState>`, `missing` when it doesn't exist ([states](#apply-all)) |
 
 `findings-scan-state` has no custom message, so it shows ACM's own. `compliancescans [<scan>] found but not as specified` is a bad scan; its diff shows `phase: Healthy`, a phase no scan reaches, asserted only to flag it. `compliancecheckresults not found` means no results yet.
 
@@ -114,6 +116,18 @@ oc -n openshift-compliance annotate compliancescans/<scan> compliance.openshift.
 
 ## Benchmarks
 
+There are two ways to scan more than one benchmark:
+
+| | One binding | Side by side |
+|---|---|---|
+| Where | `config.profiles` | One `config.bindings` entry per benchmark |
+| ScanSettingBindings and suites | One, `config.binding` | One per binding |
+| Apply settings ([Apply all](#apply-all)) | One for all profiles | Each binding its own |
+
+Every finding, waiver and drift check reads every binding. Schedule and raw-results storage come from the one `default` ScanSetting, whichever way.
+
+### One binding
+
 `config.profiles` takes any mix. They share one binding, schedule and suite, and result names carry the scan, so they don't collide.
 
 ```yaml
@@ -129,6 +143,31 @@ stack:
     Dropping a profile deletes its scan, results, remediations and raw-results PVC. Applied MachineConfigs, KubeletConfig settings and created objects stay behind. Set its remediations to `false` and roll out before you drop it; for KubeletConfig see [Reverting](#reverting).
 
 Leave `config.binding` alone when you change profiles. A new name writes a second ScanSettingBinding, the old one is never deleted and keeps scanning, and the findings read only the new one. If you rename it, delete the old one: `oc delete ssb <old> -n openshift-compliance`.
+
+### Side by side
+
+Each `config.bindings` entry adds a ScanSettingBinding with its own profiles. The default binding keeps scanning `config.profiles`.
+
+```yaml
+stack:
+  compliance:
+    config:
+      bindings:
+        nist-moderate: # (1)!
+          profiles: [ocp4-moderate, ocp4-moderate-node, rhcos4-moderate] # (2)!
+```
+
+1.  The binding's name. It is also the name of its ComplianceSuite and the `compliance.openshift.io/suite` label on its scans, results and remediations.
+2.  Red Hat requires a node profile to be scanned with its platform profile, so keep the three together.
+
+`findings-scan-state` then checks each binding's suite, results and Profiles. A rule's results from both benchmarks are separate findings (`ocp4-stig-<rule>`, `ocp4-moderate-<rule>`), and one waiver covers both.
+
+| You set | Result |
+|---|---|
+| A profile in two bindings, `config.profiles` included | Render fails: `... <profile> is already in binding <name>`. Scans are named after their profile, so two suites would fight over one scan |
+| `profiles` on the entry named after `config.binding` | Render fails: that binding scans `config.profiles` |
+| An entry without `profiles` | Render fails: `stack.compliance.config.bindings.<name>.profiles is empty` |
+| `null` in a later layer | Removes the binding from every check. Its ScanSettingBinding isn't deleted and keeps scanning: `oc delete ssb <name> -n openshift-compliance` stops it, and deletes its results |
 
 ## Pinning
 
@@ -220,6 +259,58 @@ stack:
 - A value other than `true` or `false` fails the render.
 
 Turning `remediate` off stops managing `spec.apply`. What is applied stays applied.
+
+### Apply all
+
+Declaring hundreds of remediations by name doesn't scale. `applyAll` applies every remediation of one binding instead, minus a list of rules:
+
+```yaml
+stack:
+  compliance:
+    policies:
+      remediate:
+        enabled: true # (1)!
+    config:
+      bindings:
+        stig: # (2)!
+          applyAll: true
+          exclude: # (3)!
+            - project-config-and-template-network-policy
+```
+
+1.  `applyAll` writes through policy `remediate`, so it does nothing while that is off.
+2.  The default binding (`config.binding`). Its entry takes only `applyAll` and `exclude`. Other bindings set it in their own entry ([Side by side](#side-by-side)).
+3.  Rule names, as in [Waivers](#waivers), not remediation names. One entry covers the rule on every role and every `-1`, `-2` object of its fix. A result name fails the render.
+
+`remediate-remediations` then sets `spec.apply: true` on every ComplianceRemediation labelled with the binding's suite, except:
+
+- rules in `exclude`;
+- waived rules, since a waiver accepts the cluster as it is;
+- names in `config.remediations`, `true` or `false`. An explicit entry wins, so `false` there reverts one remediation of an `applyAll` binding.
+
+It writes nothing until every scan of every binding is `DONE` and every binding has scans. The operator rewrites remediations during a scan, and waiting for every binding keeps one binding's reboots out of another binding's node scans.
+
+`remediate-remediation-state` names each remediation `applyAll` sets that isn't `Applied` yet, as `<name>=<applicationState>`:
+
+| State | Means | What to do |
+|---|---|---|
+| `Pending` | Written, not yet processed by the operator | Wait |
+| `NeedsReview` | The fix needs a variable the profile doesn't set; annotation `compliance.openshift.io/unset-value` names it. The operator applies nothing | Exclude the rule from every binding that scans it, or set the variable in a [TailoredProfile](https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/security_and_compliance/compliance-operator#compliance-tailored-profiles_compliance-tailor) `setValues`, which this element doesn't manage |
+| `MissingDependencies` | It needs another rule to pass first (annotation `compliance.openshift.io/depends-on`), such as the usbguard service on the usbguard package | Nothing: the next scan after the dependency is applied passes it, and the fix applies. [Rescan](#timing) to go faster. A dependency no binding scans never passes, so exclude the rule from every binding that scans it |
+| `Error` | The operator couldn't apply it, often a MachineConfig for a node role with no MachineConfigPool | `oc describe complianceremediation <name> -n openshift-compliance` |
+| `Outdated` | A content update changed the fix, and the old one stays applied | [Pinning](#pinning) |
+
+Each scan sets `spec.apply` back to `false` on every remediation that isn't `Applied` or `Outdated`. `remediate-remediations` sets it again once the scans are done, so you don't redo anything.
+
+What to expect:
+
+- A failed result stays a finding while its fix applies. It turns `PASS` only on the next scan.
+- Nothing pauses the MachineConfigPools, as Red Hat's `autoApplyRemediations` does, so a pool can roll more than once per round. A round's scan can bring more fixes (the dependencies above), so plan for several rounds of reboots.
+- Removing `applyAll`, or adding a rule to `exclude`, reverts nothing. The applied remediations show in `findings-drift`; set them `false` in `config.remediations` to revert ([Reverting](#reverting)).
+- Don't also set `autoApplyRemediations` on the ScanSetting. It applies every remediation of every binding, excluded ones included.
+
+!!! warning "Give a rule one decision in every binding that scans it"
+    When the operator processes a remediation set to `false`, it deletes the object that fix creates if the operator created it, whichever binding's remediation created it. So when two bindings scan the same rule and only one applies it, each scan of the other binding can delete what the first one created. Set `applyAll` on every binding that scans the rule and exclude it from all or none, or name each binding's remediation of it (`ocp4-stig-<rule>`, `ocp4-moderate-<rule>`) with the same value in `config.remediations`. MachineConfigs are safe, since each remediation gets its own; the risk is the objects a fix creates.
 
 ### Reverting
 

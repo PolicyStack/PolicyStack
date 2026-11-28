@@ -38,6 +38,7 @@ _exclude:
     /.github/workflows/stable-review.yml
     /.github/scripts/stable-gate.sh
     /.github/scripts/stable-gate-test.sh
+    /.github/pages
     /docs
     /site
     /zensical.toml
